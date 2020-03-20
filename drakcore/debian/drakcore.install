@@ -1,0 +1,7 @@
+drakcore/config.ini /etc/drakcore/
+drakcore/uwsgi.ini /etc/drakcore/
+drakcore/systemd/minio.env /etc/drakcore/
+
+drakcore/systemd/*.service /etc/systemd/system/
+
+drakcore/systemd/minio /usr/share/drakcore/

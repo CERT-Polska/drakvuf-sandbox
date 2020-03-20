@@ -1,0 +1,70 @@
+dist: bionic
+language: python
+python:
+    - 3.6
+services:
+    - docker
+git:
+    submodules: false
+jobs:
+    include:
+    - stage: test
+      env:
+        - TEST="flake8 drakrun"
+      script:
+        - pip3 install flake8
+        - pip3 install -r drakrun/requirements.txt
+        - cd drakrun && flake8 --ignore E402,F401,E501
+    - stage: test
+      env:
+        - TEST="flake8 drakcore"
+      script:
+        - pip3 install flake8
+        - pip3 install -r drakcore/requirements.txt
+        - cd drakcore && flake8 --ignore E402,F401,E501
+    - stage: test
+      env:
+        - TEST="build frontend"
+      script:
+        - export NODE_OPTIONS=--max_old_space_size=4096
+        - cd drakcore/drakcore/frontend
+        - npm install
+        - npm run build
+    - stage: package
+      env:
+        - TEST="package build drakrun"
+      script:
+        - sh drakrun/package/build.sh;
+      before_deploy:
+        - git config --local user.name "drakrun-build"
+        - git config --local user.email "ml@icedev.pl"
+        - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)}
+        - git tag $TRAVIS_TAG
+      deploy:
+        provider: releases
+        api_key: $GITHUB_TOKEN
+        edge: true
+        draft: true
+        file:
+          - out/**/*
+        on:
+          branch: master
+    - stage: package
+      env:
+        - TEST="package build drakcore"
+      script:
+        - sh drakcore/package/build.sh;
+      before_deploy:
+        - git config --local user.name "drakrun-build"
+        - git config --local user.email "ml@icedev.pl"
+        - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)}
+        - git tag $TRAVIS_TAG
+      deploy:
+        provider: releases
+        api_key: $GITHUB_TOKEN
+        edge: true
+        draft: true
+        file:
+          - out/**/*
+        on:
+          branch: master

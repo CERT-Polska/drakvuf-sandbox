@@ -1,0 +1,18 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with python-virtualenv
+
+build:
+	# Build frontend
+	cd drakcore/frontend && npm install && npm run-script build
+	# Config files
+	cp drakcore/config.dist.ini drakcore/config.ini
+	cp drakcore/uwsgi.dist.ini drakcore/uwsgi.ini
+	cp drakcore/systemd/minio.dist.env drakcore/systemd/minio.env
+	# Download minio
+	wget -O drakcore/systemd/minio https://dl.min.io/server/minio/release/linux-amd64/minio
+	chmod +x drakcore/systemd/minio
+
+override_dh_virtualenv:
+	dh_virtualenv --python python3

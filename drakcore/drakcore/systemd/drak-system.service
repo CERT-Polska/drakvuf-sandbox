@@ -1,0 +1,17 @@
+[Unit]
+Description=drak-system service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/venvs/drakcore/bin/drak-system
+User=root
+Group=root
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=60s
+StartLimitBurst=3
+WorkingDirectory=/var/lib/drakcore
+
+[Install]
+WantedBy=default.target

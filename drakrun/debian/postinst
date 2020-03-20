@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -e
+
+case "$1" in
+    configure)
+        # continue with the script
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+	echo "postinst called with unknown argument \`$1'" >&2
+	exit 1
+    ;;
+esac
+
+mkdir -p /var/lib/drakrun/{profiles,volumes}
+systemctl daemon-reload
+/opt/venvs/drakrun/bin/draksetup postupgrade

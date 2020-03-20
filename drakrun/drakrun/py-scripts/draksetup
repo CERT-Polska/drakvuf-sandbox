@@ -1,0 +1,7 @@
+#!/usr/bin/env python
+
+import drakrun.draksetup as ds
+
+ds.LIB_DIR = "/var/lib/drakrun/"
+ds.ETC_DIR = "/etc/drakrun/"
+ds.main()

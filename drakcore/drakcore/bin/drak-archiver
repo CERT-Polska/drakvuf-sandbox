@@ -1,0 +1,4 @@
+#!/usr/bin/env python
+
+from drakcore.archiver import main
+main()

@@ -1,0 +1,18 @@
+[Unit]
+Description=drak-web service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/venvs/drakcore/bin/uwsgi --ini /etc/drakcore/uwsgi.ini
+User=root
+Group=root
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=60s
+StartLimitBurst=3
+KillSignal=SIGQUIT
+WorkingDirectory=/var/lib/drakcore
+
+[Install]
+WantedBy=default.target

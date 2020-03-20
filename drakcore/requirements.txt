@@ -1,0 +1,6 @@
+requests==2.22.0
+Flask==1.1.1
+karton2==2.0.3
+redis==3.3.11
+uwsgi==2.0.17.1
+minio==5.0.7

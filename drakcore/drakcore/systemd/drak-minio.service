@@ -1,0 +1,18 @@
+[Unit]
+Description=drak-minio service
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/drakcore/minio.env
+ExecStart=/usr/bin/ionice -c 3 /usr/share/drakcore/minio server /var/lib/drakcore/minio
+User=root
+Group=root
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=60s
+StartLimitBurst=3
+WorkingDirectory=/var/lib/drakcore/minio
+
+[Install]
+WantedBy=default.target

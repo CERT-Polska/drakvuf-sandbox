@@ -1,0 +1,25 @@
+arch = 'x86_64'
+name = "vm-{{ VM_ID }}"
+maxmem = 3048
+memory = 3048
+vcpus = 2
+maxcpus = 2
+builder = "hvm"
+boot = "cd"
+hap = 1
+acpi = 1
+on_poweroff = "destroy"
+on_reboot = "destroy"
+on_crash = "destroy"
+vnc=1
+vnclisten="0.0.0.0"
+vncdisplay={{ VM_ID }}
+vncpasswd="{{ VNC_PASS }}"
+usb = 1
+usbdevice = "tablet"
+altp2m = 2
+shadow_memory = 16
+audio=1
+soundhw='hda'
+vif = [ 'type=ioemu,model=e1000,bridge=xenbr0' ]
+disk = [ {{ DISKS }} ]

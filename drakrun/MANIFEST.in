@@ -1,0 +1,2 @@
+include drakrun/cfg.template
+include drakrun/tools/*

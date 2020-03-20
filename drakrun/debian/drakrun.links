@@ -1,0 +1,3 @@
+opt/venvs/drakrun/bin/draksetup usr/bin/draksetup
+opt/venvs/drakrun/bin/drakrun usr/bin/drakrun
+opt/venvs/drakrun/bin/drakpush usr/bin/drakpush

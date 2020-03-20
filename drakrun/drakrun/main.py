@@ -1,0 +1,330 @@
+#!/usr/bin/python3
+
+import logging
+import os
+import shutil
+import argparse
+import subprocess
+import hashlib
+import socket
+import pefile
+import json
+import re
+import io
+from karton2 import Karton, Config, Task, DirectoryResource
+from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
+import drakrun.run as d_run
+from drakrun.drakparse import parse_logs
+
+
+LIB_DIR = os.path.dirname(os.path.realpath(__file__))
+ETC_DIR = os.path.dirname(os.path.realpath(__file__))
+MAIN_DIR = os.path.dirname(os.path.realpath(__file__))
+INSTANCE_ID = None
+
+
+def get_domid_from_instance_id(instance_id: str) -> int:
+    output = subprocess.check_output(["xl", "domid", f"vm-{instance_id}"])
+    return int(output.decode('utf-8').strip())
+
+
+def start_tcpdump_collector(instance_id: str, outdir: str) -> subprocess.Popen:
+    domid = get_domid_from_instance_id(instance_id)
+
+    try:
+        subprocess.check_output("tcpdump --version", shell=True)
+    except subprocess.CalledProcessError:
+        logging.warning("Seems like tcpdump is not working/not installed on your system. Pcap will not be recorded.")
+        return
+
+    return subprocess.Popen([
+        "tcpdump",
+        "-i",
+        f"vif{domid}.0-emu",
+        "-w",
+        f"{outdir}/dump.pcap"
+    ])
+
+
+class DrakrunKarton(Karton):
+    identity = "karton.drakrun-prod"
+    filters = [
+        {
+            "type": "sample",
+            "stage": "recognized",
+            "platform": "win32"
+        },
+        {
+            "type": "sample",
+            "stage": "recognized",
+            "platform": "win64"
+        }
+    ]
+
+    def init_drakrun(self):
+        output_strategy = self.config.minio_config.get("output_strategy", "store")
+        if output_strategy == "store":
+            if not self.minio.bucket_exists('drakrun'):
+                self.minio.make_bucket(bucket_name='drakrun')
+
+    def _get_dll_run_command(self, pe_data):
+        d = [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]]
+        pe = pefile.PE(data=pe_data, fast_load=True)
+        pe.parse_data_directories(directories=d)
+
+        try:
+            exports = [(e.ordinal, e.name.decode('utf-8', 'ignore')) for e in pe.DIRECTORY_ENTRY_EXPORT.symbols]
+        except AttributeError:
+            return None
+
+        for export in exports:
+            if export[1] == 'DllRegisterServer':
+                return 'regsvr32 malwar.dll'
+
+            if 'DllMain' in export[1]:
+                return 'rundll32 malwar.dll,{}'.format(export[1])
+
+        if exports:
+            if exports[0][1]:
+                return 'rundll32 malwar.dll,{}'.format(export[1].split('@')[0])
+            elif exports[0][0]:
+                return 'rundll32 malwar.dll,#{}'.format(export[0])
+
+        return None
+
+    def crop_dumps(self, dirpath):
+        entries = (os.path.join(dirpath, fn) for fn in os.listdir(dirpath))
+        entries = ((os.stat(path), path) for path in entries)
+
+        entries = ((stat[ST_CTIME], path, stat[ST_SIZE])
+                   for stat, path in entries if S_ISREG(stat[ST_MODE]))
+
+        max_total_size = 300 * 1024 * 1024  # 300 MB
+        current_size = 0
+
+        for cdate, path, size in sorted(entries):
+            current_size += size
+
+            if current_size > max_total_size:
+                os.unlink(path)
+
+        if current_size > max_total_size:
+            self.log.error('Some dumps were deleted, because the configured size threshold was exceeded.')
+
+    def generate_graphs(self, workdir):
+        with open(os.path.join(workdir, 'drakmon.log'), 'r') as f:
+            with open(os.path.join(workdir, 'drakmon.csv'), 'w') as o:
+                for csv_line in parse_logs(f):
+                    if csv_line.strip():
+                        o.write(csv_line.strip() + "\n")
+                    else:
+                        print('empty line?')
+
+        try:
+            subprocess.run(['/opt/procdot/procmon2dot', os.path.join(workdir, 'drakmon.csv'), os.path.join(workdir, 'graph.dot'), 'procdot,forceascii'], cwd=workdir, check=True)
+        except subprocess.CalledProcessError:
+            self.log.exception("Failed to generate graph using procdot")
+
+        os.unlink(os.path.join(workdir, 'drakmon.csv'))
+
+    def slice_logs(self, workdir):
+        plugin_fd = {}
+
+        with open(os.path.join(workdir, 'drakmon.log'), 'r') as f:
+            for line in f:
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    self.log.exception("BUG: Failed to parse drakmon.log line: {}".format(line))
+
+                if 'Plugin' not in obj:
+                    obj['Plugin'] = 'unknown'
+
+                if obj['Plugin'] not in plugin_fd:
+                    plugin_fd[obj['Plugin']] = open(os.path.join(workdir, obj['Plugin'] + '.log'), 'w')
+                else:
+                    plugin_fd[obj['Plugin']].write('\n')
+
+                plugin_fd[obj['Plugin']].write(json.dumps(obj))
+
+        for key, fd in plugin_fd.items():
+            fd.close()
+
+        os.unlink(os.path.join(workdir, 'drakmon.log'))
+
+    def upload_artifacts(self, workdir, subdir=''):
+        base_path = os.path.join(workdir, 'output')
+        for fn in os.listdir(os.path.join(base_path, subdir)):
+            file_path = os.path.join(base_path, subdir, fn)
+            if os.path.isfile(file_path):
+                self.minio.fput_object('drakrun', os.path.join(self.current_task.root_uid, subdir, fn), file_path)
+            elif os.path.isdir(file_path):
+                self.upload_artifacts(workdir, os.path.join(subdir, fn))
+
+    def process(self):
+        sample = self.current_task.get_resource("sample")
+        local_sample = self.download_resource(sample)
+        self.log.info("hostname: {}".format(socket.gethostname()))
+        sha256sum = hashlib.sha256(local_sample.content).hexdigest()
+        self.log.info("running sample sha256: {}".format(sha256sum))
+
+        workdir = '/tmp/drakrun/vm-{}'.format(int(INSTANCE_ID))
+        extension = self.current_task.headers.get("extension", "exe").lower()
+        start_command = 'start malwar.{}'.format(extension)
+
+        if extension == 'dll':
+            run_command = self._get_dll_run_command(local_sample.content)
+
+            if not run_command:
+                self.log.info('Unable to run malware sample, could not generate any suitable command to run it.')
+                return
+
+            self.log.info('Using command: {}'.format(run_command))
+            start_command = 'start {}'.format(run_command)
+
+        try:
+            shutil.rmtree(workdir)
+        except Exception as e:
+            print(e)
+
+        outdir = os.path.join(workdir, 'output')
+        os.makedirs(workdir, exist_ok=True)
+        os.mkdir(outdir)
+        os.mkdir(os.path.join(outdir, 'dumps'))
+
+        with open(os.path.join(outdir, 'sample.txt'), 'w') as f:
+            f.write(hashlib.sha256(local_sample.content).hexdigest())
+
+        with open(os.path.join(workdir, 'run.bat'), 'wb') as f:
+            f.write(b'xcopy D:\\malwar.' + extension.encode('ascii') + b' %USERPROFILE%\\Desktop\\\r\nC:\\\r\ncd %USERPROFILE%\\Desktop\r\n' + start_command.encode('ascii'))
+
+        with open(os.path.join(workdir, 'malwar.{}'.format(extension)), 'wb') as f:
+            f.write(local_sample.content)
+
+        try:
+            subprocess.run(["genisoimage", "-o", os.path.join(workdir, 'malwar.iso'), os.path.join(workdir, 'malwar.{}'.format(extension)), os.path.join(workdir, 'run.bat')], cwd=workdir, check=True)
+        except subprocess.CalledProcessError as e:
+            logging.exception("Failed to generate CD ISO image. Please install genisoimage")
+            raise e
+
+        watcher = None
+
+        for _ in range(3):
+            try:
+                self.log.info("running vm {}".format(INSTANCE_ID))
+                d_run.ETC_DIR = ETC_DIR
+                d_run.LIB_DIR = LIB_DIR
+                d_run.logging = self.log
+                d_run.run_vm(INSTANCE_ID)
+
+                watcher = start_tcpdump_collector(INSTANCE_ID, outdir)
+
+                self.log.info("running monitor {}".format(INSTANCE_ID))
+
+                kernel_profile = os.path.join(LIB_DIR, "profiles/kernel.json")
+                runtime_profile = os.path.join(LIB_DIR, "profiles/runtime.json")
+                with open(runtime_profile, 'r') as runtime_f:
+                    rp = json.loads(runtime_f.read())
+                    inject_pid = rp['inject_pid']
+                    kpgd = rp['vmi_offsets']['kpgd']
+
+                hooks_list = os.path.join(ETC_DIR, "hooks.txt")
+                dump_dir = os.path.join(outdir, "dumps")
+                drakmon_log_fp = os.path.join(outdir, "drakmon.log")
+
+                drakvuf_cmd = ["drakvuf",
+                               "-o", "json",
+                               "-x", "poolmon",
+                               "-x", "objmon",
+                               "-j", "5",
+                               "-t", "600",
+                               "-i", inject_pid,
+                               "-k", kpgd,
+                               "-d", "vm-{vm_id}".format(vm_id=INSTANCE_ID),
+                               "--dll-hooks-list", hooks_list,
+                               "--memdump-dir", dump_dir,
+                               "-r", kernel_profile,
+                               "-e", "D:\\run.bat"]
+
+                with open(drakmon_log_fp, "wb") as drakmon_log:
+                    drakvuf = subprocess.Popen(drakvuf_cmd, stdout=drakmon_log)
+
+                    try:
+                        exit_code = drakvuf.wait(660)
+                    except subprocess.TimeoutExpired as e:
+                        logging.error("BUG: Monitor command doesn\'t terminate automatically after timeout expires.")
+                        logging.error("Trying to terminate DRAKVUF...")
+                        drakvuf.terminate()
+                        drakvuf.wait(10)
+                        logging.error("BUG: Monitor command also doesn\'t terminate after sending SIGTERM.")
+                        drakvuf.kill()
+                        drakvuf.wait()
+                        logging.error("Monitor command was forcefully killed.")
+                        raise e
+
+                    if exit_code != 0:
+                        raise subprocess.CalledProcessError(exit_code, drakvuf_cmd)
+                break
+            except subprocess.CalledProcessError:
+                self.log.info("Something went wrong with the VM {}".format(INSTANCE_ID), exc_info=True)
+            finally:
+                try:
+                    subprocess.run(["xl", "destroy", "vm-{}".format(INSTANCE_ID)], cwd=workdir, check=True)
+                except subprocess.CalledProcessError:
+                    self.log.info("Failed to destroy VM {}".format(INSTANCE_ID), exc_info=True)
+        else:
+            self.log.info("Failed to analyze sample after 3 retries, giving up.")
+            return
+
+        self.log.info("waiting for tcpdump to exit")
+
+        if watcher:
+            try:
+                watcher.wait(timeout=60)
+            except subprocess.TimeoutExpired:
+                self.log.exception("tcpdump doesn't exit cleanly after 60s")
+
+        self.crop_dumps(os.path.join(outdir, 'dumps'))
+        if os.path.exists("/opt/procdot/procmon2dot"):
+            self.generate_graphs(outdir)
+        self.slice_logs(outdir)
+        self.log.info("uploading artifacts")
+
+        output_strategy = self.config.minio_config.get("output_strategy", "store")
+
+        if output_strategy == 'karton-task':
+            t = Task(
+                {
+                    "type": "analysis",
+                    "kind": "drakrun-prod",
+                    "quality": self.current_task.headers.get("quality", "high")
+                }
+            )
+
+            r = DirectoryResource(name='analysis', directory_path=os.path.join(workdir, 'output'))
+            t.add_resource('analysis', r)
+            t.add_resource('sample', sample)
+            self.send_task(t)
+        elif output_strategy == 'store':
+            self.upload_artifacts(workdir)
+
+
+def cmdline_main():
+    parser = argparse.ArgumentParser(description='Kartonized drakrun <3')
+    parser.add_argument('instance', type=int, help='Instance identifier')
+    args = parser.parse_args()
+
+    global INSTANCE_ID
+    INSTANCE_ID = args.instance
+    main()
+
+
+def main():
+    conf = Config(os.path.join(ETC_DIR, "config.ini"))
+    c = DrakrunKarton(conf)
+    c.init_drakrun()
+    c.loop()
+
+
+if __name__ == "__main__":
+    cmdline_main()
