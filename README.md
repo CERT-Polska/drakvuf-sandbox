@@ -114,6 +114,35 @@ The system core package `drakcore*.deb` consists of the following services:
 
 A worker package `drakrun*.deb` is basically a wrapper around DRAKVUF project that spins off `drakrun` service instances. These instances are processing the queued suspicious files one after another, using appropriate infrastructure. This component also features a `draksetup` command that makes it easier to setup configuration that is necessary to run services.
 
+## Building installation packages
+
+In order to build installation packages on your own, you must [install Docker](https://docs.docker.com/install/linux/docker-ce/debian/) on your machine.
+
+### DRAKVUF Sandbox (drakcore, drakrun)
+
+You may build your packages from source using following commands:
+
+```
+git clone https://github.com/CERT-Polska/drakvuf-sandbox.git
+cd drakvuf-sandbox
+sudo ./drakcore/package/build.sh
+sudo ./drakrun/package/build.sh
+```
+
+Afterwards, you should find your installation packages produced in `out/` directory.
+
+### DRAKVUF (drakvuf-bundle)
+
+The build scripts for `drakvuf-bundle` are part of [tklengyel/drakvuf](https://github.com/tklengyel/drakvuf) repository. You may build your package using the following commands:
+
+```
+git clone --recursive https://github.com/tklengyel/drakvuf
+cd drakvuf
+sudo ./package/build.sh
+```
+
+The resulting package will be produced to `package/out/` directory.
+
 ## Maintainers/authors
 
 Feel free to contact us if you have any questions or comments.
