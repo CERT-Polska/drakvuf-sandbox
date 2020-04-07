@@ -1,0 +1,112 @@
+kind: pipeline
+type: docker
+name: lint-drakcore
+
+steps:
+- name: flake8 drakcore
+  image: python
+  commands:
+    - pip3 install flake8
+    - pip3 install -r drakcore/requirements.txt
+    - cd drakcore && flake8 --ignore E402,F401,E501
+node:
+   purpose: generic
+---
+kind: pipeline
+type: docker
+name: lint-drakrun
+
+steps:
+- name: flake8 drakrun
+  image: python
+  commands:
+    - pip3 install flake8
+    - pip3 install -r drakrun/requirements.txt
+    - cd drakrun && flake8 --ignore E402,F401,E501
+node:
+   purpose: generic
+---
+kind: pipeline
+type: docker
+name: build-drakcore
+
+steps:
+- name: package drakcore
+  image: debian:buster
+  commands:
+    - export DEBIAN_FRONTEND=noninteractive
+    - apt-get update
+    - apt-get install -y wget curl python3 python3-venv python3-pip dh-virtualenv debhelper devscripts
+    - curl -sL https://deb.nodesource.com/setup_13.x | bash -
+    - apt-get install -y nodejs
+    - wget -O /usr/local/bin/mc http://192.168.21.1:5000/static/mc
+    - chmod +x /usr/local/bin/mc
+    - mc config host add cache http://192.168.21.131:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+    - mc mb --ignore-existing cache/debs
+    - cd drakcore
+    - dpkg-buildpackage -us -uc -b
+    - mc cp ../drakcore_*_amd64.deb "cache/debs/drakcore_drone-$DRONE_BUILD_NUMBER.deb"
+  environment:
+    MINIO_ACCESS_KEY:
+      from_secret: MINIO_ACCESS_KEY
+    MINIO_SECRET_KEY:
+      from_secret: MINIO_SECRET_KEY
+node:
+   purpose: generic
+---
+kind: pipeline
+type: docker
+name: build-drakrun
+
+steps:
+- name: package drakrun
+  image: debian:buster
+  commands:
+    - export DEBIAN_FRONTEND=noninteractive
+    - apt-get update
+    - apt-get install -y wget python3 python3-pip python3-venv dh-virtualenv debhelper devscripts libpixman-1-0 libpng16-16 libfdt1 libglib2.0-dev libjson-c3 libyajl2 libaio1
+    - wget -O drakvuf.deb https://github.com/tklengyel/drakvuf-builds/releases/download/20200317014821-a1ef03c/drakvuf-bundle-0.7-a1ef03c-generic.deb
+    - dpkg -i drakvuf.deb
+    - wget -O /usr/local/bin/mc http://192.168.21.1:5000/static/mc
+    - chmod +x /usr/local/bin/mc
+    - mc config host add cache http://192.168.21.131:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+    - mc mb --ignore-existing cache/debs
+    - cd drakrun
+    - dpkg-buildpackage -us -uc -b
+    - mc cp ../drakrun_*_amd64.deb "cache/debs/drakrun_drone-$DRONE_BUILD_NUMBER.deb"
+  environment:
+    MINIO_ACCESS_KEY:
+      from_secret: MINIO_ACCESS_KEY
+    MINIO_SECRET_KEY:
+      from_secret: MINIO_SECRET_KEY
+node:
+   purpose: generic
+---
+kind: pipeline
+type: docker
+name: test-e2e
+
+steps:
+- name: test-e2e
+  image: python
+  commands:
+    - mkdir -p ~/.ssh/
+    - echo "$ZEN_SSH_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - cd test
+    - pip install -r requirements.txt
+    - pytest --capture=no
+  environment:
+    MINIO_ACCESS_KEY:
+      from_secret: MINIO_ACCESS_KEY
+    MINIO_SECRET_KEY:
+      from_secret: MINIO_SECRET_KEY
+    ZEN_SSH_KEY:
+      from_secret: ZEN_SSH_KEY
+node:
+   purpose: e2e
+depends_on:
+- lint-drakcore
+- lint-drakrun
+- build-drakcore
+- build-drakrun
