@@ -7,3 +7,4 @@ steps:
   image: python
   commands:
     - python3 --version
+
