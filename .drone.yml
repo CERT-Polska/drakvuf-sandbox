@@ -7,4 +7,5 @@ steps:
   image: python
   commands:
     - python3 --version
-
+  node:
+     purpose: generic
