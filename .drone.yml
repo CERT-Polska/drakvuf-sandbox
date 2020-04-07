@@ -8,8 +8,3 @@ steps:
   commands:
     - python3 --version
 
-
-
-
-
-
