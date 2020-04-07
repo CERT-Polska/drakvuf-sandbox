@@ -1,0 +1,9 @@
+kind: pipeline
+type: docker
+name: test
+
+steps:
+- name: test
+  image: python
+  commands:
+    - python3 --version
