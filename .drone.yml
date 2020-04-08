@@ -11,6 +11,10 @@ steps:
     - cd drakcore && flake8 --ignore E402,F401,E501
 node:
    purpose: generic
+trigger:
+  event:
+    exclude:
+    - pull_request
 ---
 kind: pipeline
 type: docker
@@ -25,6 +29,10 @@ steps:
     - cd drakrun && flake8 --ignore E402,F401,E501
 node:
    purpose: generic
+trigger:
+  event:
+    exclude:
+    - pull_request
 ---
 kind: pipeline
 type: docker
@@ -53,6 +61,10 @@ steps:
       from_secret: MINIO_SECRET_KEY
 node:
    purpose: generic
+trigger:
+  event:
+    exclude:
+    - pull_request
 ---
 kind: pipeline
 type: docker
@@ -81,6 +93,10 @@ steps:
       from_secret: MINIO_SECRET_KEY
 node:
    purpose: generic
+trigger:
+  event:
+    exclude:
+    - pull_request
 ---
 kind: pipeline
 type: docker
@@ -110,3 +126,7 @@ depends_on:
 - lint-drakrun
 - build-drakcore
 - build-drakrun
+trigger:
+  event:
+    exclude:
+    - pull_request
