@@ -41,14 +41,17 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
     os.makedirs(os.path.join(LIB_DIR, "profiles"), exist_ok=True)
     os.makedirs(os.path.join(LIB_DIR, "volumes"), exist_ok=True)
 
-    if os.path.exists("/etc/drakcore/config.ini"):
-        conf = configparser.ConfigParser()
-        conf.read(os.path.join(ETC_DIR, "config.ini"))
-        minio_access_key = conf.get('minio', 'access_key').strip()
+    conf = configparser.ConfigParser()
+    conf.read(os.path.join(ETC_DIR, "config.ini"))
+    minio_access_key = conf.get('minio', 'access_key').strip()
 
+    if os.path.exists("/etc/drakcore/config.ini"):
         if not minio_access_key:
             logging.info("Detected single-node setup, copying configuration from /etc/drakcore/config.ini")
             copyfile("/etc/drakcore/config.ini", os.path.join(ETC_DIR, "config.ini"))
+    elif not minio_access_key:
+        logging.warning("Detected blank value for minio access_key in /etc/drakrun/config.ini. "
+                        "This service may not work properly.")
 
     if unattended_xml:
         logging.info("Baking unattended.iso for automated installation")

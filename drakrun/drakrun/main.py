@@ -321,6 +321,11 @@ def cmdline_main():
 
 def main():
     conf = Config(os.path.join(ETC_DIR, "config.ini"))
+
+    if not conf.get('minio', 'access_key').strip():
+        logging.warning("Detected blank value for minio access_key in /etc/drakrun/config.ini. "
+                        "This service may not work properly.")
+
     c = DrakrunKarton(conf)
     c.init_drakrun()
     c.loop()
