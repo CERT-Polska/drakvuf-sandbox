@@ -85,7 +85,7 @@ def status(task_uid):
     for task_key in tasks:
         task = json.loads(rs.get(task_key))
 
-        if task["root_uid"] == str(task_uid) and task["status"] != "Finished":
+        if task["root_uid"] == task_uid and task["status"] != "Finished":
             return jsonify({"status": "pending"})
 
     return jsonify({"status": "done"})
