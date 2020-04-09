@@ -19,6 +19,7 @@ conf = Config(find_config())
 
 drakmon_cfg = {k: v for k, v in conf.config.items("drakmon")}
 
+rs = SystemService(conf).rs
 minio = SystemService(conf).minio
 
 
@@ -79,14 +80,15 @@ def graph(task_uid):
 
 @app.route("/status/<task_uid>")
 def status(task_uid):
-    # FIXME race condition?
-    try:
-        obj = minio.stat_object("drakrun", task_uid + "/syscall.log")
-    except NoSuchKey:
-        # TODO consult karton if the task is actually running?
-        return jsonify({"status": "pending"})
+    tasks = rs.keys("karton.task:*")
 
-    return jsonify({"status": "done", "time": datetime.fromtimestamp(mktime(obj.last_modified))})
+    for task_key in tasks:
+        task = json.loads(rs.get(task_key))
+
+        if task["root_uid"] == task_uid and task["status"] != "Finished":
+            return jsonify({"status": "pending"})
+
+    return jsonify({"status": "done"})
 
 
 @app.route("/")
