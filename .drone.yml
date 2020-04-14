@@ -1,3 +1,18 @@
+---
+kind: pipeline
+type: docker
+name: check-integrity
+
+steps:
+- name: check integrity
+  image: debian:buster
+  commands:
+    - echo 'c41173b8e7505a8c604fa51525ffaa382db1d2befb70738135a11ee805393d04 test/ci-files.txt' | sha256sum --check -
+    - find test -type f -not -name "ci-files.txt" | xargs -I{} sha256sum {} | sort > /tmp/ci-files.txt
+    - diff -q /tmp/ci-files.txt test/ci-files.txt
+node:
+    purpose: generic
+---
 kind: pipeline
 type: docker
 name: lint-drakcore
@@ -10,7 +25,9 @@ steps:
     - pip3 install -r drakcore/requirements.txt
     - cd drakcore && flake8 --ignore E402,F401,E501
 node:
-   purpose: generic
+ purpose: generic
+depends_on:
+  - check-integrity
 trigger:
   event:
     exclude:
@@ -28,7 +45,9 @@ steps:
     - pip3 install -r drakrun/requirements.txt
     - cd drakrun && flake8 --ignore E402,F401,E501
 node:
-   purpose: generic
+ purpose: generic
+depends_on:
+  - check-integrity
 trigger:
   event:
     exclude:
@@ -60,7 +79,9 @@ steps:
     MINIO_SECRET_KEY:
       from_secret: MINIO_SECRET_KEY
 node:
-   purpose: generic
+ purpose: generic
+depends_on:
+  - check-integrity
 trigger:
   event:
     exclude:
@@ -92,7 +113,9 @@ steps:
     MINIO_SECRET_KEY:
       from_secret: MINIO_SECRET_KEY
 node:
-   purpose: generic
+  purpose: generic
+depends_on:
+  - check-integrity
 trigger:
   event:
     exclude:
@@ -122,6 +145,7 @@ steps:
 node:
    purpose: e2e
 depends_on:
+- check-integrity
 - lint-drakcore
 - lint-drakrun
 - build-drakcore
@@ -130,3 +154,8 @@ trigger:
   event:
     exclude:
     - pull_request
+---
+kind: signature
+hmac: 07141082d7ab134f9a0f4b5e802a0e0b1dee17c3806944187553f5bcda0a898d
+
+...
