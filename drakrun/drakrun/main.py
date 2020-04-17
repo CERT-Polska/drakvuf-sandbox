@@ -109,6 +109,8 @@ class DrakrunKarton(Karton):
                 logging.info(f"Bridge drak{INSTANCE_ID} already exists.")
             else:
                 logging.exception(f"Failed to create bridge drak{INSTANCE_ID}.")
+        else:
+            subprocess.check_output(f'ip addr add 10.13.{INSTANCE_ID}.1/24 dev drak{INSTANCE_ID}', shell=True)
 
         self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
         self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -d 0.0.0.0/0 -j DROP")
@@ -261,13 +263,14 @@ class DrakrunKarton(Karton):
         for _ in range(3):
             try:
                 self.log.info("running vm {}".format(INSTANCE_ID))
+                watcher_dnsmasq = start_dnsmasq(INSTANCE_ID)
+
                 d_run.ETC_DIR = ETC_DIR
                 d_run.LIB_DIR = LIB_DIR
                 d_run.logging = self.log
                 d_run.run_vm(INSTANCE_ID)
 
                 watcher_tcpdump = start_tcpdump_collector(INSTANCE_ID, outdir)
-                watcher_dnsmasq = start_dnsmasq(INSTANCE_ID)
 
                 self.log.info("running monitor {}".format(INSTANCE_ID))
 
@@ -284,8 +287,7 @@ class DrakrunKarton(Karton):
 
                 drakvuf_cmd = ["drakvuf",
                                "-o", "json",
-                               "-x", "poolmon",
-                               "-x", "objmon",
+                               "-a", "syscalls",  # FIXME
                                "-j", "5",
                                "-t", "600",
                                "-i", inject_pid,
