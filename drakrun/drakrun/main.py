@@ -293,7 +293,7 @@ class DrakrunKarton(Karton):
 
                 drakvuf_cmd = ["drakvuf",
                                "-o", "json",
-                               "-x", "syscalls",  # FIXME
+                               "-x", "syscalls",  # FIXME add default syscall filter cuz otherwise we get 99999999999 GB of logs after analysis
                                "-x", "poolmon",
                                "-x", "objmon",
                                "-j", "5",
