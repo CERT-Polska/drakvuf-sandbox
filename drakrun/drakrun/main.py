@@ -112,6 +112,7 @@ class DrakrunKarton(Karton):
         else:
             subprocess.check_output(f'ip addr add 10.13.{INSTANCE_ID}.1/24 dev drak{INSTANCE_ID}', shell=True)
 
+        subprocess.check_output(f'ip link set dev drak{INSTANCE_ID} up', shell=True)
         self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
         self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -d 0.0.0.0/0 -j DROP")
         # FIXME hardcoded interface name, also make it more configurable
