@@ -176,6 +176,6 @@ def drakmon_vm():
         )
 
         # add xen bridge
-        c.run("brctl addbr xenbr0")
+        c.run("brctl addbr drak0")
 
     return Connection("testvm", config=FABRIC_CONFIG)

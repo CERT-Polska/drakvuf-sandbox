@@ -131,12 +131,12 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
         return
 
     try:
-        subprocess.check_output('brctl addbr xenbr0', stderr=subprocess.STDOUT, shell=True)
+        subprocess.check_output('brctl addbr drak0', stderr=subprocess.STDOUT, shell=True)
     except subprocess.CalledProcessError as e:
         if b'already exists' in e.output:
-            logging.info("Bridge xenbr0 already exists.")
+            logging.info("Bridge drak0 already exists.")
         else:
-            logging.exception("Failed to create bridge xenbr0.")
+            logging.exception("Failed to create bridge drak0.")
 
     cfg_path = os.path.join(ETC_DIR, "configs/vm-0.cfg")
 
