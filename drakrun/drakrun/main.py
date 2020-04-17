@@ -293,7 +293,9 @@ class DrakrunKarton(Karton):
 
                 drakvuf_cmd = ["drakvuf",
                                "-o", "json",
-                               "-a", "syscalls",  # FIXME
+                               "-x", "syscalls",  # FIXME
+                               "-x", "poolmon",
+                               "-x", "objmon",
                                "-j", "5",
                                "-t", "600",
                                "-i", inject_pid,
