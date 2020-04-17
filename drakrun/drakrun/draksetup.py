@@ -30,7 +30,7 @@ def find_default_interface():
         .decode('ascii').strip().split('\n')
     
     for route in routes:
-        m = re.search(r'dev ([^ ]+)', x.strip())
+        m = re.search(r'dev ([^ ]+)', route.strip())
 
         if m:
             return m.group(1)
