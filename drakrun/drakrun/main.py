@@ -120,6 +120,8 @@ class DrakrunKarton(Karton):
 
         if out_interface:
             self._add_iptable_rule(f"POSTROUTING -t nat -s 10.13.{INSTANCE_ID}.0/24 -o {out_interface} -j MASQUERADE")
+            self._add_iptable_rule(f"FORWARD -i drak{INSTANCE_ID} -o {out_interface} -j ACCEPT")
+            self._add_iptable_rule(f"FORWARD -i {out_interface} -o drak{INSTANCE_ID} -j ACCEPT")
 
     def _get_dll_run_command(self, pe_data):
         d = [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]]
@@ -250,7 +252,7 @@ class DrakrunKarton(Karton):
             f.write(hashlib.sha256(local_sample.content).hexdigest())
 
         with open(os.path.join(workdir, 'run.bat'), 'wb') as f:
-            f.write(b'xcopy D:\\malwar.' + extension.encode('ascii') + b' %USERPROFILE%\\Desktop\\\r\nC:\\\r\ncd %USERPROFILE%\\Desktop\r\n' + start_command.encode('ascii'))
+            f.write(b'ipconfig /renew\r\nxcopy D:\\malwar.' + extension.encode('ascii') + b' %USERPROFILE%\\Desktop\\\r\nC:\r\ncd %USERPROFILE%\\Desktop\r\n' + start_command.encode('ascii'))
 
         with open(os.path.join(workdir, 'malwar.{}'.format(extension)), 'wb') as f:
             f.write(local_sample.content)
