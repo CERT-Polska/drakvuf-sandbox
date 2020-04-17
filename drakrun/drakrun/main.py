@@ -115,8 +115,11 @@ class DrakrunKarton(Karton):
         subprocess.check_output(f'ip link set dev drak{INSTANCE_ID} up', shell=True)
         self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
         self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -d 0.0.0.0/0 -j DROP")
-        # FIXME hardcoded interface name, also make it more configurable
-        self._add_iptable_rule("POSTROUTING -t nat -o ens33 -j MASQUERADE")
+
+        out_interface = self.config.config['drakrun'].get('out_interface')
+
+        if out_interface:
+            self._add_iptable_rule(f"POSTROUTING -t nat -s 10.13.{INSTANCE_ID}.0/24 -o {out_interface} -j MASQUERADE")
 
     def _get_dll_run_command(self, pe_data):
         d = [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]]
