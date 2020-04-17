@@ -25,6 +25,19 @@ MAIN_DIR = os.path.dirname(os.path.realpath(__file__))
 FNULL = open(os.devnull, 'w')
 
 
+def find_default_interface():
+    routes = subprocess.check_output('ip route show default', shell=True, stderr=subprocess.STDOUT) \
+        .decode('ascii').strip().split('\n')
+    
+    for route in routes:
+        m = re.search(r'dev ([^ ]+)', x.strip())
+
+        if m:
+            return m.group(1)
+
+    return ''
+
+
 def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unattended_xml):
     logging.info("Ensuring that drakrun@* services are stopped...")
     subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
@@ -41,9 +54,19 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
     os.makedirs(os.path.join(LIB_DIR, "profiles"), exist_ok=True)
     os.makedirs(os.path.join(LIB_DIR, "volumes"), exist_ok=True)
 
+    conf = configparser.ConfigParser()
+    conf.read(os.path.join(ETC_DIR, "config.ini"))
+    conf_patched = False
+
+    out_interface = conf.get('drakrun', 'out_interface').strip()
+    
+    if not out_interface:
+        default_if = find_default_interface()
+        logging.info(f"Detected default network interface: {default_if}")
+        conf['drakrun']['out_interface'] = default_if
+        conf_patched = True
+
     if os.path.exists("/etc/drakcore/config.ini"):
-        conf = configparser.ConfigParser()
-        conf.read(os.path.join(ETC_DIR, "config.ini"))
         minio_access_key = conf.get('minio', 'access_key').strip()
 
         if not minio_access_key:
@@ -53,9 +76,11 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
 
             conf['redis'] = core_conf['redis']
             conf['minio'] = core_conf['minio']
+            conf_patched = True
 
-            with open(os.path.join(ETC_DIR, "config.ini"), "w") as f:
-                conf.write(f)
+    if conf_patched:
+        with open(os.path.join(ETC_DIR, "config.ini"), "w") as f:
+            conf.write(f)
 
     if unattended_xml:
         logging.info("Baking unattended.iso for automated installation")
