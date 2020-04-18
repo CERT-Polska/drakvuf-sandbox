@@ -5,6 +5,7 @@ import socket
 import time
 import paramiko.config
 import pytest
+import configparser
 
 from pathlib import Path
 from fabric import task, Connection, Config
@@ -167,8 +168,19 @@ def drakmon_vm():
         for d in debs:
             dpkg_install(c, d.name)
 
-        # minio keys
-        c.run("cp /etc/drakcore/config.ini /etc/drakrun/config.ini")
+        # set/copy required config values
+        conf = configparser.ConfigParser()
+        conf.read("/etc/drakrun/config.ini")
+
+        core_conf = configparser.ConfigParser()
+        core_conf.read("/etc/drakcore/config.ini")
+
+        conf['drakrun']['out_interface'] = 'ens33'
+        conf['redis'] = core_conf['redis']
+        conf['minio'] = core_conf['minio']
+
+        with open("/etc/drakrun/config.ini", "w") as f:
+            conf.write(f)
 
         # add ISO image to make xen happy
         c.run(
