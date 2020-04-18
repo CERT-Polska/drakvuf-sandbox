@@ -41,8 +41,9 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
     os.makedirs(os.path.join(LIB_DIR, "profiles"), exist_ok=True)
     os.makedirs(os.path.join(LIB_DIR, "volumes"), exist_ok=True)
 
+    conf_path = os.path.join(ETC_DIR, "config.ini")
     conf = configparser.ConfigParser()
-    conf.read(os.path.join(ETC_DIR, "config.ini"))
+    conf.read(conf_path)
 
     conf_patched = False
     minio_access_key = conf.get('minio', 'access_key').strip()
@@ -57,11 +58,11 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
             conf['minio'] = core_conf['minio']
             conf_patched = True
     elif not minio_access_key:
-        logging.warning("Detected blank value for minio access_key in /etc/drakrun/config.ini. "
+        logging.warning(f"Detected blank value for minio access_key in {conf_path}. "
                         "This service may not work properly.")
 
     if conf_patched:
-        with open(os.path.join(ETC_DIR, "config.ini"), "w") as f:
+        with open(conf_path, "w") as f:
             conf.write(f)
 
     if unattended_xml:
