@@ -28,7 +28,7 @@ FNULL = open(os.devnull, 'w')
 def find_default_interface():
     routes = subprocess.check_output('ip route show default', shell=True, stderr=subprocess.STDOUT) \
         .decode('ascii').strip().split('\n')
-    
+
     for route in routes:
         m = re.search(r'dev ([^ ]+)', route.strip())
 
@@ -59,7 +59,7 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
     conf_patched = False
 
     out_interface = conf.get('drakrun', 'out_interface').strip()
-    
+
     if not out_interface:
         default_if = find_default_interface()
         logging.info(f"Detected default network interface: {default_if}")
