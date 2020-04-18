@@ -175,7 +175,7 @@ def drakmon_vm():
         core_conf = configparser.ConfigParser()
         core_conf.read("/etc/drakcore/config.ini")
 
-        conf['drakrun']['out_interface'] = 'ens33'
+        conf['drakrun'] = {'out_interface': 'ens33'}
         conf['redis'] = core_conf['redis']
         conf['minio'] = core_conf['minio']
 
