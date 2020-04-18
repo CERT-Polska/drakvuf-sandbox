@@ -325,7 +325,7 @@ def main():
 
     if not conf.config.get('minio', 'access_key').strip():
         logging.warning(f"Detected blank value for minio access_key in {conf_path}. "
-                         "This service may not work properly.")
+                        "This service may not work properly.")
 
     c = DrakrunKarton(conf)
     c.init_drakrun()
