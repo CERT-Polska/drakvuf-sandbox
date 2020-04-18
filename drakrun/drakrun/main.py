@@ -59,6 +59,8 @@ def start_dnsmasq(vm_id: int) -> Optional[subprocess.Popen]:
     return subprocess.Popen([
         "dnsmasq",
         "--no-daemon",
+        "--conf-file=/dev/null",
+        "--bind-interfaces",
         f"--interface=drak{vm_id}",
         "--port=0",
         "--no-hosts",
