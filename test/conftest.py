@@ -168,26 +168,6 @@ def drakmon_vm():
         for d in debs:
             dpkg_install(c, d.name)
 
-        # set/copy required config values
-        conf = configparser.ConfigParser()
-        conf.read("/etc/drakrun/config.ini")
-        
-        with open('/etc/drakcore/config.ini', 'rb') as f:
-            logging.info('drakcore config value')
-            logging.info(f.read())
-
-        core_conf = configparser.ConfigParser()
-        core_conf.read("/etc/drakcore/config.ini")
-
-        conf['drakrun'] = {'out_interface': 'ens33'}
-        redis_section = core_conf['redis']
-        minio_section = core_conf['minio']
-        conf['redis'] = redis_section
-        conf['minio'] = minio_section
-
-        with open("/etc/drakrun/config.ini", "w") as f:
-            conf.write(f)
-
         # add ISO image to make xen happy
         c.run(
             "genisoimage -o /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO /dev/null"
