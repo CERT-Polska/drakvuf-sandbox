@@ -41,14 +41,29 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
     os.makedirs(os.path.join(LIB_DIR, "profiles"), exist_ok=True)
     os.makedirs(os.path.join(LIB_DIR, "volumes"), exist_ok=True)
 
-    if os.path.exists("/etc/drakcore/config.ini"):
-        conf = configparser.ConfigParser()
-        conf.read(os.path.join(ETC_DIR, "config.ini"))
-        minio_access_key = conf.get('minio', 'access_key').strip()
+    conf_path = os.path.join(ETC_DIR, "config.ini")
+    conf = configparser.ConfigParser()
+    conf.read(conf_path)
 
+    conf_patched = False
+    minio_access_key = conf.get('minio', 'access_key').strip()
+
+    if os.path.exists("/etc/drakcore/config.ini"):
         if not minio_access_key:
-            logging.info("Detected single-node setup, copying configuration from /etc/drakcore/config.ini")
-            copyfile("/etc/drakcore/config.ini", os.path.join(ETC_DIR, "config.ini"))
+            logging.info("Detected single-node setup, copying minio and redis sections from /etc/drakcore/config.ini")
+            core_conf = configparser.ConfigParser()
+            core_conf.read("/etc/drakcore/config.ini")
+
+            conf['redis'] = core_conf['redis']
+            conf['minio'] = core_conf['minio']
+            conf_patched = True
+    elif not minio_access_key:
+        logging.warning(f"Detected blank value for minio access_key in {conf_path}. "
+                        "This service may not work properly.")
+
+    if conf_patched:
+        with open(conf_path, "w") as f:
+            conf.write(f)
 
     if unattended_xml:
         logging.info("Baking unattended.iso for automated installation")
