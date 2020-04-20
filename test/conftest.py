@@ -5,7 +5,6 @@ import socket
 import time
 import paramiko.config
 import pytest
-import configparser
 
 from pathlib import Path
 from fabric import task, Connection, Config

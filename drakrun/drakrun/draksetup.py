@@ -35,7 +35,7 @@ def find_default_interface():
         if m:
             return m.group(1)
 
-    return ''
+    return None
 
 
 def detect_defaults():
@@ -50,14 +50,18 @@ def detect_defaults():
     conf.read(os.path.join(ETC_DIR, "config.ini"))
     conf_patched = False
 
-    minio_access_key = conf.get('minio', 'access_key').strip()
-    out_interface = conf.get('drakrun', 'out_interface').strip()
+    minio_access_key = conf.get('minio', 'access_key')
+    out_interface = conf.get('drakrun', 'out_interface')
 
     if not out_interface:
         default_if = find_default_interface()
-        logging.info(f"Detected default network interface: {default_if}")
-        conf['drakrun']['out_interface'] = default_if
-        conf_patched = True
+
+        if default_if:
+            logging.info(f"Detected default network interface: {default_if}")
+            conf['drakrun']['out_interface'] = default_if
+            conf_patched = True
+        else:
+            logging.warning("Unable to detect default network interface.")
 
     if os.path.exists("/etc/drakcore/config.ini"):
         if not minio_access_key:
