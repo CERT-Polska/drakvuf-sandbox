@@ -365,7 +365,7 @@ def main():
 
         with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'w') as f:
             f.write(template)
-        
+
         detect_defaults()
 
 
