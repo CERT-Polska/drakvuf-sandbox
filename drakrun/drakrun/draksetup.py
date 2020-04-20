@@ -50,6 +50,7 @@ def detect_defaults():
     conf.read(os.path.join(ETC_DIR, "config.ini"))
     conf_patched = False
 
+    minio_access_key = conf.get('minio', 'access_key').strip()
     out_interface = conf.get('drakrun', 'out_interface').strip()
 
     if not out_interface:
@@ -59,8 +60,6 @@ def detect_defaults():
         conf_patched = True
 
     if os.path.exists("/etc/drakcore/config.ini"):
-        minio_access_key = conf.get('minio', 'access_key').strip()
-
         if not minio_access_key:
             logging.info("Detected single-node setup, copying minio and redis sections from /etc/drakcore/config.ini")
             core_conf = configparser.ConfigParser()
