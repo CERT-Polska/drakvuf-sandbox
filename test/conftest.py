@@ -22,7 +22,7 @@ DRONE_BUILD_NUMBER = os.getenv("DRONE_BUILD_NUMBER")
 # VM_SNAPSHOT_BASE = "snap1585837798"
 
 # Debian with preconfigured Windows in /var/lib/drakrun and /etc/drakrun
-VM_SNAPSHOT_BASE = "snap1586184629"
+VM_SNAPSHOT_BASE = "snap1587390752"
 VM_RUNNER_HOST = "http://192.168.21.1:5000"
 VM_HOST = "192.168.21.129"
 
