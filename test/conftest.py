@@ -171,6 +171,10 @@ def drakmon_vm():
         # set/copy required config values
         conf = configparser.ConfigParser()
         conf.read("/etc/drakrun/config.ini")
+        
+        with open('/etc/drakcore/config.ini', 'rb') as f:
+            logging.info('drakcore config value')
+            logging.info(f.read())
 
         core_conf = configparser.ConfigParser()
         core_conf.read("/etc/drakcore/config.ini")
