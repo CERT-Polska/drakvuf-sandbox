@@ -38,15 +38,7 @@ def find_default_interface():
     return ''
 
 
-def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unattended_xml):
-    logging.info("Ensuring that drakrun@* services are stopped...")
-    subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
-
-    logging.info("Performing installation...")
-
-    if storage_backend != "qcow2":
-        raise RuntimeError("Not implemented yet")
-
+def detect_defaults():
     os.makedirs(ETC_DIR, exist_ok=True)
     os.makedirs(os.path.join(ETC_DIR, "configs"), exist_ok=True)
 
@@ -81,6 +73,16 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
     if conf_patched:
         with open(os.path.join(ETC_DIR, "config.ini"), "w") as f:
             conf.write(f)
+
+
+def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unattended_xml):
+    logging.info("Ensuring that drakrun@* services are stopped...")
+    subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+
+    logging.info("Performing installation...")
+
+    if storage_backend != "qcow2":
+        raise RuntimeError("Not implemented yet")
 
     if unattended_xml:
         logging.info("Baking unattended.iso for automated installation")
@@ -356,11 +358,15 @@ def main():
 
         with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'r') as f:
             template = f.read()
+
         passwd_characters = string.ascii_letters + string.digits
         passwd = ''.join(random.choice(passwd_characters) for i in range(20))
         template = template.replace('{{ VNC_PASS }}', passwd)
+
         with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'w') as f:
             f.write(template)
+        
+        detect_defaults()
 
 
 if __name__ == "__main__":
