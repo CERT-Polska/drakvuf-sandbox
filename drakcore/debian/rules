@@ -11,7 +11,8 @@ build:
 	cp drakcore/uwsgi.dist.ini drakcore/uwsgi.ini
 	cp drakcore/systemd/minio.dist.env drakcore/systemd/minio.env
 	# Download minio
-	if [ ! -f drakcore/systemd/minio ] ; then wget -O drakcore/systemd/minio https://dl.min.io/server/minio/release/linux-amd64/minio ; chmod +x drakcore/systemd/minio ; fi
+	if [ ! -f drakcore/systemd/minio ] ; then wget -O drakcore/systemd/minio https://dl.min.io/server/minio/release/linux-amd64/minio ; fi
+	chmod +x drakcore/systemd/minio
 
 override_dh_virtualenv:
 	dh_virtualenv --python python3
