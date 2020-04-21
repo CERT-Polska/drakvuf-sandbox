@@ -84,9 +84,6 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
 
     logging.info("Performing installation...")
 
-    if storage_backend != "qcow2":
-        raise RuntimeError("Not implemented yet")
-
     if unattended_xml:
         logging.info("Baking unattended.iso for automated installation")
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -135,24 +132,54 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
 
     generate_vm_conf(install_info, 0)
 
-    try:
-        subprocess.check_output("qemu-img --version", shell=True)
-    except subprocess.CalledProcessError:
-        logging.exception("Failed to determine qemu-img version. Make sure you have qemu-utils installed.")
-        return
+    if storage_backend == "qcow2":
+        try:
+            subprocess.check_output("qemu-img --version", shell=True)
+        except subprocess.CalledProcessError:
+            logging.exception("Failed to determine qemu-img version. Make sure you have qemu-utils installed.")
+            return
 
-    try:
-        subprocess.check_output(' '.join([
-            "qemu-img",
-            "create",
-            "-f",
-            "qcow2",
-            os.path.join(LIB_DIR, "volumes/vm-0.img"),
-            shlex.quote(disk_size)
-        ]), shell=True)
-    except subprocess.CalledProcessError:
-        logging.exception("Failed to create a new volume using qemu-img.")
-        return
+        try:
+            subprocess.check_output(' '.join([
+                "qemu-img",
+                "create",
+                "-f",
+                "qcow2",
+                os.path.join(LIB_DIR, "volumes/vm-0.img"),
+                shlex.quote(disk_size)
+            ]), shell=True)
+        except subprocess.CalledProcessError:
+            logging.exception("Failed to create a new volume using qemu-img.")
+            return
+    elif storage_backend == "zfs":
+        try:
+            subprocess.check_output("zfs -?", shell=True)
+        except subprocess.CalledProcessError:
+            logging.exception("Failed to execute zfs command. Make sure you have ZFS support installed.")
+            return
+
+        vm0_vol = shlex.quote(os.path.join(zfs_tank_name, 'vm-0'))
+
+        try:
+            subprocess.check_output(f"zfs destroy -Rfr {vm0_vol}", shell=True)
+        except subprocess.CalledProcessError as e:
+            if b'dataset does not exist' not in e.output:
+                logging.exception(f"Failed to destroy the existing ZFS volume {vm0_vol}.")
+                return
+
+        try:
+            subprocess.check_output(' '.join([
+                "zfs",
+                "create",
+                "-V",
+                shlex.quote(disk_size),
+                shlex.quote(os.path.join(zfs_tank_name, 'vm-0'))
+            ]), shell=True)
+        except subprocess.CalledProcessError:
+            logging.exception("Failed to create a new volume using zfs create.")
+            return
+    else:
+        raise RuntimeError('Unknown storage backend type.')
 
     try:
         subprocess.check_output("brctl show", shell=True)
@@ -255,6 +282,10 @@ def generate_profiles():
     subprocess.check_output('xl save vm-0 ' + os.path.join(LIB_DIR, "volumes/snapshot.sav"), shell=True)
 
     logging.info("Snapshot was saved succesfully.")
+
+    if install_info["storage_backend"] == 'zfs':
+        snap_name = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
+        subprocess.check_output(f'zfs snapshot {snap_name}', shell=True)
 
     for vm_id in range(max_vms + 1):
         # we treat vm_id=0 as special internal one
