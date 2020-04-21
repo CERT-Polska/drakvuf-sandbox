@@ -47,11 +47,12 @@ steps:
     - apt-get install -y wget curl python3 python3-venv python3-pip dh-virtualenv debhelper devscripts
     - curl -sL https://deb.nodesource.com/setup_13.x | bash -
     - apt-get install -y nodejs
-    - wget -O /usr/local/bin/mc http://192.168.21.1:5000/static/mc
+    - wget -O /usr/local/bin/mc $CACHE_SERVER/mc
     - chmod +x /usr/local/bin/mc
     - mc config host add cache http://192.168.21.131:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
     - mc mb --ignore-existing cache/debs
     - cd drakcore
+    - wget -O drakcore/systemd/minio $CACHE_SERVER/minio
     - dpkg-buildpackage -us -uc -b
     - mc cp ../drakcore_*_amd64.deb "cache/debs/drakcore_drone-$DRONE_BUILD_NUMBER.deb"
   environment:
@@ -59,6 +60,7 @@ steps:
       from_secret: MINIO_ACCESS_KEY
     MINIO_SECRET_KEY:
       from_secret: MINIO_SECRET_KEY
+    CACHE_SERVER: http://192.168.21.1:5000/static
 node:
    purpose: generic
 trigger:
