@@ -7,6 +7,8 @@ import argparse
 import subprocess
 import hashlib
 import socket
+from typing import Optional
+
 import pefile
 import json
 import re
@@ -28,7 +30,7 @@ def get_domid_from_instance_id(instance_id: str) -> int:
     return int(output.decode('utf-8').strip())
 
 
-def start_tcpdump_collector(instance_id: str, outdir: str) -> subprocess.Popen:
+def start_tcpdump_collector(instance_id: str, outdir: str) -> Optional[subprocess.Popen]:
     domid = get_domid_from_instance_id(instance_id)
 
     try:
@@ -43,6 +45,30 @@ def start_tcpdump_collector(instance_id: str, outdir: str) -> subprocess.Popen:
         f"vif{domid}.0-emu",
         "-w",
         f"{outdir}/dump.pcap"
+    ])
+
+
+def start_dnsmasq(vm_id: int) -> Optional[subprocess.Popen]:
+    try:
+        subprocess.check_output("dnsmasq --version", shell=True)
+    except subprocess.CalledProcessError:
+        logging.warning("Seems like dnsmasq is not working/not installed on your system."
+                        "Guest networking may not be fully functional.")
+        return
+
+    return subprocess.Popen([
+        "dnsmasq",
+        "--no-daemon",
+        "--conf-file=/dev/null",
+        "--bind-interfaces",
+        f"--interface=drak{vm_id}",
+        "--port=0",
+        "--no-hosts",
+        "--no-resolv",
+        "--no-poll",
+        "--leasefile-ro",
+        f"--dhcp-range=10.13.{vm_id}.100,10.13.{vm_id}.200,255.255.255.0,12h",
+        "--dhcp-option=option:dns-server,8.8.8.8"
     ])
 
 
@@ -61,11 +87,46 @@ class DrakrunKarton(Karton):
         }
     ]
 
+    def _add_iptable_rule(self, rule):
+        try:
+            subprocess.check_output(f"iptables -C {rule}", shell=True)
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 1:
+                # rule doesn't exist
+                subprocess.check_output(f"iptables -A {rule}", shell=True)
+            else:
+                # some other error
+                raise RuntimeError(f'Failed to check for iptables rule: {rule}')
+
     def init_drakrun(self):
         output_strategy = self.config.minio_config.get("output_strategy", "store")
         if output_strategy == "store":
             if not self.minio.bucket_exists('drakrun'):
                 self.minio.make_bucket(bucket_name='drakrun')
+
+        try:
+            subprocess.check_output(f'brctl addbr drak{INSTANCE_ID}', stderr=subprocess.STDOUT, shell=True)
+        except subprocess.CalledProcessError as e:
+            if b'already exists' in e.output:
+                logging.info(f"Bridge drak{INSTANCE_ID} already exists.")
+            else:
+                logging.exception(f"Failed to create bridge drak{INSTANCE_ID}.")
+        else:
+            subprocess.check_output(f'ip addr add 10.13.{INSTANCE_ID}.1/24 dev drak{INSTANCE_ID}', shell=True)
+
+        subprocess.check_output(f'ip link set dev drak{INSTANCE_ID} up', shell=True)
+        self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
+        self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -d 0.0.0.0/0 -j DROP")
+
+        out_interface = self.config.config['drakrun'].get('out_interface')
+
+        if out_interface:
+            with open('/proc/sys/net/ipv4/ip_forward', 'w') as f:
+                f.write('1\n')
+
+            self._add_iptable_rule(f"POSTROUTING -t nat -s 10.13.{INSTANCE_ID}.0/24 -o {out_interface} -j MASQUERADE")
+            self._add_iptable_rule(f"FORWARD -i drak{INSTANCE_ID} -o {out_interface} -j ACCEPT")
+            self._add_iptable_rule(f"FORWARD -i {out_interface} -o drak{INSTANCE_ID} -j ACCEPT")
 
     def _get_dll_run_command(self, pe_data):
         d = [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]]
@@ -196,7 +257,7 @@ class DrakrunKarton(Karton):
             f.write(hashlib.sha256(local_sample.content).hexdigest())
 
         with open(os.path.join(workdir, 'run.bat'), 'wb') as f:
-            f.write(b'xcopy D:\\malwar.' + extension.encode('ascii') + b' %USERPROFILE%\\Desktop\\\r\nC:\\\r\ncd %USERPROFILE%\\Desktop\r\n' + start_command.encode('ascii'))
+            f.write(b'ipconfig /renew\r\nxcopy D:\\malwar.' + extension.encode('ascii') + b' %USERPROFILE%\\Desktop\\\r\nC:\r\ncd %USERPROFILE%\\Desktop\r\n' + start_command.encode('ascii'))
 
         with open(os.path.join(workdir, 'malwar.{}'.format(extension)), 'wb') as f:
             f.write(local_sample.content)
@@ -207,17 +268,20 @@ class DrakrunKarton(Karton):
             logging.exception("Failed to generate CD ISO image. Please install genisoimage")
             raise e
 
-        watcher = None
+        watcher_tcpdump = None
+        watcher_dnsmasq = None
 
         for _ in range(3):
             try:
                 self.log.info("running vm {}".format(INSTANCE_ID))
+                watcher_dnsmasq = start_dnsmasq(INSTANCE_ID)
+
                 d_run.ETC_DIR = ETC_DIR
                 d_run.LIB_DIR = LIB_DIR
                 d_run.logging = self.log
                 d_run.run_vm(INSTANCE_ID)
 
-                watcher = start_tcpdump_collector(INSTANCE_ID, outdir)
+                watcher_tcpdump = start_tcpdump_collector(INSTANCE_ID, outdir)
 
                 self.log.info("running monitor {}".format(INSTANCE_ID))
 
@@ -234,6 +298,7 @@ class DrakrunKarton(Karton):
 
                 drakvuf_cmd = ["drakvuf",
                                "-o", "json",
+                               "-x", "syscalls",  # FIXME add default syscall filter cuz otherwise we get 99999999999 GB of logs after analysis
                                "-x", "poolmon",
                                "-x", "objmon",
                                "-j", "5",
@@ -272,15 +337,18 @@ class DrakrunKarton(Karton):
                     subprocess.run(["xl", "destroy", "vm-{}".format(INSTANCE_ID)], cwd=workdir, check=True)
                 except subprocess.CalledProcessError:
                     self.log.info("Failed to destroy VM {}".format(INSTANCE_ID), exc_info=True)
+
+                if watcher_dnsmasq:
+                    watcher_dnsmasq.terminate()
         else:
             self.log.info("Failed to analyze sample after 3 retries, giving up.")
             return
 
         self.log.info("waiting for tcpdump to exit")
 
-        if watcher:
+        if watcher_tcpdump:
             try:
-                watcher.wait(timeout=60)
+                watcher_tcpdump.wait(timeout=60)
             except subprocess.TimeoutExpired:
                 self.log.exception("tcpdump doesn't exit cleanly after 60s")
 

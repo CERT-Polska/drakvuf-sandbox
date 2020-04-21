@@ -31,7 +31,7 @@ This instruction assumes that you want to create a single-node installation with
    ```
 3. Install DRAKVUF Sandbox stack:
    ```
-   sudo apt-get install -y python3.7 libpython3.7 python3-distutils tcpdump genisoimage qemu-utils bridge-utils
+   sudo apt-get install -y python3.7 libpython3.7 python3-distutils tcpdump genisoimage qemu-utils bridge-utils dnsmasq
    sudo apt-get install -y redis-server
    sudo dpkg -i drakcore*.deb
    sudo dpkg -i drakrun*.deb

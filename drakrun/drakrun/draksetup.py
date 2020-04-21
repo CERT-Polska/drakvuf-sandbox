@@ -25,15 +25,20 @@ MAIN_DIR = os.path.dirname(os.path.realpath(__file__))
 FNULL = open(os.devnull, 'w')
 
 
-def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unattended_xml):
-    logging.info("Ensuring that drakrun@* services are stopped...")
-    subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+def find_default_interface():
+    routes = subprocess.check_output('ip route show default', shell=True, stderr=subprocess.STDOUT) \
+        .decode('ascii').strip().split('\n')
 
-    logging.info("Performing installation...")
+    for route in routes:
+        m = re.search(r'dev ([^ ]+)', route.strip())
 
-    if storage_backend != "qcow2":
-        raise RuntimeError("Not implemented yet")
+        if m:
+            return m.group(1)
 
+    return None
+
+
+def detect_defaults():
     os.makedirs(ETC_DIR, exist_ok=True)
     os.makedirs(os.path.join(ETC_DIR, "configs"), exist_ok=True)
 
@@ -41,12 +46,22 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
     os.makedirs(os.path.join(LIB_DIR, "profiles"), exist_ok=True)
     os.makedirs(os.path.join(LIB_DIR, "volumes"), exist_ok=True)
 
-    conf_path = os.path.join(ETC_DIR, "config.ini")
     conf = configparser.ConfigParser()
-    conf.read(conf_path)
-
+    conf.read(os.path.join(ETC_DIR, "config.ini"))
     conf_patched = False
-    minio_access_key = conf.get('minio', 'access_key').strip()
+
+    minio_access_key = conf.get('minio', 'access_key')
+    out_interface = conf.get('drakrun', 'out_interface')
+
+    if not out_interface:
+        default_if = find_default_interface()
+
+        if default_if:
+            logging.info(f"Detected default network interface: {default_if}")
+            conf['drakrun']['out_interface'] = default_if
+            conf_patched = True
+        else:
+            logging.warning("Unable to detect default network interface.")
 
     if os.path.exists("/etc/drakcore/config.ini"):
         if not minio_access_key:
@@ -57,13 +72,20 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
             conf['redis'] = core_conf['redis']
             conf['minio'] = core_conf['minio']
             conf_patched = True
-    elif not minio_access_key:
-        logging.warning(f"Detected blank value for minio access_key in {conf_path}. "
-                        "This service may not work properly.")
 
     if conf_patched:
-        with open(conf_path, "w") as f:
+        with open(os.path.join(ETC_DIR, "config.ini"), "w") as f:
             conf.write(f)
+
+
+def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unattended_xml):
+    logging.info("Ensuring that drakrun@* services are stopped...")
+    subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+
+    logging.info("Performing installation...")
+
+    if storage_backend != "qcow2":
+        raise RuntimeError("Not implemented yet")
 
     if unattended_xml:
         logging.info("Baking unattended.iso for automated installation")
@@ -139,12 +161,12 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
         return
 
     try:
-        subprocess.check_output('brctl addbr xenbr0', stderr=subprocess.STDOUT, shell=True)
+        subprocess.check_output('brctl addbr drak0', stderr=subprocess.STDOUT, shell=True)
     except subprocess.CalledProcessError as e:
         if b'already exists' in e.output:
-            logging.info("Bridge xenbr0 already exists.")
+            logging.info("Bridge drak0 already exists.")
         else:
-            logging.exception("Failed to create bridge xenbr0.")
+            logging.exception("Failed to create bridge drak0.")
 
     cfg_path = os.path.join(ETC_DIR, "configs/vm-0.cfg")
 
@@ -339,11 +361,15 @@ def main():
 
         with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'r') as f:
             template = f.read()
+
         passwd_characters = string.ascii_letters + string.digits
         passwd = ''.join(random.choice(passwd_characters) for i in range(20))
         template = template.replace('{{ VNC_PASS }}', passwd)
+
         with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'w') as f:
             f.write(template)
+
+        detect_defaults()
 
 
 if __name__ == "__main__":

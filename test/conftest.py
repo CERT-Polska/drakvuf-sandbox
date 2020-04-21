@@ -21,7 +21,7 @@ DRONE_BUILD_NUMBER = os.getenv("DRONE_BUILD_NUMBER")
 # VM_SNAPSHOT_BASE = "snap1585837798"
 
 # Debian with preconfigured Windows in /var/lib/drakrun and /etc/drakrun
-VM_SNAPSHOT_BASE = "snap1586184629"
+VM_SNAPSHOT_BASE = "snap1587390752"
 VM_RUNNER_HOST = "http://192.168.21.1:5000"
 VM_HOST = "192.168.21.129"
 
@@ -42,6 +42,7 @@ DRAKMON_DEPS = [
     "genisoimage",
     "qemu-utils",
     "bridge-utils",
+    "dnsmasq",
 ]
 
 DRAKVUF_BUNDLE_URL = "https://github.com/tklengyel/drakvuf-builds/releases/download/20200318193922-a1ef03c/drakvuf-bundle-0.7-a1ef03c-generic.deb"
@@ -166,15 +167,12 @@ def drakmon_vm():
         for d in debs:
             dpkg_install(c, d.name)
 
-        # minio keys
-        c.run("cp /etc/drakcore/config.ini /etc/drakrun/config.ini")
-
         # add ISO image to make xen happy
         c.run(
             "genisoimage -o /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO /dev/null"
         )
 
         # add xen bridge
-        c.run("brctl addbr xenbr0")
+        c.run("brctl addbr drak0")
 
     return Connection("testvm", config=FABRIC_CONFIG)
