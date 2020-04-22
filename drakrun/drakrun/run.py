@@ -38,11 +38,13 @@ def run_vm(vm_id):
         if not os.path.exists(vm_zvol):
             subprocess.run(["zfs", "clone",
                             "-p", os.path.join(install_info['zfs_tank_name'], 'vm-0@booted'),
-                            vm_zvol], check=True)
+                            os.path.join(install_info['zfs_tank_name'], f'vm-{vm_id}')], check=True)
 
             for _ in range(120):
                 if not os.path.exists(vm_zvol):
                     time.sleep(0.1)
+                else:
+                    break
             else:
                 logging.error(f'Failed to see {vm_zvol} created after executing zfs clone command.')
                 return

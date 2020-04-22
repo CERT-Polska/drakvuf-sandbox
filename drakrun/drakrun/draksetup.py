@@ -161,7 +161,7 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
         vm0_vol = shlex.quote(os.path.join(zfs_tank_name, 'vm-0'))
 
         try:
-            subprocess.check_output(f"zfs destroy -Rfr {vm0_vol}", shell=True)
+            subprocess.check_output(f"zfs destroy -Rfr {vm0_vol}", stderr=subprocess.STDOUT, shell=True)
         except subprocess.CalledProcessError as e:
             if b'dataset does not exist' not in e.output:
                 logging.exception(f"Failed to destroy the existing ZFS volume {vm0_vol}.")
