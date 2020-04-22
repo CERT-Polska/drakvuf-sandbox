@@ -4,6 +4,7 @@ import logging
 import os
 import subprocess
 import time
+import json
 
 from drakrun.genmac import gen_mac, print_mac
 
@@ -12,6 +13,9 @@ ETC_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 def run_vm(vm_id):
+    with open(os.path.join(ETC_DIR, "install.json"), "rb") as f:
+        install_info = json.loads(f.read())
+
     try:
         subprocess.check_output(["xl", "destroy", "vm-{vm_id}".format(vm_id=vm_id)], stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError:
@@ -22,10 +26,34 @@ def run_vm(vm_id):
     except FileNotFoundError:
         pass
 
-    subprocess.run(["qemu-img", "create",
-                    "-f", "qcow2",
-                    "-o", "backing_file=vm-0.img",
-                    os.path.join(LIB_DIR, "volumes/vm-{vm_id}.img".format(vm_id=vm_id))], check=True)
+    if install_info['storage_backend'] == 'qcow2':
+        subprocess.run(["qemu-img", "create",
+                        "-f", "qcow2",
+                        "-o", "backing_file=vm-0.img",
+                        os.path.join(LIB_DIR, "volumes/vm-{vm_id}.img".format(vm_id=vm_id))], check=True)
+    elif install_info['storage_backend'] == 'zfs':
+        vm_zvol = os.path.join('/dev/zvol', install_info['zfs_tank_name'], f'vm-{vm_id}')
+        vm_snap = os.path.join(install_info['zfs_tank_name'], f'vm-{vm_id}@booted')
+
+        if not os.path.exists(vm_zvol):
+            subprocess.run(["zfs", "clone",
+                            "-p", os.path.join(install_info['zfs_tank_name'], 'vm-0@booted'),
+                            os.path.join(install_info['zfs_tank_name'], f'vm-{vm_id}')], check=True)
+
+            for _ in range(120):
+                if not os.path.exists(vm_zvol):
+                    time.sleep(0.1)
+                else:
+                    break
+            else:
+                logging.error(f'Failed to see {vm_zvol} created after executing zfs clone command.')
+                return
+
+            subprocess.run(["zfs", "snapshot", vm_snap], check=True)
+
+        subprocess.run(["zfs", "rollback", vm_snap], check=True)
+    else:
+        raise RuntimeError("Unknown storage backend")
 
     try:
         subprocess.run(["xl", "-vvv", "restore",
