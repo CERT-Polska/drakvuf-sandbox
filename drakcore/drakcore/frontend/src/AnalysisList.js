@@ -19,26 +19,41 @@ class AnalysisList extends Component {
             this.setState({ analyses: response.data });
     }
 
+    formatTimestamp(ts) {
+        return (new Date(ts * 1000)).toISOString()
+            .replace('T', ' ')
+            .replace('.000Z', '');
+    }
+
     render() {
         return <div className="App container-fluid">
-            <h2>Upload</h2>
-            <form action="/upload" method="POST" encType="multipart/form-data">
-                <input type="file" name="file" />
-                <button type="submit">Upload</button>
-            </form>
 
-            <h2>Analyses</h2>
+            <div className="page-title-box">
+                <h4 className="page-title">Analyses</h4>
+            </div>
+
             <table className="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th>Analysis</th>
+                        <th>Analysis ID</th>
+                        <th>Sample SHA256</th>
+                        <th>Started</th>
+                        <th>Finished</th>
+                        <th>Start command</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                 {
                     this.state.analyses.map((val) => {
                         return <tr>
-                            <td><Link to={"/analysis/" + val.id}>{val.id}</Link></td>
+                            <td className="text-hash"><Link to={"/analysis/" + val.id}>{val.id}</Link></td>
+                            <td className="text-hash">{val.meta.sample_sha256}</td>
+                            <td>{this.formatTimestamp(val.meta.time_started)}</td>
+                            <td>{this.formatTimestamp(val.meta.time_finished)}</td>
+                            <td><code>{val.meta.start_command}</code></td>
+                            <td><Link className="btn btn-secondary" to={"/analysis/" + val.id}>
+                                <i className="uil uil-document"/> View</Link></td>
                         </tr>;
                     })
                 }

@@ -2,7 +2,7 @@ import React from 'react';
 import {Component} from 'react';
 import './App.css';
 import api from './api';
-import { Graphviz } from 'graphviz-react';
+import {Graphviz} from 'graphviz-react';
 
 class AnalysisMain extends Component {
     constructor(props) {
@@ -27,24 +27,41 @@ class AnalysisMain extends Component {
     }
 
     render() {
-        let processTree = <div>(Process tree was not generated, please check out <kbd>ProcDOT integration (optional)</kbd> section of README to enable it.)</div>;
+        let processTree = <div>(Process tree was not generated, please check out "ProcDOT integration (optional)"
+            section of README to enable it.)</div>;
 
         if (this.state.graph) {
             processTree = <div id="treeWrapper" style={{width: '80em', height: '30em'}}>
-                <Graphviz dot={this.state.graph} />
+                <Graphviz dot={this.state.graph}/>
             </div>;
         }
 
         return <div className="App container-fluid">
-            {processTree}
+            <div className="page-title-box">
+                <h4 className="page-title">Report</h4>
+            </div>
 
-            <h2>Logs</h2>
-            <div className="list-group">
-            {
-                this.state.logs.map(val => {
-                    return <a href={`/logs/${val.slice(0, -4)}`} class="list-group-item list-group-item-action">{val.slice(37, -4)}</a>
-                })
-            }
+            <div className="card mb-md-0 mb-3">
+                <div className="card-body">
+                    <h5 className="card-title mb-0">Behavioral graph</h5>
+
+                    {processTree}
+                </div>
+            </div>
+
+            <div className="card mb-md-0 mb-3">
+                <div className="card-body">
+                    <h5 className="card-title mb-0">Analysis logs</h5>
+
+                    <div className="list-group">
+                        {
+                            this.state.logs.map(val => {
+                                return <a href={`/logs/${val.slice(0, -4)}`}
+                                          className="list-group-item list-group-item-action">{val.slice(37, -4)}</a>
+                            })
+                        }
+                    </div>
+                </div>
             </div>
         </div>;
     }

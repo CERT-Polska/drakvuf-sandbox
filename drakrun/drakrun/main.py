@@ -7,6 +7,7 @@ import argparse
 import subprocess
 import hashlib
 import socket
+import time
 from typing import Optional
 
 import pefile
@@ -253,6 +254,12 @@ class DrakrunKarton(Karton):
         os.mkdir(outdir)
         os.mkdir(os.path.join(outdir, 'dumps'))
 
+        metadata = {
+            "sample_sha256": sha256sum,
+            "time_started": int(time.time()),
+            "start_command": start_command
+        }
+
         with open(os.path.join(outdir, 'sample.txt'), 'w') as f:
             f.write(hashlib.sha256(local_sample.content).hexdigest())
 
@@ -357,6 +364,11 @@ class DrakrunKarton(Karton):
             self.generate_graphs(outdir)
         self.slice_logs(outdir)
         self.log.info("uploading artifacts")
+
+        metadata['time_finished'] = int(time.time())
+
+        with open(os.path.join(outdir, 'metadata.json'), 'w') as f:
+            f.write(json.dumps(metadata))
 
         output_strategy = self.config.minio_config.get("output_strategy", "store")
 

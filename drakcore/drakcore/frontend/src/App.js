@@ -10,6 +10,7 @@ import {
 import AnalysisList from "./AnalysisList";
 import AnalysisMain from "./AnalysisMain";
 import AnalysisStatus from "./AnalysisStatus";
+import UploadSample from "./UploadSample";
 
 
 class NavBtns extends Component {
@@ -46,12 +47,12 @@ class App extends Component {
         return <Router>
             <div className="wrapper">
                 <div className="left-side-menu">
-                    <a href="index.html" className="logo text-center logo-light">
+                    <a href="/" className="logo text-center logo-light">
                         <span className="logo-lg">
-                            <img src="assets/images/logo.png" alt=""/>
+                            <img src="/assets/images/logo.png" alt=""/>
                         </span>
                         <span className="logo-sm">
-                            <img src="assets/images/logo.png" alt="" height="16"/>
+                            <img src="/assets/images/logo.png" alt="" height="16"/>
                         </span>
                     </a>
 
@@ -59,7 +60,7 @@ class App extends Component {
                         <ul className="metismenu side-nav">
                             <li className="side-nav-title side-nav-item">Sandbox</li>
                             <li className="side-nav-item">
-                                <Link to={"/"} className="side-nav-link">
+                                <Link to={"/upload"} className="side-nav-link">
                                     <i className="uil-file-upload"/>
                                     <span> Upload sample </span>
                                 </Link>
@@ -84,10 +85,28 @@ class App extends Component {
                     <Switch>
                         <Route path="/progress/:analysis" component={AnalysisStatus}/>
                         <Route path="/analysis/:analysis" component={AnalysisMain}/>
+                        <Route path="/upload" exact component={UploadSample}/>
                         <Route path="/" exact component={AnalysisList}/>
                     </Switch>
                 </div>
             </div>
+
+            <footer className="footer">
+                <div className="container-fluid">
+                    <div className="row">
+                        <div className="col-md-6">
+                            DRAKVUF Sandbox (C) 2020 <a href="https://cert.pl/">CERT Polska</a><br/>
+                            DRAKVUF (C) 2014-2020 <a href="https://tklengyel.com/">Tamas K Lengyel</a>
+                        </div>
+                        <div className="col-md-6">
+                            <div className="text-md-right footer-links d-none d-md-block">
+                                <a href="https://github.com/CERT-Polska/drakvuf-sandbox">CERT-Polska / drakvuf-sandbox</a>
+                                <a href="https://github.com/tklengyel/drakvuf">tklengyel / drakvuf</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
 
         </Router>;
     }

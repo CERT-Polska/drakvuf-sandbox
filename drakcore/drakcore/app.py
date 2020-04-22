@@ -4,7 +4,7 @@ from tempfile import NamedTemporaryFile
 
 import requests
 
-from flask import Flask, jsonify, request, send_file, redirect
+from flask import Flask, jsonify, request, send_file, redirect, send_from_directory
 from karton2 import Config, Producer, Resource, Task
 from minio.error import NoSuchKey
 from datetime import datetime
@@ -30,9 +30,15 @@ def add_header(response):
 
 
 @app.route("/list")
-def list():
+def route_list():
+    analyses = []
     res = minio.list_objects_v2("drakrun")
-    return jsonify([{"id": x.object_name, "time": x.last_modified} for x in res])
+
+    for obj in res:
+        meta = minio.get_object("drakrun", obj.object_name + "/metadata.json")
+        analyses.append({"id": obj.object_name.strip('/'), "meta": json.loads(meta.read())})
+
+    return jsonify(analyses)
 
 
 @app.route("/upload", methods=['POST'])
@@ -99,6 +105,11 @@ def index():
 @app.route("/robots.txt")
 def robots():
     return send_file("frontend/build/robots.txt")
+
+
+@app.route('/assets/<path:path>')
+def send_assets(path):
+    return send_from_directory('frontend/build/assets', path)
 
 
 @app.route("/<path:path>")

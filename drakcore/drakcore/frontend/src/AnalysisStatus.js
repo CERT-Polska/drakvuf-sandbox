@@ -40,13 +40,20 @@ class AnalysisStatus extends Component {
 
     render() {
         if (this.state.status === "done") {
-            return <Redirect to={"/analysis/" + this.props.match.params.analysis} />;
-	}
+            return <Redirect to={"/analysis/" + this.props.match.params.analysis}/>;
+        }
 
         return <div className="App container-fluid">
-            <h2>Status</h2>
-	    <p>Please wait until analysis is completed (usually 10 minutes).</p>
-	    <p>Current status: {this.state.status}... {this.state.spinner}</p>
+            <div className="page-title-box">
+                <h4 className="page-title">Status</h4>
+            </div>
+
+            <p>Please wait until analysis is completed (usually 10 minutes).</p>
+            <p>Current status: {this.state.status}... {this.state.spinner}</p>
+
+            <div className="progress">
+                <div className="progress-bar progress-bar-striped progress-bar-animated" style={{"width": "100%"}} />
+            </div>
         </div>;
     }
 }
