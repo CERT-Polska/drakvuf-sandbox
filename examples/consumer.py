@@ -18,8 +18,7 @@ class DrakrunAnalysisConsumer(Karton):
 
     def process(self):
         tmp_dir = tempfile.mkdtemp(prefix="drakrun")
-        #analysis_uid = self.current_task.payload['analysis_uid']
-        analysis_uid = "123"
+        analysis_uid = self.current_task.payload['analysis_uid']
 
         self.log.info(f"Storing analysis {analysis_uid} into {tmp_dir}")
 
