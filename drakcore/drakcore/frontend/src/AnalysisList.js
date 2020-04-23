@@ -37,6 +37,7 @@ class AnalysisList extends Component {
                     <tr>
                         <th>Analysis ID</th>
                         <th>Sample SHA256</th>
+                        <th>File type</th>
                         <th>Started</th>
                         <th>Finished</th>
                         <th>Start command</th>
@@ -49,10 +50,11 @@ class AnalysisList extends Component {
                         return <tr>
                             <td className="text-hash"><Link to={"/analysis/" + val.id}>{val.id}</Link></td>
                             <td className="text-hash">{val.meta.sample_sha256}</td>
+                            <td>{val.meta.magic_output}</td>
                             <td>{this.formatTimestamp(val.meta.time_started)}</td>
                             <td>{this.formatTimestamp(val.meta.time_finished)}</td>
                             <td><code>{val.meta.start_command}</code></td>
-                            <td><Link className="btn btn-secondary" to={"/analysis/" + val.id}>
+                            <td><Link to={"/analysis/" + val.id}>
                                 <i className="uil uil-document"/> View</Link></td>
                         </tr>;
                     })
