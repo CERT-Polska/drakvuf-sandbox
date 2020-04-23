@@ -8,6 +8,7 @@ import subprocess
 import hashlib
 import socket
 import time
+import zipfile
 from typing import Optional
 
 import pefile
@@ -15,7 +16,7 @@ import json
 import re
 import io
 import magic
-from karton2 import Karton, Config, Task, DirectoryResource
+from karton2 import Karton, Config, Task, DirectoryResource, RemoteResource
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 import drakrun.run as d_run
 from drakrun.drakparse import parse_logs
@@ -101,10 +102,8 @@ class DrakrunKarton(Karton):
                 raise RuntimeError(f'Failed to check for iptables rule: {rule}')
 
     def init_drakrun(self):
-        output_strategy = self.config.minio_config.get("output_strategy", "store")
-        if output_strategy == "store":
-            if not self.minio.bucket_exists('drakrun'):
-                self.minio.make_bucket(bucket_name='drakrun')
+        if not self.minio.bucket_exists('drakrun'):
+            self.minio.make_bucket(bucket_name='drakrun')
 
         try:
             subprocess.check_output(f'brctl addbr drak{INSTANCE_ID}', stderr=subprocess.STDOUT, shell=True)
@@ -155,7 +154,9 @@ class DrakrunKarton(Karton):
 
         return None
 
-    def crop_dumps(self, dirpath):
+    def crop_dumps(self, dirpath, target_zip):
+        zipf = zipfile.ZipFile(target_zip, 'w', zipfile.ZIP_DEFLATED)
+
         entries = (os.path.join(dirpath, fn) for fn in os.listdir(dirpath))
         entries = ((os.stat(path), path) for path in entries)
 
@@ -168,8 +169,10 @@ class DrakrunKarton(Karton):
         for cdate, path, size in sorted(entries):
             current_size += size
 
-            if current_size > max_total_size:
-                os.unlink(path)
+            if current_size <= max_total_size:
+                zipf.write(path)
+
+            os.unlink(path)
 
         if current_size > max_total_size:
             self.log.error('Some dumps were deleted, because the configured size threshold was exceeded.')
@@ -215,14 +218,19 @@ class DrakrunKarton(Karton):
 
         os.unlink(os.path.join(workdir, 'drakmon.log'))
 
-    def upload_artifacts(self, workdir, subdir=''):
+    def upload_artifacts(self, analysis_uid, workdir, subdir=''):
         base_path = os.path.join(workdir, 'output')
+
         for fn in os.listdir(os.path.join(base_path, subdir)):
             file_path = os.path.join(base_path, subdir, fn)
+
             if os.path.isfile(file_path):
-                self.minio.fput_object('drakrun', os.path.join(self.current_task.root_uid, subdir, fn), file_path)
+                object_name = os.path.join(analysis_uid, subdir, fn)
+                res_name = os.path.join(subdir, fn)
+                self.minio.fput_object('drakrun', object_name, file_path)
+                yield RemoteResource(name=res_name, bucket='drakrun', _uid=object_name)
             elif os.path.isdir(file_path):
-                self.upload_artifacts(workdir, os.path.join(subdir, fn))
+                yield from self.upload_artifacts(analysis_uid, workdir, os.path.join(subdir, fn))
 
     def process(self):
         sample = self.current_task.get_resource("sample")
@@ -231,6 +239,16 @@ class DrakrunKarton(Karton):
         sha256sum = hashlib.sha256(local_sample.content).hexdigest()
         magic_output = magic.from_buffer(local_sample.content)
         self.log.info("running sample sha256: {}".format(sha256sum))
+
+        analysis_uid = self.current_task.uid
+        override_uid = self.current_task.payload.get('override_uid')
+
+        self.log.info(f"analysis UID: {analysis_uid}")
+
+        if override_uid:
+            analysis_uid = override_uid
+            self.log.info(f"override UID: {override_uid}")
+            self.log.info("note that artifacts will be stored under this overriden identifier")
 
         workdir = '/tmp/drakrun/vm-{}'.format(int(INSTANCE_ID))
         extension = self.current_task.headers.get("extension", "exe").lower()
@@ -263,7 +281,7 @@ class DrakrunKarton(Karton):
             "start_command": start_command
         }
 
-        with open(os.path.join(outdir, 'sample.txt'), 'w') as f:
+        with open(os.path.join(outdir, 'sample_sha256.txt'), 'w') as f:
             f.write(hashlib.sha256(local_sample.content).hexdigest())
 
         with open(os.path.join(workdir, 'run.bat'), 'wb') as f:
@@ -362,7 +380,7 @@ class DrakrunKarton(Karton):
             except subprocess.TimeoutExpired:
                 self.log.exception("tcpdump doesn't exit cleanly after 60s")
 
-        self.crop_dumps(os.path.join(outdir, 'dumps'))
+        self.crop_dumps(os.path.join(outdir, 'dumps'), os.path.join(outdir, 'dumps.zip'))
         if os.path.exists("/opt/procdot/procmon2dot"):
             self.generate_graphs(outdir)
         self.slice_logs(outdir)
@@ -373,23 +391,23 @@ class DrakrunKarton(Karton):
         with open(os.path.join(outdir, 'metadata.json'), 'w') as f:
             f.write(json.dumps(metadata))
 
-        output_strategy = self.config.minio_config.get("output_strategy", "store")
+        payload = {"analysis_uid": analysis_uid}
+        payload.update(metadata)
 
-        if output_strategy == 'karton-task':
-            t = Task(
-                {
-                    "type": "analysis",
-                    "kind": "drakrun-prod",
-                    "quality": self.current_task.headers.get("quality", "high")
-                }
-            )
+        t = Task(
+            {
+                "type": "analysis",
+                "kind": "drakrun",
+                "quality": self.current_task.headers.get("quality", "high")
+            },
+            payload=payload
+        )
 
-            r = DirectoryResource(name='analysis', directory_path=os.path.join(workdir, 'output'))
-            t.add_resource('analysis', r)
-            t.add_resource('sample', sample)
-            self.send_task(t)
-        elif output_strategy == 'store':
-            self.upload_artifacts(workdir)
+        for resource in self.upload_artifacts(analysis_uid, workdir):
+            t.add_resource(resource.name, resource)
+
+        t.add_resource('sample', sample)
+        self.send_task(t)
 
 
 def cmdline_main():
