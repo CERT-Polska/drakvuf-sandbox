@@ -5,6 +5,7 @@
 
 build:
 	# Build frontend
+	export NODE_OPTIONS='--max-old-space-size=2048'
 	if [ ! -d drakcore/frontend/build ] ; then cd drakcore/frontend && npm install && npm run-script build ; fi
 	# Config files
 	cp drakcore/config.dist.ini drakcore/config.ini
