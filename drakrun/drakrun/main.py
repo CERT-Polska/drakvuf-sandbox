@@ -400,7 +400,7 @@ class DrakrunKarton(Karton):
                 "kind": "drakrun",
                 "quality": self.current_task.headers.get("quality", "high")
             },
-            payload=metadata
+            payload=payload
         )
 
         for resource in self.upload_artifacts(analysis_uid, workdir):
