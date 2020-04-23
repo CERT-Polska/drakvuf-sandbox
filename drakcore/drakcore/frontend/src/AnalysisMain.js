@@ -26,6 +26,15 @@ class AnalysisMain extends Component {
         }
     }
 
+    getPathWithoutExt(path) {
+        // strip file extension from the path (assuming it's always present)
+        return path.split('.').slice(0, -1).join('.');
+    }
+
+    getFileNameWithoutExt(path) {
+        return this.getPathWithoutExt(path).split('/').slice(-1).pop();
+    }
+
     render() {
         let processTree = <div>(Process tree was not generated, please check out "ProcDOT integration (optional)"
             section of README to enable it.)</div>;
@@ -56,8 +65,9 @@ class AnalysisMain extends Component {
                     <div className="list-group">
                         {
                             this.state.logs.map(val => {
-                                return <a href={`/logs/${val.slice(0, -4)}`}
-                                          className="list-group-item list-group-item-action">{val.slice(37, -4)}</a>
+                                return <a href={`/logs/${this.getPathWithoutExt(val)}`}
+                                          className="list-group-item list-group-item-action">
+                                    {this.getFileNameWithoutExt(val)}</a>
                             })
                         }
                     </div>
