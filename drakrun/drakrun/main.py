@@ -14,6 +14,7 @@ import pefile
 import json
 import re
 import io
+import magic
 from karton2 import Karton, Config, Task, DirectoryResource
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 import drakrun.run as d_run
@@ -228,6 +229,7 @@ class DrakrunKarton(Karton):
         local_sample = self.download_resource(sample)
         self.log.info("hostname: {}".format(socket.gethostname()))
         sha256sum = hashlib.sha256(local_sample.content).hexdigest()
+        magic_output = magic.from_buffer(local_sample.content)
         self.log.info("running sample sha256: {}".format(sha256sum))
 
         workdir = '/tmp/drakrun/vm-{}'.format(int(INSTANCE_ID))
@@ -256,6 +258,7 @@ class DrakrunKarton(Karton):
 
         metadata = {
             "sample_sha256": sha256sum,
+            "magic_output": magic_output,
             "time_started": int(time.time()),
             "start_command": start_command
         }

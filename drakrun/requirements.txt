@@ -4,3 +4,4 @@ pdbparse==1.4
 construct==2.9.45
 requests==2.22.0
 tqdm==4.43.0
+python-magic==0.4.15

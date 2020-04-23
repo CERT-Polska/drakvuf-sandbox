@@ -38,7 +38,7 @@ def route_list():
         meta = minio.get_object("drakrun", os.path.join(obj.object_name, "metadata.json"))
         analyses.append({"id": obj.object_name.strip('/'), "meta": json.loads(meta.read())})
 
-    return jsonify(analyses)
+    return jsonify(sorted(analyses, key=lambda o: o.get('meta', {}).get('time_finished', 0), reverse=True))
 
 
 @app.route("/upload", methods=['POST'])
