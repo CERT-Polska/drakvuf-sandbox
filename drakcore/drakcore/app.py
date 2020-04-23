@@ -56,10 +56,11 @@ def upload():
             sample = Resource("sample", fr.read())
 
     task = Task({"type": "sample", "stage": "recognized", "platform": "win32"})
+    task.payload["override_uid"] = task.uid
     task.add_resource("sample", sample)
 
     producer.send_task(task)
-    return redirect("/progress/" + task.root_uid)
+    return redirect("/progress/" + task.uid)
 
 
 @app.route("/logs/<task_uid>/<log_type>")

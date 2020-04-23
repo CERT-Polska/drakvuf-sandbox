@@ -218,19 +218,19 @@ class DrakrunKarton(Karton):
 
         os.unlink(os.path.join(workdir, 'drakmon.log'))
 
-    def upload_artifacts(self, workdir, subdir=''):
+    def upload_artifacts(self, analysis_uid, workdir, subdir=''):
         base_path = os.path.join(workdir, 'output')
 
         for fn in os.listdir(os.path.join(base_path, subdir)):
             file_path = os.path.join(base_path, subdir, fn)
 
             if os.path.isfile(file_path):
-                object_name = os.path.join(self.current_task.uid, subdir, fn)
+                object_name = os.path.join(analysis_uid, subdir, fn)
                 res_name = os.path.join(subdir, fn)
                 self.minio.fput_object('drakrun', object_name, file_path)
                 yield RemoteResource(name=res_name, bucket='drakrun', _uid=object_name)
             elif os.path.isdir(file_path):
-                yield from self.upload_artifacts(workdir, os.path.join(subdir, fn))
+                yield from self.upload_artifacts(analysis_uid, workdir, os.path.join(subdir, fn))
 
     def process(self):
         sample = self.current_task.get_resource("sample")
@@ -239,6 +239,16 @@ class DrakrunKarton(Karton):
         sha256sum = hashlib.sha256(local_sample.content).hexdigest()
         magic_output = magic.from_buffer(local_sample.content)
         self.log.info("running sample sha256: {}".format(sha256sum))
+
+        analysis_uid = self.current_task.uid
+        override_uid = self.current_task.payload.get('override_uid')
+
+        self.log.info(f"analysis UID: {analysis_uid}")
+
+        if override_uid:
+            analysis_uid = override_uid
+            self.log.info(f"override UID: {override_uid}")
+            self.log.info("note that artifacts will be stored under this overriden identifier")
 
         workdir = '/tmp/drakrun/vm-{}'.format(int(INSTANCE_ID))
         extension = self.current_task.headers.get("extension", "exe").lower()
@@ -381,7 +391,7 @@ class DrakrunKarton(Karton):
         with open(os.path.join(outdir, 'metadata.json'), 'w') as f:
             f.write(json.dumps(metadata))
 
-        payload = {"analysis_uid": self.current_task.uid}
+        payload = {"analysis_uid": analysis_uid}
         payload.update(metadata)
 
         t = Task(
@@ -393,7 +403,7 @@ class DrakrunKarton(Karton):
             payload=metadata
         )
 
-        for resource in self.upload_artifacts(workdir):
+        for resource in self.upload_artifacts(analysis_uid, workdir):
             t.add_resource(resource.name, resource)
 
         t.add_resource('sample', sample)
