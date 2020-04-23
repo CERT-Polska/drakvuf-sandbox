@@ -35,7 +35,7 @@ def route_list():
     res = minio.list_objects_v2("drakrun")
 
     for obj in res:
-        meta = minio.get_object("drakrun", obj.object_name + "/metadata.json")
+        meta = minio.get_object("drakrun", os.path.join(obj.object_name, "metadata.json"))
         analyses.append({"id": obj.object_name.strip('/'), "meta": json.loads(meta.read())})
 
     return jsonify(analyses)
