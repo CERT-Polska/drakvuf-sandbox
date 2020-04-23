@@ -35,7 +35,11 @@ def route_list():
     res = minio.list_objects_v2("drakrun")
 
     for obj in res:
-        meta = minio.get_object("drakrun", os.path.join(obj.object_name, "metadata.json"))
+        try:
+            meta = minio.get_object("drakrun", os.path.join(obj.object_name, "metadata.json"))
+        except minio.error.NoSuchKey:
+            meta = {}
+
         analyses.append({"id": obj.object_name.strip('/'), "meta": json.loads(meta.read())})
 
     return jsonify(sorted(analyses, key=lambda o: o.get('meta', {}).get('time_finished', 0), reverse=True))
