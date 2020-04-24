@@ -44,7 +44,7 @@ This instruction assumes that you want to create a single-node installation with
    
    **Unattended installation:** If you have `autounattend.xml` matching your Windows ISO, you can request unattended installation by adding `--unattended-xml /path/to/autounattend.xml`. Unattended install configuration could be generated with [Windows Answer File Generator](https://www.windowsafg.com/win10x86_x64.html).
    
-   **Storage backend:** By default, DRAKVUF Sandbox is storing virtual machine's HDD in a `qcow2` file. If you want to use ZFS instead, please check the "Advanced setup" section below.
+   **Storage backend:** By default, DRAKVUF Sandbox is storing virtual machine's HDD in a `qcow2` file. If you want to use ZFS instead, please check the "Optional features" section below.
 5. Use VNC to connect to the installation process:
    ```
    vncviewer localhost:5900
@@ -56,7 +56,7 @@ This instruction assumes that you want to create a single-node installation with
    ```
 8. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
 
-## Advanced setup
+## Optional features
 
 This sections contains various information about optional features that may be enabled when setting up DRAKVUF Sandbox.
 
