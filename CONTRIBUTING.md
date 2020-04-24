@@ -10,7 +10,7 @@ Very first thing to consider is to setup and configure your local instance of DR
 * Develop on local machine: Install Debian Buster in [VMware Workstation 15 Player](https://www.vmware.com/products/workstation-player/workstation-player-evaluation.html).
 * Develop on a remote server: Just get some bare-metal or rent a dedicated server (e.g. [Kimsufi](https://www.kimsufi.com/us/en/servers.xml)) with Debian Buster.
 
-**Caution!** Your host machine must be an Intel processor with VT-x and EPT support, even when using VMware or other nested virtualization. You can check it using the following command:
+**Caution!** Your host machine must be an Intel processor with VT-x and EPT support, even when using VMware or other nested virtualization. You can check it by executing the following command on your native system (i.e. host system and without hypervisor loaded):
 
 ```
 # should return non-empty output and exit code 0
