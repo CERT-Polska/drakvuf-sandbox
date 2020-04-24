@@ -51,7 +51,7 @@ def start_tcpdump_collector(instance_id: str, outdir: str) -> Optional[subproces
     ])
 
 
-def start_dnsmasq(vm_id: int, /ns_server: str) -> Optional[subprocess.Popen]:
+def start_dnsmasq(vm_id: int, dns_server: str) -> Optional[subprocess.Popen]:
     try:
         subprocess.check_output("dnsmasq --version", shell=True)
     except subprocess.CalledProcessError:
