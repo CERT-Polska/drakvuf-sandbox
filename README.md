@@ -90,6 +90,32 @@ DRAKVUF Sandbox may optionally draw a behavioral graph using [ProcDOT](https://w
    ```
 3. Your new analysis reports will also contain behavioral graphs.
 
+### Networking (optional)
+#### Basic networking
+If you want your guest VMs to access Internet, you can enable networking by editing `[drakrun]`
+section in `/etc/drakrun/config.ini`:
+
+* Set `net_enable=1` in order to enable guest Internet access.
+* Check if `out_interface` was detected properly (e.g. `ens33`) and if not, correct this setting.
+
+After making changes to `/etc/drakrun`, you need to restart all `drakrun` services that are running
+in your system:
+ 
+```
+systemctl restart 'drakrun@*'
+```
+
+Be aware that if your sandbox instance is already running some analyses, the above command will gracefully
+wait up to a few minutes until these are completed.
+
+#### Using dnschef
+You may optionally configure your guests to use 
+
+1. Setup [dnschef](https://github.com/iphelix/dnschef) tool.
+2. Start `dnschef` in such way to make it listen on all `drak*` interfaces that belong to DRAKVUF Sandbox.
+3. Set `dns_server=use-gateway-address` in `/etc/drakrun/config.ini`.
+4. Restart your drakrun instances: `systemctl restart 'drakrun@*`
+
 ## Troubleshooting
 
 ### Checking service status
