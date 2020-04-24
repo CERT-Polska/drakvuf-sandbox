@@ -51,7 +51,7 @@ def start_tcpdump_collector(instance_id: str, outdir: str) -> Optional[subproces
     ])
 
 
-def start_dnsmasq(vm_id: int, dns_server: str) -> Optional[subprocess.Popen]:
+def start_dnsmasq(vm_id: int, /ns_server: str) -> Optional[subprocess.Popen]:
     try:
         subprocess.check_output("dnsmasq --version", shell=True)
     except subprocess.CalledProcessError:
@@ -74,7 +74,7 @@ def start_dnsmasq(vm_id: int, dns_server: str) -> Optional[subprocess.Popen]:
         "--no-poll",
         "--leasefile-ro",
         f"--dhcp-range=10.13.{vm_id}.100,10.13.{vm_id}.200,255.255.255.0,12h",
-        "--dhcp-option=option:dns-server,{dns_server}"
+        f"--dhcp-option=option:dns-server,{dns_server}"
     ])
 
 
