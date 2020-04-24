@@ -43,6 +43,8 @@ This instruction assumes that you want to create a single-node installation with
    carefully read the command's output. This command would run a Virtual Machine with Windows system installation process.
    
    **Unattended installation:** If you have `autounattend.xml` matching your Windows ISO, you can request unattended installation by adding `--unattended-xml /path/to/autounattend.xml`. Unattended install configuration could be generated with [Windows Answer File Generator](https://www.windowsafg.com/win10x86_x64.html).
+   
+   **Storage backend:** By default, DRAKVUF Sandbox is storing virtual machine's HDD in a `qcow2` file. If you want to use ZFS instead, please check the "Optional features" section below.
 5. Use VNC to connect to the installation process:
    ```
    vncviewer localhost:5900
@@ -52,9 +54,31 @@ This instruction assumes that you want to create a single-node installation with
    ```
    sudo draksetup postinstall
    ```
-8. Test installation using web interface: http://localhost:6300/
+8. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
 
-### ProcDOT integration (optional)
+## Optional features
+
+This sections contains various information about optional features that may be enabled when setting up DRAKVUF Sandbox.
+
+### ZFS Storage backend
+If you want to install DRAKVUF Sandbox with a ZFS storage backend, you should perform the following extra steps before executing `draksetup install` command:
+
+1. Install ZFS on your machine (guide for: [Debian Buster](https://github.com/openzfs/zfs/wiki/Debian), [Ubuntu 18.04](https://ubuntu.com/tutorials/setup-zfs-storage-pool#2-installing-zfs))
+2. Create a ZFS pool on a free partition:
+   ```
+   zpool create tank <partition_name>
+   ```
+   where `<partiton_name>` is e.g. `/dev/sda3`. Be aware that all data stored on the selected partition may be erased.
+3. Create a dataset for DRAKVUF Sandbox:
+   ```
+   zfs create tank/vms
+   ```
+4. Execute `draksetup install` as in "Basic installation" section, but remembering to provide additional command line switches:
+   ```
+   --storage-backend zfs --zfs-tank-name tank/vms
+   ```
+
+### ProcDOT integration
 DRAKVUF Sandbox may optionally draw a behavioral graph using [ProcDOT](https://www.procdot.com/), if `drakcore` will find it's binary installed at `/opt/procdot/procmon2dot`.
 
 1. [Download ProcDOT](https://www.procdot.com/downloadprocdotbinaries.htm) (Linux version).
@@ -64,9 +88,9 @@ DRAKVUF Sandbox may optionally draw a behavioral graph using [ProcDOT](https://w
    mv /tmp/procdot/lin64 /opt/procdot
    chmod +x /opt/procdot/procmon2dot
    ```
-3. Your new analyses will also display behavioral graphs.
+3. Your new analysis reports will also contain behavioral graphs.
 
-### Troubleshooting
+## Troubleshooting
 
 ### Checking service status
 
