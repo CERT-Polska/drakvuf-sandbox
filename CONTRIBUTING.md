@@ -63,4 +63,4 @@ your changes to the DRAKVUF Sandbox services will be immediately visible after y
        return 'hello'
    ```
 3. Save the file and execute `systemctl restart drak-web`
-4. Navigate to http://localhost:6300/hello-world, your new subpage should appear.
+4. Navigate to `http://localhost:6300/hello-world`, your new subpage should appear.
