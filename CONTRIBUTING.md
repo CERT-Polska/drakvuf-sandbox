@@ -1,8 +1,9 @@
 Contribute to DRAKVUF Sandbox
 =============================
 
-Development system
-------------------
+## Setup development environment
+
+### Prerequisites
 
 Very first thing to consider is to setup and configure your local instance of DRAKVUF Sandbox. There are two basic options in that matter:
 
@@ -13,18 +14,47 @@ Very first thing to consider is to setup and configure your local instance of DR
 DRAKVUF will not run on incompatible processors, as it directly relies on particular hardware virtualization extensions.
 
 
-Install `drakcore` or `drakrun` locally
----------------------------------------
+### Clone the repository
 
-1. Clone the repository:
+In order to obtain the source code of DRAKVUF Sandbox, you need to execute the following commands:
+
+```
+git clone https://github.com/CERT-Polska/drakvuf-sandbox.git
+cd drakvuf-sandbox
+```
+
+### Build Debian packages
+
+The DRAKVUF Sandbox distribution packages are built using Docker, in order to make them more reproducible. In order to build the packages by yourself, perform the following steps:
+
+1. Obtain and install [Docker](https://docs.docker.com/engine/install/debian/).
+2. Execute:
    ```
-   git clone https://github.com/CERT-Polska/drakvuf-sandbox.git
-   cd drakvuf-sandbox
+   sh drakcore/package/build.sh
+   sh drakrun/package/build.sh
    ```
-2. Install local `drakcore` and `drakrun`.
+3. The Debian packages will be produced to the `out/` directory. You can install them similarly as you would install the released packages. See ["Basic installation" section of README.md](https://github.com/CERT-Polska/drakvuf-sandbox/blob/icedevml-patch-1/README.md#basic-installation).
+
+
+### Install editable Python packages
+
+Now you can re-install Python packages from sources, using:
+
+```
+/opt/venvs/drakcore/bin/pip3 install --editable ./drakcore/
+/opt/venvs/drakrun/bin/pip3 install --editable ./drakrun/
+```
+
+your changes to the DRAKVUF Sandbox services will be immediately visible after you restart them.
+
+### Test local changes
+
+1. Open `drakcore/drakcore/app.py`
+2. Add these lines before `def main()`:
+   ```python
+   @app.route("/hello-world")
+   def hello_world():
+       return 'hello'
    ```
-   python3 -m venv venv
-   source venv/bin/activate
-   pip3 install --editable ./drakcore/
-   pip3 install --editable ./drakrun/
-   ```
+3. Save the file and execute `systemctl restart drak-web`
+4. Navigate to http://localhost:6300/hello-world, your new subpage should appear.
