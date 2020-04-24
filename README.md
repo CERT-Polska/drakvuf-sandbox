@@ -14,7 +14,7 @@ Because it is usually pretty hard to set up a malware sandbox, this project also
 In order to run DRAKVUF Sandbox, your setup must fullfill all of the listed requirements:
 
 * Processor: Intel processor with VT-x and EPT features
-* Host system: Debian Buster with at least 2 core CPU and 5 GB RAM
+* Host system: Debian Buster/Ubuntu 18.04 with at least 2 core CPU and 5 GB RAM
 * Guest system: Windows 7 (x64), Windows 10 (x64; experimental support)
 
 ### Basic installation

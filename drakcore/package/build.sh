@@ -3,7 +3,7 @@
 # Directory with .deb files
 OUTDIR=$(pwd)/out
 # Base image for building
-BASEIMAGE=debian:buster
+BASEIMAGE=ubuntu:18.04
 # Current user - to make current user owner of output .deb files.
 FILE_OWNER=$(id -u):$(id -g)
 
