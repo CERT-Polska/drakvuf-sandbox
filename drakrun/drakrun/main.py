@@ -51,13 +51,16 @@ def start_tcpdump_collector(instance_id: str, outdir: str) -> Optional[subproces
     ])
 
 
-def start_dnsmasq(vm_id: int) -> Optional[subprocess.Popen]:
+def start_dnsmasq(vm_id: int, dns_server: str) -> Optional[subprocess.Popen]:
     try:
         subprocess.check_output("dnsmasq --version", shell=True)
     except subprocess.CalledProcessError:
         logging.warning("Seems like dnsmasq is not working/not installed on your system."
                         "Guest networking may not be fully functional.")
         return
+
+    if dns_server == "use-gateway-address":
+        dns_server = f"10.13.{vm_id}.1"
 
     return subprocess.Popen([
         "dnsmasq",
@@ -71,7 +74,7 @@ def start_dnsmasq(vm_id: int) -> Optional[subprocess.Popen]:
         "--no-poll",
         "--leasefile-ro",
         f"--dhcp-range=10.13.{vm_id}.100,10.13.{vm_id}.200,255.255.255.0,12h",
-        "--dhcp-option=option:dns-server,8.8.8.8"
+        f"--dhcp-option=option:dns-server,{dns_server}"
     ])
 
 
@@ -119,9 +122,14 @@ class DrakrunKarton(Karton):
         self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
         self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -d 0.0.0.0/0 -j DROP")
 
-        out_interface = self.config.config['drakrun'].get('out_interface')
+        net_enable = int(self.config.config['drakrun'].get('net_enable', '0'))
+        out_interface = self.config.config['drakrun'].get('out_interface', '')
+        dns_server = self.config.config['drakrun'].get('dns_server', '')
 
-        if out_interface:
+        if dns_server == "use-gateway-address":
+            self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -p udp --dport 52 --sport 52 -j ACCEPT")
+
+        if net_enable:
             with open('/proc/sys/net/ipv4/ip_forward', 'w') as f:
                 f.write('1\n')
 
@@ -302,7 +310,7 @@ class DrakrunKarton(Karton):
         for _ in range(3):
             try:
                 self.log.info("running vm {}".format(INSTANCE_ID))
-                watcher_dnsmasq = start_dnsmasq(INSTANCE_ID)
+                watcher_dnsmasq = start_dnsmasq(INSTANCE_ID, self.config.config['drakrun'].get('dns_server', '8.8.8.8'))
 
                 d_run.ETC_DIR = ETC_DIR
                 d_run.LIB_DIR = LIB_DIR

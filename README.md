@@ -90,6 +90,48 @@ DRAKVUF Sandbox may optionally draw a behavioral graph using [ProcDOT](https://w
    ```
 3. Your new analysis reports will also contain behavioral graphs.
 
+### Networking (optional)
+
+**Note:** Even though that the guest Internet connectivity is an optional feature, `drakrun` would always make some changes to your host system's network configuration:
+
+Always:
+
+* Each instance of `drakrun@<vm_id>` will create a bridge `drak<vm_id>`, assign `10.13.<vm_id>.1/24` IP address/subnet to it and bring the interface up.
+* `drakrun` will drop any INPUT traffic originating from `drak<vm_id>` bridge, except DHCP traffic (UDP ports: 67, 68).
+
+Only with `net_enable=1`:
+
+* `drakrun` will enable IPv4 forwarding.
+* `drakrun` will configure MASQUERADE through `out_interface` for packets originating from `10.13.<vm_id>.0/24`.
+* `drakrun` will DROP traffic between `drak<X>` and `drak<Y>` bridges for `X != Y`.
+
+In order to find out the exact details of the network configuration, search for `_add_iptable_rule` function usages in `drakrun/drakrun/main.py` file.
+
+#### Basic networking
+If you want your guest VMs to access Internet, you can enable networking by editing `[drakrun]`
+section in `/etc/drakrun/config.ini`:
+
+* Set `net_enable=1` in order to enable guest Internet access.
+* Check if `out_interface` was detected properly (e.g. `ens33`) and if not, correct this setting.
+
+After making changes to `/etc/drakrun`, you need to restart all `drakrun` services that are running
+in your system:
+ 
+```
+systemctl restart 'drakrun@*'
+```
+
+Be aware that if your sandbox instance is already running some analyses, the above command will gracefully
+wait up to a few minutes until these are completed.
+
+#### Using dnschef
+You may optionally configure your guests to use 
+
+1. Setup [dnschef](https://github.com/iphelix/dnschef) tool.
+2. Start `dnschef` in such way to make it listen on all `drak*` interfaces that belong to DRAKVUF Sandbox.
+3. Set `dns_server=use-gateway-address` in `/etc/drakrun/config.ini`.
+4. Restart your drakrun instances: `systemctl restart 'drakrun@*`
+
 ## Troubleshooting
 
 ### Checking service status
