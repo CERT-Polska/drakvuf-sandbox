@@ -31,6 +31,8 @@ cd drakvuf-sandbox
 
 ### Build Debian packages
 
+#### On local computer
+
 The DRAKVUF Sandbox distribution packages are built using Docker, in order to make them more reproducible. In order to build the packages by yourself, perform the following steps:
 
 1. Obtain and install [Docker](https://docs.docker.com/engine/install/debian/).
@@ -40,6 +42,12 @@ The DRAKVUF Sandbox distribution packages are built using Docker, in order to ma
    sh drakrun/package/build.sh
    ```
 3. The Debian packages will be produced to the `out/` directory. You can install them similarly as you would install the released packages. See ["Basic installation" section of README.md](https://github.com/CERT-Polska/drakvuf-sandbox/blob/icedevml-patch-1/README.md#basic-installation).
+
+#### On the Drone CI server
+
+When you open a pull request to this project, Drone CI will run some tests on your code and Debian packages will be also built during the process. The artifacts produced by the CI are available at [debs.icedev.pl](https://debs.icedev.pl/).
+
+Packages are numbered according to the Drone CI job numbers. You can figure out the job number by inspecting the [status checks](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-status-checks) related to your commit and clicking on `Details` link near `continuous-integration/drone/push` label. The build ID is in the URL and also in the breadcrumb, e.g.: `Repositories -> CERT-Polska/drakvuf-sandbox -> #200`.
 
 
 ### Install editable Python packages
