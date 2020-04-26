@@ -24,17 +24,15 @@ This instruction assumes that you want to create a single-node installation with
 1. Download [latest release packages](https://github.com/CERT-Polska/drakvuf-sandbox/releases).
 2. Install DRAKVUF:
    ```
-   sudo apt-get update
-   sudo apt-get install -y libpixman-1-0 libpng16-16 libnettle6 libgnutls30 libfdt1 libglib2.0-0 libglib2.0-dev libjson-c3 libyajl2 libaio1
-   sudo dpkg -i drakvuf-bundle*.deb
+   sudo apt update
+   sudo apt install ./drakvuf-bundle*.deb
    sudo reboot
    ```
 3. Install DRAKVUF Sandbox stack:
    ```
-   sudo apt-get install -y python3.7 libpython3.7 python3-distutils tcpdump genisoimage qemu-utils bridge-utils dnsmasq libmagic1
-   sudo apt-get install -y redis-server
-   sudo dpkg -i drakcore*.deb
-   sudo dpkg -i drakrun*.deb
+   sudo apt install redis-server
+   sudo apt install ./drakcore*.deb
+   sudo apt install ./drakrun*.deb
    ```
 4. Execute:
    ```
