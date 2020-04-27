@@ -19,6 +19,9 @@ export default {
     async getGraph(analysis) {
         return axios.get(`/graph/${analysis}`);
     },
+    async getProcessTree(analysis) {
+        return axios.get(`/processed/${analysis}/process_tree.json`);
+    },
     async query(q) {
         return axios.get("/query", { params: { q: q } });
     }

@@ -4,25 +4,46 @@ import './App.css';
 import api from './api';
 import {Graphviz} from 'graphviz-react';
 
+function buildProcessTree(proclist) {
+    return <ul>{proclist.slice().sort((pA, pB) => pA.pid - pB.pid).map(processTreeHelper)}</ul>;
+}
+
+function processTreeHelper(process) {
+    return (
+    <React.Fragment>
+        <li>
+            <code>{process.procname ? process.procname : "unnamed process"}</code> ({process.pid})
+        </li>
+        {buildProcessTree(process.children)}
+    </React.Fragment>);
+}
+
 class AnalysisMain extends Component {
     constructor(props) {
         super(props);
 
         this.state = {
             "logs": [],
-            "graph": null
+            "graph": null,
+            "processTree": null,
         };
     }
 
     async componentDidMount() {
-        const res_logs = await api.listLogs(this.props.match.params.analysis);
+        const analysis = this.props.match.params.analysis;
+        const res_logs = await api.listLogs(analysis);
         if (res_logs.data) {
             this.setState({"logs": res_logs.data});
         }
 
-        const res_graph = await api.getGraph(this.props.match.params.analysis);
+        const res_graph = await api.getGraph(analysis);
         if (res_graph.data) {
             this.setState({"graph": res_graph.data});
+        }
+
+        const process_tree = await api.getProcessTree(analysis);
+        if (process_tree) {
+            this.setState({"processTree": process_tree.data});
         }
     }
 
@@ -38,10 +59,19 @@ class AnalysisMain extends Component {
     render() {
         let processTree = <div>(Process tree was not generated, please check out "ProcDOT integration (optional)"
             section of README to enable it.)</div>;
+        let simpleProcessTree;
 
         if (this.state.graph) {
             processTree = <div id="treeWrapper" style={{width: '80em', height: '30em'}}>
                 <Graphviz dot={this.state.graph}/>
+            </div>;
+        } else if (this.state.processTree) {
+            simpleProcessTree =
+            <div className="card mb-md-0 mb-3">
+                <div className="card-body">
+                    <h5 className="card-title mb-0">Proces tree</h5>
+                    {buildProcessTree(this.state.processTree)}
+                </div>
             </div>;
         }
 
@@ -57,6 +87,8 @@ class AnalysisMain extends Component {
                     {processTree}
                 </div>
             </div>
+
+            {simpleProcessTree}
 
             <div className="card mb-md-0 mb-3">
                 <div className="card-body">
