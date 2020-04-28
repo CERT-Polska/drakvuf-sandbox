@@ -1,4 +1,4 @@
-drakcore (0.2.0) unstable; urgency=low
+drakcore (0.2.1) unstable; urgency=low
   * New layout in the web UI
   * Implemented basic networking support
   * Implemented ZFS support
