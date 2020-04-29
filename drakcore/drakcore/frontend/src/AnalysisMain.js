@@ -10,7 +10,7 @@ function buildProcessTree(proclist) {
 
 function processTreeHelper(process) {
     return (
-    <React.Fragment>
+    <React.Fragment key={process.pid}>
         <li>
             <code>{process.procname ? process.procname : "unnamed process"}</code> ({process.pid})
         </li>
@@ -97,7 +97,8 @@ class AnalysisMain extends Component {
                     <div className="list-group">
                         {
                             this.state.logs.map(val => {
-                                return <a href={`/logs/${this.getPathWithoutExt(val)}`}
+                                return <a key={val}
+                                          href={`/logs/${this.getPathWithoutExt(val)}`}
                                           className="list-group-item list-group-item-action">
                                     {this.getFileNameWithoutExt(val)}</a>
                             })
