@@ -46,7 +46,7 @@ class AnalysisList extends Component {
                 <tbody>
                 {
                     this.state.analyses.map((val) => {
-                        return <tr>
+                        return <tr key={val.id}>
                             <td className="text-hash"><Link to={"/analysis/" + val.id}>{val.meta.sample_sha256}</Link></td>
                             <td>{val.meta.magic_output}</td>
                             <td>{this.formatTimestamp(val.meta.time_started)}</td>
