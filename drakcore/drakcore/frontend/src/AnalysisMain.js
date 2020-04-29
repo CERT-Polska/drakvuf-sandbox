@@ -67,7 +67,7 @@ class AnalysisMain extends Component {
             </div>;
         } else if (this.state.processTree) {
             simpleProcessTree =
-            <div className="card mb-md-0 mb-3">
+            <div className="card tilebox-one">
                 <div className="card-body">
                     <h5 className="card-title mb-0">Proces tree</h5>
                     {buildProcessTree(this.state.processTree)}
@@ -80,7 +80,7 @@ class AnalysisMain extends Component {
                 <h4 className="page-title">Report</h4>
             </div>
 
-            <div className="card mb-md-0 mb-3">
+            <div className="card tilebox-one">
                 <div className="card-body">
                     <h5 className="card-title mb-0">Behavioral graph</h5>
 
@@ -90,7 +90,7 @@ class AnalysisMain extends Component {
 
             {simpleProcessTree}
 
-            <div className="card mb-md-0 mb-3">
+            <div className="card tilebox-one">
                 <div className="card-body">
                     <h5 className="card-title mb-0">Analysis logs</h5>
 

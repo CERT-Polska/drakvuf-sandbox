@@ -78,35 +78,37 @@ class App extends Component {
                     </div>
 
                 </div>
-            </div>
 
-            <div className="content-page">
-                <div className="content">
-                    <Switch>
-                        <Route path="/progress/:analysis" component={AnalysisStatus}/>
-                        <Route path="/analysis/:analysis" component={AnalysisMain}/>
-                        <Route path="/upload" exact component={UploadSample}/>
-                        <Route path="/" exact component={AnalysisList}/>
-                    </Switch>
+                <div className="content-page">
+                    <div className="content">
+                        <Switch>
+                            <Route path="/progress/:analysis" component={AnalysisStatus}/>
+                            <Route path="/analysis/:analysis" component={AnalysisMain}/>
+                            <Route path="/upload" exact component={UploadSample}/>
+                            <Route path="/" exact component={AnalysisList}/>
+                        </Switch>
+                    </div>
                 </div>
-            </div>
 
-            <footer className="footer">
-                <div className="container-fluid">
-                    <div className="row">
-                        <div className="col-md-6">
-                            DRAKVUF Sandbox (C) 2019-2020 <a href="https://cert.pl/">CERT Polska</a><br/>
-                            DRAKVUF (C) 2014-2020 <a href="https://tklengyel.com/">Tamas K Lengyel</a>
-                        </div>
-                        <div className="col-md-6">
-                            <div className="text-md-right footer-links d-none d-md-block">
-                                <a href="https://github.com/CERT-Polska/drakvuf-sandbox">CERT-Polska / drakvuf-sandbox</a>
-                                <a href="https://github.com/tklengyel/drakvuf">tklengyel / drakvuf</a>
+                <footer className="footer">
+                    <div className="container-fluid">
+                        <div className="row">
+                            <div className="col-md-6">
+                                DRAKVUF Sandbox (C) 2019-2020 <a href="https://cert.pl/">CERT Polska</a><br/>
+                                DRAKVUF (C) 2014-2020 <a href="https://tklengyel.com/">Tamas K Lengyel</a>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="text-md-right footer-links d-none d-md-block">
+                                    <a href="https://github.com/CERT-Polska/drakvuf-sandbox">CERT-Polska / drakvuf-sandbox</a>
+                                    <a href="https://github.com/tklengyel/drakvuf">tklengyel / drakvuf</a>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </footer>
+                </footer>
+            </div>
+
+
 
         </Router>;
     }
