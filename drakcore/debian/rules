@@ -16,4 +16,4 @@ build:
 	chmod +x drakcore/systemd/minio
 
 override_dh_virtualenv:
-	dh_virtualenv --python python3
+	dh_virtualenv --python python3.7
