@@ -57,8 +57,7 @@ class Drakcore:
     def upload(self, sample):
         response = requests.post(f"{self.host}/upload", files={"file": sample})
         response.raise_for_status()
-        # redirect to http://<host>/progress/<task-uuid>
-        return response.url.split("/")[-1]
+        return response.json()["task_uid"]
 
     def check_status(self, task_uuid):
         response = requests.get(f"{self.host}/status/{task_uuid}")

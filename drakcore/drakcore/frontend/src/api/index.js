@@ -25,4 +25,13 @@ export default {
   async query(q) {
     return axios.get("/query", { params: { q: q } });
   },
+  async uploadSample(file) {
+    let formData = new FormData();
+    formData.append("file", file);
+    return axios.post("/upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
 };
