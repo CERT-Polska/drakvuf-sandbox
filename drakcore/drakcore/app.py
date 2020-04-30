@@ -62,7 +62,7 @@ def upload():
     task.add_resource("sample", sample)
 
     producer.send_task(task)
-    return redirect("/progress/" + task.uid)
+    return jsonify({"task_uid": task.uid})
 
 
 @app.route("/logs/<task_uid>/<log_type>")
