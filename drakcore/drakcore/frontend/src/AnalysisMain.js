@@ -1,31 +1,13 @@
 import React from "react";
 import { Component } from "react";
+import {
+  Link
+} from "react-router-dom";
 import "./App.css";
 import api from "./api";
 import { Graphviz } from "graphviz-react";
 
-function buildProcessTree(proclist) {
-  return (
-    <ul>
-      {proclist
-        .slice()
-        .sort((pA, pB) => pA.pid - pB.pid)
-        .map(processTreeHelper)}
-    </ul>
-  );
-}
 
-function processTreeHelper(process) {
-  return (
-    <React.Fragment key={process.pid}>
-      <li>
-        <code>{process.procname ? process.procname : "unnamed process"}</code> (
-        {process.pid})
-      </li>
-      {buildProcessTree(process.children)}
-    </React.Fragment>
-  );
-}
 
 class AnalysisMain extends Component {
   constructor(props) {
@@ -36,6 +18,32 @@ class AnalysisMain extends Component {
       graph: null,
       processTree: null,
     };
+    this.processTreeHelper = this.processTreeHelper.bind(this);
+
+  }
+
+  processTreeHelper(process) {
+    const analysis = this.props.match.params.analysis;
+    return (
+      <React.Fragment key={process.pid}>
+        <li>
+          <code>{process.procname ? process.procname : "unnamed process"}</code> 
+          <span className="ml-1">(<Link to={`/analysis/${analysis}/apicalls/${process.pid}`}>{process.pid}</Link>)</span>
+        </li>
+        {this.buildProcessTree(process.children)}
+      </React.Fragment>
+    );
+  }
+
+  buildProcessTree(proclist) {
+    return (
+      <ul>
+        {proclist
+          .slice()
+          .sort((pA, pB) => pA.pid - pB.pid)
+          .map(this.processTreeHelper)}
+      </ul>
+    );
   }
 
   async componentDidMount() {
@@ -85,7 +93,7 @@ class AnalysisMain extends Component {
         <div className="card tilebox-one">
           <div className="card-body">
             <h5 className="card-title mb-0">Proces tree</h5>
-            {buildProcessTree(this.state.processTree)}
+            {this.buildProcessTree(this.state.processTree)}
           </div>
         </div>
       );

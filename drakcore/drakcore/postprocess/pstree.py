@@ -3,7 +3,8 @@ from dataclasses import dataclass, field
 from io import BytesIO
 from typing import List, Set, Optional, Dict, Any
 from drakcore.postprocess import postprocess
-from karton2 import Task, Resource
+from karton2 import Task, RemoteResource
+from tempfile import NamedTemporaryFile
 
 
 @dataclass
@@ -62,18 +63,23 @@ class ProcessTree:
 
 def tree_from_log(file):
     pstree = ProcessTree()
-    for line in file.readlines():
+    for line in file:
         entry = json.loads(line)
         pstree.add_process(entry["PID"], entry["PPID"], entry["ProcessName"])
     return pstree.as_dict()
 
 
 @postprocess(required=["procmon.log"])
-def build_process_tree(task: Task, resources: Dict[str, Resource], minio):
-    res_log = resources["procmon.log"]
-    log = BytesIO(res_log.content)
-    data = json.dumps(tree_from_log(log)).encode()
-    file = BytesIO(data)
-    analysis_uid = task.payload["analysis_uid"]
+def build_process_tree(task: Task, resources: Dict[str, RemoteResource], minio):
+    res_log: RemoteResource = resources["procmon.log"]
 
-    minio.put_object("drakrun", f"{analysis_uid}/process_tree.json", file, len(data))
+    with NamedTemporaryFile() as tmp_file:
+        res_log.download_content_to_file(minio, tmp_file.name)
+
+        # reopen because of minio reasons
+        with open(tmp_file.name, "rb") as reader:
+            data = json.dumps(tree_from_log(reader)).encode()
+
+    output = BytesIO(data)
+    analysis_uid = task.payload["analysis_uid"]
+    minio.put_object("drakrun", f"{analysis_uid}/process_tree.json", output, len(data))

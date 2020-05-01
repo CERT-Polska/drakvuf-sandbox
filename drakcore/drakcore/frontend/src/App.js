@@ -10,7 +10,19 @@ import {
 import AnalysisList from "./AnalysisList";
 import AnalysisMain from "./AnalysisMain";
 import AnalysisStatus from "./AnalysisStatus";
+import AnalysisApicall from "./AnalysisApicall";
 import UploadSample from "./UploadSample";
+
+function AnalysisEntry(props) {
+  return (
+    <li className="side-nav-item">
+      <Link to={props.url} className="side-nav-link">
+        <i className={props.icon} />
+        <span>{props.name}</span>
+      </Link>
+    </li>
+  );
+}
 
 class NavBtns extends Component {
   render() {
@@ -26,12 +38,16 @@ class NavBtns extends Component {
       nav_btns = (
         <div>
           <li className="side-nav-title side-nav-item">Analysis</li>
-          <li className="side-nav-item">
-            <Link to={"/analysis/" + analysis_id} className="side-nav-link">
-              <i className="uil-clipboard-alt" />
-              <span> Report </span>
-            </Link>
-          </li>
+          <AnalysisEntry
+            name="Report"
+            url={`/analysis/${analysis_id}`}
+            icon="uil-clipboard-alt"
+          />
+          <AnalysisEntry
+            name="API calls"
+            url={`/analysis/${analysis_id}/apicalls`}
+            icon="uil-heart-rate"
+          />
         </div>
       );
     }
@@ -83,6 +99,10 @@ class App extends Component {
             <div className="content">
               <Switch>
                 <Route path="/progress/:analysis" component={AnalysisStatus} />
+                <Route
+                  path="/analysis/:analysis/apicalls/:pid?"
+                  component={AnalysisApicall}
+                />
                 <Route path="/analysis/:analysis" component={AnalysisMain} />
                 <Route path="/upload" exact component={UploadSample} />
                 <Route path="/" exact component={AnalysisList} />

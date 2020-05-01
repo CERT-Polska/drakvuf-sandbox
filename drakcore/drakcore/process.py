@@ -19,20 +19,18 @@ class AnalysisProcessor(Consumer):
 
     def process(self):
         # downloaded resource cache
-        downloaded_resources = {}
+        task_resources = {}
         for plugin in self.plugins:
             for resource in plugin.required:
-                if resource in downloaded_resources:
+                if resource in task_resources:
                     continue
-                try:
-                    remote = self.current_task.get_resource(resource)
-                    local = self.download_resource(remote)
-                    downloaded_resources[resource] = local
-                except NoSuchKey:
+                r = self.current_task.get_resource(resource)
+                if r is None:
                     self.log.error("Resource not found")
                     break
+                task_resources[resource] = r
             else:
-                plugin.handler(self.current_task, downloaded_resources, self.minio)
+                plugin.handler(self.current_task, task_resources, self.minio)
 
 
 def main():

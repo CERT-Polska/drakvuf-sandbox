@@ -75,6 +75,16 @@ def processed(task_uid, which):
         abort(404)
 
 
+@app.route("/processed/<task_uid>/apicall/<pid>")
+def apicall(task_uid, pid):
+    try:
+        with NamedTemporaryFile() as f:
+            minio.fget_object("drakrun", f"{task_uid}/apicall/{pid}.json", f.name)
+            return send_file(f.name)
+    except NoSuchKey:
+        abort(404)
+
+
 @app.route("/logs/<task_uid>/<log_type>")
 def logs(task_uid, log_type):
     with NamedTemporaryFile() as f:
