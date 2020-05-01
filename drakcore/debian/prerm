@@ -16,6 +16,7 @@ case "$1" in
     ;;
 esac
 
+systemctl disable --now drak-postprocess.service
 systemctl disable --now drak-minio.service
 systemctl disable --now drak-system.service
 systemctl disable --now drak-web.service

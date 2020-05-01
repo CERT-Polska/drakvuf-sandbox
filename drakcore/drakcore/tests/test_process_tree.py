@@ -1,6 +1,6 @@
 import os
 import pytest
-from drakcore.pstree import ProcessTree
+from drakcore.postprocess.pstree import ProcessTree
 
 
 def test_empty_tree():

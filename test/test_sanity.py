@@ -17,6 +17,7 @@ def test_services_running(drakmon_vm):
         get_service_info(drakmon_vm, "drak-system.service"),
         get_service_info(drakmon_vm, "drak-minio.service"),
         get_service_info(drakmon_vm, "drak-web.service"),
+        get_service_info(drakmon_vm, "drak-postprocess.service"),
         get_service_info(drakmon_vm, "redis-server.service"),
     )
 
