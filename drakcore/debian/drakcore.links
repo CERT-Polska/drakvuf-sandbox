@@ -2,3 +2,4 @@ opt/venvs/drakcore/bin/drak-archiver usr/bin/drak-archiver
 opt/venvs/drakcore/bin/drak-config-setup usr/bin/drak-config-setup
 opt/venvs/drakcore/bin/drak-system usr/bin/drak-system
 opt/venvs/drakcore/bin/drak-postprocess usr/bin/drak-postprocess
+opt/venvs/drakcore/bin/drak-healthcheck usr/bin/drak-healthcheck

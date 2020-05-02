@@ -13,7 +13,11 @@ setup(
     packages=["drakcore", "drakcore.postprocess"],
     include_package_data=True,
     install_requires=open("requirements.txt").read().splitlines(),
-    scripts=['drakcore/bin/drak-archiver', 'drakcore/bin/drak-system', 'drakcore/bin/drak-config-setup', 'drakcore/bin/drak-postprocess'],
+    scripts=['drakcore/bin/drak-archiver',
+             'drakcore/bin/drak-system',
+             'drakcore/bin/drak-config-setup',
+             'drakcore/bin/drak-postprocess',
+             'drakcore/bin/drak-healthcheck'],
     classifiers=[
         "Programming Language :: Python",
         "Operating System :: OS Independent",
