@@ -1,8 +1,9 @@
 import json
 from dataclasses import dataclass, field
-from collections import defaultdict
+from io import BytesIO
 from typing import List, Set, Optional, Dict, Any
-from tempfile import NamedTemporaryFile
+from drakcore.postprocess import postprocess
+from karton2 import Task, Resource
 
 
 @dataclass
@@ -67,8 +68,12 @@ def tree_from_log(file):
     return pstree.as_dict()
 
 
-def generate_process_tree(minio, task_uid) -> bytes:
-    with NamedTemporaryFile() as tmp_file:
-        minio.fget_object("drakrun", f"{task_uid}/procmon.log", tmp_file.name)
-        with open(tmp_file.name) as log_file:
-            return json.dumps(tree_from_log(log_file)).encode()
+@postprocess(required=["procmon.log"])
+def build_process_tree(task: Task, resources: Dict[str, Resource], minio):
+    res_log = resources["procmon.log"]
+    log = BytesIO(res_log.content)
+    data = json.dumps(tree_from_log(log)).encode()
+    file = BytesIO(data)
+    analysis_uid = task.payload["analysis_uid"]
+
+    minio.put_object("drakrun", f"{analysis_uid}/process_tree.json", file, len(data))

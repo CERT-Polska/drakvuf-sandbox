@@ -20,7 +20,7 @@ export default {
     return axios.get(`/graph/${analysis}`);
   },
   async getProcessTree(analysis) {
-    return axios.get(`/processed/${analysis}/process_tree.json`);
+    return axios.get(`/processed/${analysis}/process_tree`);
   },
   async query(q) {
     return axios.get("/query", { params: { q: q } });

@@ -10,10 +10,10 @@ setup(
     version="0.2.0",
     description="DRAKVUF Sandbox Core",
     package_dir={"drakcore": "drakcore"},
-    packages=["drakcore"],
+    packages=["drakcore", "drakcore.postprocess"],
     include_package_data=True,
     install_requires=open("requirements.txt").read().splitlines(),
-    scripts=['drakcore/bin/drak-archiver', 'drakcore/bin/drak-system', 'drakcore/bin/drak-config-setup'],
+    scripts=['drakcore/bin/drak-archiver', 'drakcore/bin/drak-system', 'drakcore/bin/drak-config-setup', 'drakcore/bin/drak-postprocess'],
     classifiers=[
         "Programming Language :: Python",
         "Operating System :: OS Independent",
