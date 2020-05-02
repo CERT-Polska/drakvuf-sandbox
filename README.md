@@ -140,10 +140,7 @@ If your DRAKVUF Sandbox installation seems to work improperly, here are some com
 
 Check service status:
 ```
-systemctl status drak-web
-systemctl status drak-system
-systemctl status drak-minio
-systemctl status drakrun@1
+drak-healthcheck
 ```
 
 Check service logs:
