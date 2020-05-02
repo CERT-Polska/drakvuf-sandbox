@@ -2,10 +2,10 @@ Source: drakcore
 Section: admin
 Priority: optional
 Maintainer: Unmaintained snapshot
-Build-Depends: debhelper (>= 9), python3.7, python3-setuptools, dh-virtualenv (>> 0.6)
+Build-Depends: debhelper (>= 9), python3, python3-setuptools, dh-virtualenv (>> 0.6)
 Standards-Version: 3.9.5
 
 Package: drakcore
 Architecture: amd64
-Pre-Depends: dpkg (>= 1.16.1),  python3.7, libpython3.7, python3-distutils, libmagic1
+Pre-Depends: dpkg (>= 1.16.1), python3.7 | python3.8, libpython3.7 | libpython3.8, python3-distutils, libmagic1
 Description: DRAKVUF Sandbox Core (standalone)
