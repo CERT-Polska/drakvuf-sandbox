@@ -80,7 +80,6 @@ class AnalysisMain extends Component {
         (optional)" section of README to enable it.)
       </div>
     );
-    let simpleProcessTree;
 
     if (this.state.graph) {
       processTree = (
@@ -88,7 +87,10 @@ class AnalysisMain extends Component {
           <Graphviz dot={this.state.graph} />
         </div>
       );
-    } else if (this.state.processTree) {
+    }
+    
+    let simpleProcessTree;
+    if (this.state.processTree) {
       simpleProcessTree = (
         <div className="card tilebox-one">
           <div className="card-body">
