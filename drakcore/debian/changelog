@@ -1,5 +1,3 @@
-drakcore (0.2.1) unstable; urgency=low
-  * New layout in the web UI
-  * Implemented basic networking support
-  * Implemented ZFS support
- -- Michał Leszczyński <ml@icedev.pl>  Tue, 23 Apr 2020 04:00:00 +0100
+drakcore (0.3.0) unstable; urgency=low
+  * See GitHub for release notes.
+ -- Michał Leszczyński <ml@icedev.pl>  Tue, 05 May 2020 04:00:00 +0100

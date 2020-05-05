@@ -1,6 +1,6 @@
 {
   "name": "drakcore",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "dependencies": {
     "axios": "^0.19.2",
