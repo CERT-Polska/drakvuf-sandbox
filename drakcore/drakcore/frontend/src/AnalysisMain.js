@@ -16,6 +16,7 @@ class AnalysisMain extends Component {
     this.state = {
       logs: [],
       graph: null,
+      graphState: "loading",
       processTree: null,
     };
     this.processTreeHelper = this.processTreeHelper.bind(this);
@@ -53,9 +54,15 @@ class AnalysisMain extends Component {
       this.setState({ logs: res_logs.data });
     }
 
-    const res_graph = await api.getGraph(analysis);
-    if (res_graph.data) {
-      this.setState({ graph: res_graph.data });
+    try {
+      const res_graph = await api.getGraph(analysis);
+      if (res_graph.data) {
+        this.setState({ graphState: "loaded", graph: res_graph.data });
+      } else {
+        this.setState({ graphState: "missing" });
+      }
+    } catch (e) {
+      this.setState({ graphState: "missing" });
     }
 
     const process_tree = await api.getProcessTree(analysis);
@@ -75,21 +82,26 @@ class AnalysisMain extends Component {
 
   render() {
     let processTree = (
-      <div>
-        (Process tree was not generated, please check out "ProcDOT integration
-        (optional)" section of README to enable it.)
-      </div>
+      <div>Loading graph...</div>
     );
 
-    if (this.state.graph) {
+    if (this.state.graphState === "loaded") {
       processTree = (
-        <div id="treeWrapper" style={{ width: "80em", height: "30em" }}>
-          <Graphviz dot={this.state.graph} />
+        <div id="treeWrapper">
+          <Graphviz dot={this.state.graph} options={{zoom: true, width: "100%"}} />
+        </div>
+      );
+    } else if (this.state.graphState === "missing") {
+      processTree = (
+        <div>
+          (Process tree was not generated, please check out "ProcDOT integration
+          (optional)" section of README to enable it.)
         </div>
       );
     }
-    
+
     let simpleProcessTree;
+
     if (this.state.processTree) {
       simpleProcessTree = (
         <div className="card tilebox-one">
