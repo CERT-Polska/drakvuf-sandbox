@@ -34,12 +34,8 @@ def process_logfile(log):
 
 @postprocess(required=["apimon.log"])
 def process_api_log(task: Task, resources: Dict[str, RemoteResource], minio):
-    res_log = resources["apimon.log"]
-    with NamedTemporaryFile() as tmp_file:
-        res_log.download_content_to_file(minio, tmp_file.name)
-
-        with open(tmp_file.name) as log:
-            out_files = process_logfile(log)
+    with resources["apimon.log"].download_temporary_file() as tmp_file:
+        out_files = process_logfile(tmp_file)
 
     analysis_uid = task.payload["analysis_uid"]
     for pid, file in out_files.items():

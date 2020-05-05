@@ -26,11 +26,13 @@ class AnalysisProcessor(Consumer):
                     continue
                 r = self.current_task.get_resource(resource)
                 if r is None:
-                    self.log.error("Resource not found")
                     break
                 task_resources[resource] = r
             else:
-                plugin.handler(self.current_task, task_resources, self.minio)
+                try:
+                    plugin.handler(self.current_task, task_resources, self.minio)
+                except Exception as e:
+                    self.log.error("%s", e)
 
 
 def main():
