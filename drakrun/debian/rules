@@ -6,11 +6,11 @@
 build:
 	$(MAKE) -C drakrun/tools
 	cp drakrun/config.dist.ini drakrun/config.ini
-	touch drakrun/hooks.txt
+	cp drakrun/hooks.dist.txt drakrun/hooks.txt
 
 override_dh_virtualenv:
 	dh_virtualenv --python python3
 
 # Silence libvmi.so info errors
 override_dh_shlibdeps:
-	    dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
+	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
