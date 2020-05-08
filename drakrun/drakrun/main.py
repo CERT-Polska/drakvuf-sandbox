@@ -346,6 +346,10 @@ class DrakrunKarton(Karton):
                                "-r", kernel_profile,
                                "-e", "D:\\run.bat"]
 
+                syscall_filter = self.config.config['drakrun'].get('syscall_filter', None)
+                if syscall_filter:
+                    drakvuf_cmd.extend(["-S", syscall_filter])
+
                 with open(drakmon_log_fp, "wb") as drakmon_log:
                     drakvuf = subprocess.Popen(drakvuf_cmd, stdout=drakmon_log)
 
