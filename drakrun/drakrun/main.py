@@ -345,7 +345,7 @@ class DrakrunKarton(Karton):
                                "--memdump-dir", dump_dir,
                                "-r", kernel_profile,
                                "-e", "D:\\run.bat"]
-                
+
                 syscall_filter = self.config.config['drakrun'].get('syscall_filter', None)
                 if syscall_filter:
                     drakvuf_cmd.extend(["-S", syscall_filter])
