@@ -1,5 +1,6 @@
 import argparse
 import configparser
+import hashlib
 import logging
 import shlex
 import os
@@ -11,7 +12,9 @@ import string
 import tempfile
 from shutil import copyfile
 
+import requests
 from drakrun.drakpdb import fetch_pdb, make_pdb_profile
+from requests import RequestException
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(asctime)s][%(levelname)s] %(message)s',
@@ -98,13 +101,22 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
             except subprocess.CalledProcessError:
                 logging.exception("Failed to generate unattended.iso.")
 
+    sha256_hash = hashlib.sha256()
+
+    with open(iso_path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+
+        iso_sha256 = sha256_hash.hexdigest()
+
     with open(os.path.join(ETC_DIR, "install.json"), "w") as f:
         install_info = {"storage_backend": storage_backend,
                         "disk_size": disk_size,
                         "iso_path": os.path.abspath(iso_path),
                         "zfs_tank_name": zfs_tank_name,
                         "max_vms": max_vms,
-                        "enable_unattended": unattended_xml is not None}
+                        "enable_unattended": unattended_xml is not None,
+                        "iso_sha256": iso_sha256}
         f.write(json.dumps(install_info, indent=4))
 
     logging.info("Checking xen-detect...")
@@ -225,7 +237,18 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
     logging.info("-" * 80)
 
 
-def generate_profiles():
+def send_usage_report(report):
+    try:
+        res = requests.post('https://drakvuf.icedev.pl/usage/draksetup', json=report, timeout=5)
+        res.raise_for_status()
+    except RequestException:
+        logging.exception("Failed to send usage report. This is not a serious problem.")
+
+
+def generate_profiles(no_report=False):
+    if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
+        no_report = True
+
     with open(os.path.join(ETC_DIR, "install.json"), 'r') as f:
         install_info = json.loads(f.read())
 
@@ -233,6 +256,7 @@ def generate_profiles():
     output = subprocess.check_output(['vmi-win-guid', 'name', 'vm-0'], timeout=30).decode('utf-8')
 
     try:
+        version = re.search(r'Version: (.*)', output).group(1)
         pdb = re.search(r'PDB GUID: ([0-9a-f]+)', output).group(1)
         fn = re.search(r'Kernel filename: ([a-z]+\.[a-z]+)', output).group(1)
     except AttributeError:
@@ -290,6 +314,18 @@ def generate_profiles():
     for vm_id in range(max_vms + 1):
         # we treat vm_id=0 as special internal one
         generate_vm_conf(install_info, vm_id)
+
+    if not no_report:
+        send_usage_report({
+            "kernel": {
+                "guid": pdb,
+                "filename": fn,
+                "version": version
+            },
+            "install_iso": {
+                "sha256": install_info["iso_sha256"]
+            }
+        })
 
     reenable_services()
     logging.info("All right, drakrun setup is done.")
@@ -365,6 +401,7 @@ def main():
 
     profile_p = subparsers.add_parser('postinstall', help='Perform tasks after guest installation')
     profile_p.set_defaults(which='postinstall')
+    profile_p.add_argument('--no-report', dest='no_report', action='store_true', default=False, help='Don\'t send anonymous usage report')
 
     postupgrade_p = subparsers.add_parser('postupgrade', help='Perform tasks after drakrun upgrade')
     postupgrade_p.set_defaults(which='postupgrade')
@@ -386,7 +423,7 @@ def main():
                 max_vms=args.max_vms,
                 unattended_xml=args.unattended_xml)
     elif args.which == "postinstall":
-        generate_profiles()
+        generate_profiles(args.no_report)
     elif args.which == "postupgrade":
         reenable_services()
 

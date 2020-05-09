@@ -54,6 +54,7 @@ This instruction assumes that you want to create a single-node installation with
    ```
    sudo draksetup postinstall
    ```
+   **Note:** Add `--no-report` if you don't want `draksetup` to send [basic usage report](https://github.com/CERT-Polska/drakvuf-sandbox/blob/master/USAGE_STATISTICS.md). 
 8. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
 
 ## Optional features
