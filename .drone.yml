@@ -53,6 +53,7 @@ steps:
     - mc mb --ignore-existing cache/debs
     - cd drakcore
     - wget -O drakcore/systemd/minio $CACHE_SERVER/minio
+    - package/find-python.sh
     - dpkg-buildpackage -us -uc -b
     - mc cp ../drakcore_*_amd64.deb "cache/debs/drakcore_drone-$DRONE_BUILD_NUMBER.deb"
   environment:
@@ -86,6 +87,7 @@ steps:
     - mc config host add cache http://192.168.21.131:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
     - mc mb --ignore-existing cache/debs
     - cd drakrun
+    - package/find-python.sh
     - dpkg-buildpackage -us -uc -b
     - mc cp ../drakrun_*_amd64.deb "cache/debs/drakrun_drone-$DRONE_BUILD_NUMBER.deb"
   environment:
