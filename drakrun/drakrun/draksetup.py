@@ -277,7 +277,16 @@ def generate_profiles(no_report=False):
     with open(kernel_profile, 'w') as f:
         f.write(profile)
 
-    output = subprocess.check_output(['vmi-win-offsets', 'name', 'vm-0', '-r', kernel_profile], timeout=30).decode('utf-8')
+    for i in range(10):
+        try:
+            proc = subprocess.Popen(['vmi-win-offsets', 'name', 'vm-0', '-r', kernel_profile])
+            output = proc.communicate(timeout=10).decode('utf-8', 'ignore')
+            break
+        except subprocess.TimeoutExpired:
+            proc.terminate()
+    else:
+        logging.error("Failed to fetch vmi-win-offsets after many attempts.")
+        return
 
     offsets = re.findall(r'^([a-z_]+):(0x[0-9a-f]+)$', output, re.MULTILINE)
     if not offsets:
