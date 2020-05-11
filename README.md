@@ -23,6 +23,7 @@ Nested virtualization:
 
 * KVM, Hyper-v are **not** supported
 * because of the above, hosting drakvuf-sandbox in cloud is also **not** supported (because most hosting providers use one of the above)
+* however, nested Xen **does** work
 * VMware Workstation Player **does** work, but you need to check Virtualize EPT option for a VM; Intel processor with EPT still required
 
 ### Basic installation
