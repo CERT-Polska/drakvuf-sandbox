@@ -1,7 +1,7 @@
 # DRAKVUF Sandbox
 [![Build Status](https://drone.icedev.pl/api/badges/CERT-Polska/drakvuf-sandbox/status.svg)](https://drone.icedev.pl/CERT-Polska/drakvuf-sandbox)
 
-DRAKVUF Sandbox is an automated black-box malware analysis system with [DRAKVUF](https://drakvuf.com/) engine under the hood.
+DRAKVUF Sandbox is an automated black-box malware analysis system with [DRAKVUF](https://drakvuf.com/) engine under the hood, which allows for malware analysis without agent on guest OS.
 
 This project provides you with a friendly web interface that allows you to upload suspicious files to be analyzed. Once the sandboxing job is finished, you can explore the analysis result through the mentioned interface and get insight whether the file is truly malicious or not.
 
@@ -18,6 +18,12 @@ In order to run DRAKVUF Sandbox, your setup must fullfill all of the listed requ
 * Processor: Intel processor with VT-x and EPT features
 * Host system: Debian 10 Buster/Ubuntu 18.04 Bionic/Ubuntu 20.04 Focal with at least 2 core CPU and 5 GB RAM
 * Guest system: Windows 7 (x64), Windows 10 (x64; experimental support)
+
+Nested virtualization:
+
+* KVM, Hyper-v are **not** supported
+* because of the above, hosting drakvuf-sandbox in cloud is also **not** supported (because most hosting providers use one of the above)
+* VMware Workstation Player **does** work, but you need to check Virtualize EPT option for a VM; Intel processor with EPT still required
 
 ### Basic installation
 
@@ -133,100 +139,11 @@ You may optionally configure your guests to use
 3. Set `dns_server=use-gateway-address` in `/etc/drakrun/config.ini`.
 4. Restart your drakrun instances: `systemctl restart 'drakrun@*`
 
-## Troubleshooting
+## [Troubleshooting](https://github.com/CERT-Polska/drakvuf-sandbox/wiki/Troubleshooting)
 
-### Checking service status
+## [Project contents](https://github.com/CERT-Polska/drakvuf-sandbox/wiki/Project-contents)
 
-If your DRAKVUF Sandbox installation seems to work improperly, here are some commands that would help to troubleshoot the infrastructure.
-
-Check service status:
-```
-drak-healthcheck
-```
-
-Check service logs:
-```
-journalctl -e -u drak-web
-journalctl -e -u drak-system
-journalctl -e -u drak-minio
-journalctl -e -u drakrun@1
-```
-
-### Debug `device model did not start`
-
-You may encounter the following error with `draksetup` command or `drakrun@*` service, which will prevent the VM from starting properly.
-
-```
-libxl: error: libxl_create.c:1676:domcreate_devmodel_started: Domain 4:device model did not start: -3
-...
-subprocess.CalledProcessError: Command 'xl create /etc/drakrun/configs/vm-0.cfg' returned non-zero exit status 3.
-```
-
-In such a case, you should inspect `/var/log/xen/qemu*.log` in order to determine the actual reason why the VM is refusing to start.
-
-### Debug `can't allocate low memory for domain`
-
-The following error with `draksetup` command or `drakrun@*` service means that your machine is missing memory resources:
-
-```
-xc: error: panic: xc_dom_boot.c:122: xc_dom_boot_mem_init: can't allocate low memory for domain: Out of memory
-...
-subprocess.CalledProcessError: Command 'xl create /etc/drakrun/configs/vm-0.cfg' returned non-zero exit status 3.
-```
-
-Resolutions:
-* adjust the amount of memory dedicated to the Dom0 (host system) in `/etc/default/grub.d/xen.cfg` (look for `dom0_mem=2048M,max:2048M`) and run `update-grub && reboot`;
-* adjust the amount of memory dedicated to the DomU (guest systems) in `/etc/drakrun/scripts/cfg.template` (`maxmem` and `memory` keys);
-
-## Project contents
-
-The project is divided into two main packages:
-
-* `drakcore*.deb` - system core, provides a web interface, an internal task queue and object storage
-* `drakrun*.deb` - sandbox worker, should be installed where you want to run your Virtual Machines (Intel CPU with VT-x and EPT is required)
-
-Please note that the [DRAKVUF engine](https://github.com/tklengyel/drakvuf) is a separate project authored by Tamas K Lengyel.
-
-### Sandbox Core
-
-The system core package `drakcore*.deb` consists of the following services:
-
-* `drak-web` - web interface that allows user to interact with the sandbox
-* `drak-system` - internal task management system, using for dispatching jobs between workers
-* `drak-minio` - builtin object storage on which analysis results are stored
-
-### Sandbox Worker
-
-A worker package `drakrun*.deb` is basically a wrapper around DRAKVUF project that spins off `drakrun` service instances. These instances are processing the queued suspicious files one after another, using appropriate infrastructure. This component also features a `draksetup` command that makes it easier to setup configuration that is necessary to run services.
-
-## Building installation packages
-
-In order to build installation packages on your own, you must [install Docker](https://docs.docker.com/install/linux/docker-ce/debian/) on your machine.
-
-### DRAKVUF Sandbox (drakcore, drakrun)
-
-You may build your packages from source using following commands:
-
-```
-git clone https://github.com/CERT-Polska/drakvuf-sandbox.git
-cd drakvuf-sandbox
-sudo ./drakcore/package/build.sh
-sudo ./drakrun/package/build.sh
-```
-
-Afterwards, you should find your installation packages produced in `out/` directory.
-
-### DRAKVUF (drakvuf-bundle)
-
-The build scripts for `drakvuf-bundle` are part of [tklengyel/drakvuf](https://github.com/tklengyel/drakvuf) repository. You may build your package using the following commands:
-
-```
-git clone --recursive https://github.com/tklengyel/drakvuf
-cd drakvuf
-sudo ./package/build.sh
-```
-
-The resulting package will be produced to `package/out/` directory.
+## [Building installation packages](https://github.com/CERT-Polska/drakvuf-sandbox/wiki/Building-installation-packages)
 
 ## Maintainers/authors
 
