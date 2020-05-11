@@ -19,7 +19,7 @@ docker run --rm \
            -it \
            -v $OUTDIR:/out \
            deb-build \
-           sh -c "dpkg-buildpackage -us -uc -b && cp ../drakrun*.deb /out && chown -R $FILE_OWNER /out"
+           sh -c "package/find-python.sh && dpkg-buildpackage -us -uc -b && cp ../drakrun*.deb /out && chown -R $FILE_OWNER /out"
 
 if [ $? -ne 0 ]; then echo Failed to build package ; exit 1 ; fi
 

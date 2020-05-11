@@ -1,5 +1,7 @@
 #!/usr/bin/make -f
 
+PYTHON_BIN := "$(shell cat 'package/python-bin')"
+
 %:
 	dh $@ --with python-virtualenv
 
@@ -16,4 +18,4 @@ build:
 	chmod +x drakcore/systemd/minio
 
 override_dh_virtualenv:
-	dh_virtualenv --python python3
+	dh_virtualenv --python ${PYTHON_BIN}
