@@ -2,4 +2,4 @@ drakrun/config.ini /etc/drakrun/
 drakrun/scripts/* /etc/drakrun/scripts/
 drakrun/hooks.txt /etc/drakrun/
 drakrun/systemd/*.service /etc/systemd/system
-drakrun/splash.bmp /usr/share/drakrun/
+drakrun/splash.jpg /usr/share/drakrun/

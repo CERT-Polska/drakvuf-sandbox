@@ -5,7 +5,7 @@ memory = 3048
 vcpus = 2
 maxcpus = 2
 builder = "hvm"
-boot = "cd,menu=on,splash=/usr/share/drakrun/splash.bmp,splash-time=2000"
+boot = "cd,menu=on,splash=/usr/share/drakrun/splash.jpg,splash-time=2000"
 hap = 1
 acpi = 1
 on_poweroff = "destroy"
