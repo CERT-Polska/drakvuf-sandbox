@@ -277,7 +277,7 @@ def generate_profiles(no_report=False):
     with open(kernel_profile, 'w') as f:
         f.write(profile)
 
-    output = subprocess.check_output(['vmi-win-offsets', 'name', 'vm-0', '-r', kernel_profile], timeout=30).decode('utf-8')
+    output = subprocess.check_output(['vmi-win-offsets', '--name', 'vm-0', '--json-kernel', kernel_profile], timeout=30).decode('utf-8')
 
     offsets = re.findall(r'^([a-z_]+):(0x[0-9a-f]+)$', output, re.MULTILINE)
     if not offsets:

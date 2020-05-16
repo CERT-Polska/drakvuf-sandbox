@@ -1,0 +1,3 @@
+[submodule "drakvuf"]
+	path = drakvuf
+	url = https://github.com/CERT-Polska/drakvuf.git
