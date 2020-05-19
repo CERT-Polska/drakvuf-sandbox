@@ -9,6 +9,12 @@ steps:
     - pip3 install flake8
     - pip3 install -r drakcore/requirements.txt
     - cd drakcore && flake8 --ignore E402,F401,E501
+- name: Check formatting with prettier
+  image: node:14
+  commands:
+    - cd drakcore/drakcore/frontend
+    - npm install
+    - npx prettier --check src/
 node:
    purpose: generic
 trigger:
