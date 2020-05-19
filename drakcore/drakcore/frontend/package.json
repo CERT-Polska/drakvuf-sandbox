@@ -8,6 +8,7 @@
     "d3-selection-multi": "^1.0.1",
     "graphviz-react": "^1.0.4",
     "ndjson-parse": "^1.0.4",
+    "prettier": "^2.0.5",
     "react": "^16.13.1",
     "react-d3-tree": "^1.16.1",
     "react-dom": "^16.13.1",
@@ -18,7 +19,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "format": "prettier --write src/"
   },
   "eslintConfig": {
     "extends": "react-app"

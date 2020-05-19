@@ -1,13 +1,9 @@
 import React from "react";
 import { Component } from "react";
-import {
-  Link
-} from "react-router-dom";
+import { Link } from "react-router-dom";
 import "./App.css";
 import api from "./api";
 import { Graphviz } from "graphviz-react";
-
-
 
 class AnalysisMain extends Component {
   constructor(props) {
@@ -20,7 +16,6 @@ class AnalysisMain extends Component {
       processTree: null,
     };
     this.processTreeHelper = this.processTreeHelper.bind(this);
-
   }
 
   processTreeHelper(process) {
@@ -28,8 +23,14 @@ class AnalysisMain extends Component {
     return (
       <React.Fragment key={process.pid}>
         <li>
-          <code>{process.procname ? process.procname : "unnamed process"}</code> 
-          <span className="ml-1">(<Link to={`/analysis/${analysis}/apicalls/${process.pid}`}>{process.pid}</Link>)</span>
+          <code>{process.procname ? process.procname : "unnamed process"}</code>
+          <span className="ml-1">
+            (
+            <Link to={`/analysis/${analysis}/apicalls/${process.pid}`}>
+              {process.pid}
+            </Link>
+            )
+          </span>
         </li>
         {this.buildProcessTree(process.children)}
       </React.Fragment>
@@ -81,14 +82,15 @@ class AnalysisMain extends Component {
   }
 
   render() {
-    let processTree = (
-      <div>Loading graph...</div>
-    );
+    let processTree = <div>Loading graph...</div>;
 
     if (this.state.graphState === "loaded") {
       processTree = (
         <div id="treeWrapper">
-          <Graphviz dot={this.state.graph} options={{zoom: true, width: "100%"}} />
+          <Graphviz
+            dot={this.state.graph}
+            options={{ zoom: true, width: "100%" }}
+          />
         </div>
       );
     } else if (this.state.graphState === "missing") {
