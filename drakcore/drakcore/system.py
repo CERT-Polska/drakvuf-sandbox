@@ -25,7 +25,7 @@ def main():
 
     bucket_name = config.minio_config["bucket"]
 
-    service.log.info("Veryfing bucket existence...")
+    service.log.info("Verifying bucket existence...")
     minio = get_minio_helper(config)
     if not minio.bucket_exists(bucket_name):
         service.log.info("Bucket %s is missing. Creating new one...", bucket_name)
