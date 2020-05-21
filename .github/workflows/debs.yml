@@ -1,0 +1,22 @@
+name: Package build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+      matrix:
+        container:
+          - "debian:buster"
+          - "ubuntu:bionic"
+          - "ubuntu:focal"
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        path: sandbox
+    - name: build debs
+      run: |
+        sh drakcore/package/build.sh ${{ matrix.container }}
+        sh drakrun/package/build.sh ${{ matrix.container }}
