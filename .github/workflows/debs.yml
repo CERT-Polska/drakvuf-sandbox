@@ -1,6 +1,9 @@
 name: Package build
 
-on: [push]
+on:
+  push:
+    tags:
+      - 'v0.*'
 
 jobs:
   build:
