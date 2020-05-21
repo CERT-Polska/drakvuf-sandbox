@@ -13,11 +13,29 @@ jobs:
           - "ubuntu:bionic"
           - "ubuntu:focal"
     steps:
-    - uses: actions/checkout@v2
+    - name: Checkout DRAKVUF Sandbox
+      uses: actions/checkout@v2
       with:
         path: sandbox
-    - name: build debs
+        submodules: false
+    - name: Get DRAKVUF commit ref
+      id: get_drakvuf_ref
       run: |
-        cd sandbox
-        sh drakcore/package/build.sh ${{ matrix.container }}
-        sh drakrun/package/build.sh ${{ matrix.container }}
+        DRAKVUF_REF=$(git ls-tree HEAD drakvuf | cut -f3 '-d ' | cut -f1 -d$'\t')
+        echo "::set-output name=drakvuf_ref::${DRAKVUF_REF}"
+    - name: Checkout DRAKVUF
+      uses: actions/checkout@v2
+      with:
+        path: drakvuf
+        ref: ${{ steps.get_drakvuf_ref.outputs.drakvuf_ref }}
+        submodules: recursive
+    - name: Build DRAKVUF package
+      run: |
+        cd drakvuf
+        sh package/build.sh ${{ matrix.container }}
+    - name: Build drakcore package
+      run: |
+        BASEIMAGE=${{ matrix.container }} sh drakcore/package/build.sh
+    - name: Build drakrun package
+      run: |
+        BASEIMAGE=${{ matrix.container }} sh drakrun/package/build.sh
