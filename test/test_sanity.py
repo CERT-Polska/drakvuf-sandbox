@@ -1,11 +1,10 @@
 import time
 import json
 import requests
+import pytest
 
 from utils import get_hypervisor_type, get_service_info, Drakcore
-from conftest import VM_HOST
-
-import pytest
+from conftest import VM_HOST, DRAKMON_SERVICES
 
 
 def test_running_on_xen(drakmon_vm):
@@ -14,13 +13,8 @@ def test_running_on_xen(drakmon_vm):
 
 def test_services_running(drakmon_vm):
     def check_status():
-        infos = (
-            get_service_info(drakmon_vm, "drak-system.service"),
-            get_service_info(drakmon_vm, "drak-minio.service"),
-            get_service_info(drakmon_vm, "drak-web.service"),
-            get_service_info(drakmon_vm, "drak-postprocess.service"),
-            get_service_info(drakmon_vm, "redis-server.service"),
-        )
+        infos = [get_service_info(drakmon_vm, service) for service in DRAKMON_SERVICES]
+
         for info in infos:
             assert info["LoadState"] == "loaded"
             assert info["ActiveState"] == "active"

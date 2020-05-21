@@ -61,6 +61,14 @@ DRAKVUF_DEPS = [
     "libaio1",
 ]
 
+DRAKMON_SERVICES = [
+    "drak-system.service",
+    "drak-minio.service",
+    "drak-web.service",
+    "drak-postprocess.service",
+    "redis-server.service",
+]
+
 vm_runner = VMRunner(VM_RUNNER_HOST)
 
 ssh_config = paramiko.config.SSHConfig.from_text(
@@ -179,6 +187,7 @@ def drakmon_vm():
 
     return Connection("testvm", config=FABRIC_CONFIG)
 
+
 @pytest.fixture(scope="session")
 def karton_bucket(drakmon_vm):
     """ Wait up to 10 seconds until karton2 bucket appears """
@@ -190,3 +199,14 @@ def karton_bucket(drakmon_vm):
             time.sleep(1.0)
 
     return None
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """ Dump logs if we're going to exit with an error """
+    if exitstatus == 0:
+        return
+
+    print("Testing finished with errors, collecting logs")
+    with Connection("testvm", config=FABRIC_CONFIG) as c:
+        for service in DRAKMON_SERVICES:
+            c.run(f"journalctl -u {service}")
