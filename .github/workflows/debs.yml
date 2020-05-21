@@ -26,6 +26,7 @@ jobs:
     - name: Checkout DRAKVUF
       uses: actions/checkout@v2
       with:
+        repository: tklengyel/drakvuf
         path: drakvuf
         ref: ${{ steps.get_drakvuf_ref.outputs.drakvuf_ref }}
         submodules: recursive
