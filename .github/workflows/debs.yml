@@ -18,5 +18,6 @@ jobs:
         path: sandbox
     - name: build debs
       run: |
+        cd sandbox
         sh drakcore/package/build.sh ${{ matrix.container }}
         sh drakrun/package/build.sh ${{ matrix.container }}
