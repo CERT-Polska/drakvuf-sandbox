@@ -21,7 +21,7 @@ jobs:
     - name: Get DRAKVUF commit ref
       id: get_drakvuf_ref
       run: |
-        DRAKVUF_REF=$(git ls-tree HEAD drakvuf | cut -f3 '-d ' | cut -f1 -d$'\t')
+        DRAKVUF_REF=$(sh -c 'cd sandbox && git ls-tree HEAD drakvuf' | cut -f3 '-d ' | cut -f1 -d$'\t')
         echo "::set-output name=drakvuf_ref::${DRAKVUF_REF}"
     - name: Checkout DRAKVUF
       uses: actions/checkout@v2
@@ -33,9 +33,24 @@ jobs:
     - name: Build DRAKVUF package
       run: |
         sh -c 'cd drakvuf && sh package/build.sh ${{ matrix.container }}'
+    - name: Upload DRAKVUF package
+      uses: actions/upload-artifact@v2
+      with:
+        name: drakvuf-bundle-${{ matrix.container }}
+        path: drakvuf/package/out/*
     - name: Build drakcore package
       run: |
         sh -c 'cd sandbox && BASEIMAGE=${{ matrix.container }} sh drakcore/package/build.sh'
+    - name: Upload drakcore package
+      uses: actions/upload-artifact@v2
+      with:
+        name: drakcore-${{ matrix.container }}
+        path: sandbox/drakcore/out/*
     - name: Build drakrun package
       run: |
         sh -c 'cd sandbox && BASEIMAGE=${{ matrix.container }} sh drakrun/package/build.sh'
+    - name: Upload drakrun package
+      uses: actions/upload-artifact@v2
+      with:
+        name: drakrun-${{ matrix.container }}
+        path: sandbox/drakrun/out/*
