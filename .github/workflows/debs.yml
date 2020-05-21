@@ -32,11 +32,10 @@ jobs:
         submodules: recursive
     - name: Build DRAKVUF package
       run: |
-        cd drakvuf
-        sh package/build.sh ${{ matrix.container }}
+        sh -c 'cd drakvuf && sh package/build.sh ${{ matrix.container }}'
     - name: Build drakcore package
       run: |
-        BASEIMAGE=${{ matrix.container }} sh drakcore/package/build.sh
+        sh -c 'cd sandbox && BASEIMAGE=${{ matrix.container }} sh drakcore/package/build.sh'
     - name: Build drakrun package
       run: |
-        BASEIMAGE=${{ matrix.container }} sh drakrun/package/build.sh
+        sh -c 'cd sandbox && BASEIMAGE=${{ matrix.container }} sh drakrun/package/build.sh'
