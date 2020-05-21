@@ -16,7 +16,7 @@ docker build -f drakcore/package/Dockerfile \
              --build-arg IMAGE=$BASEIMAGE \
              -t deb-build-web . && \
 docker run --rm \
-           -it \
+           -i \
            -v $OUTDIR:/out \
            deb-build-web \
            sh -c "package/find-python.sh && dpkg-buildpackage -us -uc -b && cp ../drakcore*.deb /out && chown -R $FILE_OWNER /out"
