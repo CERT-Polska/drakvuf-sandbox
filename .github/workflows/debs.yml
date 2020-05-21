@@ -1,0 +1,67 @@
+name: Package build
+
+on:
+  push:
+    tags:
+      - 'v0.*'
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+      matrix:
+        container:
+          - "debian:buster"
+          - "ubuntu:bionic"
+          - "ubuntu:focal"
+    steps:
+    - name: Generate artifact suffix
+      id: gen_artifact_suffix
+      run: |
+        SYSTEM_ID=$(echo ${{ matrix.container }} | cut -f1 '-d:')
+        DISTRIBUTION=$(echo ${{ matrix.container }} | cut -f2 '-d:')
+        ARTIFACT_SUFFIX="${SYSTEM_ID}_${DISTRIBUTION}"
+        echo "Artifact suffix: $ARTIFACT_SUFFIX"
+        echo "::set-output name=artifact_suffix::${ARTIFACT_SUFFIX}"
+    - name: Checkout DRAKVUF Sandbox
+      uses: actions/checkout@v2
+      with:
+        path: sandbox
+        submodules: false
+    - name: Get DRAKVUF commit ref
+      id: get_drakvuf_ref
+      run: |
+        DRAKVUF_REF=$(sh -c 'cd sandbox && git ls-tree HEAD drakvuf' | cut -f3 '-d ' | cut -f1 -d$'\t')
+        echo "::set-output name=drakvuf_ref::${DRAKVUF_REF}"
+    - name: Checkout DRAKVUF
+      uses: actions/checkout@v2
+      with:
+        repository: tklengyel/drakvuf
+        path: drakvuf
+        ref: ${{ steps.get_drakvuf_ref.outputs.drakvuf_ref }}
+        submodules: recursive
+    - name: Build DRAKVUF package
+      run: |
+        sh -c 'cd drakvuf && sh package/build.sh ${{ matrix.container }}'
+    - name: Upload DRAKVUF package
+      uses: actions/upload-artifact@v2
+      with:
+        name: drakvuf-bundle-${{ steps.gen_artifact_suffix.outputs.artifact_suffix }}
+        path: drakvuf/package/out/*
+    - name: Build drakcore package
+      run: |
+        sh -c 'cd sandbox && BASEIMAGE=${{ matrix.container }} sh drakcore/package/build.sh'
+    - name: Upload drakcore package
+      uses: actions/upload-artifact@v2
+      with:
+        name: drakcore-${{ steps.gen_artifact_suffix.outputs.artifact_suffix }}
+        path: sandbox/out/drakcore*
+    - name: Build drakrun package
+      run: |
+        sh -c 'cd sandbox && BASEIMAGE=${{ matrix.container }} sh drakrun/package/build.sh'
+    - name: Upload drakrun package
+      uses: actions/upload-artifact@v2
+      with:
+        name: drakrun-${{ steps.gen_artifact_suffix.outputs.artifact_suffix }}
+        path: sandbox/out/drakrun*

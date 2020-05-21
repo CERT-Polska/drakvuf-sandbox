@@ -16,7 +16,7 @@ docker build -f drakrun/package/Dockerfile \
              --build-arg IMAGE=$BASEIMAGE \
              -t deb-build . && \
 docker run --rm \
-           -it \
+           -i \
            -v $OUTDIR:/out \
            deb-build \
            sh -c "package/find-python.sh && dpkg-buildpackage -us -uc -b && cp ../drakrun*.deb /out && chown -R $FILE_OWNER /out"
