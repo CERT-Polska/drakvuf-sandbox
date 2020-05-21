@@ -45,7 +45,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: drakvuf-bundle-${{ steps.gen_artifact_suffix.outputs.artifact_suffix }}
-        path: drakvuf/out/*
+        path: drakvuf/package/out/*
     - name: Build drakcore package
       run: |
         sh -c 'cd sandbox && BASEIMAGE=${{ matrix.container }} sh drakcore/package/build.sh'
@@ -53,7 +53,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: drakcore-${{ steps.gen_artifact_suffix.outputs.artifact_suffix }}
-        path: sandbox/out/*
+        path: sandbox/out/drakcore*
     - name: Build drakrun package
       run: |
         sh -c 'cd sandbox && BASEIMAGE=${{ matrix.container }} sh drakrun/package/build.sh'
@@ -61,4 +61,4 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: drakrun-${{ steps.gen_artifact_suffix.outputs.artifact_suffix }}
-        path: sandbox/drakrun/out/*
+        path: sandbox/out/drakrun*
