@@ -13,6 +13,14 @@ jobs:
           - "ubuntu:bionic"
           - "ubuntu:focal"
     steps:
+    - name: Generate artifact suffix
+      id: gen_artifact_suffix
+      run: |
+        SYSTEM_ID=$(echo ${{ matrix.container }} | cut -f1 '-d:')
+        DISTRIBUTION=$(echo ${{ matrix.container }} | cut -f2 '-d:')
+        ARTIFACT_SUFFIX="${SYSTEM_ID}_${DISTRIBUTION}"
+        echo "Artifact suffix: $ARTIFACT_SUFFIX"
+        echo "::set-output name=artifact_suffix::${ARTIFACT_SUFFIX}"
     - name: Checkout DRAKVUF Sandbox
       uses: actions/checkout@v2
       with:
@@ -36,7 +44,7 @@ jobs:
     - name: Upload DRAKVUF package
       uses: actions/upload-artifact@v2
       with:
-        name: drakvuf-bundle-${{ matrix.container }}
+        name: drakvuf-bundle-${{ steps.gen_artifact_suffix.outputs.artifact_suffix }}
         path: drakvuf/package/out/*
     - name: Build drakcore package
       run: |
@@ -44,7 +52,7 @@ jobs:
     - name: Upload drakcore package
       uses: actions/upload-artifact@v2
       with:
-        name: drakcore-${{ matrix.container }}
+        name: drakcore-${{ steps.gen_artifact_suffix.outputs.artifact_suffix }}
         path: sandbox/drakcore/out/*
     - name: Build drakrun package
       run: |
@@ -52,5 +60,5 @@ jobs:
     - name: Upload drakrun package
       uses: actions/upload-artifact@v2
       with:
-        name: drakrun-${{ matrix.container }}
+        name: drakrun-${{ steps.gen_artifact_suffix.outputs.artifact_suffix }}
         path: sandbox/drakrun/out/*
