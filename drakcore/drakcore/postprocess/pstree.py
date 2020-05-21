@@ -71,14 +71,8 @@ def tree_from_log(file):
 
 @postprocess(required=["procmon.log"])
 def build_process_tree(task: Task, resources: Dict[str, RemoteResource], minio):
-    res_log: RemoteResource = resources["procmon.log"]
-
-    with NamedTemporaryFile() as tmp_file:
-        res_log.download_content_to_file(minio, tmp_file.name)
-
-        # reopen because of minio reasons
-        with open(tmp_file.name, "rb") as reader:
-            data = json.dumps(tree_from_log(reader)).encode()
+    with resources["procmon.log"].download_temporary_file() as tmp_file:
+        data = json.dumps(tree_from_log(tmp_file)).encode()
 
     output = BytesIO(data)
     analysis_uid = task.payload["analysis_uid"]

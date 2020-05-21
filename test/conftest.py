@@ -8,6 +8,7 @@ import pytest
 
 from pathlib import Path
 from fabric import task, Connection, Config
+from invoke.exceptions import UnexpectedExit
 from minio import Minio
 from minio.error import ResponseError
 
@@ -177,3 +178,15 @@ def drakmon_vm():
         c.run("brctl addbr drak0")
 
     return Connection("testvm", config=FABRIC_CONFIG)
+
+@pytest.fixture(scope="session")
+def karton_bucket(drakmon_vm):
+    """ Wait up to 10 seconds until karton2 bucket appears """
+    for _ in range(10):
+        try:
+            drakmon_vm.run("[[ -f /var/lib/drakcore/minio/karton2 ]]")
+            break
+        except UnexpectedExit:
+            time.sleep(1.0)
+
+    return None
