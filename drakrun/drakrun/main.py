@@ -248,6 +248,12 @@ class DrakrunKarton(Karton):
         magic_output = magic.from_buffer(sample.content)
         self.log.info("running sample sha256: {}".format(sha256sum))
 
+        timeout = self.current_task.payload.get('timeout') or 60 * 10
+        hard_time_limit = 60 * 20
+        if timeout > hard_time_limit:
+            self.log.error("Tried to run the analysis for more than hard limit of %d seconds", hard_time_limit)
+            return
+
         analysis_uid = self.current_task.uid
         override_uid = self.current_task.payload.get('override_uid')
 
@@ -337,7 +343,7 @@ class DrakrunKarton(Karton):
                                "-x", "poolmon",
                                "-x", "objmon",
                                "-j", "5",
-                               "-t", "600",
+                               "-t", str(timeout),
                                "-i", inject_pid,
                                "-k", kpgd,
                                "-d", "vm-{vm_id}".format(vm_id=INSTANCE_ID),
@@ -354,7 +360,7 @@ class DrakrunKarton(Karton):
                     drakvuf = subprocess.Popen(drakvuf_cmd, stdout=drakmon_log)
 
                     try:
-                        exit_code = drakvuf.wait(660)
+                        exit_code = drakvuf.wait(timeout + 60)
                     except subprocess.TimeoutExpired as e:
                         logging.error("BUG: Monitor command doesn\'t terminate automatically after timeout expires.")
                         logging.error("Trying to terminate DRAKVUF...")

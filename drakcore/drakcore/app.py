@@ -58,10 +58,15 @@ def upload():
             sample = Resource("sample", fr.read())
 
     task = Task({"type": "sample", "stage": "recognized", "platform": "win32"})
-    task.payload["override_uid"] = task.uid
-    task.add_resource("sample", sample)
+    task.add_resource("override_uid", task.uid)
 
+    timeout = request.form.get("timeout")
+    if timeout:
+        task.add_resource("timeout", int(timeout))
+
+    task.add_resource("sample", sample)
     producer.send_task(task)
+
     return jsonify({"task_uid": task.uid})
 
 
