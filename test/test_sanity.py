@@ -43,7 +43,7 @@ def drakcore(karton_bucket):
 
 
 def test_sample_analysis(drakmon_vm, drakcore):
-    task_uuid = drakcore.upload(open("test.exe", "rb"))
+    task_uuid = drakcore.upload(open("test.exe", "rb"), timeout=120)
 
     # wait until end of analysis
     while True:

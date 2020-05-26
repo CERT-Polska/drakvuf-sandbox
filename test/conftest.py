@@ -194,6 +194,7 @@ def karton_bucket(drakmon_vm):
     for _ in range(10):
         try:
             drakmon_vm.run("[[ -f /var/lib/drakcore/minio/karton2 ]]")
+            drakmon_vm.run("[[ -f /var/lib/drakcore/minio/drakrun ]]")
             break
         except UnexpectedExit:
             time.sleep(1.0)

@@ -28,9 +28,10 @@ export default {
   async query(q) {
     return axios.get("/query", { params: { q: q } });
   },
-  async uploadSample(file) {
+  async uploadSample(file, timeout) {
     let formData = new FormData();
     formData.append("file", file);
+    formData.append("timeout", timeout);
     return axios.post("/upload", formData, {
       headers: {
         "Content-Type": "multipart/form-data",

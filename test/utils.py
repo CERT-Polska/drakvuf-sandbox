@@ -54,8 +54,8 @@ class Drakcore:
     def __init__(self, host):
         self.host = host
 
-    def upload(self, sample):
-        response = requests.post(f"{self.host}/upload", files={"file": sample})
+    def upload(self, sample, timeout):
+        response = requests.post(f"{self.host}/upload", files={"file": sample}, data={"timeout": timeout})
         response.raise_for_status()
         return response.json()["task_uid"]
 
