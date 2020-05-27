@@ -268,7 +268,7 @@ class DrakrunKarton(Karton):
         extension = self.current_task.headers.get("extension", "exe").lower()
         start_command = 'start malwar.{}'.format(extension)
 
-        if extension == 'dll':
+        if extension == 'dll' or '(DLL)' in magic_output:
             run_command = self._get_dll_run_command(sample.content)
 
             if not run_command:
