@@ -49,7 +49,7 @@ class AnalysisApicall extends Component {
     this.analysis_id = this.props.match.params.analysis;
 
     this.state = {
-      calls: [],
+      calls: null,
       processList: [],
     };
 
@@ -58,6 +58,7 @@ class AnalysisApicall extends Component {
 
   async pidChanged(new_pid) {
     try {
+      this.setState({ calls: null });
       const res = await api.getApiCalls(this.analysis_id, new_pid);
       const calls = res.data.split("\n").map(JSON.parse);
       this.setState({ calls });
@@ -94,30 +95,43 @@ class AnalysisApicall extends Component {
   render() {
     const url_pid = parseInt(this.props.match.params.pid);
 
-    let tableContent = this.state.calls.map((entry, i) => (
-      <tr key={i}>
-        <td>{entry.timestamp}</td>
-        <td>
-          <code>{entry.method}</code>
-        </td>
-        <td>
-          {entry.arguments.map((arg, i) => (
-            <div key={i} className="badge-outline-primary badge mr-1">
-              {arg}
-            </div>
-          ))}
-        </td>
-      </tr>
-    ));
-
     let content;
-    if (tableContent.length === 0) {
+    if (this.state.calls === null) {
+      content = (
+        <div
+          className="alert alert-primary d-flex align-items-center"
+          role="alert"
+        >
+          Loading....
+          <div
+            className="spinner-border ml-auto"
+            role="status"
+            aria-hidden="true"
+          ></div>
+        </div>
+      );
+    } else if (this.state.calls.length === 0) {
       content = (
         <div className="alert alert-primary" role="alert">
           No API calls found for this process
         </div>
       );
     } else {
+      let tableContent = this.state.calls.map((entry, i) => (
+        <tr key={i}>
+          <td>{entry.timestamp}</td>
+          <td>
+            <code>{entry.method}</code>
+          </td>
+          <td>
+            {entry.arguments.map((arg, i) => (
+              <div key={i} className="badge-outline-primary badge mr-1">
+                {arg}
+              </div>
+            ))}
+          </td>
+        </tr>
+      ));
       content = (
         <table className="table table-centered apicallTable">
           <thead>
