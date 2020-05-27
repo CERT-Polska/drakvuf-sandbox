@@ -1,5 +1,5 @@
 # DRAKVUF Sandbox
-[![Build Status](https://drone.icedev.pl/api/badges/CERT-Polska/drakvuf-sandbox/status.svg)](https://drone.icedev.pl/CERT-Polska/drakvuf-sandbox)
+[![Gitter](https://badges.gitter.im/drakvuf-sandbox/community.svg)](https://gitter.im/drakvuf-sandbox/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![Build Status](https://drone.icedev.pl/api/badges/CERT-Polska/drakvuf-sandbox/status.svg)](https://drone.icedev.pl/CERT-Polska/drakvuf-sandbox)
 
 DRAKVUF Sandbox is an automated black-box malware analysis system with [DRAKVUF](https://drakvuf.com/) engine under the hood, which does not require an agent on guest OS.
 
