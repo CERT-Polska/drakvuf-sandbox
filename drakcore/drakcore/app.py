@@ -60,9 +60,20 @@ def upload():
     task = Task({"type": "sample", "stage": "recognized", "platform": "win32"})
     task.add_resource("override_uid", task.uid)
 
+    # Add analysis timeout to task
     timeout = request.form.get("timeout")
     if timeout:
         task.add_resource("timeout", int(timeout))
+
+    # Add filename override to task
+    filename = request.form.get("file_name")
+    if filename:
+        task.add_resource("file_name", filename)
+
+    # Add startup command to task
+    start_command = request.form.get("start_command")
+    if start_command:
+        task.add_resource("start_command", filename)
 
     task.add_resource("sample", sample)
     producer.send_task(task)

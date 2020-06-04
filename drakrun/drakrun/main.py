@@ -149,18 +149,28 @@ class DrakrunKarton(Karton):
 
         for export in exports:
             if export[1] == 'DllRegisterServer':
-                return 'regsvr32 malwar.dll'
+                return 'start regsvr32 %f'
 
             if 'DllMain' in export[1]:
-                return 'rundll32 malwar.dll,{}'.format(export[1])
+                return 'start rundll32 %f,{}'.format(export[1])
 
         if exports:
             if exports[0][1]:
-                return 'rundll32 malwar.dll,{}'.format(export[1].split('@')[0])
+                return 'start rundll32 %f,{}'.format(export[1].split('@')[0])
             elif exports[0][0]:
-                return 'rundll32 malwar.dll,#{}'.format(export[0])
+                return 'start rundll32 %f,#{}'.format(export[0])
 
         return None
+
+    def _get_start_command(self, extension, sample):
+        if extension == 'dll':
+            start_command = self.current_task.payload.get("start_command", self._get_dll_run_command(sample.content))
+        elif extension == 'exe':
+            start_command = 'start %f'
+        else:
+            self.log.error("Unknown file extension - %s", extension)
+            start_command = None
+        return start_command
 
     def crop_dumps(self, dirpath, target_zip):
         zipf = zipfile.ZipFile(target_zip, 'w', zipfile.ZIP_DEFLATED)
@@ -265,18 +275,29 @@ class DrakrunKarton(Karton):
             self.log.info("note that artifacts will be stored under this overriden identifier")
 
         workdir = '/tmp/drakrun/vm-{}'.format(int(INSTANCE_ID))
+
         extension = self.current_task.headers.get("extension", "exe").lower()
-        start_command = 'start malwar.{}'.format(extension)
+        if '(DLL)' in magic_output:
+            extension = 'dll'
+        self.log.info("Running file as %s", extension)
 
-        if extension == 'dll' or '(DLL)' in magic_output:
-            run_command = self._get_dll_run_command(sample.content)
+        file_name = self.current_task.payload.get("file_name", f"malwar.{extension}")
+        # Alphanumeric, dot, underscore, dash
+        if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
+            self.log.error("Filename contains invalid characters")
+            return
 
-            if not run_command:
-                self.log.info('Unable to run malware sample, could not generate any suitable command to run it.')
-                return
+        self.log.info("Using file name %s", file_name)
+        start_command = self.current_task.payload.get("start_command", self._get_start_command(extension, sample))
+        if not start_command:
+            self.log.error("Unable to run malware sample, could not generate any suitable command to run it.")
+            return
 
-            self.log.info('Using command: {}'.format(run_command))
-            start_command = 'start {}'.format(run_command)
+        start_command = start_command.replace("%f", file_name)
+        self.log.info("Using command: %s", start_command)
+
+        if "%f" not in start_command:
+            self.log.warning("No file name in start command")
 
         try:
             shutil.rmtree(workdir)
@@ -298,14 +319,18 @@ class DrakrunKarton(Karton):
         with open(os.path.join(outdir, 'sample_sha256.txt'), 'w') as f:
             f.write(hashlib.sha256(sample.content).hexdigest())
 
-        with open(os.path.join(workdir, 'run.bat'), 'wb') as f:
-            f.write(b'ipconfig /renew\r\nxcopy D:\\malwar.' + extension.encode('ascii') + b' %USERPROFILE%\\Desktop\\\r\nC:\r\ncd %USERPROFILE%\\Desktop\r\n' + start_command.encode('ascii'))
+        with open(os.path.join(workdir, 'run.bat'), 'w', encoding='ascii', newline='\r\n') as f:
+            f.write('ipconfig /renew\n')
+            f.write(f'xcopy D:\\{file_name} %USERPROFILE%\\Desktop\\\n')
+            f.write('C:\n')
+            f.write('cd %USERPROFILE%\\Desktop\n')
+            f.write(start_command)
 
-        with open(os.path.join(workdir, 'malwar.{}'.format(extension)), 'wb') as f:
+        with open(os.path.join(workdir, file_name), 'wb') as f:
             f.write(sample.content)
 
         try:
-            subprocess.run(["genisoimage", "-o", os.path.join(workdir, 'malwar.iso'), os.path.join(workdir, 'malwar.{}'.format(extension)), os.path.join(workdir, 'run.bat')], cwd=workdir, check=True)
+            subprocess.run(["genisoimage", "-o", os.path.join(workdir, 'malwar.iso'), os.path.join(workdir, file_name), os.path.join(workdir, 'run.bat')], cwd=workdir, check=True)
         except subprocess.CalledProcessError as e:
             logging.exception("Failed to generate CD ISO image. Please install genisoimage")
             raise e
