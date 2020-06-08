@@ -154,6 +154,8 @@ Feel free to contact us if you have any questions or comments.
 * Adam Kliś - bonus@cert.pl
 * Hubert Jasudowicz - chivay@cert.pl
 
+You can also reach us on IRC - [#drakvuf-sandbox@irc.freenode.net](https://webchat.freenode.net/#drakvuf-sandbox).
+
 If you have any questions about [DRAKVUF](https://drakvuf.com/) engine itself, contact tamas@tklengyel.com
 
 ## CEF Notice
