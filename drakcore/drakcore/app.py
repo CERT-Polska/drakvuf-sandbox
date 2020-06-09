@@ -38,7 +38,7 @@ def route_list():
         try:
             meta = minio.get_object("drakrun", os.path.join(
                 obj.object_name, "metadata.json"))
-        except minio.error.NoSuchKey:
+        except NoSuchKey:
             meta = {}
 
         analyses.append({"id": obj.object_name.strip('/'),
