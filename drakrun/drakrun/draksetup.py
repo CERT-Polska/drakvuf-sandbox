@@ -264,21 +264,21 @@ def create_rekall_profiles(install_info, pdb_guid):
 
         tmp_mount = shlex.quote(os.path.join("/dev/zvol", install_info["zfs_tank_name"], "tmp-part2"))
         subprocess.check_output(f'mount -t ntfs -o ro {tmp_mount} {mount_path}')
-    else: # qcow2
+    else:  # qcow2
         subprocess.check_output("modprobe nbd")
         # TODO: this assumes /dev/nbd0 is free
         subprocess.check_output(' '.join([
-                "qemu-nbd",
-                "-c",
-                "/dev/nbd0",
-                "-P",
-                "2"
-                "--read-only",
-                os.path.join(LIB_DIR, "volumes", "vm-0.img")
-            ]), shell=True)
-    
+            "qemu-nbd",
+            "-c",
+            "/dev/nbd0",
+            "-P",
+            "2"
+            "--read-only",
+            os.path.join(LIB_DIR, "volumes", "vm-0.img")
+        ]), shell=True)
+
     DLL = namedtuple("DLL", ["path", "dest"])
-    
+
     # copy files, list of files without 'C:\' and with '/' instead of '\'
     file_list = [
         DLL("Windows/System32/drivers/tcpip.sys", "tcpip_profile"),
@@ -306,16 +306,16 @@ def create_rekall_profiles(install_info, pdb_guid):
             with open(os.path.join(profiles_path, file.dest + ".json"), 'w') as f:
                 f.write(profile)
             os.remove(file.dest)
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             logging.warning(f"Failed to copy file {file.path}, skipping...")
-    
+
     # cleanup
     subprocess.check_output(f'umount {mount_path}')
     os.rmdir(mount_path)
 
     if install_info["storage_backend"] == "zfs":
         subprocess.check_output(f'zfs destroy {tmp_snap}', shell=True)
-    else: # qcow2
+    else:  # qcow2
         subprocess.check_output('qemu-nbd --disconnect /dev/nbd0')
 
 
@@ -384,7 +384,7 @@ def generate_profiles(no_report=False):
     if install_info["storage_backend"] == 'zfs':
         snap_name = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
         subprocess.check_output(f'zfs snapshot {snap_name}', shell=True)
-    
+
     create_rekall_profiles(install_info, pdb)
 
     for vm_id in range(max_vms + 1):
