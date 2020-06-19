@@ -11,6 +11,7 @@ import subprocess
 import string
 import tempfile
 from shutil import copyfile
+from collections import namedtuple
 
 import requests
 from drakrun.drakpdb import fetch_pdb, make_pdb_profile
@@ -276,13 +277,37 @@ def create_rekall_profiles(install_info, pdb_guid):
                 os.path.join(LIB_DIR, "volumes", "vm-0.img")
             ]), shell=True)
     
-    # copy files
-    file_list = ["Windows/system32/ntoskrnl.exe"]
+    DLL = namedtuple("DLL", ["path", "dest"])
+    
+    # copy files, list of files without 'C:\' and with '/' instead of '\'
+    file_list = [
+        DLL("Windows/System32/drivers/tcpip.sys", "tcpip_profile"),
+        DLL("Windows/System32/win32k.sys", "win32k_profile"),
+        DLL("Windows/System32/sspicli.dll", "sspicli_profile"),
+        DLL("Windows/System32/kernel32.dll", "kernel32_profile"),
+        DLL("Windows/System32/KernelBase.dll", "kernelbase_profile"),
+        DLL("Windows/SysWOW64/kernel32.dll", "wow_kernel32_profile"),
+        DLL("Windows/System32/IPHLPAPI.DLL", "iphlpapi_profile"),
+        DLL("Windows/System32/mpr.dll", "mpr_profile"),
+        DLL("Windows/System32/ntdll.dll", "ntdll_profile"),
+        DLL("Windows/System32/ole32.dll", "ole32_profile"),
+        DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile"),
+        DLL("Windows/System32/combase.dll", "combase_profile"),
+        DLL("Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll", "clr_profile"),
+        DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile")
+    ]
+
     for file in file_list:
         try:
-            copyfile(os.path.join(mount_path, file), profiles_path)
+            logging.info(f"fetching rekall profile for {file.path}")
+            copyfile(os.path.join(mount_path, file.path), os.path.join(profiles_path, file.dest))
+            tmp = fetch_pdb(file, pdb_guid, profiles_path)
+            profile = make_pdb_profile(tmp)
+            with open(os.path.join(profiles_path, file.dest + ".json"), 'w') as f:
+                f.write(profile)
+            os.remove(file.dest)
         except FileNotFoundError as e:
-            logging.warning(f"Failed to copy file {file}, skipping...")
+            logging.warning(f"Failed to copy file {file.path}, skipping...")
     
     # cleanup
     subprocess.check_output(f'umount {mount_path}')
@@ -292,15 +317,6 @@ def create_rekall_profiles(install_info, pdb_guid):
         subprocess.check_output(f'zfs destroy {tmp_snap}', shell=True)
     else: # qcow2
         subprocess.check_output('qemu-nbd --disconnect /dev/nbd0')
-    
-    # generate rekall profiles
-    for file in os.listdir(profiles_path):
-        logging.info(f"fetching rekall profile for {file}")
-        tmp = fetch_pdb(file, pdb_guid, profiles_path)
-        profile = make_pdb_profile(tmp)
-        with open(os.path.join(profiles_path, os.path.splitext(file)[0] + ".json"), 'w') as f:
-            f.write(profile)
-        os.remove(file)
 
 
 def generate_profiles(no_report=False):
