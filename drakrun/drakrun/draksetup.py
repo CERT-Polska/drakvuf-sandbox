@@ -245,6 +245,64 @@ def send_usage_report(report):
         logging.exception("Failed to send usage report. This is not a serious problem.")
 
 
+def create_rekall_profiles(install_info, pdb_guid):
+    profiles_path = os.path.join(LIB_DIR, "profiles")
+    mount_path = ''.join(random.choice(string.ascii_letters + string.digits) for i in range(20))
+    os.mkdir(mount_path)
+
+    '''
+    Note: we mount 2nd partition, as 1st partition is windows boot related
+    and 2nd partition is C:\\
+    '''
+
+    if install_info["storage_backend"] == "zfs":
+        # workaround for not being able to mount a snapshot
+        base_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
+        tmp_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'tmp'))
+        subprocess.check_output(f'zfs clone {base_snap} {tmp_snap}', shell=True)
+
+        tmp_mount = shlex.quote(os.path.join("/dev/zvol", install_info["zfs_tank_name"], "tmp-part2"))
+        subprocess.check_output(f'mount -t ntfs -o ro {tmp_mount} {mount_path}')
+    else: # qcow2
+        subprocess.check_output("modprobe nbd")
+        # TODO: this assumes /dev/nbd0 is free
+        subprocess.check_output(' '.join([
+                "qemu-nbd",
+                "-c",
+                "/dev/nbd0",
+                "-P",
+                "2"
+                "--read-only",
+                os.path.join(LIB_DIR, "volumes", "vm-0.img")
+            ]), shell=True)
+    
+    # copy files
+    file_list = ["Windows/system32/ntoskrnl.exe"]
+    for file in file_list:
+        try:
+            copyfile(os.path.join(mount_path, file), profiles_path)
+        except FileNotFoundError as e:
+            logging.warning(f"Failed to copy file {file}, skipping...")
+    
+    # cleanup
+    subprocess.check_output(f'umount {mount_path}')
+    os.rmdir(mount_path)
+
+    if install_info["storage_backend"] == "zfs":
+        subprocess.check_output(f'zfs destroy {tmp_snap}', shell=True)
+    else: # qcow2
+        subprocess.check_output('qemu-nbd --disconnect /dev/nbd0')
+    
+    # generate rekall profiles
+    for file in os.listdir(profiles_path):
+        logging.info(f"fetching rekall profile for {file}")
+        tmp = fetch_pdb(file, pdb_guid, profiles_path)
+        profile = make_pdb_profile(tmp)
+        with open(os.path.join(profiles_path, os.path.splitext(file)[0] + ".json"), 'w') as f:
+            f.write(profile)
+        os.remove(file)
+
+
 def generate_profiles(no_report=False):
     if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
         no_report = True
@@ -273,7 +331,7 @@ def generate_profiles(no_report=False):
     profile = make_pdb_profile(dest)
 
     logging.info("Saving profile...")
-    kernel_profile = os.path.join(LIB_DIR, 'profiles/kernel.json')
+    kernel_profile = os.path.join(LIB_DIR, 'profiles', 'kernel.json')
     with open(kernel_profile, 'w') as f:
         f.write(profile)
 
@@ -290,7 +348,7 @@ def generate_profiles(no_report=False):
         logging.error("Failed to obtain KPGD value.")
         return
 
-    pid_tool = os.path.join(MAIN_DIR, "tools/get-explorer-pid")
+    pid_tool = os.path.join(MAIN_DIR, "tools", "get-explorer-pid")
     explorer_pid_s = subprocess.check_output([pid_tool, "vm-0", kernel_profile, offsets_dict['kpgd']], timeout=30).decode('ascii', 'ignore')
     m = re.search(r'explorer\.exe:([0-9]+)', explorer_pid_s)
     explorer_pid = m.group(1)
@@ -298,18 +356,20 @@ def generate_profiles(no_report=False):
     runtime_profile = {"vmi_offsets": offsets_dict, "inject_pid": explorer_pid}
 
     logging.info("Saving runtime profile...")
-    with open(os.path.join(LIB_DIR, 'profiles/runtime.json'), 'w') as f:
+    with open(os.path.join(LIB_DIR, 'profiles', 'runtime.json'), 'w') as f:
         f.write(json.dumps(runtime_profile, indent=4))
 
     # TODO (optional) making usermode profiles (a special tool for GUID extraction is required)
     logging.info("Saving VM snapshot...")
-    subprocess.check_output('xl save vm-0 ' + os.path.join(LIB_DIR, "volumes/snapshot.sav"), shell=True)
+    subprocess.check_output('xl save vm-0 ' + os.path.join(LIB_DIR, "volumes", "snapshot.sav"), shell=True)
 
     logging.info("Snapshot was saved succesfully.")
 
     if install_info["storage_backend"] == 'zfs':
         snap_name = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
         subprocess.check_output(f'zfs snapshot {snap_name}', shell=True)
+    
+    create_rekall_profiles(install_info, pdb)
 
     for vm_id in range(max_vms + 1):
         # we treat vm_id=0 as special internal one
