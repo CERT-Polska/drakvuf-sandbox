@@ -289,7 +289,7 @@ def create_rekall_profiles(install_info, pdb_guid):
     if install_info["storage_backend"] == "zfs":
         subprocess.check_output(f'zfs destroy {tmp_snap}', shell=True)
     else:  # qcow2
-        subprocess.check_output('qemu-nbd --disconnect /dev/nbd0')
+        subprocess.check_output('qemu-nbd --disconnect /dev/nbd0', shell=True)
 
 
 def generate_profiles(no_report=False):
