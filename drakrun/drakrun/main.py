@@ -19,6 +19,7 @@ import magic
 from karton2 import Karton, Config, Task, LocalResource
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 import drakrun.run as d_run
+from drakrun.drakpdb import dll_file_list
 from drakrun.drakparse import parse_logs
 
 
@@ -253,17 +254,12 @@ class DrakrunKarton(Karton):
 
     def get_profile_list(self) -> List[str]:
         files = os.listdir(os.path.join(LIB_DIR, "profiles"))
-        profiles = [
-            "tcpip_profile", "win32k_profile", "sspicli_profile", "kernel32_profile", "kernelbase_profile", "wow_kernel32_profile",
-            "iphlpapi_profile", "mpr_profile", "ntdll_profile", "ole32_profile", "wow_ole32_profile", "combase_profile",
-            "clr_profile", "mscorwks_profile"
-        ]
 
         out = []
 
-        for profile in profiles:
-            if f"{profile}.json" in files:
-                out.extend([f"--{profile}", f"{profile}.json"])
+        for profile in dll_file_list:
+            if f"{profile.dest}.json" in files:
+                out.extend([f"--{profile.dest}", f"{profile.dest}.json"])
 
         return out
 

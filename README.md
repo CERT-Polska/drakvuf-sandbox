@@ -40,7 +40,7 @@ This instruction assumes that you want to create a single-node installation with
    ```
 3. Install DRAKVUF Sandbox stack:
    ```
-   sudo apt install redis-server
+   sudo apt install redis-server ntfs-3g
    sudo apt install ./drakcore*.deb
    sudo apt install ./drakrun*.deb
    ```

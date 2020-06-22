@@ -11,10 +11,9 @@ import subprocess
 import string
 import tempfile
 from shutil import copyfile
-from collections import namedtuple
 
 import requests
-from drakrun.drakpdb import fetch_pdb, make_pdb_profile
+from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list
 from requests import RequestException
 
 logging.basicConfig(level=logging.DEBUG,
@@ -248,70 +247,44 @@ def send_usage_report(report):
 
 def create_rekall_profiles(install_info, pdb_guid):
     profiles_path = os.path.join(LIB_DIR, "profiles")
-    mount_path = ''.join(random.choice(string.ascii_letters + string.digits) for i in range(20))
-    os.mkdir(mount_path)
 
-    '''
-    Note: we mount 2nd partition, as 1st partition is windows boot related
-    and 2nd partition is C:\\
-    '''
+    with tempfile.TemporaryDirectory() as mount_path:
+        # we mount 2nd partition, as 1st partition is windows boot related and 2nd partition is C:\\
 
-    if install_info["storage_backend"] == "zfs":
-        # workaround for not being able to mount a snapshot
-        base_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
-        tmp_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'tmp'))
-        subprocess.check_output(f'zfs clone {base_snap} {tmp_snap}', shell=True)
+        if install_info["storage_backend"] == "zfs":
+            # workaround for not being able to mount a snapshot
+            base_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
+            tmp_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'tmp'))
+            subprocess.check_output(f'zfs clone {base_snap} {tmp_snap}', shell=True)
 
-        tmp_mount = shlex.quote(os.path.join("/dev/zvol", install_info["zfs_tank_name"], "tmp-part2"))
-        subprocess.check_output(f'mount -t ntfs -o ro {tmp_mount} {mount_path}')
-    else:  # qcow2
-        subprocess.check_output("modprobe nbd")
-        # TODO: this assumes /dev/nbd0 is free
-        subprocess.check_output(' '.join([
-            "qemu-nbd",
-            "-c",
-            "/dev/nbd0",
-            "-P",
-            "2"
-            "--read-only",
-            os.path.join(LIB_DIR, "volumes", "vm-0.img")
-        ]), shell=True)
+            tmp_mount = shlex.quote(os.path.join("/dev/zvol", install_info["zfs_tank_name"], "tmp-part2"))
+            subprocess.check_output(f'mount -t ntfs -o ro {tmp_mount} {mount_path}')
+        else:  # qcow2
+            subprocess.check_output("modprobe nbd")
+            # TODO: this assumes /dev/nbd0 is free
+            subprocess.check_output(' '.join([
+                "qemu-nbd",
+                "-c",
+                "/dev/nbd0",
+                "--read-only",
+                os.path.join(LIB_DIR, "volumes", "vm-0.img")
+            ]), shell=True)
+            subprocess.check_output(f"mount /dev/ndb0p2 {mount_path}")
 
-    DLL = namedtuple("DLL", ["path", "dest"])
+        for file in dll_file_list:
+            try:
+                logging.info(f"fetching rekall profile for {file.path}")
+                copyfile(os.path.join(mount_path, file.path), os.path.join(profiles_path, file.dest))
+                tmp = fetch_pdb(file, pdb_guid, profiles_path)
+                profile = make_pdb_profile(tmp)
+                with open(os.path.join(profiles_path, f"{file.dest}.json"), 'w') as f:
+                    f.write(profile)
+                os.remove(file.dest)
+            except FileNotFoundError:
+                logging.warning(f"Failed to copy file {file.path}, skipping...")
 
-    # copy files, list of files without 'C:\' and with '/' instead of '\'
-    file_list = [
-        DLL("Windows/System32/drivers/tcpip.sys", "tcpip_profile"),
-        DLL("Windows/System32/win32k.sys", "win32k_profile"),
-        DLL("Windows/System32/sspicli.dll", "sspicli_profile"),
-        DLL("Windows/System32/kernel32.dll", "kernel32_profile"),
-        DLL("Windows/System32/KernelBase.dll", "kernelbase_profile"),
-        DLL("Windows/SysWOW64/kernel32.dll", "wow_kernel32_profile"),
-        DLL("Windows/System32/IPHLPAPI.DLL", "iphlpapi_profile"),
-        DLL("Windows/System32/mpr.dll", "mpr_profile"),
-        DLL("Windows/System32/ntdll.dll", "ntdll_profile"),
-        DLL("Windows/System32/ole32.dll", "ole32_profile"),
-        DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile"),
-        DLL("Windows/System32/combase.dll", "combase_profile"),
-        DLL("Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll", "clr_profile"),
-        DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile")
-    ]
-
-    for file in file_list:
-        try:
-            logging.info(f"fetching rekall profile for {file.path}")
-            copyfile(os.path.join(mount_path, file.path), os.path.join(profiles_path, file.dest))
-            tmp = fetch_pdb(file, pdb_guid, profiles_path)
-            profile = make_pdb_profile(tmp)
-            with open(os.path.join(profiles_path, file.dest + ".json"), 'w') as f:
-                f.write(profile)
-            os.remove(file.dest)
-        except FileNotFoundError:
-            logging.warning(f"Failed to copy file {file.path}, skipping...")
-
-    # cleanup
-    subprocess.check_output(f'umount {mount_path}')
-    os.rmdir(mount_path)
+        # cleanup
+        subprocess.check_output(f'umount {mount_path}')
 
     if install_info["storage_backend"] == "zfs":
         subprocess.check_output(f'zfs destroy {tmp_snap}', shell=True)
