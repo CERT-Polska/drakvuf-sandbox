@@ -269,7 +269,7 @@ def create_rekall_profiles(install_info, pdb_guid):
                 "--read-only",
                 os.path.join(LIB_DIR, "volumes", "vm-0.img")
             ]), shell=True)
-            subprocess.check_output(f"mount /dev/ndb0p2 {mount_path}")
+            subprocess.check_output(f"mount -t ntfs -o ro /dev/ndb0p2 {mount_path}")
 
         for file in dll_file_list:
             try:
