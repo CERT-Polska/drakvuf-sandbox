@@ -260,15 +260,9 @@ def create_rekall_profiles(install_info, pdb_guid):
             tmp_mount = shlex.quote(os.path.join("/dev/zvol", install_info["zfs_tank_name"], "tmp-part2"))
             subprocess.check_output(f'mount -t ntfs -o ro {tmp_mount} {mount_path}', shell=True)
         else:  # qcow2
-            subprocess.check_output("modprobe nbd")
+            subprocess.check_output("modprobe nbd", shell=True)
             # TODO: this assumes /dev/nbd0 is free
-            subprocess.check_output([
-                "qemu-nbd",
-                "-c",
-                "/dev/nbd0",
-                "--read-only",
-                os.path.join(LIB_DIR, "volumes", "vm-0.img")
-            ])
+            subprocess.check_output(f"qemu-nbd -c /dev/nbd0 --read-only {os.path.join(LIB_DIR, 'volumes', 'vm-0.img')}", shell=True)
             subprocess.check_output(f"mount -t ntfs -o ro /dev/ndb0p2 {mount_path}", shell=True)
 
         for file in dll_file_list:
