@@ -15,18 +15,18 @@ class AnalysisMain extends Component {
       graphState: "loading",
       processTree: null,
     };
+    this.analysisID = this.props.match.params.analysis;
     this.processTreeHelper = this.processTreeHelper.bind(this);
   }
 
   processTreeHelper(process) {
-    const analysis = this.props.match.params.analysis;
     return (
       <React.Fragment key={process.pid}>
         <li>
           <code>{process.procname ? process.procname : "unnamed process"}</code>
           <span className="ml-1">
             (
-            <Link to={`/analysis/${analysis}/apicalls/${process.pid}`}>
+            <Link to={`/analysis/${this.analysisID}/apicalls/${process.pid}`}>
               {process.pid}
             </Link>
             )
@@ -49,14 +49,13 @@ class AnalysisMain extends Component {
   }
 
   async componentDidMount() {
-    const analysis = this.props.match.params.analysis;
-    const res_logs = await api.listLogs(analysis);
+    const res_logs = await api.listLogs(this.analysisID);
     if (res_logs.data) {
       this.setState({ logs: res_logs.data });
     }
 
     try {
-      const res_graph = await api.getGraph(analysis);
+      const res_graph = await api.getGraph(this.analysisID);
       if (res_graph.data) {
         this.setState({ graphState: "loaded", graph: res_graph.data });
       } else {
@@ -66,7 +65,7 @@ class AnalysisMain extends Component {
       this.setState({ graphState: "missing" });
     }
 
-    const process_tree = await api.getProcessTree(analysis);
+    const process_tree = await api.getProcessTree(this.analysisID);
     if (process_tree) {
       this.setState({ processTree: process_tree.data });
     }
@@ -131,22 +130,35 @@ class AnalysisMain extends Component {
 
         {simpleProcessTree}
 
-        <div className="card tilebox-one">
-          <div className="card-body">
-            <h5 className="card-title mb-0">Analysis logs</h5>
+        <div className="row">
+          <div className="col-md-9">
+            <div className="card tilebox-one">
+              <div className="card-body">
+                <h5 className="card-title mb-0">Analysis logs</h5>
 
-            <div className="list-group">
-              {this.state.logs.map((val) => {
-                return (
-                  <a
-                    key={val}
-                    href={`/logs/${this.getPathWithoutExt(val)}`}
-                    className="list-group-item list-group-item-action"
-                  >
-                    {this.getFileNameWithoutExt(val)}
-                  </a>
-                );
-              })}
+                <div className="list-group">
+                  {this.state.logs.map((val) => {
+                    return (
+                      <a
+                        key={val}
+                        href={`/logs/${this.getPathWithoutExt(val)}`}
+                        className="list-group-item list-group-item-action"
+                      >
+                        {this.getFileNameWithoutExt(val)}
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-md-3">
+            <div class="card">
+              <a href={`/dumps/${this.analysisID}`} className="btn btn-primary">
+                <i class="mdi mdi-download mr-2"></i>
+                <span>Download dumps</span>
+              </a>
             </div>
           </div>
         </div>
