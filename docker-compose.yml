@@ -24,5 +24,9 @@ services:
     environment:
       - MINIO_ACCESS_KEY=drakmon-minio
       - MINIO_SECRET_KEY=thisistheway
+  drakrun:
+    build:
+      context: .
+      dockerfile: ./drakrun/Dockerfile
 volumes:
   store:
