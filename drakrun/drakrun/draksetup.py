@@ -257,7 +257,7 @@ def create_rekall_profiles(install_info, pdb_guid):
             tmp_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'tmp'))
             subprocess.check_output(f'zfs clone {base_snap} {tmp_snap}', shell=True)
 
-            tmp_mount = shlex.quote(os.path.join("/dev/zvol", install_info["zfs_tank_name"], "tmp-part2"))
+            tmp_mount = shlex.quote(os.path.join("dev", "zvol", install_info["zfs_tank_name"], "tmp-part2"))
             subprocess.check_output(f'mount -t ntfs -o ro {tmp_mount} {mount_path}', shell=True)
         else:  # qcow2
             subprocess.check_output("modprobe nbd", shell=True)
@@ -278,7 +278,7 @@ def create_rekall_profiles(install_info, pdb_guid):
                 logging.warning(f"Failed to copy file {file.path}, skipping...")
 
         # cleanup
-        subprocess.check_output(f'umount {mount_path}')
+        subprocess.check_output(f'umount {mount_path}', shell=True)
 
     if install_info["storage_backend"] == "zfs":
         subprocess.check_output(f'zfs destroy {tmp_snap}', shell=True)
