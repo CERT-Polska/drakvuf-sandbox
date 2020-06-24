@@ -1,0 +1,28 @@
+version: "3"
+services:
+  # Web app
+  web:
+    build: ./drakcore
+    ports:
+      - "6300:6300"
+  # Analysis postprocessing
+  postprocess:
+    build: ./drakcore
+    command: drak-postprocess
+  # Karton system controller
+  system:
+    build: ./drakcore
+    command: drak-system
+  redis:
+    image: redis
+  # Object storage
+  minio:
+    image: minio/minio
+    command: server /data
+    volumes:
+      - store:/data
+    environment:
+      - MINIO_ACCESS_KEY=drakmon-minio
+      - MINIO_SECRET_KEY=thisistheway
+volumes:
+  store:

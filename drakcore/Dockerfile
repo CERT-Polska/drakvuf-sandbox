@@ -16,4 +16,4 @@ WORKDIR /app
 
 RUN pip install .
 
-CMD python drakcore/app.py
+CMD uwsgi --http 0.0.0.0:6300 --module drakcore.app:app --processes 4
