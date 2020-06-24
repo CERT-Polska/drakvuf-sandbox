@@ -107,6 +107,13 @@ def logs(task_uid, log_type):
         return send_file(f.name, mimetype='text/plain')
 
 
+@app.route("/dumps/<task_uid>")
+def dumps(task_uid):
+    with NamedTemporaryFile() as f:
+        minio.fget_object("drakrun", task_uid + "/" + "dumps.zip", f.name)
+        return send_file(f.name, mimetype='text/plain')
+
+
 @app.route("/logs/<task_uid>")
 def list_logs(task_uid):
     try:
