@@ -6,7 +6,9 @@ import pdbparse
 import json
 
 import requests
-from construct import EnumIntegerString
+from binasci import hexlify
+from pefile import PE, DEBUG_TYPE
+from construct import *
 from requests import HTTPError
 from tqdm import tqdm
 from typing import NamedTuple
@@ -31,6 +33,23 @@ dll_file_list = [
     DLL("Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll", "clr_profile"),
     DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile")
 ]
+
+
+def GUID(name):
+    return Struct(name,
+        ULInt32("Data1"),
+        ULInt16("Data2"),
+        ULInt16("Data3"),
+        String("Data4", 8),
+    )
+
+
+CV_RSDS_HEADER = Struct("CV_RSDS",
+    Const(Bytes("Signature", 4), "RSDS"),
+    GUID("GUID"),
+    ULInt32("Age"),
+    CString("Filename"),
+)
 
 
 # Derived from rekall
@@ -320,11 +339,28 @@ def fetch_pdb(pdbname, guidage, destdir='.'):
     raise RuntimeError("Failed to fetch PDB")
 
 
+def pdb_guid(file):
+    pe = PE(file, fast_load = True)
+    pe.parse_data_directories()
+    try:
+        codeview = next(filter(lambda x: x.struct.Type == DEBUG_TYPE[u'IMAGE_DEBUG_TYPE_CODEVIEW'], pe.DIRECTORY_ENTRY_DEBUG))
+    except StopIteration:
+        print("Failed to find CodeView in pdb")
+        raise RuntimeError("Failed to find GUID age")
+    
+    offset = codeview.struct.PointerToRawData
+    size = codeview.struct.SizeOfData
+    tmp = CV_RSDS_HEADER.parse(pe.__data__[offset:offset + size])
+    guidstr = u"%08x%04x%04x%s%x" % (tmp.GUID.Data1, tmp.GUID.Data2, tmp.GUID.Data3, hexlify(tmp.GUID.Data4).decode('ascii'), tmp.Age)
+    return {"filename": tmp.Filename, "GUID": guidstr}
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='drakpdb')
-    parser.add_argument('action', type=str, help='one of: fetch_pdb, parse_pdb')
+    parser.add_argument('action', type=str, help='one of: fetch_pdb, parse_pdb, pdb_guid')
     parser.add_argument('pdb_name', type=str, help='name of pdb file without extension, e.g. ntkrnlmp')
     parser.add_argument('guid_age', nargs='?', help='guid/age of the pdb file')
+    parser.add_argument('file', type=str, help='file to get GUID age from')
 
     args = parser.parse_args()
 
@@ -332,5 +368,7 @@ if __name__ == "__main__":
         print(make_pdb_profile(args.pdb_name))
     elif args.action == "fetch_pdb":
         fetch_pdb(args.pdb_name, args.guid_age)
+    if args.action == "pdb_guid":
+        print(pdb_guid(args.file))
     else:
         raise RuntimeError('Unknown action')
