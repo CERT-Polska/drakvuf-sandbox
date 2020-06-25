@@ -269,13 +269,16 @@ def create_rekall_profiles(install_info, pdb_guid):
             try:
                 logging.info(f"fetching rekall profile for {file.path}")
                 copyfile(os.path.join(mount_path, file.path), os.path.join(profiles_path, file.dest))
-                tmp = fetch_pdb(file, pdb_guid, profiles_path)
+                tmp = fetch_pdb(os.path.basename(file.path), pdb_guid, profiles_path)
                 profile = make_pdb_profile(tmp)
                 with open(os.path.join(profiles_path, f"{file.dest}.json"), 'w') as f:
                     f.write(profile)
                 os.remove(file.dest)
             except FileNotFoundError:
                 logging.warning(f"Failed to copy file {file.path}, skipping...")
+            except RuntimeError as e:
+                logging.exception(f"Failed to fetch profile for {file.path}, skipping...")
+                pass
 
         # cleanup
         subprocess.check_output(f'umount {mount_path}', shell=True)
