@@ -6,7 +6,7 @@ import pdbparse
 import json
 
 import requests
-from binasci import hexlify
+from binascii import hexlify
 from pefile import PE, DEBUG_TYPE
 from construct import *
 from requests import HTTPError
@@ -347,7 +347,7 @@ def pdb_guid(file):
     except StopIteration:
         print("Failed to find CodeView in pdb")
         raise RuntimeError("Failed to find GUID age")
-    
+
     offset = codeview.struct.PointerToRawData
     size = codeview.struct.SizeOfData
     tmp = CV_RSDS_HEADER.parse(pe.__data__[offset:offset + size])
