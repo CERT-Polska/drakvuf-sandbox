@@ -8,7 +8,7 @@ import json
 import requests
 from binascii import hexlify
 from pefile import PE, DEBUG_TYPE
-from construct import *
+from construct import Struct, Const, Bytes, Int32ul, Int16ul, CString, EnumIntegerString
 from requests import HTTPError
 from tqdm import tqdm
 from typing import NamedTuple
@@ -44,7 +44,7 @@ CV_RSDS_HEADER = "CV_RSDS" / Struct(
         "Data4" / Bytes(8),
     ),
     "Age" / Int32ul,
-    "Filename" / CString(encoding = "utf8"),
+    "Filename" / CString(encoding="utf8"),
 )
 
 
@@ -336,7 +336,7 @@ def fetch_pdb(pdbname, guidage, destdir='.'):
 
 
 def pdb_guid(file):
-    pe = PE(file, fast_load = True)
+    pe = PE(file, fast_load=True)
     pe.parse_data_directories()
     try:
         codeview = next(filter(lambda x: x.struct.Type == DEBUG_TYPE[u'IMAGE_DEBUG_TYPE_CODEVIEW'], pe.DIRECTORY_ENTRY_DEBUG))
