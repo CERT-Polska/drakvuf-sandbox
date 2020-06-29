@@ -296,9 +296,10 @@ def create_rekall_profiles(install_info):
                 profile = make_pdb_profile(tmp)
                 with open(os.path.join(profiles_path, f"{file.dest}.json"), 'w') as f:
                     f.write(profile)
-                os.remove(file.dest)
+                os.remove(os.path.join(profiles_path, file.dest))
             except FileNotFoundError:
                 logging.warning(f"Failed to copy file {file.path}, skipping...")
+                pass
             except RuntimeError as e:
                 logging.exception(f"Failed to fetch profile for {file.path}, skipping...")
                 pass
