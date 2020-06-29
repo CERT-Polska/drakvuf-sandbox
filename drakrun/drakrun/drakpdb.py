@@ -14,24 +14,24 @@ from tqdm import tqdm
 from typing import NamedTuple
 
 
-DLL = NamedTuple("DLL", [("path", str), ("dest", str)])
+DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", str)])
 
 # profile file list, without 'C:\' and with '/' instead of '\'
 dll_file_list = [
-    DLL("Windows/System32/drivers/tcpip.sys", "tcpip_profile"),
-    DLL("Windows/System32/win32k.sys", "win32k_profile"),
-    DLL("Windows/System32/sspicli.dll", "sspicli_profile"),
-    DLL("Windows/System32/kernel32.dll", "kernel32_profile"),
-    DLL("Windows/System32/KernelBase.dll", "kernelbase_profile"),
-    DLL("Windows/SysWOW64/kernel32.dll", "wow_kernel32_profile"),
-    DLL("Windows/System32/IPHLPAPI.DLL", "iphlpapi_profile"),
-    DLL("Windows/System32/mpr.dll", "mpr_profile"),
-    DLL("Windows/System32/ntdll.dll", "ntdll_profile"),
-    DLL("Windows/System32/ole32.dll", "ole32_profile"),
-    DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile"),
-    DLL("Windows/System32/combase.dll", "combase_profile"),
-    DLL("Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll", "clr_profile"),
-    DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile")
+    DLL("Windows/System32/drivers/tcpip.sys", "tcpip_profile", "--json-tcpip"),
+    DLL("Windows/System32/win32k.sys", "win32k_profile", "--json-win32k"),
+    DLL("Windows/System32/sspicli.dll", "sspicli_profile", "--json-sspicli"),
+    DLL("Windows/System32/kernel32.dll", "kernel32_profile", "--json-kernel32"),
+    DLL("Windows/System32/KernelBase.dll", "kernelbase_profile", "--json-kernelbase"),
+    DLL("Windows/SysWOW64/kernel32.dll", "wow_kernel32_profile", "--json-wow-kernel32"),
+    DLL("Windows/System32/IPHLPAPI.DLL", "iphlpapi_profile", "--json-iphlpapi"),
+    DLL("Windows/System32/mpr.dll", "mpr_profile", "--json-mpr"),
+    DLL("Windows/System32/ntdll.dll", "ntdll_profile", "--json-ntdll"),
+    DLL("Windows/System32/ole32.dll", "ole32_profile", "--json-ole32"),
+    DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile", "--json-wow-ole32"),
+    DLL("Windows/System32/combase.dll", "combase_profile", "--json-combase"),
+    DLL("Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll", "clr_profile", "--json-clr"),
+    DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile", "--json-mscorwks")
 ]
 
 
