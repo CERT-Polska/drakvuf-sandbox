@@ -18,15 +18,11 @@ logging.basicConfig(level=logging.INFO)
 
 DRONE_BUILD_NUMBER = os.getenv("DRONE_BUILD_NUMBER")
 
-# Clean debian image
-# VM_SNAPSHOT_BASE = "snap1585837798"
+VM_SNAPSHOT_BASE = os.getenv("VM_SNAPSHOT_BASE")
+VM_RUNNER_HOST = "http://" + os.getenv("VM_RUNNER_HOST")
+VM_HOST = os.getenv("VM_HOST")
 
-# Debian with preconfigured Windows in /var/lib/drakrun and /etc/drakrun
-VM_SNAPSHOT_BASE = "snap1587390752"
-VM_RUNNER_HOST = "http://192.168.21.1:5000"
-VM_HOST = "192.168.21.129"
-
-MINIO_HOST = "192.168.21.131:9000"
+MINIO_HOST = os.getenv("MINIO_HOST")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
 
