@@ -255,15 +255,37 @@ def create_rekall_profiles(install_info):
             # workaround for not being able to mount a snapshot
             base_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
             tmp_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'tmp'))
-            subprocess.check_output(f'zfs clone {base_snap} {tmp_snap}', shell=True)
+            try:
+                subprocess.check_output(f'zfs clone {base_snap} {tmp_snap}', shell=True)
+            except subprocess.CalledProcessError:
+                logging.warning("Failed to clone temporary zfs snapshot. Aborting generation of usermode rekall profiles")
+                return
 
             tmp_mount = shlex.quote(os.path.join("/", "dev", "zvol", install_info["zfs_tank_name"], "tmp-part2"))
-            subprocess.check_output(f'mount -t ntfs -o ro {tmp_mount} {mount_path}', shell=True)
+            try:
+                subprocess.check_output(f'mount -t ntfs -o ro {tmp_mount} {mount_path}', shell=True)
+            except subprocess.CalledProcessError:
+                logging.warning("Failed to mount temporary zfs snapshot. Aborting generation of usermode rekall profiles")
+                return
         else:  # qcow2
-            subprocess.check_output("modprobe nbd", shell=True)
+            try:
+                subprocess.check_output("modprobe nbd", shell=True)
+            except subprocess.CalledProcessError:
+                logging.warning("Failed to load nbd kernel module. Aborting generation of usermode rekall profiles")
+                return
+
             # TODO: this assumes /dev/nbd0 is free
-            subprocess.check_output(f"qemu-nbd -c /dev/nbd0 --read-only {os.path.join(LIB_DIR, 'volumes', 'vm-0.img')}", shell=True)
-            subprocess.check_output(f"mount -t ntfs -o ro /dev/ndb0p2 {mount_path}", shell=True)
+            try:
+                subprocess.check_output(f"qemu-nbd -c /dev/nbd0 --read-only {os.path.join(LIB_DIR, 'volumes', 'vm-0.img')}", shell=True)
+            except subprocess.CalledProcessError:
+                logging.warning("Failed to load quemu image as nbd0. Aborting generation of usermode rekall profiles")
+                return
+
+            try:
+                subprocess.check_output(f"mount -t ntfs -o ro /dev/ndb0p2 {mount_path}", shell=True)
+            except subprocess.CalledProcessError:
+                logging.warning("Failed to mount nbd0p2. Aborting generation of usermode rekall profiles")
+                return
 
         for file in dll_file_list:
             try:
