@@ -35,20 +35,16 @@ dll_file_list = [
 ]
 
 
-def GUID(name):
-    return Struct(name,
-        ULInt32("Data1"),
-        ULInt16("Data2"),
-        ULInt16("Data3"),
-        String("Data4", 8),
-    )
-
-
-CV_RSDS_HEADER = Struct("CV_RSDS",
-    Const(Bytes("Signature", 4), "RSDS"),
-    GUID("GUID"),
-    ULInt32("Age"),
-    CString("Filename"),
+CV_RSDS_HEADER = "CV_RSDS" / Struct(
+    "Signature" / Const(b"RSDS", Bytes(4)),
+    "GUID" / Struct(
+        "Data1" / Int32ul,
+        "Data2" / Int16ul,
+        "Data3" / Int16ul,
+        "Data4" / Bytes(8),
+    ),
+    "Age" / Int32ul,
+    "Filename" / CString(encoding = "utf8"),
 )
 
 
