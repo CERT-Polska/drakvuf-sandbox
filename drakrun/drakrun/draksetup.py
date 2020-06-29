@@ -293,10 +293,12 @@ def create_rekall_profiles(install_info):
                 copyfile(os.path.join(mount_path, file.path), os.path.join(profiles_path, file.dest))
                 guid = pdb_guid(os.path.join(profiles_path, file.dest))
                 tmp = fetch_pdb(guid["filename"], guid["GUID"], profiles_path)
+                logging.debug("parsing PDB into JSON profile...")
                 profile = make_pdb_profile(tmp)
                 with open(os.path.join(profiles_path, f"{file.dest}.json"), 'w') as f:
                     f.write(profile)
                 os.remove(os.path.join(profiles_path, file.dest))
+                os.remove(os.path.join(profiles_path, tmp))
             except FileNotFoundError:
                 logging.warning(f"Failed to copy file {file.path}, skipping...")
             except RuntimeError as e:
