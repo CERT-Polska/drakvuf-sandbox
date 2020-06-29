@@ -299,10 +299,10 @@ def create_rekall_profiles(install_info):
                 os.remove(os.path.join(profiles_path, file.dest))
             except FileNotFoundError:
                 logging.warning(f"Failed to copy file {file.path}, skipping...")
-                pass
             except RuntimeError as e:
                 logging.exception(f"Failed to fetch profile for {file.path}, skipping...")
-                pass
+            except Exception as e:
+                logging.exception(f"Unexpected exception while creating rekall profile for {file.path}, skipping...")
 
         # cleanup
         subprocess.check_output(f'umount {mount_path}', shell=True)
