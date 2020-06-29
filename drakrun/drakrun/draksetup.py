@@ -266,6 +266,10 @@ def create_rekall_profiles(install_info):
                 subprocess.check_output(f'mount -t ntfs -o ro {tmp_mount} {mount_path}', shell=True)
             except subprocess.CalledProcessError:
                 logging.warning("Failed to mount temporary zfs snapshot. Aborting generation of usermode rekall profiles")
+                try:
+                    subprocess.check_output(f'zfs destroy {tmp_snap}', shell=True)
+                except subprocess.CalledProcessError:
+                    logging.exception('Failed to cleanup after zfs tmp snapshot')
                 return
         else:  # qcow2
             try:
@@ -282,9 +286,13 @@ def create_rekall_profiles(install_info):
                 return
 
             try:
-                subprocess.check_output(f"mount -t ntfs -o ro /dev/ndb0p2 {mount_path}", shell=True)
+                subprocess.check_output(f"mount -t ntfs -o ro /dev/nbd0p2 {mount_path}", shell=True)
             except subprocess.CalledProcessError:
                 logging.warning("Failed to mount nbd0p2. Aborting generation of usermode rekall profiles")
+                try:
+                    subprocess.check_output('qemu-nbd --disconnect /dev/nbd0', shell=True)
+                except subprocess.CalledProcessError:
+                    logging.exception('Failed to cleanup after nbd0')
                 return
 
         for file in dll_file_list:
