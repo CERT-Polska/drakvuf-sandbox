@@ -123,6 +123,13 @@ steps:
     - pip install -r requirements.txt
     - pytest --capture=no
   environment:
+  # Clean debian image
+  # VM_SNAPSHOT_BASE = "snap1585837798"
+  # Debian with preconfigured Windows in /var/lib/drakrun and /etc/drakrun
+    VM_SNAPSHOT_BASE: snap1587390752
+    VM_RUNNER_HOST: "192.168.21.1:5000"
+    VM_HOST: "192.168.21.129"
+    MINIO_HOST: "192.168.21.131:9000"
     MINIO_ACCESS_KEY:
       from_secret: MINIO_ACCESS_KEY
     MINIO_SECRET_KEY:
