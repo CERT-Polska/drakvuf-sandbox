@@ -3,6 +3,7 @@
   "version": "0.6.0",
   "private": true,
   "dependencies": {
+    "@novnc/novnc": "^1.1.0",
     "axios": "^0.19.2",
     "d3": "^5.16.0",
     "d3-selection-multi": "^1.0.1",
