@@ -90,7 +90,7 @@ class AnalysisStatus extends Component {
   createConnection() {
     let rfb = null
     try {
-      rfb = new RFB(document.getElementById('noVNC-canvas'), `ws://:6301`, { credentials: { password: this.state.password }})
+      rfb = new RFB(document.getElementById('noVNC-canvas'), `ws://${window.location.hostname}:6301`, { credentials: { password: this.state.password }})
       rfb.addEventListener('connect', () => {
           this.setState({ vnc_started: true, error: null });
           rfb.focus();
@@ -105,7 +105,7 @@ class AnalysisStatus extends Component {
     } catch (err) {
       console.error(`Unable to create RFB client: ${err}`)
     }
-  
+
     return rfb
   }
 
