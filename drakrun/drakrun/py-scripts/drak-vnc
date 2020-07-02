@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+set -e
+cd /opt/venvs/drakrun/lib/python3*/site-packages/websockify
+exec /opt/venvs/drakrun/bin/activate
+exec python ./websockify.py "$(($1 + 5900))" "localhost:$(($1 + 6300))"
