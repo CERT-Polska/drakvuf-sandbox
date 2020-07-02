@@ -7,6 +7,6 @@ Standards-Version: 3.9.5
 
 Package: drakrun
 Architecture: amd64
-Depends: tcpdump, genisoimage, qemu-utils, bridge-utils, dnsmasq
+Depends: tcpdump, genisoimage, qemu-utils, bridge-utils, dnsmasq, websockify
 Pre-Depends: dpkg (>= 1.16.1), {{PYTHON_PACKAGES}}, python3-distutils
 Description: DRAKVUF Sandbox Worker (standalone)
