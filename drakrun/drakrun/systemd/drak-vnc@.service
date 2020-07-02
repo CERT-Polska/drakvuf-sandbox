@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/venvs/drakrun/bin/drak-vnc %i
+ExecStart=/etc/drakrun/scripts/drak-vnc %i
 User=root
 Group=root
 Restart=on-failure
