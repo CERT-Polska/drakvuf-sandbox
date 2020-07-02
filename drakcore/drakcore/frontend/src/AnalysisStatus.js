@@ -153,7 +153,7 @@ class AnalysisStatus extends Component {
             label="VNC password"
             onInput={this.handleInput}
             placeholder="password"
-            hint="VNC password is generated once for all VMs and is kept in /etc/drakrun/scripts/cfg.template"
+            hint="VNC password is generated once for all VMs and can be checked via 'drak-vncpasswd' command"
             style={{ display: this.state.vnc_started ? 'none' : 'block' }}
         />
 
