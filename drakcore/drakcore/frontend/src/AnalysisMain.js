@@ -154,9 +154,9 @@ class AnalysisMain extends Component {
           </div>
 
           <div className="col-md-3">
-            <div class="card">
+            <div className="card">
               <a href={`/dumps/${this.analysisID}`} className="btn btn-primary">
-                <i class="mdi mdi-download mr-2"></i>
+                <i className="mdi mdi-download mr-2"></i>
                 <span>Download dumps</span>
               </a>
             </div>
