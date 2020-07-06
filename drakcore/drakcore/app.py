@@ -72,7 +72,7 @@ def upload():
     # Add startup command to task
     start_command = request.form.get("start_command")
     if start_command:
-        task.add_resource("start_command", filename)
+        task.add_resource("start_command", start_command)
 
     task.add_resource("sample", sample)
     producer.send_task(task)
