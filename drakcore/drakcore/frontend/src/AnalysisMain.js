@@ -5,6 +5,116 @@ import "./App.css";
 import api from "./api";
 import { Graphviz } from "graphviz-react";
 
+function computeExpandState(expandPid, process, expandMap) {
+  // compute the values for children
+  process.children.forEach((child) =>
+    computeExpandState(expandPid, child, expandMap)
+  );
+
+  // check if any of them is expanded
+  const childrenExpanded = process.children.some(
+    (child) => expandMap[child.pid]
+  );
+
+  // compute value for this process
+  expandMap[process.pid] = childrenExpanded || process.pid === expandPid;
+}
+
+class ProcessTree extends Component {
+  constructor(props) {
+    super(props);
+
+    this.toggleCollapse = this.toggleCollapse.bind(this);
+    this.setExpanded = this.setExpanded.bind(this);
+    this.buildProcessTree = this.buildProcessTree.bind(this);
+    this.processTreeHelper = this.processTreeHelper.bind(this);
+    this.isExpanded = this.isExpanded.bind(this);
+
+    let initialExpandedMap = {};
+    if (this.props.expandPid) {
+      this.props.tree.forEach((process) =>
+        computeExpandState(this.props.expandPid, process, initialExpandedMap)
+      );
+    }
+
+    this.state = {
+      expandedMap: initialExpandedMap,
+    };
+  }
+
+  setExpanded(pid, value) {
+    this.setState((oldState) => {
+      const newState = {
+        expandedMap: {
+          ...oldState.expandedMap,
+          [pid]: value,
+        },
+      };
+      return newState;
+    });
+  }
+
+  toggleCollapse(pid) {
+    const current = this.state.expandedMap[pid];
+    this.setExpanded(pid, !current);
+  }
+
+  isExpanded(pid) {
+    return this.state.expandedMap[pid];
+  }
+
+  processTreeHelper(process) {
+    const collapseType = this.isExpanded(process.pid)
+      ? "mdi mdi-minus-circle mr-1"
+      : "mdi mdi-plus-circle mr-1";
+    const collapseToggle = (
+      <span
+        style={{ cursor: "pointer" }}
+        className={collapseType}
+        onClick={() => this.toggleCollapse(process.pid)}
+      ></span>
+    );
+
+    const subtree = this.isExpanded(process.pid)
+      ? this.buildProcessTree(process.children)
+      : "";
+
+    return (
+      <React.Fragment key={process.pid}>
+        <li>
+          {process.children.length > 0 ? collapseToggle : ""}
+          <code>{process.procname || "unnamed process"}</code>
+          <span className="ml-1">
+            (
+            <Link
+              to={`/analysis/${this.props.analysisID}/apicalls/${process.pid}`}
+            >
+              {process.pid}
+            </Link>
+            )
+          </span>
+        </li>
+        {subtree}
+      </React.Fragment>
+    );
+  }
+
+  buildProcessTree(proclist) {
+    return (
+      <ul style={{ listStyleType: "none" }}>
+        {proclist
+          .slice()
+          .sort((pA, pB) => pA.pid - pB.pid)
+          .map(this.processTreeHelper)}
+      </ul>
+    );
+  }
+
+  render() {
+    return this.buildProcessTree(this.props.tree);
+  }
+}
+
 class AnalysisMain extends Component {
   constructor(props) {
     super(props);
@@ -15,37 +125,8 @@ class AnalysisMain extends Component {
       graphState: "loading",
       processTree: null,
     };
+
     this.analysisID = this.props.match.params.analysis;
-    this.processTreeHelper = this.processTreeHelper.bind(this);
-  }
-
-  processTreeHelper(process) {
-    return (
-      <React.Fragment key={process.pid}>
-        <li>
-          <code>{process.procname ? process.procname : "unnamed process"}</code>
-          <span className="ml-1">
-            (
-            <Link to={`/analysis/${this.analysisID}/apicalls/${process.pid}`}>
-              {process.pid}
-            </Link>
-            )
-          </span>
-        </li>
-        {this.buildProcessTree(process.children)}
-      </React.Fragment>
-    );
-  }
-
-  buildProcessTree(proclist) {
-    return (
-      <ul>
-        {proclist
-          .slice()
-          .sort((pA, pB) => pA.pid - pB.pid)
-          .map(this.processTreeHelper)}
-      </ul>
-    );
   }
 
   async componentDidMount() {
@@ -66,8 +147,10 @@ class AnalysisMain extends Component {
     }
 
     const process_tree = await api.getProcessTree(this.analysisID);
-    if (process_tree) {
-      this.setState({ processTree: process_tree.data });
+    const inject_log = await api.getLog(this.analysisID, "inject");
+    if (process_tree && inject_log) {
+      const injectedPid = inject_log.data["InjectedPid"];
+      this.setState({ processTree: process_tree.data, injectedPid });
     }
   }
 
@@ -102,13 +185,16 @@ class AnalysisMain extends Component {
     }
 
     let simpleProcessTree;
-
     if (this.state.processTree) {
       simpleProcessTree = (
         <div className="card tilebox-one">
           <div className="card-body">
             <h5 className="card-title mb-0">Proces tree</h5>
-            {this.buildProcessTree(this.state.processTree)}
+            <ProcessTree
+              tree={this.state.processTree}
+              expandPid={this.state.injectedPid}
+              analysisID={this.analysisID}
+            />
           </div>
         </div>
       );
