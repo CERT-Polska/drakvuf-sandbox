@@ -259,7 +259,7 @@ class DrakrunKarton(Karton):
 
         for profile in dll_file_list:
             if f"{profile.dest}.json" in files:
-                out.extend([profile.arg, os.path.join(LIB_DIR, f"{profile.dest}.json")])
+                out.extend([profile.arg, os.path.join(LIB_DIR, "profiles", f"{profile.dest}.json")])
 
         return out
 
@@ -379,6 +379,7 @@ class DrakrunKarton(Karton):
                                "-o", "json",
                                "-x", "poolmon",
                                "-x", "objmon",
+                               "-x", "socketmon",
                                "-j", "5",
                                "-t", str(timeout),
                                "-i", inject_pid,
