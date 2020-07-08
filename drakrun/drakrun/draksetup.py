@@ -252,7 +252,7 @@ def generate_profiles(no_report=False):
     with open(os.path.join(ETC_DIR, "install.json"), 'r') as f:
         install_info = json.loads(f.read())
 
-    max_vms = int(install_info["max_vms"])
+    max_vms = install_info["max_vms"]
     output = subprocess.check_output(['vmi-win-guid', 'name', 'vm-0'], timeout=30).decode('utf-8')
 
     try:
@@ -339,7 +339,7 @@ def reenable_services():
     with open(os.path.join(ETC_DIR, "install.json"), 'r') as f:
         install_info = json.loads(f.read())
 
-    max_vms = int(install_info["max_vms"])
+    max_vms = install_info["max_vms"]
 
     subprocess.check_output('systemctl disable \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
     subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
@@ -395,7 +395,7 @@ def main():
     install_p.add_argument('--storage-backend', default='qcow2', type=str, help='Storage backend (default: qcow2)')
     install_p.add_argument('--disk-size', default='100G', type=str, help='Disk size (default: 100G)')
     install_p.add_argument('--zfs-tank-name', type=str, help='Tank name (only for zfs storage backend)')
-    install_p.add_argument('--max-vms', default=1, type=str, help='Maximum number of simultaneous VMs (default: 1)')
+    install_p.add_argument('--max-vms', default=1, type=int, help='Maximum number of simultaneous VMs (default: 1)')
     install_p.add_argument('--iso', type=str, help='Installation ISO', required=True)
     install_p.add_argument('--unattended-xml', type=str, help='Path to autounattend.xml for automated Windows install (optional)')
 
