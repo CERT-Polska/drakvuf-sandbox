@@ -10,6 +10,7 @@ import random
 import subprocess
 import string
 import tempfile
+import time
 from shutil import copyfile
 
 import requests
@@ -263,6 +264,8 @@ def create_rekall_profiles(install_info):
 
             tmp_mount = shlex.quote(os.path.join("/", "dev", "zvol", install_info["zfs_tank_name"], "tmp-part2"))
             try:
+                # We have to wait for a moment for zvol to appear
+                time.sleep(1.0)
                 subprocess.check_output(f'mount -t ntfs -o ro {tmp_mount} {mount_path}', shell=True)
             except subprocess.CalledProcessError:
                 logging.warning("Failed to mount temporary zfs snapshot. Aborting generation of usermode rekall profiles")
