@@ -335,7 +335,7 @@ def create_rekall_profiles(install_info):
         subprocess.check_output('qemu-nbd --disconnect /dev/nbd0', shell=True)
 
 
-def generate_profiles(no_report=False):
+def generate_profiles(no_report=False, generate_usermode=True):
     if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
         no_report = True
 
@@ -401,7 +401,8 @@ def generate_profiles(no_report=False):
         snap_name = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
         subprocess.check_output(f'zfs snapshot {snap_name}', shell=True)
 
-    create_rekall_profiles(install_info)
+    if generate_usermode:
+        create_rekall_profiles(install_info)
 
     for vm_id in range(max_vms + 1):
         # we treat vm_id=0 as special internal one
@@ -490,6 +491,7 @@ def main():
     install_p.add_argument('--max-vms', default=1, type=str, help='Maximum number of simultaneous VMs (default: 1)')
     install_p.add_argument('--iso', type=str, help='Installation ISO', required=True)
     install_p.add_argument('--unattended-xml', type=str, help='Path to autounattend.xml for automated Windows install (optional)')
+    install_p.add_argument('--no-usermode', dest='generate_usermode', action='store_false', default=True, help='Disable user mode profile generation')
 
     profile_p = subparsers.add_parser('postinstall', help='Perform tasks after guest installation')
     profile_p.set_defaults(which='postinstall')
@@ -515,7 +517,7 @@ def main():
                 max_vms=args.max_vms,
                 unattended_xml=args.unattended_xml)
     elif args.which == "postinstall":
-        generate_profiles(args.no_report)
+        generate_profiles(args.no_report, args.generate_usermode)
     elif args.which == "postupgrade":
         reenable_services()
 
