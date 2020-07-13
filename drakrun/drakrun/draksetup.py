@@ -309,22 +309,28 @@ def create_rekall_profiles(install_info):
 
         for file in dll_file_list:
             try:
-                logging.info(f"fetching rekall profile for {file.path}")
-                copyfile(os.path.join(mount_path, file.path), os.path.join(profiles_path, file.dest))
-                guid = pdb_guid(os.path.join(profiles_path, file.dest))
+                logging.info(f"Fetching rekall profile for {file.path}")
+                local_dll_path = os.path.join(profiles_path, file.dest)
+
+                copyfile(os.path.join(mount_path, file.path), local_dll_path)
+                guid = pdb_guid(local_dll_path)
                 tmp = fetch_pdb(guid["filename"], guid["GUID"], profiles_path)
-                logging.debug("parsing PDB into JSON profile...")
+
+                logging.debug("Parsing PDB into JSON profile...")
                 profile = make_pdb_profile(tmp)
                 with open(os.path.join(profiles_path, f"{file.dest}.json"), 'w') as f:
                     f.write(profile)
-                os.remove(os.path.join(profiles_path, file.dest))
-                os.remove(os.path.join(profiles_path, tmp))
             except FileNotFoundError:
                 logging.warning(f"Failed to copy file {file.path}, skipping...")
             except RuntimeError:
                 logging.warning(f"Failed to fetch profile for {file.path}, skipping...")
             except Exception:
                 logging.warning(f"Unexpected exception while creating rekall profile for {file.path}, skipping...")
+            finally:
+                if os.path.exists(local_dll_path):
+                    os.remove(local_dll_path)
+                if os.path.exists(os.path.join(profiles_path, tmp)):
+                    os.remove(os.path.join(profiles_path, tmp))
 
         # cleanup
         subprocess.check_output(f'umount {mount_path}', shell=True)
