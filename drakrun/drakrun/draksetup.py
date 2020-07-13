@@ -491,11 +491,11 @@ def main():
     install_p.add_argument('--max-vms', default=1, type=str, help='Maximum number of simultaneous VMs (default: 1)')
     install_p.add_argument('--iso', type=str, help='Installation ISO', required=True)
     install_p.add_argument('--unattended-xml', type=str, help='Path to autounattend.xml for automated Windows install (optional)')
-    install_p.add_argument('--no-usermode', dest='generate_usermode', action='store_false', default=True, help='Disable user mode profile generation')
 
     profile_p = subparsers.add_parser('postinstall', help='Perform tasks after guest installation')
     profile_p.set_defaults(which='postinstall')
     profile_p.add_argument('--no-report', dest='no_report', action='store_true', default=False, help='Don\'t send anonymous usage report')
+    profile_p.add_argument('--no-usermode', dest='generate_usermode', action='store_false', default=True, help='Disable user mode profile generation')
 
     postupgrade_p = subparsers.add_parser('postupgrade', help='Perform tasks after drakrun upgrade')
     postupgrade_p.set_defaults(which='postupgrade')
