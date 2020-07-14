@@ -1,6 +1,8 @@
 import os
 import argparse
+
 from karton2 import Producer, Config, Resource, Task
+from drakrun.config import ETC_DIR
 
 
 def main():
@@ -8,7 +10,7 @@ def main():
     parser.add_argument('sample', help='Path to the sample')
     args = parser.parse_args()
 
-    conf = Config('/etc/drakrun/config.ini')
+    conf = Config(os.path.join(ETC_DIR, 'config.ini'))
     producer = Producer(conf)
 
     with open(args.sample, "rb") as f:

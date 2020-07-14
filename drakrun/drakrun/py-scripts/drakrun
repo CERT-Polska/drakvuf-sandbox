@@ -2,7 +2,4 @@
 
 import drakrun.main as dm
 
-dm.LIB_DIR = "/var/lib/drakrun/"
-dm.ETC_DIR = "/etc/drakrun/"
 dm.cmdline_main()
-

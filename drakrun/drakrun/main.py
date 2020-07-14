@@ -21,11 +21,8 @@ from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 import drakrun.run as d_run
 from drakrun.drakpdb import dll_file_list
 from drakrun.drakparse import parse_logs
+from drakrun.config import LIB_DIR, ETC_DIR
 
-
-LIB_DIR = os.path.dirname(os.path.realpath(__file__))
-ETC_DIR = os.path.dirname(os.path.realpath(__file__))
-MAIN_DIR = os.path.dirname(os.path.realpath(__file__))
 INSTANCE_ID = None
 
 
@@ -355,8 +352,6 @@ class DrakrunKarton(Karton):
                 self.log.info("running vm {}".format(INSTANCE_ID))
                 watcher_dnsmasq = start_dnsmasq(INSTANCE_ID, self.config.config['drakrun'].get('dns_server', '8.8.8.8'))
 
-                d_run.ETC_DIR = ETC_DIR
-                d_run.LIB_DIR = LIB_DIR
                 d_run.logging = self.log
                 d_run.run_vm(INSTANCE_ID)
 
