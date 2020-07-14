@@ -10,10 +10,11 @@ import random
 import subprocess
 import string
 import tempfile
+import time
 from shutil import copyfile
 
 import requests
-from drakrun.drakpdb import fetch_pdb, make_pdb_profile
+from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from requests import RequestException
 
 logging.basicConfig(level=logging.DEBUG,
@@ -245,7 +246,102 @@ def send_usage_report(report):
         logging.exception("Failed to send usage report. This is not a serious problem.")
 
 
-def generate_profiles(no_report=False):
+def create_rekall_profiles(install_info):
+    profiles_path = os.path.join(LIB_DIR, "profiles")
+
+    with tempfile.TemporaryDirectory() as mount_path:
+        # we mount 2nd partition, as 1st partition is windows boot related and 2nd partition is C:\\
+
+        if install_info["storage_backend"] == "zfs":
+            # workaround for not being able to mount a snapshot
+            base_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
+            tmp_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'tmp'))
+            try:
+                subprocess.check_output(f'zfs clone {base_snap} {tmp_snap}', shell=True)
+            except subprocess.CalledProcessError:
+                logging.warning("Failed to clone temporary zfs snapshot. Aborting generation of usermode rekall profiles")
+                return
+
+            volume_path = os.path.join("/", "dev", "zvol", install_info["zfs_tank_name"], "tmp-part2")
+            # Wait for 60s for the volume to appear in /dev/zvol/...
+            for _ in range(60):
+                if os.path.exists(volume_path):
+                    break
+                time.sleep(1.0)
+            else:
+                raise RuntimeError(f"ZFS volume not available at {volume_path}")
+
+            try:
+                # We have to wait for a moment for zvol to appear
+                time.sleep(1.0)
+                tmp_mount = shlex.quote(volume_path)
+                subprocess.check_output(f'mount -t ntfs -o ro {tmp_mount} {mount_path}', shell=True)
+            except subprocess.CalledProcessError:
+                logging.warning("Failed to mount temporary zfs snapshot. Aborting generation of usermode rekall profiles")
+                try:
+                    subprocess.check_output(f'zfs destroy {tmp_snap}', shell=True)
+                except subprocess.CalledProcessError:
+                    logging.exception('Failed to cleanup after zfs tmp snapshot')
+                return
+        else:  # qcow2
+            try:
+                subprocess.check_output("modprobe nbd", shell=True)
+            except subprocess.CalledProcessError:
+                logging.warning("Failed to load nbd kernel module. Aborting generation of usermode rekall profiles")
+                return
+
+            # TODO: this assumes /dev/nbd0 is free
+            try:
+                subprocess.check_output(f"qemu-nbd -c /dev/nbd0 --read-only {os.path.join(LIB_DIR, 'volumes', 'vm-0.img')}", shell=True)
+            except subprocess.CalledProcessError:
+                logging.warning("Failed to load quemu image as nbd0. Aborting generation of usermode rekall profiles")
+                return
+
+            try:
+                subprocess.check_output(f"mount -t ntfs -o ro /dev/nbd0p2 {mount_path}", shell=True)
+            except subprocess.CalledProcessError:
+                logging.warning("Failed to mount nbd0p2. Aborting generation of usermode rekall profiles")
+                try:
+                    subprocess.check_output('qemu-nbd --disconnect /dev/nbd0', shell=True)
+                except subprocess.CalledProcessError:
+                    logging.exception('Failed to cleanup after nbd0')
+                return
+
+        for file in dll_file_list:
+            try:
+                logging.info(f"Fetching rekall profile for {file.path}")
+                local_dll_path = os.path.join(profiles_path, file.dest)
+
+                copyfile(os.path.join(mount_path, file.path), local_dll_path)
+                guid = pdb_guid(local_dll_path)
+                tmp = fetch_pdb(guid["filename"], guid["GUID"], profiles_path)
+
+                logging.debug("Parsing PDB into JSON profile...")
+                profile = make_pdb_profile(tmp)
+                with open(os.path.join(profiles_path, f"{file.dest}.json"), 'w') as f:
+                    f.write(profile)
+            except FileNotFoundError:
+                logging.warning(f"Failed to copy file {file.path}, skipping...")
+            except RuntimeError:
+                logging.warning(f"Failed to fetch profile for {file.path}, skipping...")
+            except Exception:
+                logging.warning(f"Unexpected exception while creating rekall profile for {file.path}, skipping...")
+            finally:
+                if os.path.exists(local_dll_path):
+                    os.remove(local_dll_path)
+                if os.path.exists(os.path.join(profiles_path, tmp)):
+                    os.remove(os.path.join(profiles_path, tmp))
+
+        # cleanup
+        subprocess.check_output(f'umount {mount_path}', shell=True)
+
+    if install_info["storage_backend"] == "zfs":
+        subprocess.check_output(f'zfs destroy {tmp_snap}', shell=True)
+    else:  # qcow2
+        subprocess.check_output('qemu-nbd --disconnect /dev/nbd0', shell=True)
+
+
+def generate_profiles(no_report=False, generate_usermode=True):
     if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
         no_report = True
 
@@ -273,7 +369,7 @@ def generate_profiles(no_report=False):
     profile = make_pdb_profile(dest)
 
     logging.info("Saving profile...")
-    kernel_profile = os.path.join(LIB_DIR, 'profiles/kernel.json')
+    kernel_profile = os.path.join(LIB_DIR, 'profiles', 'kernel.json')
     with open(kernel_profile, 'w') as f:
         f.write(profile)
 
@@ -290,7 +386,7 @@ def generate_profiles(no_report=False):
         logging.error("Failed to obtain KPGD value.")
         return
 
-    pid_tool = os.path.join(MAIN_DIR, "tools/get-explorer-pid")
+    pid_tool = os.path.join(MAIN_DIR, "tools", "get-explorer-pid")
     explorer_pid_s = subprocess.check_output([pid_tool, "vm-0", kernel_profile, offsets_dict['kpgd']], timeout=30).decode('ascii', 'ignore')
     m = re.search(r'explorer\.exe:([0-9]+)', explorer_pid_s)
     explorer_pid = m.group(1)
@@ -298,18 +394,21 @@ def generate_profiles(no_report=False):
     runtime_profile = {"vmi_offsets": offsets_dict, "inject_pid": explorer_pid}
 
     logging.info("Saving runtime profile...")
-    with open(os.path.join(LIB_DIR, 'profiles/runtime.json'), 'w') as f:
+    with open(os.path.join(LIB_DIR, 'profiles', 'runtime.json'), 'w') as f:
         f.write(json.dumps(runtime_profile, indent=4))
 
     # TODO (optional) making usermode profiles (a special tool for GUID extraction is required)
     logging.info("Saving VM snapshot...")
-    subprocess.check_output('xl save vm-0 ' + os.path.join(LIB_DIR, "volumes/snapshot.sav"), shell=True)
+    subprocess.check_output('xl save vm-0 ' + os.path.join(LIB_DIR, "volumes", "snapshot.sav"), shell=True)
 
     logging.info("Snapshot was saved succesfully.")
 
     if install_info["storage_backend"] == 'zfs':
         snap_name = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
         subprocess.check_output(f'zfs snapshot {snap_name}', shell=True)
+
+    if generate_usermode:
+        create_rekall_profiles(install_info)
 
     for vm_id in range(max_vms + 1):
         # we treat vm_id=0 as special internal one
@@ -402,6 +501,7 @@ def main():
     profile_p = subparsers.add_parser('postinstall', help='Perform tasks after guest installation')
     profile_p.set_defaults(which='postinstall')
     profile_p.add_argument('--no-report', dest='no_report', action='store_true', default=False, help='Don\'t send anonymous usage report')
+    profile_p.add_argument('--no-usermode', dest='generate_usermode', action='store_false', default=True, help='Disable user mode profile generation')
 
     postupgrade_p = subparsers.add_parser('postupgrade', help='Perform tasks after drakrun upgrade')
     postupgrade_p.set_defaults(which='postupgrade')
@@ -423,7 +523,7 @@ def main():
                 max_vms=args.max_vms,
                 unattended_xml=args.unattended_xml)
     elif args.which == "postinstall":
-        generate_profiles(args.no_report)
+        generate_profiles(args.no_report, args.generate_usermode)
     elif args.which == "postupgrade":
         reenable_services()
 

@@ -9,7 +9,7 @@ import hashlib
 import socket
 import time
 import zipfile
-from typing import Optional
+from typing import Optional, List
 
 import pefile
 import json
@@ -19,6 +19,7 @@ import magic
 from karton2 import Karton, Config, Task, LocalResource
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 import drakrun.run as d_run
+from drakrun.drakpdb import dll_file_list
 from drakrun.drakparse import parse_logs
 
 
@@ -251,6 +252,17 @@ class DrakrunKarton(Karton):
             elif os.path.isdir(file_path):
                 yield from self.upload_artifacts(analysis_uid, workdir, os.path.join(subdir, fn))
 
+    def get_profile_list(self) -> List[str]:
+        files = os.listdir(os.path.join(LIB_DIR, "profiles"))
+
+        out = []
+
+        for profile in dll_file_list:
+            if f"{profile.dest}.json" in files:
+                out.extend([profile.arg, os.path.join(LIB_DIR, "profiles", f"{profile.dest}.json")])
+
+        return out
+
     def process(self):
         sample = self.current_task.get_resource("sample")
         self.log.info("hostname: {}".format(socket.gethostname()))
@@ -367,6 +379,7 @@ class DrakrunKarton(Karton):
                                "-o", "json",
                                "-x", "poolmon",
                                "-x", "objmon",
+                               "-x", "socketmon",
                                "-j", "5",
                                "-t", str(timeout),
                                "-i", inject_pid,
@@ -376,6 +389,8 @@ class DrakrunKarton(Karton):
                                "--memdump-dir", dump_dir,
                                "-r", kernel_profile,
                                "-e", "D:\\run.bat"]
+
+                drakvuf_cmd.extend(self.get_profile_list())
 
                 syscall_filter = self.config.config['drakrun'].get('syscall_filter', None)
                 if syscall_filter:
