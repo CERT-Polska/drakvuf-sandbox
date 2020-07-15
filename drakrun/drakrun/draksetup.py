@@ -491,7 +491,7 @@ def main():
 
     install_p = subparsers.add_parser('install', help='Install guest Virtual Machine')
     install_p.set_defaults(which='install')
-    install_p.add_argument('--storage-backend', default='qcow2', type=str, help='Storage backend (default: qcow2)')
+    install_p.add_argument('--storage-backend', default='qcow2', choices=['qcow2', 'zfs'], help='Storage backend (default: qcow2)')
     install_p.add_argument('--disk-size', default='100G', type=str, help='Disk size (default: 100G)')
     install_p.add_argument('--zfs-tank-name', type=str, help='Tank name (only for zfs storage backend)')
     install_p.add_argument('--max-vms', default=1, type=int, help='Maximum number of simultaneous VMs (default: 1)')
@@ -516,6 +516,9 @@ def main():
         logging.warning('Not running as root, draksetup may work improperly!')
 
     if args.which == "install":
+        if args.storage_backend != "zfs" and args.zfs_tank_name is not None:
+            parser.error("--zfs-tank-name is meaningful only for ZFS storage backend")
+
         install(storage_backend=args.storage_backend,
                 disk_size=args.disk_size,
                 iso_path=args.iso,
