@@ -58,6 +58,7 @@ class AnalysisStatus extends Component {
       status: "unknown",
       spinner: "oO",
       password: "",
+      vm_id: null,
       error: null,
       vnc_started: false,
       updated: false,
@@ -80,6 +81,7 @@ class AnalysisStatus extends Component {
         let newSpinner = this.state.spinner === "oO" ? "Oo" : "oO";
         this.setState({
           status: response.data.status,
+          vm_id: parseInt(response.data.vm_id),
           updated: true,
           spinner: newSpinner,
         });
@@ -90,7 +92,7 @@ class AnalysisStatus extends Component {
   createConnection() {
     let rfb = null
     try {
-      rfb = new RFB(document.getElementById('noVNC-canvas'), `ws://${window.location.hostname}:6301`, { credentials: { password: this.state.password }})
+      rfb = new RFB(document.getElementById('noVNC-canvas'), `ws://${window.location.hostname}:${6300 + this.state.vm_id}`, { credentials: { password: this.state.password }})
       rfb.addEventListener('connect', () => {
           this.setState({ vnc_started: true, error: null });
           rfb.focus();
