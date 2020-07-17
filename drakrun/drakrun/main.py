@@ -252,6 +252,7 @@ class DrakrunKarton(Karton):
                 yield from self.upload_artifacts(analysis_uid, workdir, os.path.join(subdir, fn))
 
     def process(self):
+        self.current_task.add_payload("vm_id", INSTANCE_ID)
         sample = self.current_task.get_resource("sample")
         self.log.info("hostname: {}".format(socket.gethostname()))
         sha256sum = hashlib.sha256(sample.content).hexdigest()

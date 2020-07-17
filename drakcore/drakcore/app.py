@@ -136,12 +136,17 @@ def graph(task_uid):
 @app.route("/status/<task_uid>")
 def status(task_uid):
     tasks = rs.keys("karton.task:*")
+    res = {"status": "done"}
 
     for task_key in tasks:
         task = json.loads(rs.get(task_key))
 
-        if task["root_uid"] == task_uid and task["status"] != "Finished":
-            return jsonify({"status": "pending"})
+        if task["root_uid"] == task_uid:
+            if task["status"] != "Finished":
+                res["status"] = "pending"
+
+            if "vm_id" in task["payload"]:
+                res["vm_id"] = task["payload"]["vm_id"]
 
     return jsonify({"status": "done"})
 
