@@ -15,18 +15,12 @@ from shutil import copyfile
 
 import requests
 from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
+from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
 from requests import RequestException
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(asctime)s][%(levelname)s] %(message)s',
                     handlers=[logging.StreamHandler()])
-
-# this can be overriden by launcher
-LIB_DIR = os.path.dirname(os.path.realpath(__file__))
-ETC_DIR = os.path.dirname(os.path.realpath(__file__))
-MAIN_DIR = os.path.dirname(os.path.realpath(__file__))
-
-FNULL = open(os.devnull, 'w')
 
 
 def find_default_interface():
@@ -110,15 +104,16 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
 
         iso_sha256 = sha256_hash.hexdigest()
 
-    with open(os.path.join(ETC_DIR, "install.json"), "w") as f:
-        install_info = {"storage_backend": storage_backend,
-                        "disk_size": disk_size,
-                        "iso_path": os.path.abspath(iso_path),
-                        "zfs_tank_name": zfs_tank_name,
-                        "max_vms": max_vms,
-                        "enable_unattended": unattended_xml is not None,
-                        "iso_sha256": iso_sha256}
-        f.write(json.dumps(install_info, indent=4))
+    install_info = InstallInfo(
+        storage_backend=storage_backend,
+        disk_size=disk_size,
+        iso_path=os.path.abspath(iso_path),
+        zfs_tank_name=zfs_tank_name,
+        max_vms=max_vms,
+        enable_unattended=unattended_xml is not None,
+        iso_sha256=iso_sha256
+    )
+    install_info.save()
 
     logging.info("Checking xen-detect...")
     proc = subprocess.run('xen-detect -N', shell=True)
@@ -246,23 +241,23 @@ def send_usage_report(report):
         logging.exception("Failed to send usage report. This is not a serious problem.")
 
 
-def create_rekall_profiles(install_info):
+def create_rekall_profiles(install_info: InstallInfo):
     profiles_path = os.path.join(LIB_DIR, "profiles")
 
     with tempfile.TemporaryDirectory() as mount_path:
         # we mount 2nd partition, as 1st partition is windows boot related and 2nd partition is C:\\
 
-        if install_info["storage_backend"] == "zfs":
+        if install_info.storage_backend == "zfs":
             # workaround for not being able to mount a snapshot
-            base_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
-            tmp_snap = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'tmp'))
+            base_snap = shlex.quote(os.path.join(install_info.zfs_tank_name, 'vm-0@booted'))
+            tmp_snap = shlex.quote(os.path.join(install_info.zfs_tank_name, 'tmp'))
             try:
                 subprocess.check_output(f'zfs clone {base_snap} {tmp_snap}', shell=True)
             except subprocess.CalledProcessError:
                 logging.warning("Failed to clone temporary zfs snapshot. Aborting generation of usermode rekall profiles")
                 return
 
-            volume_path = os.path.join("/", "dev", "zvol", install_info["zfs_tank_name"], "tmp-part2")
+            volume_path = os.path.join("/", "dev", "zvol", install_info.zfs_tank_name, "tmp-part2")
             # Wait for 60s for the volume to appear in /dev/zvol/...
             for _ in range(60):
                 if os.path.exists(volume_path):
@@ -335,7 +330,7 @@ def create_rekall_profiles(install_info):
         # cleanup
         subprocess.check_output(f'umount {mount_path}', shell=True)
 
-    if install_info["storage_backend"] == "zfs":
+    if install_info.storage_backend == "zfs":
         subprocess.check_output(f'zfs destroy {tmp_snap}', shell=True)
     else:  # qcow2
         subprocess.check_output('qemu-nbd --disconnect /dev/nbd0', shell=True)
@@ -345,10 +340,8 @@ def generate_profiles(no_report=False, generate_usermode=True):
     if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
         no_report = True
 
-    with open(os.path.join(ETC_DIR, "install.json"), 'r') as f:
-        install_info = json.loads(f.read())
-
-    max_vms = install_info["max_vms"]
+    install_info = InstallInfo.load()
+    max_vms = install_info.max_vms
     output = subprocess.check_output(['vmi-win-guid', 'name', 'vm-0'], timeout=30).decode('utf-8')
 
     try:
@@ -386,7 +379,8 @@ def generate_profiles(no_report=False, generate_usermode=True):
         logging.error("Failed to obtain KPGD value.")
         return
 
-    pid_tool = os.path.join(MAIN_DIR, "tools", "get-explorer-pid")
+    module_dir = os.path.dirname(os.path.realpath(__file__))
+    pid_tool = os.path.join(module_dir, "tools", "get-explorer-pid")
     explorer_pid_s = subprocess.check_output([pid_tool, "vm-0", kernel_profile, offsets_dict['kpgd']], timeout=30).decode('ascii', 'ignore')
     m = re.search(r'explorer\.exe:([0-9]+)', explorer_pid_s)
     explorer_pid = m.group(1)
@@ -403,8 +397,8 @@ def generate_profiles(no_report=False, generate_usermode=True):
 
     logging.info("Snapshot was saved succesfully.")
 
-    if install_info["storage_backend"] == 'zfs':
-        snap_name = shlex.quote(os.path.join(install_info["zfs_tank_name"], 'vm-0@booted'))
+    if install_info.storage_backend == 'zfs':
+        snap_name = shlex.quote(os.path.join(install_info.zfs_tank_name, 'vm-0@booted'))
         subprocess.check_output(f'zfs snapshot {snap_name}', shell=True)
 
     if generate_usermode:
@@ -422,7 +416,7 @@ def generate_profiles(no_report=False, generate_usermode=True):
                 "version": version
             },
             "install_iso": {
-                "sha256": install_info["iso_sha256"]
+                "sha256": install_info.iso_sha256
             }
         })
 
@@ -431,28 +425,24 @@ def generate_profiles(no_report=False, generate_usermode=True):
 
 
 def reenable_services():
-    if not os.path.exists(os.path.join(ETC_DIR, "install.json")):
+    install_info = InstallInfo.try_load()
+    if not install_info:
         logging.info("Not re-enabling services, install.json is missing.")
         return
-
-    with open(os.path.join(ETC_DIR, "install.json"), 'r') as f:
-        install_info = json.loads(f.read())
-
-    max_vms = install_info["max_vms"]
 
     subprocess.check_output('systemctl disable \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
     subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
 
-    for vm_id in range(1, max_vms + 1):
+    for vm_id in range(1, install_info.max_vms + 1):
         logging.info("Enabling and starting drakrun@{}...".format(vm_id))
         subprocess.check_output('systemctl enable drakrun@{}'.format(vm_id), shell=True, stderr=subprocess.STDOUT)
         subprocess.check_output('systemctl restart drakrun@{}'.format(vm_id), shell=True, stderr=subprocess.STDOUT)
 
 
 def generate_vm_conf(install_info, vm_id):
-    iso_path = install_info['iso_path']
-    storage_backend = install_info['storage_backend']
-    zfs_tank_name = install_info['zfs_tank_name']
+    iso_path = install_info.iso_path
+    storage_backend = install_info.storage_backend
+    zfs_tank_name = install_info.zfs_tank_name
 
     with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'r') as f:
         template = f.read()
@@ -468,7 +458,7 @@ def generate_vm_conf(install_info, vm_id):
 
     disks.append('file:{iso},hdc:cdrom,r'.format(iso=os.path.abspath(iso_path)))
 
-    if install_info['enable_unattended']:
+    if install_info.enable_unattended:
         disks.append('file:{main_dir}/volumes/unattended.iso,hdd:cdrom,r'.format(main_dir=LIB_DIR))
 
     disks = ', '.join(['"{}"'.format(disk) for disk in disks])
