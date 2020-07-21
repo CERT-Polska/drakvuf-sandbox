@@ -1,3 +1,6 @@
+"""
+TODO: Add logging
+"""
 import contextlib
 import os
 import subprocess
@@ -250,7 +253,7 @@ REGISTERED_BACKEND_NAMES: Tuple[str] = tuple(REGISTERED_BACKENDS.keys())
 
 
 class InvalidStorageBackend(Exception):
-    """ Thrown when user tried to create unsuppoerted storage backend """
+    """ Thrown when tried to create unsupported storage backend """
 
 
 def get_storage_backend(install_info: InstallInfo) -> StorageBackendBase:
