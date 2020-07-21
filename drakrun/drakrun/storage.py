@@ -4,7 +4,7 @@ import subprocess
 import time
 import shlex
 
-from typing import Generator
+from typing import Generator, Tuple
 from drakrun.config import InstallInfo, LIB_DIR
 
 
@@ -243,7 +243,7 @@ REGISTERED_BACKENDS = {
     "zfs": ZfsStorageBackend,
 }
 
-REGISTERED_BACKEND_NAMES = list(REGISTERED_BACKENDS.keys())
+REGISTERED_BACKEND_NAMES: Tuple[str] = tuple(REGISTERED_BACKENDS.keys())
 
 class InvalidStorageBackend(Exception):
     """ Thrown when user tried to create unsuppoerted storage backend """

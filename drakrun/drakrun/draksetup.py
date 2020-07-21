@@ -16,7 +16,7 @@ import requests
 from requests import RequestException
 from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
-from drakrun.storage import get_storage_backend
+from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(asctime)s][%(levelname)s] %(message)s',
@@ -374,7 +374,7 @@ def main():
 
     install_p = subparsers.add_parser('install', help='Install guest Virtual Machine')
     install_p.set_defaults(which='install')
-    install_p.add_argument('--storage-backend', default='qcow2', choices=['qcow2', 'zfs'], help='Storage backend (default: qcow2)')
+    install_p.add_argument('--storage-backend', default='qcow2', choices=REGISTERED_BACKEND_NAMES, help='Storage backend (default: qcow2)')
     install_p.add_argument('--disk-size', default='100G', type=str, help='Disk size (default: 100G)')
     install_p.add_argument('--zfs-tank-name', type=str, help='Tank name (only for zfs storage backend)')
     install_p.add_argument('--max-vms', default=1, type=int, help='Maximum number of simultaneous VMs (default: 1)')
