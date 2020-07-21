@@ -10,13 +10,12 @@ import random
 import subprocess
 import string
 import tempfile
-import time
 from shutil import copyfile
 
 import requests
+from requests import RequestException
 from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
-from requests import RequestException
 from drakrun.storage import get_storage_backend
 
 logging.basicConfig(level=logging.DEBUG,
