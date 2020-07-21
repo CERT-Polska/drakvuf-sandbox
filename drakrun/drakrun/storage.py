@@ -69,7 +69,8 @@ class ZfsStorageBackend(StorageBackendBase):
         try:
             subprocess.check_output("zfs -?", shell=True)
         except subprocess.CalledProcessError:
-            raise RuntimeError("Failed to execute zfs command. Make sure you have ZFS support installed.")
+            raise RuntimeError("Failed to execute zfs command. "
+                               "Make sure you have ZFS support installed.")
 
     def initialize_vm0_volume(self, disk_size: str):
         vm0_vol = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0"))
@@ -125,7 +126,8 @@ class ZfsStorageBackend(StorageBackendBase):
                 else:
                     break
             else:
-                raise RuntimeError(f"Failed to see {vm_zvol} created after executing zfs clone command.")
+                raise RuntimeError(f"Failed to see {vm_zvol} created after executing "
+                                   "zfs clone command.")
 
             subprocess.run(["zfs", "snapshot", vm_snap], check=True)
 
@@ -168,7 +170,8 @@ class Qcow2StorageBackend(StorageBackendBase):
         try:
             subprocess.check_output("qemu-img --version", shell=True)
         except subprocess.CalledProcessError:
-            raise RuntimeError("Failed to determine qemu-img version. Make sure you have qemu-utils installed.")
+            raise RuntimeError("Failed to determine qemu-img version. "
+                               "Make sure you have qemu-utils installed.")
 
     def initialize_vm0_volume(self, disk_size: str):
         try:
