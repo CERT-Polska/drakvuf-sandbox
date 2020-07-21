@@ -199,9 +199,9 @@ def create_rekall_profiles(install_info: InstallInfo):
     storage_backend = get_storage_backend(install_info)
     with storage_backend.vm0_as_block() as block_device, \
          tempfile.TemporaryDirectory() as mount_path:
+        mnt_path_quoted = shlex.quote(mount_path)
+        blk_quoted = shlex.quote(block_device)
         try:
-            blk_quoted = shlex.quote(block_device)
-            mnt_path_quoted = shlex.quote(mount_path)
             subprocess.check_output(f"mount -t ntfs -o ro {blk_quoted} {mnt_path_quoted}", shell=True)
         except subprocess.CalledProcessError:
             raise RuntimeError(f"Failed to mount {block_device} as NTFS.")
@@ -233,7 +233,7 @@ def create_rekall_profiles(install_info: InstallInfo):
                     os.remove(os.path.join(profiles_path, tmp))
 
         # cleanup
-        subprocess.check_output(f'umount {mount_path}', shell=True)
+        subprocess.check_output(f'umount {mnt_path_quoted}', shell=True)
 
 
 def generate_profiles(no_report=False, generate_usermode=True):
