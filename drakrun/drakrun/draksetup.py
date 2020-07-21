@@ -197,7 +197,7 @@ def send_usage_report(report):
 
 def create_rekall_profiles(install_info: InstallInfo):
     storage_backend = get_storage_backend(install_info)
-    with storage_backend.vm0_as_block() as block_device, \
+    with storage_backend.vm0_root_as_block() as block_device, \
          tempfile.TemporaryDirectory() as mount_path:
         mnt_path_quoted = shlex.quote(mount_path)
         blk_quoted = shlex.quote(block_device)
