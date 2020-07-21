@@ -140,7 +140,7 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
 
     generate_vm_conf(install_info, 0)
 
-    backend = get_storage_backend(storage_backend, install_info)
+    backend = get_storage_backend(install_info)
     backend.initialize_vm0_volume(disk_size)
 
     try:
@@ -340,7 +340,7 @@ def reenable_services():
         subprocess.check_output('systemctl restart drakrun@{}'.format(vm_id), shell=True, stderr=subprocess.STDOUT)
 
 
-def generate_vm_conf(install_info, vm_id):
+def generate_vm_conf(install_info: InstallInfo, vm_id: int):
     with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'r') as f:
         template = f.read()
 

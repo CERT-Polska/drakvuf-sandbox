@@ -1,5 +1,4 @@
 import contextlib
-import logging
 import os
 import subprocess
 import time
@@ -49,7 +48,7 @@ class StorageBackendBase:
         """ Mounts vm-0 root partition as block device
 
         Mounts second partition (C:) on the volume as block device.
-        This assumes that first partition is an  used for booting.
+        This assumes that first partition is used for booting.
         """
         raise NotImplementedError
 
@@ -60,9 +59,13 @@ class ZfsStorageBackend(StorageBackendBase):
     def __init__(self, install_info: InstallInfo):
         super().__init__(install_info)
         self.zfs_tank_name = install_info.zfs_tank_name
+        if self.zfs_tank_name is None:
+            raise RuntimeError("zfs_tank_name is missing in InstallInfo")
         self.check_tools()
 
-    def check_tools(self):
+    @staticmethod
+    def check_tools():
+        """ Verify existence of zfs command utility """
         try:
             subprocess.check_output("zfs -?", shell=True)
         except subprocess.CalledProcessError:
@@ -74,8 +77,8 @@ class ZfsStorageBackend(StorageBackendBase):
             subprocess.check_output(
                 f"zfs destroy -Rfr {vm0_vol}", stderr=subprocess.STDOUT, shell=True
             )
-        except subprocess.CalledProcessError as e:
-            if b"dataset does not exist" not in e.output:
+        except subprocess.CalledProcessError as exc:
+            if b"dataset does not exist" not in exc.output:
                 raise RuntimeError(f"Failed to destroy the existing ZFS volume {vm0_vol}.")
         try:
             subprocess.check_output(
@@ -129,7 +132,7 @@ class ZfsStorageBackend(StorageBackendBase):
         subprocess.run(["zfs", "rollback", vm_snap], check=True)
 
     @contextlib.contextmanager
-    def vm0_as_block(self) -> Generator[str, None, None]:
+    def vm0_root_as_block(self) -> Generator[str, None, None]:
         # workaround for not being able to mount a snapshot
         base_snap = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0@booted"))
         tmp_snap = shlex.quote(os.path.join(self.zfs_tank_name, "tmp"))
@@ -153,11 +156,15 @@ class ZfsStorageBackend(StorageBackendBase):
 
 
 class Qcow2StorageBackend(StorageBackendBase):
+    """ Implements storage backend based on QEMU QCOW2 image format """
+
     def __init__(self, install_info: InstallInfo):
         super().__init__(install_info)
         self.check_tools()
 
-    def check_tools(self):
+    @staticmethod
+    def check_tools():
+        """ Verify existence of qemu-img """
         try:
             subprocess.check_output("qemu-img --version", shell=True)
         except subprocess.CalledProcessError:
@@ -210,7 +217,7 @@ class Qcow2StorageBackend(StorageBackendBase):
         )
 
     @contextlib.contextmanager
-    def vm0_as_block(self) -> Generator[str, None, None]:
+    def vm0_root_as_block(self) -> Generator[str, None, None]:
         try:
             subprocess.check_output("modprobe nbd", shell=True)
         except subprocess.CalledProcessError:
@@ -231,10 +238,19 @@ class Qcow2StorageBackend(StorageBackendBase):
         subprocess.check_output("qemu-nbd --disconnect /dev/nbd0", shell=True)
 
 
-def get_storage_backend(install_info: InstallInfo) -> StorageBackendBase:
-    backends = {
-        "qcow2": Qcow2StorageBackend,
-        "zfs": ZfsStorageBackend,
-    }
+REGISTERED_BACKENDS = {
+    "qcow2": Qcow2StorageBackend,
+    "zfs": ZfsStorageBackend,
+}
 
-    return backends[install_info.storage_backend](install_info)
+REGISTERED_BACKEND_NAMES = list(REGISTERED_BACKENDS.keys())
+
+class InvalidStorageBackend(Exception):
+    """ Thrown when user tried to create unsuppoerted storage backend """
+
+def get_storage_backend(install_info: InstallInfo) -> StorageBackendBase:
+    """ Return installed storage backend or throw InvalidStorageBackend """
+    if install_info.storage_backend not in REGISTERED_BACKEND_NAMES:
+        raise InvalidStorageBackend
+
+    return REGISTERED_BACKENDS[install_info.storage_backend](install_info)
