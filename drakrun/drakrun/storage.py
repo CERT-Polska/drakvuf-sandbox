@@ -60,7 +60,7 @@ class ZfsStorageBackend(StorageBackendBase):
         super().__init__(install_info)
         self.zfs_tank_name = install_info.zfs_tank_name
         if self.zfs_tank_name is None:
-            raise RuntimeError("zfs_tank_name is missing in InstallInfo")
+            raise RuntimeError("zfs_tank_name is missing from InstallInfo")
         self.check_tools()
 
     @staticmethod
