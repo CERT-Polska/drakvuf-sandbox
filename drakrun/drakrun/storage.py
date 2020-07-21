@@ -248,8 +248,10 @@ REGISTERED_BACKENDS = {
 
 REGISTERED_BACKEND_NAMES: Tuple[str] = tuple(REGISTERED_BACKENDS.keys())
 
+
 class InvalidStorageBackend(Exception):
     """ Thrown when user tried to create unsuppoerted storage backend """
+
 
 def get_storage_backend(install_info: InstallInfo) -> StorageBackendBase:
     """ Return installed storage backend or throw InvalidStorageBackend """
