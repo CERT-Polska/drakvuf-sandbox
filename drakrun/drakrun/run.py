@@ -6,6 +6,7 @@ import subprocess
 import time
 import json
 
+from drakrun.storage import get_storage_backend
 from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
 
 
@@ -22,34 +23,8 @@ def run_vm(vm_id):
     except FileNotFoundError:
         pass
 
-    if install_info.storage_backend == 'qcow2':
-        subprocess.run(["qemu-img", "create",
-                        "-f", "qcow2",
-                        "-o", "backing_file=vm-0.img",
-                        os.path.join(LIB_DIR, "volumes/vm-{vm_id}.img".format(vm_id=vm_id))], check=True)
-    elif install_info.storage_backend == 'zfs':
-        vm_zvol = os.path.join('/dev/zvol', install_info.zfs_tank_name, f'vm-{vm_id}')
-        vm_snap = os.path.join(install_info.zfs_tank_name, f'vm-{vm_id}@booted')
-
-        if not os.path.exists(vm_zvol):
-            subprocess.run(["zfs", "clone",
-                            "-p", os.path.join(install_info.zfs_tank_name, 'vm-0@booted'),
-                            os.path.join(install_info.zfs_tank_name, f'vm-{vm_id}')], check=True)
-
-            for _ in range(120):
-                if not os.path.exists(vm_zvol):
-                    time.sleep(0.1)
-                else:
-                    break
-            else:
-                logging.error(f'Failed to see {vm_zvol} created after executing zfs clone command.')
-                return
-
-            subprocess.run(["zfs", "snapshot", vm_snap], check=True)
-
-        subprocess.run(["zfs", "rollback", vm_snap], check=True)
-    else:
-        raise RuntimeError("Unknown storage backend")
+    storage_backend = get_storage_backend(install_info)
+    storage_backend.rollback_vm_storage(vm_id)
 
     try:
         subprocess.run(["xl", "-vvv", "restore",
