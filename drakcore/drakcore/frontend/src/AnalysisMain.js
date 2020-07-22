@@ -115,6 +115,26 @@ class ProcessTree extends Component {
   }
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null, errorInfo: null };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.setState({
+      error: error,
+      errorInfo: errorInfo,
+    });
+  }
+
+  render() {
+    if (this.state.errorInfo)
+      return "cannot view graph due to malformed output";
+    return this.props.children;
+  }
+}
+
 class AnalysisMain extends Component {
   constructor(props) {
     super(props);
@@ -168,12 +188,12 @@ class AnalysisMain extends Component {
 
     if (this.state.graphState === "loaded") {
       processTree = (
-        <div id="treeWrapper">
+        <ErrorBoundary>
           <Graphviz
             dot={this.state.graph}
             options={{ zoom: true, width: "100%" }}
           />
-        </div>
+        </ErrorBoundary>
       );
     } else if (this.state.graphState === "missing") {
       processTree = (
