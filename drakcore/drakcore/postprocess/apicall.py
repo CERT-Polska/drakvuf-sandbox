@@ -24,8 +24,10 @@ def process_logfile(log):
             }
         except KeyError as e:
             logging.warning(f"JSON is missing a required field\n{str(e)}")
+            continue
         except json.JSONDecodeError as e:
             logging.warning(f"line cannot be parsed as JSON\n{str(e)}")
+            continue
 
         out_line = json.dumps(r).encode()
         if pid in temp_files:
