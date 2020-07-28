@@ -148,7 +148,7 @@ def status(task_uid):
             if "vm_id" in task["payload"]:
                 res["vm_id"] = task["payload"]["vm_id"]
 
-    return jsonify({"status": "done"})
+    return jsonify(res)
 
 
 @app.route("/")
