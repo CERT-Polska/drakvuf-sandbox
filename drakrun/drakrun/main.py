@@ -261,7 +261,6 @@ class DrakrunKarton(Karton):
         return out
 
     def process(self):
-        self.current_task.add_payload("vm_id", INSTANCE_ID)
         sample = self.current_task.get_resource("sample")
         self.log.info("hostname: {}".format(socket.gethostname()))
         sha256sum = hashlib.sha256(sample.content).hexdigest()
@@ -283,6 +282,8 @@ class DrakrunKarton(Karton):
             analysis_uid = override_uid
             self.log.info(f"override UID: {override_uid}")
             self.log.info("note that artifacts will be stored under this overriden identifier")
+
+        self.rs.set(f"drakvnc:{analysis_uid}", INSTANCE_ID, ex=3600) # 1h
 
         workdir = '/tmp/drakrun/vm-{}'.format(int(INSTANCE_ID))
 

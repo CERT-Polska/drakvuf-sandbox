@@ -145,8 +145,10 @@ def status(task_uid):
             if task["status"] != "Finished":
                 res["status"] = "pending"
 
-            if "vm_id" in task["payload"]:
-                res["vm_id"] = task["payload"]["vm_id"]
+    try:
+        res["vm_id"] = rs.get(f"drakvnc:{task_uid}")
+    except Exception:
+        logging.warning("Failed to obtain drakvnc VM_ID from redis")
 
     return jsonify(res)
 
