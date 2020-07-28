@@ -149,7 +149,7 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
     try:
         first_line = json.loads(next(lines))
         injected_pid = first_line['InjectedPid']
-    except Exception as e:
+    except Exception:
         logging.exception("Failed to get InjectedPid from first line")
         injected_pid = 0
 
@@ -168,7 +168,7 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
 
         try:
             plugin = line_obj["Plugin"]
-        except KeyValue as e:
+        except KeyError as e:
             logging.warning(f"line is missng plugin name!{str(e)}")
             continue
 
