@@ -9,7 +9,7 @@ import hashlib
 import socket
 import time
 import zipfile
-from typing import Optional
+from typing import Optional, List
 
 import pefile
 import json
@@ -19,12 +19,10 @@ import magic
 from karton2 import Karton, Config, Task, LocalResource
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 import drakrun.run as d_run
+from drakrun.drakpdb import dll_file_list
 from drakrun.drakparse import parse_logs
+from drakrun.config import LIB_DIR, ETC_DIR
 
-
-LIB_DIR = os.path.dirname(os.path.realpath(__file__))
-ETC_DIR = os.path.dirname(os.path.realpath(__file__))
-MAIN_DIR = os.path.dirname(os.path.realpath(__file__))
 INSTANCE_ID = None
 
 
@@ -251,6 +249,17 @@ class DrakrunKarton(Karton):
             elif os.path.isdir(file_path):
                 yield from self.upload_artifacts(analysis_uid, workdir, os.path.join(subdir, fn))
 
+    def get_profile_list(self) -> List[str]:
+        files = os.listdir(os.path.join(LIB_DIR, "profiles"))
+
+        out = []
+
+        for profile in dll_file_list:
+            if f"{profile.dest}.json" in files:
+                out.extend([profile.arg, os.path.join(LIB_DIR, "profiles", f"{profile.dest}.json")])
+
+        return out
+
     def process(self):
         self.current_task.add_payload("vm_id", INSTANCE_ID)
         sample = self.current_task.get_resource("sample")
@@ -344,8 +353,6 @@ class DrakrunKarton(Karton):
                 self.log.info("running vm {}".format(INSTANCE_ID))
                 watcher_dnsmasq = start_dnsmasq(INSTANCE_ID, self.config.config['drakrun'].get('dns_server', '8.8.8.8'))
 
-                d_run.ETC_DIR = ETC_DIR
-                d_run.LIB_DIR = LIB_DIR
                 d_run.logging = self.log
                 d_run.run_vm(INSTANCE_ID)
 
@@ -368,6 +375,7 @@ class DrakrunKarton(Karton):
                                "-o", "json",
                                "-x", "poolmon",
                                "-x", "objmon",
+                               "-x", "socketmon",
                                "-j", "5",
                                "-t", str(timeout),
                                "-i", inject_pid,
@@ -377,6 +385,8 @@ class DrakrunKarton(Karton):
                                "--memdump-dir", dump_dir,
                                "-r", kernel_profile,
                                "-e", "D:\\run.bat"]
+
+                drakvuf_cmd.extend(self.get_profile_list())
 
                 syscall_filter = self.config.config['drakrun'].get('syscall_filter', None)
                 if syscall_filter:

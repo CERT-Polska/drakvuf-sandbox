@@ -6,9 +6,46 @@ import pdbparse
 import json
 
 import requests
-from construct import EnumIntegerString
+from binascii import hexlify
+from pefile import PE, DEBUG_TYPE
+from construct import Struct, Const, Bytes, Int32ul, Int16ul, CString, EnumIntegerString
 from requests import HTTPError
 from tqdm import tqdm
+from typing import NamedTuple
+
+
+DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", str)])
+
+# profile file list, without 'C:\' and with '/' instead of '\'
+dll_file_list = [
+    DLL("Windows/System32/drivers/tcpip.sys", "tcpip_profile", "--json-tcpip"),
+    DLL("Windows/System32/win32k.sys", "win32k_profile", "--json-win32k"),
+    DLL("Windows/System32/sspicli.dll", "sspicli_profile", "--json-sspicli"),
+    DLL("Windows/System32/kernel32.dll", "kernel32_profile", "--json-kernel32"),
+    DLL("Windows/System32/KernelBase.dll", "kernelbase_profile", "--json-kernelbase"),
+    DLL("Windows/SysWOW64/kernel32.dll", "wow_kernel32_profile", "--json-wow-kernel32"),
+    DLL("Windows/System32/IPHLPAPI.DLL", "iphlpapi_profile", "--json-iphlpapi"),
+    DLL("Windows/System32/mpr.dll", "mpr_profile", "--json-mpr"),
+    DLL("Windows/System32/ntdll.dll", "ntdll_profile", "--json-ntdll"),
+    DLL("Windows/System32/ole32.dll", "ole32_profile", "--json-ole32"),
+    DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile", "--json-wow-ole32"),
+    DLL("Windows/System32/combase.dll", "combase_profile", "--json-combase"),
+    DLL("Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll", "clr_profile", "--json-clr"),
+    DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile", "--json-mscorwks")
+]
+
+
+CV_RSDS_HEADER = "CV_RSDS" / Struct(
+    "Signature" / Const(b"RSDS", Bytes(4)),
+    "GUID" / Struct(
+        "Data1" / Int32ul,
+        "Data2" / Int16ul,
+        "Data3" / Int16ul,
+        "Data4" / Bytes(8),
+    ),
+    "Age" / Int32ul,
+    "Filename" / CString(encoding="utf8"),
+)
 
 
 # Derived from rekall
@@ -298,11 +335,28 @@ def fetch_pdb(pdbname, guidage, destdir='.'):
     raise RuntimeError("Failed to fetch PDB")
 
 
+def pdb_guid(file):
+    pe = PE(file, fast_load=True)
+    pe.parse_data_directories()
+    try:
+        codeview = next(filter(lambda x: x.struct.Type == DEBUG_TYPE[u'IMAGE_DEBUG_TYPE_CODEVIEW'], pe.DIRECTORY_ENTRY_DEBUG))
+    except StopIteration:
+        print("Failed to find CodeView in pdb")
+        raise RuntimeError("Failed to find GUID age")
+
+    offset = codeview.struct.PointerToRawData
+    size = codeview.struct.SizeOfData
+    tmp = CV_RSDS_HEADER.parse(pe.__data__[offset:offset + size])
+    guidstr = u"%08x%04x%04x%s%x" % (tmp.GUID.Data1, tmp.GUID.Data2, tmp.GUID.Data3, hexlify(tmp.GUID.Data4).decode('ascii'), tmp.Age)
+    return {"filename": tmp.Filename, "GUID": guidstr}
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='drakpdb')
-    parser.add_argument('action', type=str, help='one of: fetch_pdb, parse_pdb')
+    parser.add_argument('action', type=str, help='one of: fetch_pdb, parse_pdb, pdb_guid')
     parser.add_argument('pdb_name', type=str, help='name of pdb file without extension, e.g. ntkrnlmp')
     parser.add_argument('guid_age', nargs='?', help='guid/age of the pdb file')
+    parser.add_argument('file', type=str, help='file to get GUID age from')
 
     args = parser.parse_args()
 
@@ -310,5 +364,7 @@ if __name__ == "__main__":
         print(make_pdb_profile(args.pdb_name))
     elif args.action == "fetch_pdb":
         fetch_pdb(args.pdb_name, args.guid_age)
+    if args.action == "pdb_guid":
+        print(pdb_guid(args.file))
     else:
         raise RuntimeError('Unknown action')
