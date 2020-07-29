@@ -304,12 +304,6 @@ class DrakrunKarton(Karton):
             self.log.error("Unable to run malware sample, could not generate any suitable command to run it.")
             return
 
-        start_command = start_command.replace("%f", file_name)
-        self.log.info("Using command: %s", start_command)
-
-        if "%f" not in start_command:
-            self.log.warning("No file name in start command")
-
         try:
             shutil.rmtree(workdir)
         except Exception as e:
@@ -330,21 +324,8 @@ class DrakrunKarton(Karton):
         with open(os.path.join(outdir, 'sample_sha256.txt'), 'w') as f:
             f.write(hashlib.sha256(sample.content).hexdigest())
 
-        with open(os.path.join(workdir, 'run.bat'), 'w', encoding='ascii', newline='\r\n') as f:
-            f.write('ipconfig /renew\n')
-            f.write(f'xcopy D:\\{file_name} %USERPROFILE%\\Desktop\\\n')
-            f.write('C:\n')
-            f.write('cd %USERPROFILE%\\Desktop\n')
-            f.write(start_command)
-
         with open(os.path.join(workdir, file_name), 'wb') as f:
             f.write(sample.content)
-
-        try:
-            subprocess.run(["genisoimage", "-o", os.path.join(workdir, 'malwar.iso'), os.path.join(workdir, file_name), os.path.join(workdir, 'run.bat')], cwd=workdir, check=True)
-        except subprocess.CalledProcessError as e:
-            logging.exception("Failed to generate CD ISO image. Please install genisoimage")
-            raise e
 
         watcher_tcpdump = None
         watcher_dnsmasq = None
@@ -372,6 +353,38 @@ class DrakrunKarton(Karton):
                 dump_dir = os.path.join(outdir, "dumps")
                 drakmon_log_fp = os.path.join(outdir, "drakmon.log")
 
+                injector_cmd = ["injector",
+                                "-o", "json",
+                                "-d", "vm-{vm_id}".format(vm_id=INSTANCE_ID),
+                                "-r", kernel_profile,
+                                "-i", inject_pid,
+                                "-k", kpgd,
+                                "-m", "writefile",
+                                "-e", f"%USERPROFILE%\\Desktop\\{file_name}",
+                                "-B", os.path.join(workdir, file_name)]
+
+                self.log.info("Running injector...")
+                injector = subprocess.Popen(injector_cmd, stdout=subprocess.PIPE)
+                outs, errs = injector.communicate(b"", 20)
+
+                if injector.returncode != 0:
+                    raise subprocess.CalledProcessError(injector.returncode, injector_cmd)
+
+                injected_fn = json.loads(outs)['ProcessName']
+                net_enable = int(self.config.config['drakrun'].get('net_enable', '0'))
+
+                if "%f" not in start_command:
+                    self.log.warning("No file name in start command")
+
+                cwd = '\\'.join(injected_fn.split("\\")[:-1])
+                start_command = f"cd {cwd} & " + start_command.replace("%f", injected_fn)
+
+                if net_enable:
+                    start_command = "ipconfig /renew & " + start_command
+
+                full_cmd = subprocess.list2cmdline(["cmd.exe", "/C", start_command])
+                self.log.info("Using command: %s", full_cmd)
+
                 drakvuf_cmd = ["drakvuf",
                                "-o", "json",
                                "-x", "poolmon",
@@ -385,7 +398,7 @@ class DrakrunKarton(Karton):
                                "--dll-hooks-list", hooks_list,
                                "--memdump-dir", dump_dir,
                                "-r", kernel_profile,
-                               "-e", "D:\\run.bat"]
+                               "-e", full_cmd]
 
                 drakvuf_cmd.extend(self.get_profile_list())
 
