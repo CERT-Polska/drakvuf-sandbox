@@ -3,7 +3,7 @@ import { Component } from "react";
 import { Redirect } from "react-router-dom";
 import "./App.css";
 import api from "./api";
-import RFB from '@novnc/novnc'
+import RFB from "@novnc/novnc";
 
 class PasswordField extends Component {
   constructor(props) {
@@ -38,7 +38,9 @@ class PasswordField extends Component {
             name="submit"
             className="btn btn-primary"
             onClick={this.handleInput}
-          >Open VNC</button>
+          >
+            Open VNC
+          </button>
         </div>
         {this.props.hint !== undefined ? (
           <small className="form-text text-muted">{this.props.hint}</small>
@@ -90,25 +92,34 @@ class AnalysisStatus extends Component {
   }
 
   createConnection() {
-    let rfb = null
+    let rfb = null;
     try {
-      rfb = new RFB(document.getElementById('noVNC-canvas'), `ws://${window.location.hostname}:${6300 + this.state.vm_id}`, { credentials: { password: this.state.password }})
-      rfb.addEventListener('connect', () => {
-          this.setState({ vnc_started: true, error: null });
-          rfb.focus();
-          const canvas = document.getElementById("noVNC-canvas").firstChild.firstChild;
-          canvas.style.width = "auto";
-          canvas.style.height = "auto";
+      rfb = new RFB(
+        document.getElementById("noVNC-canvas"),
+        `ws://${window.location.hostname}:${6300 + this.state.vm_id}`,
+        { credentials: { password: this.state.password } }
+      );
+      rfb.addEventListener("connect", () => {
+        this.setState({ vnc_started: true, error: null });
+        rfb.focus();
+        const canvas = document.getElementById("noVNC-canvas").firstChild
+          .firstChild;
+        canvas.style.width = "auto";
+        canvas.style.height = "auto";
       });
-      rfb.addEventListener('disconnect', () => this.setState({ vnc_started: false }));
-      rfb.addEventListener('securityfailure', (err) => this.setState({ error: err.detail.reason }))  // TODO: show error
+      rfb.addEventListener("disconnect", () =>
+        this.setState({ vnc_started: false })
+      );
+      rfb.addEventListener("securityfailure", (err) =>
+        this.setState({ error: err.detail.reason })
+      ); // TODO: show error
       rfb.scaleViewport = true;
       rfb.resizeSession = true;
     } catch (err) {
-      console.error(`Unable to create RFB client: ${err}`)
+      console.error(`Unable to create RFB client: ${err}`);
     }
 
-    return rfb
+    return rfb;
   }
 
   componentWillUnmount() {
@@ -120,10 +131,8 @@ class AnalysisStatus extends Component {
   handleInput(event) {
     if (event.target.name === "password")
       this.setState({ password: event.target.value });
-    else if (event.target.name === "submit")
-      this.createConnection();
-    else
-      console.log("Unexpected event: ", event);
+    else if (event.target.name === "submit") this.createConnection();
+    else console.log("Unexpected event: ", event);
   }
 
   render() {
@@ -149,19 +158,24 @@ class AnalysisStatus extends Component {
           />
         </div>
 
-        <br/>
+        <br />
 
         <PasswordField
-            label="VNC password"
-            onInput={this.handleInput}
-            placeholder="password"
-            hint="VNC password is generated once for all VMs and can be checked via 'drak-vncpasswd' command"
-            style={{ display: this.state.vnc_started ? 'none' : 'block' }}
+          label="VNC password"
+          onInput={this.handleInput}
+          placeholder="password"
+          hint="VNC password is generated once for all VMs and can be checked via 'drak-vncpasswd' command"
+          style={{ display: this.state.vnc_started ? "none" : "block" }}
         />
 
-        { this.state.error && <div className="alert alert-danger">{ this.state.error }</div> }
+        {this.state.error && (
+          <div className="alert alert-danger">{this.state.error}</div>
+        )}
 
-        <div id='noVNC-canvas' style={{display: this.state.vnc_started ? 'block' : 'none'}} />
+        <div
+          id="noVNC-canvas"
+          style={{ display: this.state.vnc_started ? "block" : "none" }}
+        />
       </div>
     );
   }
