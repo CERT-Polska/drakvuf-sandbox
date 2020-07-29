@@ -3,6 +3,7 @@ import os
 from tempfile import NamedTemporaryFile
 
 import requests
+import logging
 
 from flask import Flask, jsonify, request, send_file, redirect, send_from_directory, Response, abort
 from karton2 import Config, Producer, Resource, Task

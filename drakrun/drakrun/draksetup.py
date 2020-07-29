@@ -339,6 +339,7 @@ def reenable_services():
         subprocess.check_output('systemctl enable drakrun@{0} drak-vnc@{0}'.format(vm_id), shell=True, stderr=subprocess.STDOUT)
         subprocess.check_output('systemctl restart drakrun@{0} drak-vnc@{0}'.format(vm_id), shell=True, stderr=subprocess.STDOUT)
 
+
 def generate_vm_conf(install_info: InstallInfo, vm_id: int):
     with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'r') as f:
         template = f.read()
