@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=/etc/drakrun/scripts/drak-vnc %i
-User=root
-Group=root
+User=nobody
+Group=nobody
 Restart=on-failure
 RestartSec=5
 StartLimitInterval=60s

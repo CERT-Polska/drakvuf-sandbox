@@ -16,7 +16,7 @@ try:
     if (passwd):
         print(f"VNC password: {passwd}")
     else:
-        print("VNC password not found. Have you ran draksetup postinstall?")
+        print("VNC password not found. Have you run draksetup postinstall?")
 
 except Exception as e:
-    print(f"Failed to run script:\n{str(e)}")
+    print(f"Failed to run script:\n{e}")
