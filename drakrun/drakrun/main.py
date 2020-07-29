@@ -330,21 +330,8 @@ class DrakrunKarton(Karton):
         with open(os.path.join(outdir, 'sample_sha256.txt'), 'w') as f:
             f.write(hashlib.sha256(sample.content).hexdigest())
 
-        with open(os.path.join(workdir, 'run.bat'), 'w', encoding='ascii', newline='\r\n') as f:
-            f.write('ipconfig /renew\n')
-            f.write(f'xcopy D:\\{file_name} %USERPROFILE%\\Desktop\\\n')
-            f.write('C:\n')
-            f.write('cd %USERPROFILE%\\Desktop\n')
-            f.write(start_command)
-
         with open(os.path.join(workdir, file_name), 'wb') as f:
             f.write(sample.content)
-
-        try:
-            subprocess.run(["genisoimage", "-o", os.path.join(workdir, 'malwar.iso'), os.path.join(workdir, file_name), os.path.join(workdir, 'run.bat')], cwd=workdir, check=True)
-        except subprocess.CalledProcessError as e:
-            logging.exception("Failed to generate CD ISO image. Please install genisoimage")
-            raise e
 
         watcher_tcpdump = None
         watcher_dnsmasq = None
@@ -372,6 +359,25 @@ class DrakrunKarton(Karton):
                 dump_dir = os.path.join(outdir, "dumps")
                 drakmon_log_fp = os.path.join(outdir, "drakmon.log")
 
+                injector_cmd = ["injector",
+                                "-o", "json",
+                                "-d", "vm-{vm_id}".format(vm_id=INSTANCE_ID),
+                                "-r", kernel_profile,
+                                "-i", inject_pid,
+                                "-k", kpgd,
+                                "-m", "writefile",
+                                "-e", "%USERPROFILE%\\Desktop\\malwar.exe",
+                                "-B", os.path.join(workdir, file_name)]
+
+                self.log.info("Running injector...")
+                injector = subprocess.Popen(injector_cmd, stdout=subprocess.PIPE)
+                outs, errs = injector.communicate(b"", 20)
+
+                injected_fn = json.loads(outs)['ProcessName']
+
+                if injector.returncode != 0:
+                    raise subprocess.CalledProcessError(injector.returncode, injector_cmd)
+
                 drakvuf_cmd = ["drakvuf",
                                "-o", "json",
                                "-x", "poolmon",
@@ -385,7 +391,7 @@ class DrakrunKarton(Karton):
                                "--dll-hooks-list", hooks_list,
                                "--memdump-dir", dump_dir,
                                "-r", kernel_profile,
-                               "-e", "D:\\run.bat"]
+                               "-e", injected_fn]
 
                 drakvuf_cmd.extend(self.get_profile_list())
 
