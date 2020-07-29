@@ -169,7 +169,7 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
         try:
             plugin = line_obj["Plugin"]
         except KeyError as e:
-            logging.warning(f"line is missng plugin name!{str(e)}")
+            logging.warning(f"line is missng plugin name!\n{e}")
             continue
 
         if plugin in switcher:
