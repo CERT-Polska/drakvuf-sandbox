@@ -1,4 +1,5 @@
 import json
+import logging
 from dataclasses import dataclass, field
 from io import BytesIO
 from typing import List, Set, Optional, Dict, Any
@@ -64,8 +65,15 @@ class ProcessTree:
 def tree_from_log(file):
     pstree = ProcessTree()
     for line in file:
-        entry = json.loads(line)
-        pstree.add_process(entry["PID"], entry["PPID"], entry["ProcessName"])
+        try:
+            entry = json.loads(line)
+            pstree.add_process(entry["PID"], entry["PPID"], entry["ProcessName"])
+        except KeyError as e:
+            logging.warning(f"JSON is missing required field\n{e}")
+            continue
+        except json.JSONDecodeError as e:
+            logging.warning(f"line cannot be parsed as JSON\n{e}")
+            continue
     return pstree.as_dict()
 
 

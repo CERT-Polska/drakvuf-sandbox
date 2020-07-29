@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 from io import BytesIO
 from collections import defaultdict
 from drakcore.postprocess import postprocess
@@ -10,15 +11,23 @@ from tempfile import NamedTemporaryFile
 
 def process_logfile(log):
     temp_files = {}
+
     for line in log:
-        entry = json.loads(line)
-        pid = entry["PID"]
-        r = {
-            "pid": pid,
-            "timestamp": entry["TimeStamp"],
-            "method": entry["Method"],
-            "arguments": entry["Arguments"],
-        }
+        try:
+            entry = json.loads(line)
+            pid = entry["PID"]
+            r = {
+                "pid": pid,
+                "timestamp": entry["TimeStamp"],
+                "method": entry["Method"],
+                "arguments": entry["Arguments"],
+            }
+        except KeyError as e:
+            logging.warning(f"JSON is missing a required field\n{e}")
+            continue
+        except json.JSONDecodeError as e:
+            logging.warning(f"line cannot be parsed as JSON\n{e}")
+            continue
 
         out_line = json.dumps(r).encode()
         if pid in temp_files:

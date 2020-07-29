@@ -1,6 +1,7 @@
 import json
 import re
-from typing import List, Dict, Iterable, Generator
+import logging
+from typing import List, Dict, Iterable, Generator, Union
 from datetime import datetime
 from sys import argv, exit
 
@@ -135,7 +136,8 @@ class Filedelete(Base):
 """
 
 
-def parse_logs(lines: Iterable[str]) -> Generator[str, None, None]:
+def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]:
+    # switch => get class => instantiate => str
     switcher = {
         "regmon": Regmon,
         "filetracer": FileTracer,
@@ -144,12 +146,11 @@ def parse_logs(lines: Iterable[str]) -> Generator[str, None, None]:
         "procmon": Procmon
     }
 
-    # switch => get class => instantiate => str
     try:
         first_line = json.loads(next(lines))
         injected_pid = first_line['InjectedPid']
-    except Exception as e:
-        print(e)
+    except Exception:
+        logging.exception("Failed to get InjectedPid from first line")
         injected_pid = 0
 
     # prepend prolog
@@ -162,21 +163,27 @@ def parse_logs(lines: Iterable[str]) -> Generator[str, None, None]:
         try:
             line_obj = json.loads(line)
         except Exception:
-            print('BUG: Unparseable log entry!', line)
+            logging.exception(f"BUG: Unparseable log entry!\n{line}")
             continue
 
-        if line_obj["Plugin"] in switcher:
-            plugin_obj = switcher[line_obj["Plugin"]]
+        try:
+            plugin = line_obj["Plugin"]
+        except KeyError as e:
+            logging.warning(f"line is missng plugin name!\n{e}")
+            continue
+
+        if plugin in switcher:
+            plugin_obj = switcher[plugin]
             converted = str(plugin_obj(line_obj))
             if converted:
                 yield converted
         elif not void_unknown:
-            print('UNPARSED:', line)
+            logging.info(f"unparsed: {line}")
 
 
 if __name__ == "__main__":
     if len(argv) != 3:
-        print('unexpected number of arguments!')
+        logging.error('unexpected number of arguments!')
         exit(1)
 
     with open(argv[1], "rb") as in_f:
