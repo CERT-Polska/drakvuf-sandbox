@@ -358,7 +358,7 @@ def generate_vm_conf(install_info: InstallInfo, vm_id: int):
 
     template = template.replace('{{ VM_ID }}', str(vm_id))
     template = template.replace('{{ DISKS }}', disks)
-    template = template.replace('{{ VNC_PORT }}', str(6300 + vm_id))
+    template = template.replace('{{ VNC_PORT }}', str(6400 + vm_id))
 
     if vm_id == 0:
         template = re.sub('on_reboot[ ]*=(.*)', 'on_reboot = "restart"', template)

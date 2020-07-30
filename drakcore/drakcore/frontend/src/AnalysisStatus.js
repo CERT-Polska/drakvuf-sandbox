@@ -87,7 +87,7 @@ class AnalysisStatus extends Component {
         let newSpinner = this.state.spinner === "oO" ? "Oo" : "oO";
         this.setState({
           status: response.data.status,
-          vnc_port: 6300 + parseInt(response.data.vm_id),
+          vnc_port: 6400 + parseInt(response.data.vm_id),
           updated: true,
           spinner: newSpinner,
         });
