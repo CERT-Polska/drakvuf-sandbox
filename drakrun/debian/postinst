@@ -16,7 +16,6 @@ case "$1" in
     ;;
 esac
 
-chmod +x /etc/drakrun/scripts/drak-vnc
 mkdir -p /var/lib/drakrun/{profiles,volumes}
 systemctl daemon-reload
 /opt/venvs/drakrun/bin/draksetup postupgrade
