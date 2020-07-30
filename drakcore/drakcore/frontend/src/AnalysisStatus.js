@@ -1,5 +1,5 @@
 import React from "react";
-import { Component } from "react";
+import { Component, createRef } from "react";
 import { Redirect } from "react-router-dom";
 import "./App.css";
 import api from "./api";
@@ -12,13 +12,17 @@ class PasswordField extends Component {
       value: "",
     };
 
-    this.handleInput = this.handleInput.bind(this);
+    this.handlePassword = this.handlePassword.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
   }
 
-  handleInput(event) {
-    if (event.target.name === "password")
-      this.setState({ value: event.target.value });
+  handlePassword(event) {
+    this.setState({ value: event.target.value });
     this.props.onInput(event);
+  }
+
+  handleSubmit(event) {
+    this.props.onSubmit(event);
   }
 
   render() {
@@ -31,13 +35,13 @@ class PasswordField extends Component {
             name="password"
             className="form-control"
             placeholder={this.props.placeholder}
-            onChange={this.handleInput}
+            onChange={this.handlePassword}
           />
           <button
             type="button"
             name="submit"
             className="btn btn-primary"
-            onClick={this.handleInput}
+            onClick={this.handleSubmit}
           >
             Open VNC
           </button>
@@ -57,10 +61,11 @@ class AnalysisStatus extends Component {
     super(props);
 
     this.state = {
+      novnc_canvas: createRef(),
       status: "unknown",
       spinner: "oO",
       password: "",
-      vm_id: null,
+      vnc_port: null,
       error: null,
       vnc_started: false,
       updated: false,
@@ -68,7 +73,7 @@ class AnalysisStatus extends Component {
 
     this.timerID = null;
 
-    this.handleInput = this.handleInput.bind(this);
+    this.handlePassword = this.handlePassword.bind(this);
     this.createConnection = this.createConnection.bind(this);
   }
 
@@ -76,14 +81,13 @@ class AnalysisStatus extends Component {
     if (this.timerID) {
       return;
     }
-
     this.timerID = setInterval(async () => {
       const response = await api.getStatus(this.props.match.params.analysis);
       if (response.data) {
         let newSpinner = this.state.spinner === "oO" ? "Oo" : "oO";
         this.setState({
           status: response.data.status,
-          vm_id: parseInt(response.data.vm_id),
+          vnc_port: 6300 + parseInt(response.data.vm_id),
           updated: true,
           spinner: newSpinner,
         });
@@ -92,18 +96,16 @@ class AnalysisStatus extends Component {
   }
 
   createConnection() {
-    let rfb = null;
     try {
-      rfb = new RFB(
-        document.getElementById("noVNC-canvas"),
-        `ws://${window.location.hostname}:${6300 + this.state.vm_id}`,
+      const rfb = new RFB(
+        this.novnc_canvas.current,
+        `ws://${window.location.hostname}:${this.state.vnc_port}`,
         { credentials: { password: this.state.password } }
       );
       rfb.addEventListener("connect", () => {
         this.setState({ vnc_started: true, error: null });
         rfb.focus();
-        const canvas = document.getElementById("noVNC-canvas").firstChild
-          .firstChild;
+        const canvas = this.novnc_canvas.current.firstChild.firstChild;
         canvas.style.width = "auto";
         canvas.style.height = "auto";
       });
@@ -115,11 +117,10 @@ class AnalysisStatus extends Component {
       ); // TODO: show error
       rfb.scaleViewport = true;
       rfb.resizeSession = true;
+      return rfb;
     } catch (err) {
       console.error(`Unable to create RFB client: ${err}`);
     }
-
-    return rfb;
   }
 
   componentWillUnmount() {
@@ -128,11 +129,8 @@ class AnalysisStatus extends Component {
     }
   }
 
-  handleInput(event) {
-    if (event.target.name === "password")
-      this.setState({ password: event.target.value });
-    else if (event.target.name === "submit") this.createConnection();
-    else console.log("Unexpected event: ", event);
+  handlePassword(event) {
+    this.setState({ password: event.target.value });
   }
 
   render() {
@@ -162,7 +160,8 @@ class AnalysisStatus extends Component {
 
         <PasswordField
           label="VNC password"
-          onInput={this.handleInput}
+          onInput={this.handlePassword}
+          onSubmit={this.createConnection}
           placeholder="password"
           hint="VNC password is generated once for all VMs and can be checked via 'drak-vncpasswd' command"
           style={{ display: this.state.vnc_started ? "none" : "block" }}
@@ -173,7 +172,7 @@ class AnalysisStatus extends Component {
         )}
 
         <div
-          id="noVNC-canvas"
+          ref={this.novnc_canvas}
           style={{ display: this.state.vnc_started ? "block" : "none" }}
         />
       </div>
