@@ -56,6 +56,10 @@ def main():
         info = get_service_info(service)
         print_status(service, service_runnning(info))
 
+        service = f"drak-vnc@{vm + 1}.service"
+        info = get_service_info(service)
+        print_status(service, service_runnning(info))
+
 
 if __name__ == "__main__":
     main()

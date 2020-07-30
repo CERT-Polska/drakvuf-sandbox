@@ -77,8 +77,8 @@ def detect_defaults():
 
 
 def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unattended_xml):
-    logging.info("Ensuring that drakrun@* services are stopped...")
-    subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+    logging.info("Ensuring that drakrun@* and drak-vnc@* services are stopped...")
+    subprocess.check_output('systemctl stop \'drakrun@*\' \'drak-vnc@*\'', shell=True, stderr=subprocess.STDOUT)
 
     logging.info("Performing installation...")
 
@@ -335,9 +335,9 @@ def reenable_services():
     subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
 
     for vm_id in range(1, install_info.max_vms + 1):
-        logging.info("Enabling and starting drakrun@{}...".format(vm_id))
-        subprocess.check_output('systemctl enable drakrun@{}'.format(vm_id), shell=True, stderr=subprocess.STDOUT)
-        subprocess.check_output('systemctl restart drakrun@{}'.format(vm_id), shell=True, stderr=subprocess.STDOUT)
+        logging.info("Enabling and starting drakrun@{0} and drak-vnc@{0}...".format(vm_id))
+        subprocess.check_output('systemctl enable drakrun@{0} drak-vnc@{0}'.format(vm_id), shell=True, stderr=subprocess.STDOUT)
+        subprocess.check_output('systemctl restart drakrun@{0} drak-vnc@{0}'.format(vm_id), shell=True, stderr=subprocess.STDOUT)
 
 
 def generate_vm_conf(install_info: InstallInfo, vm_id: int):

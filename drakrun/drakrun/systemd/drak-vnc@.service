@@ -1,0 +1,19 @@
+[Unit]
+Description=drak-vnc service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/etc/drakrun/scripts/drak-vnc %i
+User=nobody
+Group=nobody
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=60s
+StartLimitBurst=0
+WorkingDirectory=/var/lib/drakrun
+KillMode=process
+TimeoutStopSec=700
+
+[Install]
+WantedBy=default.target

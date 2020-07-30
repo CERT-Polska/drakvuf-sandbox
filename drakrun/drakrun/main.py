@@ -283,6 +283,8 @@ class DrakrunKarton(Karton):
             self.log.info(f"override UID: {override_uid}")
             self.log.info("note that artifacts will be stored under this overriden identifier")
 
+        self.rs.set(f"drakvnc:{analysis_uid}", INSTANCE_ID, ex=3600)  # 1h
+
         workdir = '/tmp/drakrun/vm-{}'.format(int(INSTANCE_ID))
 
         extension = self.current_task.headers.get("extension", "exe").lower()

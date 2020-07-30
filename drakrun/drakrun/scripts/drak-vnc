@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+exec websockify "$(($1 + 6300))" "localhost:$(($1 + 5900))"

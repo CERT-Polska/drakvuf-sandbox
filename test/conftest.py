@@ -42,6 +42,7 @@ DRAKMON_DEPS = [
     "dnsmasq",
     "libmagic1",
     "ntfs-3g",
+    "websockify",
 ]
 
 DRAKVUF_BUNDLE_URL = "https://github.com/tklengyel/drakvuf-builds/releases/download/20200318193922-a1ef03c/drakvuf-bundle-0.7-a1ef03c-generic.deb"
