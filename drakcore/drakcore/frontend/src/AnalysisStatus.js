@@ -61,7 +61,6 @@ class AnalysisStatus extends Component {
     super(props);
 
     this.state = {
-      novnc_canvas: createRef(),
       status: "unknown",
       spinner: "oO",
       password: "",
@@ -71,6 +70,7 @@ class AnalysisStatus extends Component {
       updated: false,
     };
 
+    this.novnc_canvas = createRef();
     this.timerID = null;
 
     this.handlePassword = this.handlePassword.bind(this);

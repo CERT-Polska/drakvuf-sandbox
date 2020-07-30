@@ -13,7 +13,7 @@ try:
         if passwd[0] == '"' and passwd[-1] == '"':
             passwd = passwd[1:-1]
 
-    if (passwd):
+    if passwd:
         print(f"VNC password: {passwd}")
     else:
         print("VNC password not found. Have you run draksetup postinstall?")
