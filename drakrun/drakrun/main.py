@@ -9,21 +9,22 @@ import hashlib
 import socket
 import time
 import zipfile
-from typing import Optional, List
-
-import pefile
 import json
 import re
-import io
+from typing import Optional, List
+from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
+
+import pefile
 import magic
 from karton2 import Karton, Config, Task, LocalResource
-from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
+
 import drakrun.run as d_run
 from drakrun.drakpdb import dll_file_list
 from drakrun.drakparse import parse_logs
 from drakrun.config import LIB_DIR, ETC_DIR
 
 INSTANCE_ID = None
+PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
 
 
 def get_domid_from_instance_id(instance_id: str) -> int:
@@ -38,7 +39,7 @@ def start_tcpdump_collector(instance_id: str, outdir: str) -> Optional[subproces
         subprocess.check_output("tcpdump --version", shell=True)
     except subprocess.CalledProcessError:
         logging.warning("Seems like tcpdump is not working/not installed on your system. Pcap will not be recorded.")
-        return
+        return None
 
     return subprocess.Popen([
         "tcpdump",
@@ -55,7 +56,7 @@ def start_dnsmasq(vm_id: int, dns_server: str) -> Optional[subprocess.Popen]:
     except subprocess.CalledProcessError:
         logging.warning("Seems like dnsmasq is not working/not installed on your system."
                         "Guest networking may not be fully functional.")
-        return
+        return None
 
     if dns_server == "use-gateway-address":
         dns_server = f"10.13.{vm_id}.1"
@@ -91,7 +92,8 @@ class DrakrunKarton(Karton):
         }
     ]
 
-    def _add_iptable_rule(self, rule):
+    @staticmethod
+    def _add_iptable_rule(rule):
         try:
             subprocess.check_output(f"iptables -C {rule}", shell=True)
         except subprocess.CalledProcessError as e:
@@ -135,7 +137,8 @@ class DrakrunKarton(Karton):
             self._add_iptable_rule(f"FORWARD -i drak{INSTANCE_ID} -o {out_interface} -j ACCEPT")
             self._add_iptable_rule(f"FORWARD -i {out_interface} -o drak{INSTANCE_ID} -j ACCEPT")
 
-    def _get_dll_run_command(self, pe_data):
+    @staticmethod
+    def _get_dll_run_command(pe_data):
         d = [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]]
         pe = pefile.PE(data=pe_data, fast_load=True)
         pe.parse_data_directories(directories=d)
@@ -229,7 +232,7 @@ class DrakrunKarton(Karton):
 
                 plugin_fd[obj['Plugin']].write(json.dumps(obj))
 
-        for key, fd in plugin_fd.items():
+        for fd in plugin_fd.values():
             fd.close()
 
         os.unlink(os.path.join(workdir, 'drakmon.log'))
@@ -249,14 +252,15 @@ class DrakrunKarton(Karton):
             elif os.path.isdir(file_path):
                 yield from self.upload_artifacts(analysis_uid, workdir, os.path.join(subdir, fn))
 
-    def get_profile_list(self) -> List[str]:
-        files = os.listdir(os.path.join(LIB_DIR, "profiles"))
+    @staticmethod
+    def get_profile_list() -> List[str]:
+        files = os.listdir(PROFILE_DIR)
 
         out = []
 
         for profile in dll_file_list:
             if f"{profile.dest}.json" in files:
-                out.extend([profile.arg, os.path.join(LIB_DIR, "profiles", f"{profile.dest}.json")])
+                out.extend([profile.arg, os.path.join(PROFILE_DIR, f"{profile.dest}.json")])
 
         return out
 
@@ -361,8 +365,8 @@ class DrakrunKarton(Karton):
 
                 self.log.info("running monitor {}".format(INSTANCE_ID))
 
-                kernel_profile = os.path.join(LIB_DIR, "profiles/kernel.json")
-                runtime_profile = os.path.join(LIB_DIR, "profiles/runtime.json")
+                kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
+                runtime_profile = os.path.join(PROFILE_DIR, "runtime.json")
                 with open(runtime_profile, 'r') as runtime_f:
                     rp = json.loads(runtime_f.read())
                     inject_pid = rp['inject_pid']
