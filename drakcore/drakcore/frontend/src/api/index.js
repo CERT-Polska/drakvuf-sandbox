@@ -13,6 +13,9 @@ export default {
   async listLogs(analysis) {
     return axios.get(`/logs/${analysis}`);
   },
+  async getSha256(analysis) {
+    return axios.get(`/sha256/${analysis}`);
+  },
   async getStatus(analysis) {
     return axios.get(`/status/${analysis}`);
   },

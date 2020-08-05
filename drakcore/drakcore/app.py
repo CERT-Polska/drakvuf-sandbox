@@ -134,6 +134,13 @@ def graph(task_uid):
         return send_file(f.name, mimetype='text/plain')
 
 
+@app.route("/sha256/<task_uid>")
+def sha256(task_uid):
+    with NamedTemporaryFile() as f:
+        minio.fget_object("drakrun", f"{task_uid}/sample_sha256.txt", f.name)
+        return send_file(f.name, mimetype='text/plain')
+
+
 @app.route("/status/<task_uid>")
 def status(task_uid):
     tasks = rs.keys("karton.task:*")

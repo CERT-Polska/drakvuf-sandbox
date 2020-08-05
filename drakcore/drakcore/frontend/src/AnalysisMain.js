@@ -144,6 +144,7 @@ class AnalysisMain extends Component {
       graph: null,
       graphState: "loading",
       processTree: null,
+      sha256: null
     };
 
     this.analysisID = this.props.match.params.analysis;
@@ -171,6 +172,11 @@ class AnalysisMain extends Component {
     if (process_tree && inject_log) {
       const injectedPid = inject_log.data["InjectedPid"];
       this.setState({ processTree: process_tree.data, injectedPid });
+    }
+
+    const sha256 = await api.getSha256(this.analysisID);
+    if (sha256.data) {
+      this.setState({ sha256: sha256.data });
     }
   }
 
@@ -224,6 +230,13 @@ class AnalysisMain extends Component {
       <div className="App container-fluid">
         <div className="page-title-box">
           <h4 className="page-title">Report</h4>
+        </div>
+
+        <div className="card tilebox-one">
+          <div className="card-body">
+            <h5 className="card-title mb-0">Sha256</h5>
+            {this.state.sha256}
+          </div>
         </div>
 
         <div className="card tilebox-one">
