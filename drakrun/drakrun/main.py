@@ -376,7 +376,7 @@ class DrakrunKarton(Karton):
                 if "%f" not in start_command:
                     self.log.warning("No file name in start command")
 
-                cwd = '\\'.join(injected_fn.split("\\")[:-1])
+                cwd = subprocess.list2cmdline(['\\'.join(injected_fn.split("\\")[:-1])])
                 start_command = f"cd {cwd} & " + start_command.replace("%f", injected_fn)
 
                 if net_enable:
