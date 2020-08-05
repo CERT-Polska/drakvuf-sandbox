@@ -57,7 +57,7 @@ def test_sample_analysis(drakmon_vm, drakcore):
     for line in response.iter_lines():
         d = json.loads(line)
         # our sample tried to create a file
-        if d["Method"] == "NtCreateFile" and "test.txt" in d["FileName"]:
+        if d.get("Method") == "NtCreateFile" and "test.txt" in d.get("FileName"):
             break
     else:
         raise Exception("No matching entry found")
