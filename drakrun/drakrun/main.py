@@ -16,6 +16,7 @@ import json
 import re
 import io
 import magic
+import ntpath
 from karton2 import Karton, Config, Task, LocalResource
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 import drakrun.run as d_run
@@ -376,7 +377,7 @@ class DrakrunKarton(Karton):
                 if "%f" not in start_command:
                     self.log.warning("No file name in start command")
 
-                cwd = subprocess.list2cmdline(['\\'.join(injected_fn.split("\\")[:-1])])
+                cwd = subprocess.list2cmdline([ntpath.dirname(injected_fn)])
                 start_command = f"cd {cwd} & " + start_command.replace("%f", injected_fn)
 
                 if net_enable:
