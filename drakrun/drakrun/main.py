@@ -378,7 +378,7 @@ class DrakrunKarton(Karton):
 
                 cwd = subprocess.list2cmdline([ntpath.dirname(injected_fn)])
                 cur_start_command = start_command.replace("%f", injected_fn)
-                
+
                 # don't include our internal maintanance commands
                 metadata['start_command'] = cur_start_command
                 cur_start_command += f"cd {cwd} & " + cur_start_command
