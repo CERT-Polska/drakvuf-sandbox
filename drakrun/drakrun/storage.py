@@ -90,6 +90,7 @@ class ZfsStorageBackend(StorageBackendBase):
                     [
                         "zfs",
                         "create",
+                        "-s",
                         "-V",
                         shlex.quote(disk_size),
                         shlex.quote(os.path.join(self.zfs_tank_name, "vm-0")),
