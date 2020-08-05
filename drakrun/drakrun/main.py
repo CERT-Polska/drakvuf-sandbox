@@ -318,8 +318,7 @@ class DrakrunKarton(Karton):
         metadata = {
             "sample_sha256": sha256sum,
             "magic_output": magic_output,
-            "time_started": int(time.time()),
-            "start_command": start_command
+            "time_started": int(time.time())
         }
 
         with open(os.path.join(outdir, 'sample_sha256.txt'), 'w') as f:
@@ -378,10 +377,14 @@ class DrakrunKarton(Karton):
                     self.log.warning("No file name in start command")
 
                 cwd = subprocess.list2cmdline([ntpath.dirname(injected_fn)])
-                start_command = f"cd {cwd} & " + start_command.replace("%f", injected_fn)
+                cur_start_command = start_command.replace("%f", injected_fn)
+                
+                # don't include our internal maintanance commands
+                metadata['start_command'] = cur_start_command
+                cur_start_command += f"cd {cwd} & " + cur_start_command
 
                 if net_enable:
-                    start_command = "ipconfig /renew & " + start_command
+                    cur_start_command = "ipconfig /renew & " + cur_start_command
 
                 full_cmd = subprocess.list2cmdline(["cmd.exe", "/C", start_command])
                 self.log.info("Using command: %s", full_cmd)
