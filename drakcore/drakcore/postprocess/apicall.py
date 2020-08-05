@@ -15,6 +15,8 @@ def process_logfile(log):
     for line in log:
         try:
             entry = json.loads(line)
+            if entry["Event"] != "api_called":
+                continue
             pid = entry["PID"]
             r = {
                 "pid": pid,
