@@ -34,19 +34,19 @@ This instruction assumes that you want to create a single-node installation with
 1. Download [latest release packages](https://github.com/CERT-Polska/drakvuf-sandbox/releases).
 2. Install DRAKVUF:
    ```
-   sudo apt update
-   sudo apt install ./drakvuf-bundle*.deb
-   sudo reboot
+   # apt update
+   # apt install ./drakvuf-bundle*.deb
+   # reboot
    ```
 3. Install DRAKVUF Sandbox stack:
    ```
-   sudo apt install redis-server
-   sudo apt install ./drakcore*.deb
-   sudo apt install ./drakrun*.deb
+   # apt install redis-server
+   # apt install ./drakcore*.deb
+   # apt install ./drakrun*.deb
    ```
 4. Execute:
    ```
-   sudo draksetup install --iso /opt/path_to_windows.iso
+   # draksetup install --iso /opt/path_to_windows.iso
    ```
    carefully read the command's output. This command would run a Virtual Machine with Windows system installation process.
    
@@ -55,12 +55,12 @@ This instruction assumes that you want to create a single-node installation with
    **Storage backend:** By default, DRAKVUF Sandbox is storing virtual machine's HDD in a `qcow2` file. If you want to use ZFS instead, please check the "Optional features" section below.
 5. Use VNC to connect to the installation process:
    ```
-   vncviewer localhost:5900
+   $ vncviewer localhost:5900
    ```
 6. Perform Windows installation until you are booted to the desktop.
 7. Execute:
    ```
-   sudo draksetup postinstall
+   # draksetup postinstall
    ```
    **Note:** Add `--no-report` if you don't want `draksetup` to send [basic usage report](https://github.com/CERT-Polska/drakvuf-sandbox/blob/master/USAGE_STATISTICS.md). 
 8. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
@@ -75,12 +75,12 @@ If you want to install DRAKVUF Sandbox with a ZFS storage backend, you should pe
 1. Install ZFS on your machine (guide for: [Debian Buster](https://github.com/openzfs/zfs/wiki/Debian), [Ubuntu 18.04](https://ubuntu.com/tutorials/setup-zfs-storage-pool#2-installing-zfs))
 2. Create a ZFS pool on a free partition:
    ```
-   zpool create tank <partition_name>
+   # zpool create tank <partition_name>
    ```
    where `<partiton_name>` is e.g. `/dev/sda3`. Be aware that all data stored on the selected partition may be erased.
 3. Create a dataset for DRAKVUF Sandbox:
    ```
-   zfs create tank/vms
+   # zfs create tank/vms
    ```
 4. Execute `draksetup install` as in "Basic installation" section, but remembering to provide additional command line switches:
    ```
@@ -93,9 +93,9 @@ DRAKVUF Sandbox may optionally draw a behavioral graph using [ProcDOT](https://w
 1. [Download ProcDOT](https://www.procdot.com/downloadprocdotbinaries.htm) (Linux version).
 2. With your downloaded `procdot*_linux.zip` archive, execute the following commands:
    ```
-   unzip -o procdot*_linux.zip lin64/* -d /tmp/procdot
-   mv /tmp/procdot/lin64 /opt/procdot
-   chmod +x /opt/procdot/procmon2dot
+   # unzip -o procdot*_linux.zip lin64/* -d /tmp/procdot
+   # mv /tmp/procdot/lin64 /opt/procdot
+   # chmod +x /opt/procdot/procmon2dot
    ```
 3. Your new analysis reports will also contain behavioral graphs.
 
@@ -127,7 +127,7 @@ After making changes to `/etc/drakrun`, you need to restart all `drakrun` servic
 in your system:
  
 ```
-systemctl restart 'drakrun@*'
+# systemctl restart 'drakrun@*'
 ```
 
 Be aware that if your sandbox instance is already running some analyses, the above command will gracefully
