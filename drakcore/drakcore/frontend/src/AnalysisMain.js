@@ -20,6 +20,13 @@ function computeExpandState(expandPid, process, expandMap) {
   expandMap[process.pid] = childrenExpanded || process.pid === expandPid;
 }
 
+function formatTimestamp(ts) {
+  return new Date(ts * 1000)
+    .toISOString()
+    .replace("T", " ")
+    .replace(".000Z", "");
+}
+
 class ProcessTree extends Component {
   constructor(props) {
     super(props);
@@ -144,7 +151,7 @@ class AnalysisMain extends Component {
       graph: null,
       graphState: "loading",
       processTree: null,
-      sha256: null,
+      metadata: null,
     };
 
     this.analysisID = this.props.match.params.analysis;
@@ -174,9 +181,9 @@ class AnalysisMain extends Component {
       this.setState({ processTree: process_tree.data, injectedPid });
     }
 
-    const sha256 = await api.getSha256(this.analysisID);
-    if (sha256.data) {
-      this.setState({ sha256: sha256.data });
+    const metadata = await api.getMetadata(this.analysisID);
+    if (metadata.data) {
+      this.setState({ metadata: metadata.data });
     }
   }
 
@@ -226,6 +233,38 @@ class AnalysisMain extends Component {
       );
     }
 
+    let metadata;
+    if (this.state.metadata) {
+      metadata = (
+        <div background>
+          <table className="table table-striped table-bordered">
+            <tbody>
+              <tr>
+                <td>Sha256</td>
+                <td>{this.state.metadata.sample_sha256}</td>
+              </tr>
+              <tr>
+                <td>Magic bytes</td>
+                <td>{this.state.metadata.magic_output}</td>
+              </tr>
+              <tr>
+                <td>Start command</td>
+                <td>{this.state.metadata.start_command}</td>
+              </tr>
+              <tr>
+                <td>Started at</td>
+                <td>{formatTimestamp(this.state.metadata.time_started)}</td>
+              </tr>
+              <tr>
+                <td>Finished at</td>
+                <td>{formatTimestamp(this.state.metadata.time_finished)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
     return (
       <div className="App container-fluid">
         <div className="page-title-box">
@@ -234,8 +273,9 @@ class AnalysisMain extends Component {
 
         <div className="card tilebox-one">
           <div className="card-body">
-            <h5 className="card-title mb-0">Sha256</h5>
-            {this.state.sha256}
+            <h5 className="card-title mb-0">Metadata</h5>
+
+            {metadata}
           </div>
         </div>
 
