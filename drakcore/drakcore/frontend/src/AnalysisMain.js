@@ -144,7 +144,7 @@ class AnalysisMain extends Component {
       graph: null,
       graphState: "loading",
       processTree: null,
-      sha256: null
+      sha256: null,
     };
 
     this.analysisID = this.props.match.params.analysis;
