@@ -21,10 +21,7 @@ function computeExpandState(expandPid, process, expandMap) {
 }
 
 function formatTimestamp(ts) {
-  return new Date(ts * 1000)
-    .toISOString()
-    .replace("T", " ")
-    .split(".")[0];
+  return new Date(ts * 1000).toISOString().replace("T", " ").split(".")[0];
 }
 
 class ProcessTree extends Component {
