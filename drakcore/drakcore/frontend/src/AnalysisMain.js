@@ -20,6 +20,10 @@ function computeExpandState(expandPid, process, expandMap) {
   expandMap[process.pid] = childrenExpanded || process.pid === expandPid;
 }
 
+function formatTimestamp(ts) {
+  return new Date(ts * 1000).toISOString().replace("T", " ").split(".")[0];
+}
+
 class ProcessTree extends Component {
   constructor(props) {
     super(props);
@@ -144,6 +148,7 @@ class AnalysisMain extends Component {
       graph: null,
       graphState: "loading",
       processTree: null,
+      metadata: null,
     };
 
     this.analysisID = this.props.match.params.analysis;
@@ -171,6 +176,11 @@ class AnalysisMain extends Component {
     if (process_tree && inject_log) {
       const injectedPid = inject_log.data["InjectedPid"];
       this.setState({ processTree: process_tree.data, injectedPid });
+    }
+
+    const metadata = await api.getMetadata(this.analysisID);
+    if (metadata.data) {
+      this.setState({ metadata: metadata.data });
     }
   }
 
@@ -220,10 +230,50 @@ class AnalysisMain extends Component {
       );
     }
 
+    let metadata;
+    if (this.state.metadata) {
+      metadata = (
+        <div background>
+          <table className="table table-striped table-bordered">
+            <tbody>
+              <tr>
+                <td>Sha256</td>
+                <td>{this.state.metadata.sample_sha256}</td>
+              </tr>
+              <tr>
+                <td>Magic bytes</td>
+                <td>{this.state.metadata.magic_output}</td>
+              </tr>
+              <tr>
+                <td>Start command</td>
+                <td>{this.state.metadata.start_command}</td>
+              </tr>
+              <tr>
+                <td>Started at</td>
+                <td>{formatTimestamp(this.state.metadata.time_started)}</td>
+              </tr>
+              <tr>
+                <td>Finished at</td>
+                <td>{formatTimestamp(this.state.metadata.time_finished)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
     return (
       <div className="App container-fluid">
         <div className="page-title-box">
           <h4 className="page-title">Report</h4>
+        </div>
+
+        <div className="card tilebox-one">
+          <div className="card-body">
+            <h5 className="card-title mb-0">Metadata</h5>
+
+            {metadata}
+          </div>
         </div>
 
         <div className="card tilebox-one">

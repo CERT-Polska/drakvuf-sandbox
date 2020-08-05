@@ -134,6 +134,13 @@ def graph(task_uid):
         return send_file(f.name, mimetype='text/plain')
 
 
+@app.route("/metadata/<task_uid>")
+def metadata(task_uid):
+    tmp = minio.get_object("drakrun", f"{task_uid}/metadata.json")
+    meta = json.loads(tmp.read())
+    return jsonify(meta)
+
+
 @app.route("/status/<task_uid>")
 def status(task_uid):
     tasks = rs.keys("karton.task:*")
