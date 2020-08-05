@@ -35,7 +35,3 @@ def run_vm(vm_id):
 
         with open("/var/log/xen/qemu-dm-vm-{vm_id}.log".format(vm_id=vm_id), "rb") as f:
             logging.error(f.read())
-
-    subprocess.run(["xl", "qemu-monitor-command",
-                    "vm-{vm_id}".format(vm_id=vm_id),
-                    "change ide-5632 /tmp/drakrun/vm-{vm_id}/malwar.iso".format(vm_id=vm_id)], check=True)
