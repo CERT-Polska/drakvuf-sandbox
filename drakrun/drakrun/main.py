@@ -381,12 +381,12 @@ class DrakrunKarton(Karton):
 
                 # don't include our internal maintanance commands
                 metadata['start_command'] = cur_start_command
-                cur_start_command += f"cd {cwd} & " + cur_start_command
+                cur_start_command = f"cd {cwd} & " + cur_start_command
 
                 if net_enable:
                     cur_start_command = "ipconfig /renew & " + cur_start_command
 
-                full_cmd = subprocess.list2cmdline(["cmd.exe", "/C", start_command])
+                full_cmd = subprocess.list2cmdline(["cmd.exe", "/C", cur_start_command])
                 self.log.info("Using command: %s", full_cmd)
 
                 drakvuf_cmd = ["drakvuf",
