@@ -13,7 +13,7 @@ RUN apt-get update && \
     dpkg -i --ignore-depends=sphinx-rtd-theme-common ./dh-virtualenv.deb
 
 RUN wget -O drakvuf.deb "https://debs.icedev.pl/manual/drakvuf-bundle/$(lsb_release -cs)/drakvuf-bundle-0.7-git20200501075508+0f828ce-1.deb" && \
-    apt install -y ./drakvuf.deb
+    dpkg -i ./drakvuf.deb
 
 COPY drakrun /build
 WORKDIR /build
