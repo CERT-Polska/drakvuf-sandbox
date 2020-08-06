@@ -13,7 +13,7 @@ RUN apt-get update && \
     apt install -y ./dh-virtualenv.deb
 
 RUN wget -O drakvuf.deb "https://debs.icedev.pl/manual/drakvuf-bundle/$(lsb_release -cs)/drakvuf-bundle-0.7-git20200501075508+0f828ce-1.deb" && \
-    apt install -y ./drakvuf.deb
+    apt install --fix-missing -y ./drakvuf.deb
 
 COPY drakrun /build
 WORKDIR /build
