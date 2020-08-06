@@ -11,7 +11,7 @@ RUN apt-get update && \
     apt-get install -y nodejs && \
     python3 -m pip install pip && \
     pip3 install virtualenv && \
-    apt install -y ./dh-virtualenv.deb
+    apt install --fix-missing -y ./dh-virtualenv.deb
 
 COPY drakcore /build
 WORKDIR /build
