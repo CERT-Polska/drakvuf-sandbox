@@ -44,7 +44,7 @@ DRAKMON_DEPS = [
     "ntfs-3g",
 ]
 
-DRAKVUF_BUNDLE_URL = "https://debs.icedev.pl/manual/patch20200810-2/drakvuf-bundle-0.8-git20200810024503+ad6d4a2-1-generic.deb"
+DRAKVUF_BUNDLE_URL = "https://github.com/tklengyel/drakvuf-builds/releases/download/20200810151759-c0bcb59/drakvuf-bundle-0.8-git20200810110406+c0bcb59-1-generic.deb"
 DRAKVUF_DEPS = [
     "libpixman-1-0",
     "libpng16-16",
