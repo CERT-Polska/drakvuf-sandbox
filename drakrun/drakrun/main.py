@@ -169,6 +169,10 @@ class DrakrunKarton(Karton):
             start_command = self.current_task.payload.get("start_command", self._get_dll_run_command(sample.content))
         elif extension == 'exe':
             start_command = 'start %f'
+        elif extension in ['doc', 'docm', 'docx', 'dotm']:
+            start_command = 'start winword.exe /t %f'
+        elif extension in ['xls', 'xlsx', 'xlsm', 'xltx', 'xltm']:
+            start_command = 'start excel.exe /t %f'
         else:
             self.log.error("Unknown file extension - %s", extension)
             start_command = None

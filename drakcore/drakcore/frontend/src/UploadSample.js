@@ -100,14 +100,19 @@ class UploadSample extends Component {
     const hasCustomFileName = this.state.customFileName !== "";
     const hasCustomStartCmd = this.state.customStartCmd !== "";
 
-    if (hasCustomFileName) {
-      const fname = this.state.customFileName;
-      // Check for whitespace
-      if (!fname.match(/^\S+$/)) {
-        errMsg = "File name contains invalid characters";
-      } else if (!fname.match(/^[\w]+\.(?:dll|exe)$/i)) {
-        errMsg = "Invalid file name. Only .dll and .exe files are supported";
-      }
+    const fname = hasCustomFileName
+      ? this.state.customFileName
+      : this.state.file.name;
+    // Check for whitespace
+    if (!fname.match(/^\S+$/)) {
+      errMsg = "File name contains invalid characters";
+    } else if (
+      !fname.match(
+        /^[\w]+\.(?:dll|exe|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm)$/i
+      )
+    ) {
+      errMsg =
+        "Invalid file name. Only .dll, .exe and office files are supported";
     }
 
     if (hasCustomStartCmd) {
