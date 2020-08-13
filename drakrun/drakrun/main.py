@@ -297,7 +297,7 @@ class DrakrunKarton(Karton):
             extension = 'dll'
         self.log.info("Running file as %s", extension)
 
-        file_name = self.current_task.payload.get("file_name", f"malwar.{extension}")
+        file_name = self.current_task.payload.get("file_name", "malwar") + f".{extension}"
         # Alphanumeric, dot, underscore, dash
         if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
             self.log.error("Filename contains invalid characters")
