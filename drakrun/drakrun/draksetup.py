@@ -82,6 +82,18 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
 
     logging.info("Performing installation...")
 
+    kernel_profile = os.path.join(LIB_DIR, 'profiles', 'kernel.json')
+
+    if os.path.exists(kernel_profile):
+        logging.info(f"Deleting kernel profile at {kernel_profile}")
+        os.remove(kernel_profile)
+
+    runtime_profile_fn = os.path.join(LIB_DIR, 'profiles', 'runtime.json')
+
+    if os.path.exists(runtime_profile_fn):
+        logging.info(f"Deleting runtime profile at {runtime_profile_fn}")
+        os.remove(runtime_profile_fn)
+
     if unattended_xml:
         logging.info("Baking unattended.iso for automated installation")
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -236,12 +248,14 @@ def create_rekall_profiles(install_info: InstallInfo):
         subprocess.check_output(f'umount {mnt_path_quoted}', shell=True)
 
 
-def generate_profiles(no_report=False, generate_usermode=True):
-    if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
-        no_report = True
+def generate_kernel_profile():
+    kernel_profile = os.path.join(LIB_DIR, 'profiles', 'kernel.json')
 
-    install_info = InstallInfo.load()
-    max_vms = install_info.max_vms
+    if os.path.exists(kernel_profile):
+        logging.debug(f"Kernel profile already present at {kernel_profile}")
+        return
+
+    logging.info("Obtaining kernel PDB GUID...")
     output = subprocess.check_output(['vmi-win-guid', 'name', 'vm-0'], timeout=30).decode('utf-8')
 
     try:
@@ -255,7 +269,7 @@ def generate_profiles(no_report=False, generate_usermode=True):
     logging.info("Determined PDB GUID: {}".format(pdb))
     logging.info("Determined kernel filename: {}".format(fn))
 
-    logging.info("Fetching PDB file...")
+    logging.info("Fetching PDB file from symbol server...")
     dest = fetch_pdb(fn, pdb, destdir=os.path.join(LIB_DIR, 'profiles/'))
 
     logging.info("Generating profile out of PDB file...")
@@ -266,6 +280,16 @@ def generate_profiles(no_report=False, generate_usermode=True):
     with open(kernel_profile, 'w') as f:
         f.write(profile)
 
+
+def generate_runtime_profile():
+    kernel_profile = os.path.join(LIB_DIR, 'profiles', 'kernel.json')
+    runtime_profile_fn = os.path.join(LIB_DIR, 'profiles', 'runtime.json')
+
+    if os.path.exists(runtime_profile_fn):
+        logging.debug(f"Runtime profile already exists at {runtime_profile_fn}")
+        return
+
+    logging.info("Generating runtime profile...")
     output = subprocess.check_output(['vmi-win-offsets', '--name', 'vm-0', '--json-kernel', kernel_profile], timeout=30).decode('utf-8')
 
     offsets = re.findall(r'^([a-z_]+):(0x[0-9a-f]+)$', output, re.MULTILINE)
@@ -288,8 +312,33 @@ def generate_profiles(no_report=False, generate_usermode=True):
     runtime_profile = {"vmi_offsets": offsets_dict, "inject_pid": explorer_pid}
 
     logging.info("Saving runtime profile...")
-    with open(os.path.join(LIB_DIR, 'profiles', 'runtime.json'), 'w') as f:
+    with open(runtime_profile_fn, 'w') as f:
         f.write(json.dumps(runtime_profile, indent=4))
+
+
+def push_file(host_fn, guest_fn):
+    generate_kernel_profile()
+    generate_runtime_profile()
+
+    kernel_profile = os.path.join(LIB_DIR, 'profiles', 'kernel.json')
+    runtime_profile_fn = os.path.join(LIB_DIR, 'profiles', 'runtime.json')
+
+    with open(runtime_profile_fn, 'r') as f:
+        runtime_profile = json.loads(f.read())
+
+    out = subprocess.check_output(["injector", "-o", "json", "-r", kernel_profile, "-d", "vm-0", "-i", runtime_profile["inject_pid"], "-m", "writefile", "-e", guest_fn, "-B", host_fn])
+    logging.info(out)
+
+
+def generate_profiles(no_report=False, generate_usermode=True):
+    if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
+        no_report = True
+
+    install_info = InstallInfo.load()
+    max_vms = install_info.max_vms
+
+    generate_kernel_profile()
+    generate_runtime_profile()
 
     logging.info("Saving VM snapshot...")
     subprocess.check_output('xl save vm-0 ' + os.path.join(LIB_DIR, "volumes", "snapshot.sav"), shell=True)
@@ -382,6 +431,11 @@ def main():
     install_p.add_argument('--iso', type=str, help='Installation ISO', required=True)
     install_p.add_argument('--unattended-xml', type=str, help='Path to autounattend.xml for automated Windows install (optional)')
 
+    vm_push_file_p = subparsers.add_parser('push', help='Push file to the VM')
+    vm_push_file_p.set_defaults(which='push')
+    vm_push_file_p.add_argument('--guest-fn', type=str, help='Path on guest (e.g. \'%USERPROFILE%\\Desktop\\test.txt\')')
+    vm_push_file_p.add_argument('--host-fn', type=str, help='Path on host (e.g. /tmp/test.txt)')
+
     profile_p = subparsers.add_parser('postinstall', help='Perform tasks after guest installation')
     profile_p.set_defaults(which='postinstall')
     profile_p.add_argument('--no-report', dest='no_report', action='store_true', default=False, help='Don\'t send anonymous usage report')
@@ -413,6 +467,8 @@ def main():
         except RuntimeError as e:
             logging.exception(e)
 
+    elif args.which == "push":
+        push_file(args.host_fn, args.guest_fn)
     elif args.which == "postinstall":
         generate_profiles(args.no_report, args.generate_usermode)
     elif args.which == "postupgrade":
