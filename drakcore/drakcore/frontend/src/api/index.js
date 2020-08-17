@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// uncomment this line to use different API server
-// axios.defaults.baseURL = '';
+// Set REACT_APP_API_SERVER env to override deafult API server URL
+axios.defaults.baseURL = process.env.REACT_APP_API_SERVER;
 
 export default {
   async getList() {
