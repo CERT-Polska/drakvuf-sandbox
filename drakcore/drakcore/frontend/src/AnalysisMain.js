@@ -233,32 +233,30 @@ class AnalysisMain extends Component {
     let metadata;
     if (this.state.metadata) {
       metadata = (
-        <div background>
-          <table className="table table-striped table-bordered">
-            <tbody>
-              <tr>
-                <td>Sha256</td>
-                <td>{this.state.metadata.sample_sha256}</td>
-              </tr>
-              <tr>
-                <td>Magic bytes</td>
-                <td>{this.state.metadata.magic_output}</td>
-              </tr>
-              <tr>
-                <td>Start command</td>
-                <td>{this.state.metadata.start_command}</td>
-              </tr>
-              <tr>
-                <td>Started at</td>
-                <td>{formatTimestamp(this.state.metadata.time_started)}</td>
-              </tr>
-              <tr>
-                <td>Finished at</td>
-                <td>{formatTimestamp(this.state.metadata.time_finished)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <table className="table table-striped table-bordered">
+          <tbody>
+            <tr>
+              <td>Sha256</td>
+              <td>{this.state.metadata.sample_sha256}</td>
+            </tr>
+            <tr>
+              <td>Magic bytes</td>
+              <td>{this.state.metadata.magic_output}</td>
+            </tr>
+            <tr>
+              <td>Start command</td>
+              <td>{this.state.metadata.start_command}</td>
+            </tr>
+            <tr>
+              <td>Started at</td>
+              <td>{formatTimestamp(this.state.metadata.time_started)}</td>
+            </tr>
+            <tr>
+              <td>Finished at</td>
+              <td>{formatTimestamp(this.state.metadata.time_finished)}</td>
+            </tr>
+          </tbody>
+        </table>
       );
     }
 
