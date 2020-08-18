@@ -23,6 +23,7 @@ def process_logfile(log):
                 "timestamp": entry["TimeStamp"],
                 "method": entry["Method"],
                 "arguments": entry["Arguments"],
+                "returnvalue": entry["ReturnValue"],
             }
         except KeyError as e:
             logging.warning(f"JSON is missing a required field\n{e}")
