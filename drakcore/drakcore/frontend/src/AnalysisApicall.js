@@ -2,45 +2,7 @@ import React from "react";
 import { Component } from "react";
 import "./App.css";
 import api from "./api";
-
-class ProcessFilter extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      selected: this.props.defaultSelection,
-    };
-    this.handleChange = this.handleChange.bind(this);
-  }
-
-  handleChange(event) {
-    let value = event.target.value;
-    this.setState({ selected: value });
-    this.props.onChange(parseInt(value));
-  }
-
-  makeOption(proc) {
-    let pid = proc.pid;
-    let name = proc.procname || "unnamed process";
-    return (
-      <option key={pid} value={pid}>
-        {pid} - {name}
-      </option>
-    );
-  }
-
-  render() {
-    return (
-      <select
-        value={this.state.selected || ""}
-        className="form-control"
-        onChange={this.handleChange}
-        style={this.props.style}
-      >
-        {this.props.processList.map(this.makeOption)}
-      </select>
-    );
-  }
-}
+import OptionPicker from "./OptionPicker";
 
 class AnalysisApicall extends Component {
   constructor(props) {
@@ -75,7 +37,10 @@ class AnalysisApicall extends Component {
       let result = [];
 
       process_tree.forEach((proc) => {
-        result.push({ pid: proc.pid, procname: proc.procname });
+        result.push({
+          key: proc.pid,
+          value: `${proc.pid} – ${proc.procname || "unnamed process"}`,
+        });
         result.push(...treeFlatten(proc.children));
       });
 
@@ -154,11 +119,11 @@ class AnalysisApicall extends Component {
 
         <div className="card tilebox-one">
           <div className="card-body">
-            <ProcessFilter
+            <OptionPicker
               defaultSelection={url_pid}
-              processList={this.state.processList}
+              data={this.state.processList}
               onChange={this.pidChanged}
-              style={{ marginBottom: "1em" }}
+              className="mb-1"
             />
             {content}
           </div>
