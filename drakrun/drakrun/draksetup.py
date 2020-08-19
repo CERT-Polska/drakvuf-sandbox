@@ -1,4 +1,3 @@
-import argparse
 import configparser
 import hashlib
 import logging
@@ -12,6 +11,7 @@ import string
 import tempfile
 from shutil import copyfile
 
+import click
 import requests
 from requests import RequestException
 from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
@@ -76,6 +76,34 @@ def detect_defaults():
             conf.write(f)
 
 
+def ensure_zfs(ctx, param, value):
+    if value is not None and ctx.params['storage_backend'] != "zfs":
+        raise click.BadParameter("This parameter is valid only with ZFS backend")
+
+
+@click.command(help='Install guest Virtual Machine',
+               no_args_is_help=True)
+@click.argument('iso_path', type=click.Path(exists=True))
+@click.option('--storage-backend',
+              type=click.Choice(REGISTERED_BACKEND_NAMES, case_sensitive=False),
+              default='qcow2',
+              show_default=True,
+              help='Storage backend', is_eager=True)
+@click.option('--disk-size',
+              default='100G',
+              show_default=True,
+              help='Disk size')
+@click.option('--zfs-tank-name',
+              callback=ensure_zfs,
+              help='Tank name (only for ZFS storage backend)')
+@click.option('--max-vms',
+              type=int,
+              default=1,
+              show_default=True,
+              help='Maximum number of simultaneous VMs')
+@click.option('--unattended-xml',
+              type=click.Path(exists=True),
+              help='Path to autounattend.xml for automated Windows install')
 def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unattended_xml):
     logging.info("Ensuring that drakrun@* services are stopped...")
     subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
@@ -236,9 +264,14 @@ def create_rekall_profiles(install_info: InstallInfo):
         subprocess.check_output(f'umount {mnt_path_quoted}', shell=True)
 
 
-def generate_profiles(no_report=False, generate_usermode=True):
+@click.command()
+@click.option('--report/--no-report', default=True,
+              help="Send anonymous usage report")
+@click.option('--usermode/--no-usermode', default=False,
+              help="Generate user mode profiles")
+def postinstall(report, generate_usermode):
     if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
-        no_report = True
+        report = False
 
     install_info = InstallInfo.load()
     max_vms = install_info.max_vms
@@ -309,7 +342,7 @@ def generate_profiles(no_report=False, generate_usermode=True):
         # we treat vm_id=0 as special internal one
         generate_vm_conf(install_info, vm_id)
 
-    if not no_report:
+    if report:
         send_usage_report({
             "kernel": {
                 "guid": pdb,
@@ -369,67 +402,33 @@ def generate_vm_conf(install_info: InstallInfo, vm_id: int):
     logging.info("Generated VM configuration for vm-{vm_id}".format(vm_id=vm_id))
 
 
+@click.command(help='Perform tasks after drakrun upgrade')
+def postupgrade():
+    reenable_services()
+
+    with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'r') as f:
+        template = f.read()
+
+    passwd_characters = string.ascii_letters + string.digits
+    passwd = ''.join(random.choice(passwd_characters) for i in range(20))
+    template = template.replace('{{ VNC_PASS }}', passwd)
+
+    with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'w') as f:
+        f.write(template)
+
+    detect_defaults()
+
+
+@click.group()
 def main():
-    parser = argparse.ArgumentParser(description='Configure drakrun')
-    subparsers = parser.add_subparsers()
+    pass
 
-    install_p = subparsers.add_parser('install', help='Install guest Virtual Machine')
-    install_p.set_defaults(which='install')
-    install_p.add_argument('--storage-backend', default='qcow2', choices=REGISTERED_BACKEND_NAMES, help='Storage backend (default: qcow2)')
-    install_p.add_argument('--disk-size', default='100G', type=str, help='Disk size (default: 100G)')
-    install_p.add_argument('--zfs-tank-name', type=str, help='Tank name (only for zfs storage backend)')
-    install_p.add_argument('--max-vms', default=1, type=int, help='Maximum number of simultaneous VMs (default: 1)')
-    install_p.add_argument('--iso', type=str, help='Installation ISO', required=True)
-    install_p.add_argument('--unattended-xml', type=str, help='Path to autounattend.xml for automated Windows install (optional)')
 
-    profile_p = subparsers.add_parser('postinstall', help='Perform tasks after guest installation')
-    profile_p.set_defaults(which='postinstall')
-    profile_p.add_argument('--no-report', dest='no_report', action='store_true', default=False, help='Don\'t send anonymous usage report')
-    profile_p.add_argument('--no-usermode', dest='generate_usermode', action='store_false', default=True, help='Disable user mode profile generation')
-
-    postupgrade_p = subparsers.add_parser('postupgrade', help='Perform tasks after drakrun upgrade')
-    postupgrade_p.set_defaults(which='postupgrade')
-
-    args = parser.parse_args()
-
-    if not hasattr(args, 'which'):
-        parser.print_help()
-        return
-
-    if os.geteuid() != 0:
-        logging.warning('Not running as root, draksetup may work improperly!')
-
-    if args.which == "install":
-        if args.storage_backend != "zfs" and args.zfs_tank_name is not None:
-            parser.error("--zfs-tank-name is meaningful only for ZFS storage backend")
-
-        try:
-            install(storage_backend=args.storage_backend,
-                    disk_size=args.disk_size,
-                    iso_path=args.iso,
-                    zfs_tank_name=args.zfs_tank_name,
-                    max_vms=args.max_vms,
-                    unattended_xml=args.unattended_xml)
-        except RuntimeError as e:
-            logging.exception(e)
-
-    elif args.which == "postinstall":
-        generate_profiles(args.no_report, args.generate_usermode)
-    elif args.which == "postupgrade":
-        reenable_services()
-
-        with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'r') as f:
-            template = f.read()
-
-        passwd_characters = string.ascii_letters + string.digits
-        passwd = ''.join(random.choice(passwd_characters) for i in range(20))
-        template = template.replace('{{ VNC_PASS }}', passwd)
-
-        with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'w') as f:
-            f.write(template)
-
-        detect_defaults()
-
+main.add_command(install)
+main.add_command(postinstall)
+main.add_command(postupgrade)
 
 if __name__ == "__main__":
+    if os.geteuid() != 0:
+        logging.warning('Not running as root, draksetup may work improperly!')
     main()
