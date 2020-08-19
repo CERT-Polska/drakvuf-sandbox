@@ -112,7 +112,13 @@ def apicall(task_uid, pid):
 @app.route("/logs/<task_uid>/<log_type>")
 def logs(task_uid, log_type):
     with NamedTemporaryFile() as f:
-        minio.fget_object("drakrun", task_uid + "/" + log_type + ".log", f.name)
+        # Copy Range header if it exists
+        headers = {}
+        if "Range" in request.headers:
+            headers["Range"] = request.headers["Range"]
+        minio.fget_object("drakrun",
+                          task_uid + "/" + log_type + ".log", f.name,
+                          request_headers=headers)
         return send_file(f.name, mimetype='text/plain')
 
 
