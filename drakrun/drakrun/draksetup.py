@@ -265,9 +265,13 @@ def create_rekall_profiles(install_info: InstallInfo):
 
 
 @click.command()
-@click.option('--report/--no-report', default=True,
+@click.option('--report/--no-report',
+              default=True,
+              show_default=True,
               help="Send anonymous usage report")
-@click.option('--usermode/--no-usermode', default=False,
+@click.option('--usermode/--no-usermode',
+              default=True,
+              show_default=True,
               help="Generate user mode profiles")
 def postinstall(report, generate_usermode):
     if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
