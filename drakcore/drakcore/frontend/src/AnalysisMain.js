@@ -219,7 +219,7 @@ class AnalysisMain extends Component {
       simpleProcessTree = (
         <div className="card tilebox-one">
           <div className="card-body">
-            <h5 className="card-title mb-0">Proces tree</h5>
+            <h5 className="card-title mb-0">Process tree</h5>
             <ProcessTree
               tree={this.state.processTree}
               expandPid={this.state.injectedPid}
