@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Component } from "react";
 import { Link } from "react-router-dom";
 import "./App.css";
@@ -139,14 +139,60 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+function AnalysisBehavioralGraph(props) {
+  let [graph, setGraph] = useState();
+
+  // Fetch behavioral graph for current analysis ID
+  useEffect(() => {
+    api
+      .getGraph(props.analysisID)
+      .then((res_graph) => {
+        if (res_graph.data) {
+          setGraph(res_graph.data);
+        } else {
+          setGraph(null);
+        }
+      })
+      .catch(() => setGraph(null));
+  }, [props.analysisID]);
+
+  // Re-rendering has huge cost - much higher than initial render
+  // Component will not be re-rendered if graph stays the same
+  let SmartGraphviz = React.memo(
+    (props) => <Graphviz {...props} />,
+    (prevProps, nextProps) => prevProps.dot === nextProps.dot
+  );
+
+  if (!graph) {
+    return graph === null ? (
+      <div>
+        (Process tree was not generated, please check out "ProcDOT integration
+        (optional)" section of README to enable it.)
+      </div>
+    ) : (
+      <div>Loading graph...</div>
+    );
+  }
+
+  // FIX: `syntax error in line ... near '%'`
+  const sanitizedDot = graph.replaceAll("= %s", "= black");
+
+  return (
+    <ErrorBoundary>
+      <SmartGraphviz
+        dot={sanitizedDot}
+        options={{ zoom: true, width: "100%" }}
+      />
+    </ErrorBoundary>
+  );
+}
+
 class AnalysisMain extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
       logs: [],
-      graph: null,
-      graphState: "loading",
       processTree: null,
       metadata: null,
     };
@@ -158,17 +204,6 @@ class AnalysisMain extends Component {
     const res_logs = await api.listLogs(this.analysisID);
     if (res_logs.data) {
       this.setState({ logs: res_logs.data });
-    }
-
-    try {
-      const res_graph = await api.getGraph(this.analysisID);
-      if (res_graph.data) {
-        this.setState({ graphState: "loaded", graph: res_graph.data });
-      } else {
-        this.setState({ graphState: "missing" });
-      }
-    } catch (e) {
-      this.setState({ graphState: "missing" });
     }
 
     const process_tree = await api.getProcessTree(this.analysisID);
@@ -194,25 +229,7 @@ class AnalysisMain extends Component {
   }
 
   render() {
-    let processTree = <div>Loading graph...</div>;
-
-    if (this.state.graphState === "loaded") {
-      processTree = (
-        <ErrorBoundary>
-          <Graphviz
-            dot={this.state.graph}
-            options={{ zoom: true, width: "100%" }}
-          />
-        </ErrorBoundary>
-      );
-    } else if (this.state.graphState === "missing") {
-      processTree = (
-        <div>
-          (Process tree was not generated, please check out "ProcDOT integration
-          (optional)" section of README to enable it.)
-        </div>
-      );
-    }
+    let processTree = <AnalysisBehavioralGraph analysisID={this.analysisID} />;
 
     let simpleProcessTree;
     if (this.state.processTree) {
