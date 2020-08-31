@@ -11,6 +11,8 @@ import time
 import zipfile
 import json
 import re
+import functools
+from io import StringIO
 from typing import Optional, List
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 
@@ -76,6 +78,56 @@ def start_dnsmasq(vm_id: int, dns_server: str) -> Optional[subprocess.Popen]:
         f"--dhcp-range=10.13.{vm_id}.100,10.13.{vm_id}.200,255.255.255.0,12h",
         f"--dhcp-option=option:dns-server,{dns_server}"
     ])
+
+
+class LocalLogBuffer(logging.Handler):
+    FIELDS = (
+        "levelname",
+        "message",
+        "created",
+    )
+
+    def __init__(self):
+        super().__init__()
+        self.buffer = []
+
+    def emit(self, record):
+        entry = {k: v for (k, v) in record.__dict__.items() if k in self.FIELDS}
+        self.buffer.append(entry)
+
+
+# TODO: Deduplicate this, once we have shared code between drakcore and drakrun
+def with_logs(object_name):
+    def decorator(method):
+        @functools.wraps(method)
+        def wrapper(self: Karton, *args, **kwargs):
+            handler = LocalLogBuffer()
+            try:
+                # Register new log handler
+                self.log.addHandler(handler)
+                method(self, *args, **kwargs)
+            except Exception:
+                self.log.exception("Analysis failed")
+            finally:
+                # Unregister local handler
+                self.log.removeHandler(handler)
+                try:
+                    buffer = StringIO()
+                    for idx, entry in enumerate(handler.buffer):
+                        if idx > 0:
+                            buffer.write("\n")
+                        buffer.write(json.dumps(entry))
+
+                    res = LocalResource(object_name,
+                                        buffer.getvalue(),
+                                        bucket="drakrun")
+                    task_uid = self.current_task.payload.get('override_uid') or self.current_task.uid
+                    res._uid = f"{task_uid}/{res.name}"
+                    res.upload(self.minio)
+                except Exception:
+                    self.log.exception("Failed to upload analysis logs")
+        return wrapper
+    return decorator
 
 
 class DrakrunKarton(Karton):
@@ -269,6 +321,7 @@ class DrakrunKarton(Karton):
 
         return out
 
+    @with_logs('drakrun.log')
     def process(self):
         sample = self.current_task.get_resource("sample")
         self.log.info("hostname: {}".format(socket.gethostname()))
