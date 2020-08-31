@@ -27,6 +27,7 @@ minio = SystemService(conf).minio
 @app.after_request
 def add_header(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Range'
     return response
 
 
@@ -120,6 +121,17 @@ def logs(task_uid, log_type):
                           task_uid + "/" + log_type + ".log", f.name,
                           request_headers=headers)
         return send_file(f.name, mimetype='text/plain')
+
+
+@app.route("/logindex/<task_uid>/<log_type>")
+def logindex(task_uid, log_type):
+    with NamedTemporaryFile() as f:
+        try:
+            minio.fget_object("drakrun",
+                              task_uid + "/index/" + log_type + ".log", f.name)
+        except NoSuchKey:
+            return jsonify(error="Index not found"), 404
+        return send_file(f.name)
 
 
 @app.route("/dumps/<task_uid>")
