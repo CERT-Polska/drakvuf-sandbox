@@ -17,10 +17,6 @@ from karton2 import Task, RemoteResource
 from typing import Dict
 
 
-def get_file_size(file):
-    return os.stat(file.name).st_size
-
-
 def line_marker(line, offset):
     return dict(line=line, offset=offset)
 
