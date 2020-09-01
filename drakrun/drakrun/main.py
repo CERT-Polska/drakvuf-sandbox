@@ -168,16 +168,20 @@ class DrakrunKarton(Karton):
 
     @staticmethod
     def _get_office_file_run_command(extension, file_path):
-        start_command = 'start '
+        start_command = ['start']
         if d_office.is_office_word_file(extension):
-            start_command += 'winword.exe /t %f'
+            start_command.append('winword.exe')
         else:
-            start_command += 'excel.exe /t %f'
+            start_command.append('excel.exe')
+        start_command.extend(['/t', '%f'])
 
         outer_macros = d_office.get_outer_nodes_from_vba_file(file_path)
+        if not outer_macros:
+            outer_macros = []
         for outer_macro in outer_macros:
-            start_command += f' /m{outer_macro}'
-        return start_command
+            start_command.append(f'/m{outer_macro}')
+            
+        return subprocess.list2cmdline(start_command)
 
 
     def _get_start_command(self, extension, sample, file_path):

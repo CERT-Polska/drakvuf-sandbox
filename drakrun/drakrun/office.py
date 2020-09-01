@@ -1,7 +1,9 @@
 import sys
 import regex as re
 import logging
-from oletools import olevba, oleobj
+from oletools.olevba import VBA_Parser
+# Temporary workaround till oletools 0.56 are released.
+VBA_Parser.detect_vba_stomping = lambda self: False
 
 
 '''
@@ -29,9 +31,12 @@ class Graph:
 def vba2graph_from_vba_object(filepath):
     logging.info("Extracting macros from file")
     full_vba_code = ""
-    vba_parser = olevba.VBA_Parser(filepath)
+    vba_parser = VBA_Parser(filepath)
     for (subfilename, stream_path, vba_filename, vba_code) in vba_parser.extract_macros():
-        full_vba_code += vba_code.decode('latin1')
+        # workaround till oletools version 0.56
+        if isinstance(vba_code, bytes):
+            vba_code = vba_code.decode('latin1', errors='replace')
+        full_vba_code += vba_code
     vba_parser.close()
     return full_vba_code
 
@@ -293,9 +298,12 @@ def find_outer_nodes(dg):
 
 
 def get_outer_nodes_from_vba_file(filename):
-    input_vba_content = vba2graph_from_vba_object(filename)
-    dg = vba2graph_gen(input_vba_content)
-    return find_outer_nodes(dg)
+    try:
+        input_vba_content = vba2graph_from_vba_object(filename)
+        dg = vba2graph_gen(input_vba_content)
+        return find_outer_nodes(dg)
+    except:
+        return None
     
 
 def is_office_word_file(extension):
