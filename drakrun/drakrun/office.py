@@ -256,7 +256,7 @@ def create_call_graph(vba_func_dict):
     for func_name in vba_func_dict:
         func_code = vba_func_dict[func_name]
         # Split function code into tokens.
-        func_code_tokens = list(filter(None, re.split('[\"(, \-!?:\r\n)&=.><]+', func_code)))
+        func_code_tokens = list(filter(None, re.split('[\"(, \\-!?:\r\n)&=.><]+', func_code)))
 
         # Inside each function's code, we are looking for a function name.
         for func_name1 in vba_func_dict:
