@@ -165,7 +165,6 @@ class DrakrunKarton(Karton):
 
         return None
 
-
     @staticmethod
     def _get_office_file_run_command(extension, file_path):
         start_command = ['start']
@@ -180,9 +179,8 @@ class DrakrunKarton(Karton):
             outer_macros = []
         for outer_macro in outer_macros:
             start_command.append(f'/m{outer_macro}')
-            
-        return subprocess.list2cmdline(start_command)
 
+        return subprocess.list2cmdline(start_command)
 
     def _get_start_command(self, extension, sample, file_path):
         if extension == 'dll':

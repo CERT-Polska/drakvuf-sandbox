@@ -84,10 +84,10 @@ def vba_clean_metadata(vba_content_lines):
 
 def vba_extract_functions(vba_content_lines):
     """Seperates the input VBA code into functions
-    
+
     Args:
         vba_content_lines (string[]): VBA code lines without comments, metadata or spaces
-    
+
     Returns:
         dict[func_name]=func_code: Dictionary of VBA functions found
     """
@@ -96,7 +96,7 @@ def vba_extract_functions(vba_content_lines):
     func_name = ""
 
     for vba_line in vba_content_lines:
-        # I) Handle External Function Declaration. 
+        # I) Handle External Function Declaration.
 
         # Create dummpy empty function with func_name:
         # mcvWGqJifEVHwB (URLDownloadToFileA)
@@ -144,7 +144,6 @@ def vba_extract_functions(vba_content_lines):
 
             vba_func_dict[func_name] = ""
             continue
-
 
         # II) Handle Regular Function Declaration.
         # Look for function start keywords.
@@ -195,10 +194,10 @@ def vba_extract_functions(vba_content_lines):
 
 def vba_extract_properties(vba_content_lines):
     """Find and extract the use of VBA Properties, in order to obfuscate macros
-    
+
     Args:
         vba_content_lines (string[]): VBA code lines without comments, metadata or spaces
-    
+
     Returns:
         dict[property_name]=property_code: Dictionary of VBA Properties found
     """
@@ -257,7 +256,7 @@ def create_call_graph(vba_func_dict):
     for func_name in vba_func_dict:
         func_code = vba_func_dict[func_name]
         # Split function code into tokens.
-        func_code_tokens = list(filter(None, re.split('[\"(, \-!?:\r\n)&=.><]+', func_code)))   
+        func_code_tokens = list(filter(None, re.split('[\"(, \-!?:\r\n)&=.><]+', func_code)))
 
         # Inside each function's code, we are looking for a function name.
         for func_name1 in vba_func_dict:
@@ -302,9 +301,11 @@ def get_outer_nodes_from_vba_file(filename):
         input_vba_content = vba2graph_from_vba_object(filename)
         dg = vba2graph_gen(input_vba_content)
         return find_outer_nodes(dg)
-    except:
+    except Exception as ex:
+        logging.warning("Something went wrong. Perhaps this is not an office document.")
+        logging.warning(ex)
         return None
-    
+
 
 def is_office_word_file(extension):
     return extension in ['doc', 'docm', 'docx', 'dotm']
