@@ -83,11 +83,15 @@ class ProcessTree extends Component {
       ? this.buildProcessTree(process.children)
       : "";
 
+    const displayedName = process.procname
+      ? process.procname.split("\\").slice(-1)
+      : "unnamed process";
+
     return (
       <React.Fragment key={process.pid}>
         <li>
           {process.children.length > 0 ? collapseToggle : ""}
-          <code>{process.procname || "unnamed process"}</code>
+          <span title={process.procname}>{displayedName}</span>
           <span className="ml-1">
             (
             <Link
@@ -250,30 +254,34 @@ class AnalysisMain extends Component {
     let metadata;
     if (this.state.metadata) {
       metadata = (
-        <table className="table table-striped table-bordered">
-          <tbody>
-            <tr>
-              <td>Sha256</td>
-              <td>{this.state.metadata.sample_sha256}</td>
-            </tr>
-            <tr>
-              <td>Magic bytes</td>
-              <td>{this.state.metadata.magic_output}</td>
-            </tr>
-            <tr>
-              <td>Start command</td>
-              <td>{this.state.metadata.start_command}</td>
-            </tr>
-            <tr>
-              <td>Started at</td>
-              <td>{formatTimestamp(this.state.metadata.time_started)}</td>
-            </tr>
-            <tr>
-              <td>Finished at</td>
-              <td>{formatTimestamp(this.state.metadata.time_finished)}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="table-responsive">
+          <table className="table table-striped table-bordered">
+            <tbody>
+              <tr>
+                <td>SHA256</td>
+                <td style={{ wordBreak: "break-word" }}>
+                  {this.state.metadata.sample_sha256}
+                </td>
+              </tr>
+              <tr>
+                <td>Magic bytes</td>
+                <td>{this.state.metadata.magic_output}</td>
+              </tr>
+              <tr>
+                <td>Start command</td>
+                <td>{this.state.metadata.start_command}</td>
+              </tr>
+              <tr>
+                <td>Started at</td>
+                <td>{formatTimestamp(this.state.metadata.time_started)}</td>
+              </tr>
+              <tr>
+                <td>Finished at</td>
+                <td>{formatTimestamp(this.state.metadata.time_finished)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       );
     }
 
@@ -283,23 +291,22 @@ class AnalysisMain extends Component {
           <h4 className="page-title">Report</h4>
         </div>
 
-        <div className="card tilebox-one">
-          <div className="card-body">
-            <h5 className="card-title mb-0">Metadata</h5>
-
-            {metadata}
+        <div className="row">
+          <div className="col-xl-6">{simpleProcessTree}</div>
+          <div className="card tilebox-one col-xl-6">
+            <div className="card-body">
+              <h5 className="card-title mb-2">Metadata</h5>
+              {metadata}
+            </div>
           </div>
         </div>
 
         <div className="card tilebox-one">
           <div className="card-body">
             <h5 className="card-title mb-0">Behavioral graph</h5>
-
             {processTree}
           </div>
         </div>
-
-        {simpleProcessTree}
 
         <div className="row">
           <div className="col-md-9">
