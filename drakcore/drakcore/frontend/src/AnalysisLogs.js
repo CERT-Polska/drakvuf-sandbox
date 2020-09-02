@@ -3,7 +3,7 @@ import OptionPicker from "./OptionPicker";
 import InfiniteLoader from "react-window-infinite-loader";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList as List } from "react-window";
-import { Tabs, TabItem } from "./Tabs.js";
+import { Tabs, TabItem } from "./Tabs";
 import api from "./api";
 
 function LogBrowser({
