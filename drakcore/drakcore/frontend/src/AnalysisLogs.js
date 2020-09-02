@@ -25,7 +25,7 @@ function LogBrowser({
   const pending = useRef(null);
 
   // No index or only single marker => load only single chunk
-  const singleChunk = index == null || index.markers.length === 1;
+  const singleChunk = index === null || index.markers.length === 1;
 
   // Load first chunk
   useEffect(() => {
