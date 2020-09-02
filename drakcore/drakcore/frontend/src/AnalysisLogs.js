@@ -50,7 +50,7 @@ function LogBrowser({
   }, [chunks]);
 
   if (chunks === null) {
-    return <>Loading...</>;
+    return "Loading...";
   }
 
   const findChunkIndex = (lineIndex) => {
@@ -161,7 +161,7 @@ const DrakvufRow = ({ entry, style }) => {
   let content;
   let displayed = { ...entry };
   if (entry === undefined) {
-    content = <>Loading...</>;
+    content = "Loading...";
   } else {
     content = (
       <code style={{ whiteSpace: "nowrap" }}>{JSON.stringify(displayed)}</code>
@@ -184,7 +184,7 @@ function formatTimestamp(timestamp) {
 
 const ServiceRow = ({ entry, index, style }) => {
   if (entry === undefined) {
-    return <>Loading...</>;
+    return "Loading...";
   }
   return (
     <div style={style} className="d-flex flex-row align-content-stretch">
