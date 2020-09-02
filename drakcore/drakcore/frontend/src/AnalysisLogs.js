@@ -176,13 +176,6 @@ const DrakvufRow = ({ entry, style }) => {
   );
 };
 
-function formatTimestamp(timestamp) {
-  const newDate = new Date();
-  newDate.setTime(timestamp * 1000);
-  const dateString = newDate.toUTCString();
-  return dateString;
-}
-
 const ServiceRow = ({ entry, index, style }) => {
   if (entry === undefined) {
     return "Loading...";
