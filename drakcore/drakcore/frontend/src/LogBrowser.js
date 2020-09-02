@@ -84,9 +84,7 @@ function LogBrowser({
       const nextChunk = index.markers[idx + 1];
       const endOffset = isLastChunk ? null : nextChunk.offset;
 
-      const promise = queryData(chunk.offset, endOffset).then((chunk) => {
-        return [idx, chunk];
-      });
+      const promise = queryData(chunk.offset, endOffset).then((chunk) => [idx, chunk]);
 
       promises.push(promise);
     }
