@@ -132,7 +132,6 @@ function LogBrowser({
               const chunk = chunks[chunkIndex];
               if (chunk === undefined) {
                 return children({
-                  entry: undefined,
                   index: lineIndex,
                   style: props.style,
                 });
