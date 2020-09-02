@@ -70,6 +70,7 @@ function LogBrowser({
 
   const isItemLoaded = (entry) => {
     const chunkIdx = findChunkIndex(entry);
+    // Data is loaded in chunks, so if chunk is missing, so is the item
     return chunks[chunkIdx] !== undefined;
   };
 
