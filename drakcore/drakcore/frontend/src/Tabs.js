@@ -15,6 +15,10 @@ function TabItem({ active, value, onClick }) {
 }
 
 function Tabs({ defaultTab, children, onChange }) {
+  if (children === undefined) {
+    throw new Error("No tabs to render");
+  }
+
   const [active, setActive] = useState(defaultTab || children[0].props.label);
 
   useEffect(() => {
