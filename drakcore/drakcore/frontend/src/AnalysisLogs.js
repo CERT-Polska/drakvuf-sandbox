@@ -72,7 +72,7 @@ class AnalysisLogs extends React.Component {
         try {
           return JSON.parse(line);
         } catch (e) {
-          console.log(e);
+          console.log("Parsing JSON entry failed");
         }
         return null;
       });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import PropTypes from "prop-types";
 import InfiniteLoader from "react-window-infinite-loader";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList as List } from "react-window";
@@ -49,12 +50,6 @@ function LogBrowser({
   // Function (from, to) => Promise<bytes>
   queryData,
 }) {
-  // chunks object layout:
-  // {
-  //   0: [chunk 0 entries - objects],
-  //   1: [chunk 1 entries - objects],
-  //   ...
-  // }
   const [chunks, setChunks] = useState(null);
   const [lines, setLines] = useState(index.num_lines);
   const pending = useRef(null);
@@ -88,12 +83,24 @@ function LogBrowser({
     return "Loading...";
   }
 
+  /**
+   * Check if given item is loaded within the context
+   * of index - prop and chunks - state
+   * @param {number} entry Index of entry
+   * @return {boolean} Is item loaded
+   */
   const isItemLoaded = (entry) => {
     const chunkIdx = findChunkIndex(index, entry);
     // Data is loaded in chunks, so if chunk is missing, so is the item
     return chunks[chunkIdx] !== undefined;
   };
 
+  /**
+   * Load more items from backend to display in browser
+   * @param {number} startIndex First index to load
+   * @param {number} stopIndex Last index to load (inclusive)
+   * @return {any} Promise that resolves when all items in this range are loaded
+   */
   const loadMoreItems = (startIndex, stopIndex) => {
     const startChunkIndex = findChunkIndex(index, startIndex);
     const endChunkIndex = findChunkIndex(index, stopIndex);
@@ -173,6 +180,12 @@ function LogBrowser({
     );
   };
   return <AutoSizer>{loader}</AutoSizer>;
+}
+
+LogBrowser.propTypes = {
+    children: PropTypes.elementType.isRequired,
+    index: PropTypes.object.isRequired,
+    queryData: PropTypes.func,
 }
 
 export default LogBrowser;
