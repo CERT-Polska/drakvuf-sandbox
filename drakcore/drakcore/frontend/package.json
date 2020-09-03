@@ -10,6 +10,7 @@
     "graphviz-react": "^1.1.1",
     "ndjson-parse": "^1.0.4",
     "prettier": "^2.0.5",
+    "prop-types": "^15.7.2",
     "react": "^16.13.1",
     "react-d3-tree": "^1.16.1",
     "react-dom": "^16.13.1",
