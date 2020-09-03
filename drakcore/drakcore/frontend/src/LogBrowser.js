@@ -77,12 +77,10 @@ function LogBrowser({
   };
 
   const loadMoreItems = (startIndex, stopIndex) => {
-    // console.log(`Requesting from `, startIndex, " to ", stopIndex);
     const startChunkIndex = findChunkIndex(index, startIndex);
     const endChunkIndex = findChunkIndex(index, stopIndex);
 
     let promises = [];
-    // console.log(`Downloading from `, startChunkIndex, " to ", endChunkIndex);
     for (let idx = startChunkIndex; idx <= endChunkIndex; idx++) {
       const chunk = index.markers[idx];
       const isLastChunk = idx === index.markers.length - 1;
