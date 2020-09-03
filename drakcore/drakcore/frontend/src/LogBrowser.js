@@ -7,6 +7,24 @@ import { FixedSizeList as List } from "react-window";
 // where size of each entry == size of syscalls log / number of lines
 const BATCH_SIZE = 2000;
 
+/**
+ * @typedef Marker
+ * @prop {number} line Index of first line this chunk contains
+ * @prop {number} offset Offset in bytes from start of the file
+ */
+
+/**
+ * @typedef FileIndex
+ * @prop {Marker[]} markers Array of markers defining file chunks
+ * @prop {number} num_lines Number of lines in file
+ * @prop {number} chunk_size Size of chunk in bytes
+ */
+
+/**
+ * @param {FileIndex} index FileIndex to use for search
+ * @param {number} lineIndex Line of interest
+ * @return {number} Index of chunk containing lineIndex line
+ */
 function findChunkIndex(index, lineIndex) {
   const markers = index.markers;
   if (markers.length === 1) {
