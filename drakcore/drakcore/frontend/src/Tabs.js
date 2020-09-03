@@ -4,7 +4,7 @@ function TabItem({ active, value, onClick }) {
   return (
     <li className="nav-item">
       <a
-        href="#"
+        href="#/"
         className={"nav-link " + (active ? "active" : "")}
         onClick={onClick}
       >
