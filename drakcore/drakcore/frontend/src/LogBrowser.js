@@ -3,6 +3,26 @@ import InfiniteLoader from "react-window-infinite-loader";
 import AutoSizer from "react-virtualized-auto-sizer";
 import { FixedSizeList as List } from "react-window";
 
+// Empirically chosen average number of items in 1MiB chunk
+// where size of each entry == size of syscalls log / number of lines
+const BATCH_SIZE = 2000;
+
+function findChunkIndex(index, lineIndex) {
+  const markers = index.markers;
+  if (markers.length === 1) {
+    return 0;
+  }
+
+  for (let i = 0; i < markers.length; i++) {
+    const chunk = markers[i];
+    if (chunk.line > lineIndex) {
+      return i - 1;
+    }
+  }
+
+  return markers.length - 1;
+}
+
 function LogBrowser({
   // Log entry component
   children,
@@ -22,7 +42,7 @@ function LogBrowser({
   const pending = useRef(null);
 
   // No index or only single marker => load only single chunk
-  const singleChunk = index === null || index.markers.length === 1;
+  const singleChunk = index.markers.length === 1;
 
   // Load first chunk
   useEffect(() => {
@@ -50,31 +70,16 @@ function LogBrowser({
     return "Loading...";
   }
 
-  const findChunkIndex = (lineIndex) => {
-    if (singleChunk) {
-      return 0;
-    }
-
-    const markers = index.markers;
-    for (let i = 0; i < markers.length; i++) {
-      const chunk = markers[i];
-      if (chunk.line > lineIndex) {
-        return i - 1;
-      }
-    }
-    return markers.length - 1;
-  };
-
   const isItemLoaded = (entry) => {
-    const chunkIdx = findChunkIndex(entry);
+    const chunkIdx = findChunkIndex(index, entry);
     // Data is loaded in chunks, so if chunk is missing, so is the item
     return chunks[chunkIdx] !== undefined;
   };
 
   const loadMoreItems = (startIndex, stopIndex) => {
     // console.log(`Requesting from `, startIndex, " to ", stopIndex);
-    const startChunkIndex = findChunkIndex(startIndex);
-    const endChunkIndex = findChunkIndex(stopIndex);
+    const startChunkIndex = findChunkIndex(index, startIndex);
+    const endChunkIndex = findChunkIndex(index, stopIndex);
 
     let promises = [];
     // console.log(`Downloading from `, startChunkIndex, " to ", endChunkIndex);
@@ -84,7 +89,10 @@ function LogBrowser({
       const nextChunk = index.markers[idx + 1];
       const endOffset = isLastChunk ? null : nextChunk.offset;
 
-      const promise = queryData(chunk.offset, endOffset).then((chunk) => [idx, chunk]);
+      const promise = queryData(chunk.offset, endOffset).then((chunk) => [
+        idx,
+        chunk,
+      ]);
 
       promises.push(promise);
     }
@@ -106,13 +114,32 @@ function LogBrowser({
     return updatedPromise;
   };
 
+  const browserItem = (props) => {
+    const lineIndex = props.index;
+
+    const chunkIndex = findChunkIndex(index, lineIndex);
+    const chunk = chunks[chunkIndex];
+
+    let entry;
+    if (chunk !== undefined) {
+      const lineOffset = index ? index.markers[chunkIndex].line : 0;
+      entry = chunk[lineIndex - lineOffset];
+    }
+
+    return children({
+      entry,
+      index: lineIndex,
+      style: props.style,
+    });
+  };
+
   const loader = function ({ width, height }) {
     return (
       <InfiniteLoader
         isItemLoaded={isItemLoaded}
         loadMoreItems={loadMoreItems}
         itemCount={lines}
-        minimumBatchSize={2000}
+        minimumBatchSize={BATCH_SIZE}
       >
         {({ onItemsRendered, ref }) => (
           <List
@@ -123,25 +150,7 @@ function LogBrowser({
             onItemsRendered={onItemsRendered}
             ref={ref}
           >
-            {(props) => {
-              const lineIndex = props.index;
-
-              const chunkIndex = findChunkIndex(lineIndex);
-              const chunk = chunks[chunkIndex];
-              if (chunk === undefined) {
-                return children({
-                  index: lineIndex,
-                  style: props.style,
-                });
-              }
-              const lineOffset = index ? index.markers[chunkIndex].line : 0;
-              const entry = chunk[lineIndex - lineOffset];
-              return children({
-                entry,
-                index: lineIndex,
-                style: props.style,
-              });
-            }}
+            {browserItem}
           </List>
         )}
       </InfiniteLoader>
