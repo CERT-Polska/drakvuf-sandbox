@@ -269,7 +269,7 @@ def create_rekall_profiles(install_info: InstallInfo):
               default=True,
               show_default=True,
               help="Send anonymous usage report")
-@click.option('--usermode/--no-usermode',
+@click.option('--usermode/--no-usermode', 'generate_usermode',
               default=True,
               show_default=True,
               help="Generate user mode profiles")
