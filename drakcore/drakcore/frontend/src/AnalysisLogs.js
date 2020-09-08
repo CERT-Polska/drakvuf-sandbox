@@ -141,7 +141,6 @@ function LogViewControl({ analysisID, setLog, displayedLog, logList }) {
     displayedGroup = "services";
   } else {
     displayedGroup = "drakvuf";
-    console.log("choosing drakvuf", displayedLog, logGroups.services);
   }
 
   const intoOption = (obj) => {
