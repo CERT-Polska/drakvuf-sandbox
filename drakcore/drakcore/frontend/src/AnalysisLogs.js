@@ -3,6 +3,7 @@ import OptionPicker from "./OptionPicker";
 import { Tabs, TabItem } from "./Tabs";
 import LogBrowser from "./LogBrowser";
 import api from "./api";
+import { Redirect } from "react-router-dom";
 
 function isServiceLog(name) {
   const SERVICE_LOGS = ["drakrun.log", "drak-postprocess.log"];
@@ -70,7 +71,7 @@ async function getLogChunk(analysisID, log, from, to) {
   return null;
 }
 
-function LogWithIndex({ analysisID, log }) {
+function useLogIndex(analysisID, log) {
   const [index, setIndex] = useState(null);
 
   useEffect(() => {
@@ -93,14 +94,35 @@ function LogWithIndex({ analysisID, log }) {
       });
   }, [analysisID, log]);
 
+  return index;
+}
+
+function useLogList(analysisID) {
+  const [logList, setLogList] = useState(null);
+  // Download log list during initialization
+  useEffect(() => {
+    api.listLogs(analysisID).then((logs) => {
+      if (logs) {
+        setLogList(logs.data.map(getLogName));
+      }
+    });
+  }, [analysisID]);
+
+  return logList;
+}
+
+function LogView({ analysisID, log }) {
+  const index = useLogIndex(analysisID, log);
+
   if (log === null || index === null) {
     return "Loading...";
   }
-  const entryComponent = isServiceLog(log) ? ServiceRow : DrakvufRow;
 
+  const entryComponent = isServiceLog(log) ? ServiceRow : DrakvufRow;
   const getData = (from, to) => {
     return getLogChunk(analysisID, log, from, to);
   };
+
   return (
     <LogBrowser index={index} queryData={getData}>
       {entryComponent}
@@ -108,45 +130,32 @@ function LogWithIndex({ analysisID, log }) {
   );
 }
 
-function LogViewControl({ analysisID, setLog }) {
-  const [tab, setTab] = useState("drakvuf");
-  const [log, setCurrentLog] = useState(null);
-  const [logList, setLogList] = useState(null);
+function LogViewControl({ analysisID, setLog, displayedLog }) {
+  const logList = useLogList(analysisID);
+
+  const logGroups = {
+    services: logList ? logList.filter(isServiceLog) : [],
+    drakvuf: logList ? logList.filter((log) => !isServiceLog(log)) : [],
+  };
+
+  let displayedGroup;
+  if (logGroups.services.includes(displayedLog)) {
+    displayedGroup = "services";
+  } else {
+    displayedGroup = "drakvuf";
+  }
 
   const intoOption = (obj) => {
     const log_name = getLogName(obj);
     return { key: log_name, value: log_name };
   };
 
-  // Download log list during initialization
-  useEffect(() => {
-    api.listLogs(analysisID).then((logs) => {
-      if (logs) {
-        setLogList(logs.data);
-
-        const firstLog = getLogName(logs.data[0]);
-        setLog(firstLog);
-      }
-    });
-  }, [setLog, analysisID]);
-
-  useEffect(() => {
-    setLog(log);
-  }, [setLog, log]);
-
-  if (logList === null) {
-    return "";
-  }
-
-  const logClassPredicate = {
-    services: isServiceLog,
-    drakvuf: (log_name) => !isServiceLog(log_name),
+  const setTab = (label) => {
+    setLog(logGroups[label][0]);
   };
 
-  const logClass = logClassPredicate[tab] || ((s) => true);
-
   const tabs = (
-    <Tabs selected={tab} onChange={setTab}>
+    <Tabs selected={displayedGroup} onChange={setTab}>
       <TabItem label={"drakvuf"} value={"DRAKVUF"} />
       <TabItem label={"services"} value={"Services"} />
     </Tabs>
@@ -158,11 +167,15 @@ function LogViewControl({ analysisID, setLog }) {
       <div className="row mb-2">
         <div className="col">
           <OptionPicker
-            data={logList.filter(logClass).map(intoOption)}
-            onChange={setCurrentLog}
+            selected={displayedLog}
+            data={logGroups[displayedGroup].map(intoOption)}
+            onChange={setLog}
           />
         </div>
-        <DownloadButton filename={log} href={"/log/" + analysisID + "/" + log}>
+        <DownloadButton
+          filename={displayedLog}
+          href={"/log/" + analysisID + "/" + displayedLog}
+        >
           Download log
         </DownloadButton>
       </div>
@@ -172,7 +185,12 @@ function LogViewControl({ analysisID, setLog }) {
 
 function AnalysisLogs(props) {
   const analysisID = props.match.params.analysis;
-  const [log, setLog] = useState(null);
+  const [log, setLog] = useState(props.match.params.log || null);
+
+  // Ensure the URL is up to date
+  if (log && props.match.params.log !== log) {
+    return <Redirect to={`/analysis/${analysisID}/logs/${log}`} />;
+  }
 
   return (
     <div
@@ -185,9 +203,13 @@ function AnalysisLogs(props) {
 
       <div className="card tilebox-one" style={{ flex: 1 }}>
         <div className="card-body d-flex" style={{ flexFlow: "column" }}>
-          <LogViewControl analysisID={analysisID} setLog={setLog} />
+          <LogViewControl
+            analysisID={analysisID}
+            displayedLog={log}
+            setLog={setLog}
+          />
           <div style={{ flex: 1 }}>
-            <LogWithIndex analysisID={analysisID} log={log} />
+            <LogView analysisID={analysisID} log={log} />
           </div>
         </div>
       </div>
