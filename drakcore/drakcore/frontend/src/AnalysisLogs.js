@@ -130,9 +130,7 @@ function LogView({ analysisID, log }) {
   );
 }
 
-function LogViewControl({ analysisID, setLog, displayedLog }) {
-  const logList = useLogList(analysisID);
-
+function LogViewControl({ analysisID, setLog, displayedLog, logList }) {
   const logGroups = {
     services: logList ? logList.filter(isServiceLog) : [],
     drakvuf: logList ? logList.filter((log) => !isServiceLog(log)) : [],
@@ -143,6 +141,7 @@ function LogViewControl({ analysisID, setLog, displayedLog }) {
     displayedGroup = "services";
   } else {
     displayedGroup = "drakvuf";
+    console.log("choosing drakvuf", displayedLog, logGroups.services);
   }
 
   const intoOption = (obj) => {
@@ -150,12 +149,18 @@ function LogViewControl({ analysisID, setLog, displayedLog }) {
     return { key: log_name, value: log_name };
   };
 
-  const setTab = (label) => {
-    setLog(logGroups[label][0]);
+  const setFirstFromGroup = (label) => {
+    if (logGroups[label].length > 0) {
+      setLog(logGroups[label][0]);
+    }
   };
 
+  if (displayedLog === null) {
+    setFirstFromGroup("drakvuf");
+  }
+
   const tabs = (
-    <Tabs selected={displayedGroup} onChange={setTab}>
+    <Tabs selected={displayedGroup} onChange={setFirstFromGroup}>
       <TabItem label={"drakvuf"} value={"DRAKVUF"} />
       <TabItem label={"services"} value={"Services"} />
     </Tabs>
@@ -186,6 +191,7 @@ function LogViewControl({ analysisID, setLog, displayedLog }) {
 function AnalysisLogs(props) {
   const analysisID = props.match.params.analysis;
   const [log, setLog] = useState(props.match.params.log || null);
+  const logList = useLogList(analysisID);
 
   // Ensure the URL is up to date
   if (log && props.match.params.log !== log) {
@@ -205,6 +211,7 @@ function AnalysisLogs(props) {
         <div className="card-body d-flex" style={{ flexFlow: "column" }}>
           <LogViewControl
             analysisID={analysisID}
+            logList={logList}
             displayedLog={log}
             setLog={setLog}
           />
