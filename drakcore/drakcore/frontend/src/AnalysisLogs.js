@@ -1,10 +1,13 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import OptionPicker from "./OptionPicker";
 import { Tabs, TabItem } from "./Tabs";
 import LogBrowser from "./LogBrowser";
 import api from "./api";
 
-const SERVICE_LOGS = ["drakrun.log", "drak-postprocess.log"];
+function isServiceLog(name) {
+  const SERVICE_LOGS = ["drakrun.log", "drak-postprocess.log"];
+  return SERVICE_LOGS.some((s) => name.includes(s));
+}
 
 const DrakvufRow = ({ entry, style }) => {
   let content;
@@ -39,156 +42,157 @@ const ServiceRow = ({ entry, index, style }) => {
   );
 };
 
-class AnalysisLogs extends React.Component {
-  constructor(props) {
-    super(props);
-    this.analysisID = this.props.match.params.analysis;
+function DownloadButton({ filename, href, children }) {
+  return (
+    <a download={filename} href={href} className="btn btn-primary">
+      {children}
+    </a>
+  );
+}
 
-    this.state = {
-      currentLog: null,
-      currentTab: "drakvuf",
-      logList: [],
-      index: null,
-    };
+function getLogName(logPath) {
+  return logPath.split("/").slice(-1)[0];
+}
 
-    this.selectionChanged = this.selectionChanged.bind(this);
-    this.getLogChunk = this.getLogChunk.bind(this);
-    this.setTab = this.setTab.bind(this);
-  }
+async function getLogChunk(analysisID, log, from, to) {
+  const chunks = await api.getLogRange(analysisID, log.split(".")[0], from, to);
 
-  setTab(tab) {
-    this.setState({ currentTab: tab });
-  }
-
-  async getLogChunk(from, to) {
-    const chunks = await api.getLogRange(
-      this.analysisID,
-      this.state.currentLog.split(".")[0],
-      from,
-      to
-    );
-    if (chunks) {
-      return chunks.request.response.split("\n").map((line) => {
-        try {
-          return JSON.parse(line);
-        } catch (e) {
-          console.log("Parsing JSON entry failed");
-        }
-        return null;
-      });
-    }
-    return null;
-  }
-
-  async componentDidMount() {
-    const logs = await api.listLogs(this.analysisID);
-    if (logs) {
-      this.setState({
-        logList: logs.data,
-      });
-    }
-    const defaltSelection = logs.data[0].split("/")[1];
-    await this.selectionChanged(defaltSelection);
-  }
-
-  async selectionChanged(newSelection) {
-    try {
-      const index = await api.logIndex(
-        this.analysisID,
-        newSelection.split(".")[0]
-      );
-      this.setState({ index: index.data, currentLog: newSelection });
-    } catch {
-      this.setState({ index: null, currentLog: newSelection });
-    }
-  }
-
-  render() {
-    const handleMissingIndex = (index) => {
-      if (index !== null) {
-        return index;
+  if (chunks) {
+    return chunks.request.response.split("\n").map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch (e) {
+        console.log("Parsing JSON entry failed");
       }
-      return {
-        num_lines: 0,
-        markers: [{ line: 0, offset: 0 }],
-      };
-    };
+      return null;
+    });
+  }
+  return null;
+}
 
-    const isServiceLog = (name) =>
-      SERVICE_LOGS.some((s) => {
-        return name.includes(s);
+function LogWithIndex({ analysisID, log }) {
+  const [index, setIndex] = useState(null);
+
+  useEffect(() => {
+    if (log === null) {
+      return;
+    }
+    setIndex(null);
+    api
+      .logIndex(analysisID, log.split(".")[0])
+      .then((index) => {
+        if (index) {
+          setIndex(index.data);
+        }
+      })
+      .catch(() => {
+        setIndex({
+          num_lines: 0,
+          markers: [{ line: 0, offset: 0 }],
+        });
       });
+  }, [analysisID, log]);
 
-    const intoOption = (obj) => {
-      const log_name = obj.split("/")[1];
-      return { key: log_name, value: log_name };
-    };
+  if (log === null || index === null) {
+    return "Loading...";
+  }
+  const entryComponent = isServiceLog(log) ? ServiceRow : DrakvufRow;
 
-    const logClassPredicate = {
-      services: isServiceLog,
-      drakvuf: (log_name) => !isServiceLog(log_name),
-    };
+  const getData = (from, to) => {
+    return getLogChunk(analysisID, log, from, to);
+  };
+  return (
+    <LogBrowser index={index} queryData={getData}>
+      {entryComponent}
+    </LogBrowser>
+  );
+}
 
-    const logClass = logClassPredicate[this.state.currentTab] || ((s) => true);
+function LogViewControl({ analysisID, setLog }) {
+  const [tab, setTab] = useState("drakvuf");
+  const [log, setCurrentLog] = useState(null);
+  const [logList, setLogList] = useState(null);
 
-    const entryComponent = {
-      services: ServiceRow,
-      drakvuf: DrakvufRow,
-    };
+  const intoOption = (obj) => {
+    const log_name = getLogName(obj);
+    return { key: log_name, value: log_name };
+  };
 
-    if (this.state.currentLog === null || this.state.currentTab === null)
-      return "Loading..";
+  // Download log list during initialization
+  useEffect(() => {
+    api.listLogs(analysisID).then((logs) => {
+      if (logs) {
+        setLogList(logs.data);
 
-    const content = (
-      <>
-        <Tabs onChange={this.setTab}>
-          <TabItem label={"drakvuf"} value={"DRAKVUF"} />
-          <TabItem label={"services"} value={"Services"} />
-        </Tabs>
-        <div className="row mb-2">
-          <div className="col">
-            <OptionPicker
-              data={this.state.logList.filter(logClass).map(intoOption)}
-              onChange={this.selectionChanged}
-            />
-          </div>
-          <a
-            download={this.state.currentLog}
-            href={"/log/" + this.analysisID + "/" + this.state.currentLog}
-            className="btn btn-primary"
-          >
-            Download log
-          </a>
+        const firstLog = getLogName(logs.data[0]);
+        setLog(firstLog);
+      }
+    });
+  }, [setLog, analysisID]);
+
+  useEffect(() => {
+    setLog(log);
+  }, [setLog, log]);
+
+  if (logList === null) {
+    return "";
+  }
+
+  const logClassPredicate = {
+    services: isServiceLog,
+    drakvuf: (log_name) => !isServiceLog(log_name),
+  };
+
+  const logClass = logClassPredicate[tab] || ((s) => true);
+
+  const tabs = (
+    <Tabs selected={tab} onChange={setTab}>
+      <TabItem label={"drakvuf"} value={"DRAKVUF"} />
+      <TabItem label={"services"} value={"Services"} />
+    </Tabs>
+  );
+
+  return (
+    <>
+      {tabs}
+      <div className="row mb-2">
+        <div className="col">
+          <OptionPicker
+            data={logList.filter(logClass).map(intoOption)}
+            onChange={setCurrentLog}
+          />
         </div>
+        <DownloadButton filename={log} href={"/log/" + analysisID + "/" + log}>
+          Download log
+        </DownloadButton>
+      </div>
+    </>
+  );
+}
 
-        <div style={{ flex: 1 }}>
-          <LogBrowser
-            index={handleMissingIndex(this.state.index)}
-            queryData={this.getLogChunk}
-          >
-            {entryComponent[this.state.currentTab]}
-          </LogBrowser>
-        </div>
-      </>
-    );
+function AnalysisLogs(props) {
+  const analysisID = props.match.params.analysis;
+  const [log, setLog] = useState(null);
 
-    return (
-      <div
-        className="App container-fluid d-flex"
-        style={{ flex: 1, flexFlow: "column" }}
-      >
-        <div className="page-title-box">
-          <h4 className="page-title">Analysis logs</h4>
-        </div>
+  return (
+    <div
+      className="App container-fluid d-flex"
+      style={{ flex: 1, flexFlow: "column" }}
+    >
+      <div className="page-title-box">
+        <h4 className="page-title">Analysis logs</h4>
+      </div>
 
-        <div className="card tilebox-one" style={{ flex: 1 }}>
-          <div className="card-body d-flex" style={{ flexFlow: "column" }}>
-            {this.state.currentLog !== null ? content : ""}
+      <div className="card tilebox-one" style={{ flex: 1 }}>
+        <div className="card-body d-flex" style={{ flexFlow: "column" }}>
+          <LogViewControl analysisID={analysisID} setLog={setLog} />
+          <div style={{ flex: 1 }}>
+            <LogWithIndex analysisID={analysisID} log={log} />
           </div>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 }
 
 export default AnalysisLogs;

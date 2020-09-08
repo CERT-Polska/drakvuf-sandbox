@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 
+// TODO change this into a button, requires a little bit of styling
 function TabItem({ active, value, onClick }) {
   return (
     <li className="nav-item">
@@ -14,21 +15,15 @@ function TabItem({ active, value, onClick }) {
   );
 }
 
-function Tabs({ defaultTab, children, onChange }) {
+function Tabs({ children, onChange, selected }) {
   if (children === undefined) {
     throw new Error("No tabs to render");
   }
 
-  const [active, setActive] = useState(defaultTab || children[0].props.label);
-
-  useEffect(() => {
-    onChange(active);
-  }, [onChange, active]);
-
   const betterChildren = React.Children.map(children, (child, i) => {
     return React.cloneElement(child, {
-      active: active === child.props.label,
-      onClick: () => setActive(child.props.label),
+      active: selected === child.props.label,
+      onClick: () => onChange(child.props.label),
     });
   });
 

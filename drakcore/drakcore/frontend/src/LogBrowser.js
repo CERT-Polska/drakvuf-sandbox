@@ -183,9 +183,9 @@ function LogBrowser({
 }
 
 LogBrowser.propTypes = {
-    children: PropTypes.elementType.isRequired,
-    index: PropTypes.object.isRequired,
-    queryData: PropTypes.func,
-}
+  children: PropTypes.elementType.isRequired,
+  index: PropTypes.object.isRequired,
+  queryData: PropTypes.func,
+};
 
 export default LogBrowser;
