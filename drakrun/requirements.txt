@@ -7,3 +7,4 @@ tqdm==4.43.0
 python-magic==0.4.15
 dataclasses-json==0.5.1
 oletools==0.55.1
+regex==2020.7.14
