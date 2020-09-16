@@ -174,7 +174,12 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
 
         if plugin in switcher:
             plugin_obj = switcher[plugin]
-            converted = str(plugin_obj(line_obj))
+            try:
+                converted = str(plugin_obj(line_obj))
+            except Exception as e:
+                logging.warning(f"Failed to parse log entry:\n{e}")
+                continue
+
             if converted:
                 yield converted
         elif not void_unknown:

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Component } from "react";
 import { Link } from "react-router-dom";
 import "./App.css";
@@ -83,11 +83,15 @@ class ProcessTree extends Component {
       ? this.buildProcessTree(process.children)
       : "";
 
+    const displayedName = process.procname
+      ? process.procname.split("\\").slice(-1)
+      : "unnamed process";
+
     return (
       <React.Fragment key={process.pid}>
         <li>
           {process.children.length > 0 ? collapseToggle : ""}
-          <code>{process.procname || "unnamed process"}</code>
+          <span title={process.procname}>{displayedName}</span>
           <span className="ml-1">
             (
             <Link
@@ -139,14 +143,60 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+function AnalysisBehavioralGraph(props) {
+  let [graph, setGraph] = useState();
+
+  // Fetch behavioral graph for current analysis ID
+  useEffect(() => {
+    api
+      .getGraph(props.analysisID)
+      .then((res_graph) => {
+        if (res_graph.data) {
+          setGraph(res_graph.data);
+        } else {
+          setGraph(null);
+        }
+      })
+      .catch(() => setGraph(null));
+  }, [props.analysisID]);
+
+  // Re-rendering has huge cost - much higher than initial render
+  // Component will not be re-rendered if graph stays the same
+  let SmartGraphviz = React.memo(
+    (props) => <Graphviz {...props} />,
+    (prevProps, nextProps) => prevProps.dot === nextProps.dot
+  );
+
+  if (!graph) {
+    return graph === null ? (
+      <div>
+        (Process tree was not generated, please check out "ProcDOT integration
+        (optional)" section of README to enable it.)
+      </div>
+    ) : (
+      <div>Loading graph...</div>
+    );
+  }
+
+  // FIX: `syntax error in line ... near '%'`
+  const sanitizedDot = graph.replaceAll("= %s", "= black");
+
+  return (
+    <ErrorBoundary>
+      <SmartGraphviz
+        dot={sanitizedDot}
+        options={{ zoom: true, width: "100%" }}
+      />
+    </ErrorBoundary>
+  );
+}
+
 class AnalysisMain extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
       logs: [],
-      graph: null,
-      graphState: "loading",
       processTree: null,
       metadata: null,
     };
@@ -158,17 +208,6 @@ class AnalysisMain extends Component {
     const res_logs = await api.listLogs(this.analysisID);
     if (res_logs.data) {
       this.setState({ logs: res_logs.data });
-    }
-
-    try {
-      const res_graph = await api.getGraph(this.analysisID);
-      if (res_graph.data) {
-        this.setState({ graphState: "loaded", graph: res_graph.data });
-      } else {
-        this.setState({ graphState: "missing" });
-      }
-    } catch (e) {
-      this.setState({ graphState: "missing" });
     }
 
     const process_tree = await api.getProcessTree(this.analysisID);
@@ -194,32 +233,14 @@ class AnalysisMain extends Component {
   }
 
   render() {
-    let processTree = <div>Loading graph...</div>;
-
-    if (this.state.graphState === "loaded") {
-      processTree = (
-        <ErrorBoundary>
-          <Graphviz
-            dot={this.state.graph}
-            options={{ zoom: true, width: "100%" }}
-          />
-        </ErrorBoundary>
-      );
-    } else if (this.state.graphState === "missing") {
-      processTree = (
-        <div>
-          (Process tree was not generated, please check out "ProcDOT integration
-          (optional)" section of README to enable it.)
-        </div>
-      );
-    }
+    let processTree = <AnalysisBehavioralGraph analysisID={this.analysisID} />;
 
     let simpleProcessTree;
     if (this.state.processTree) {
       simpleProcessTree = (
         <div className="card tilebox-one">
           <div className="card-body">
-            <h5 className="card-title mb-0">Proces tree</h5>
+            <h5 className="card-title mb-0">Process tree</h5>
             <ProcessTree
               tree={this.state.processTree}
               expandPid={this.state.injectedPid}
@@ -233,30 +254,34 @@ class AnalysisMain extends Component {
     let metadata;
     if (this.state.metadata) {
       metadata = (
-        <table className="table table-striped table-bordered">
-          <tbody>
-            <tr>
-              <td>Sha256</td>
-              <td>{this.state.metadata.sample_sha256}</td>
-            </tr>
-            <tr>
-              <td>Magic bytes</td>
-              <td>{this.state.metadata.magic_output}</td>
-            </tr>
-            <tr>
-              <td>Start command</td>
-              <td>{this.state.metadata.start_command}</td>
-            </tr>
-            <tr>
-              <td>Started at</td>
-              <td>{formatTimestamp(this.state.metadata.time_started)}</td>
-            </tr>
-            <tr>
-              <td>Finished at</td>
-              <td>{formatTimestamp(this.state.metadata.time_finished)}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="table-responsive">
+          <table className="table table-striped table-bordered">
+            <tbody>
+              <tr>
+                <td>SHA256</td>
+                <td style={{ wordBreak: "break-word" }}>
+                  {this.state.metadata.sample_sha256}
+                </td>
+              </tr>
+              <tr>
+                <td>Magic bytes</td>
+                <td>{this.state.metadata.magic_output}</td>
+              </tr>
+              <tr>
+                <td>Start command</td>
+                <td>{this.state.metadata.start_command}</td>
+              </tr>
+              <tr>
+                <td>Started at</td>
+                <td>{formatTimestamp(this.state.metadata.time_started)}</td>
+              </tr>
+              <tr>
+                <td>Finished at</td>
+                <td>{formatTimestamp(this.state.metadata.time_finished)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       );
     }
 
@@ -266,23 +291,22 @@ class AnalysisMain extends Component {
           <h4 className="page-title">Report</h4>
         </div>
 
-        <div className="card tilebox-one">
-          <div className="card-body">
-            <h5 className="card-title mb-0">Metadata</h5>
-
-            {metadata}
+        <div className="row">
+          <div className="col-xl-6">{simpleProcessTree}</div>
+          <div className="card tilebox-one col-xl-6">
+            <div className="card-body">
+              <h5 className="card-title mb-2">Metadata</h5>
+              {metadata}
+            </div>
           </div>
         </div>
 
         <div className="card tilebox-one">
           <div className="card-body">
             <h5 className="card-title mb-0">Behavioral graph</h5>
-
             {processTree}
           </div>
         </div>
-
-        {simpleProcessTree}
 
         <div className="row">
           <div className="col-md-9">

@@ -46,7 +46,7 @@ This instruction assumes that you want to create a single-node installation with
    ```
 4. Execute:
    ```
-   # draksetup install --iso /opt/path_to_windows.iso
+   # draksetup install /opt/path_to_windows.iso
    ```
    carefully read the command's output. This command would run a Virtual Machine with Windows system installation process.
    

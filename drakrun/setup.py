@@ -7,7 +7,7 @@ except ImportError:
 
 setup(
     name="drakrun",
-    version="0.8.0",
+    version="0.8.1",
     description="DRAKRUN",
     package_dir={"drakrun": "drakrun"},
     packages=["drakrun"],
