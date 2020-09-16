@@ -141,6 +141,15 @@ You may optionally configure your guests to use
 3. Set `dns_server=use-gateway-address` in `/etc/drakrun/config.ini`.
 4. Restart your drakrun instances: `systemctl restart 'drakrun@*`
 
+
+#### Office files
+There is an experimental support for analyzing word and excel samples. However this requires that you have Microsoft Office installed.
+
+The steps below should be completed on guest vm before creating the snapshot (e.g. before you run `draksetup postinstall`).
+1. Install Microsoft Office. You should be able to start word/excel by running `start winword.exe`, `start excel.exe` from command line.
+2. Adjust the registry keys by adding 3 values (`DWORD VBAWarnings VALUE=1`, `DWORD AccessVBOM VALUE=1`, `DWORD ExtensionHardening VALUE=0`) both to `Computer\HKEY_CURRENT_USER\SOFTWARE\Microsoft\Office\<version>\Word\Security` and to `Computer\HKEY_CURRENT_USER\SOFTWARE\Microsoft\Office\<version>\Excel\Security` keys.
+
+
 ## [Troubleshooting](https://github.com/CERT-Polska/drakvuf-sandbox/wiki/Troubleshooting)
 
 ## [Project contents](https://github.com/CERT-Polska/drakvuf-sandbox/wiki/Project-contents)
