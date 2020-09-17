@@ -226,7 +226,7 @@ def send_usage_report(report):
 def create_rekall_profiles(install_info: InstallInfo):
     storage_backend = get_storage_backend(install_info)
     with storage_backend.vm0_root_as_block() as block_device, \
-         tempfile.TemporaryDirectory() as mount_path:
+            tempfile.TemporaryDirectory() as mount_path:
         mnt_path_quoted = shlex.quote(mount_path)
         blk_quoted = shlex.quote(block_device)
         try:
@@ -423,6 +423,16 @@ def postupgrade():
     detect_defaults()
 
 
+@click.command()
+@click.argument('domain', type=str)
+@click.argument('iso_path', type=click.Path(exists=True))
+def mount(domain, iso_path):
+    '''Inject ISO file into specified guest vm.
+    Domain can be retrieved by running "xl list" command on the host.
+    '''
+    subprocess.run(['xl', 'qemu-monitor-command', domain, f'change ide-5632 {iso_path}'])
+
+
 @click.group()
 def main():
     pass
@@ -431,6 +441,8 @@ def main():
 main.add_command(install)
 main.add_command(postinstall)
 main.add_command(postupgrade)
+main.add_command(mount)
+
 
 if __name__ == "__main__":
     if os.geteuid() != 0:
