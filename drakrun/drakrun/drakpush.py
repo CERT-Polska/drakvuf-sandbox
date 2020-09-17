@@ -9,6 +9,7 @@ def main():
     parser = argparse.ArgumentParser(description='Push sample to the karton')
     parser.add_argument('sample', help='Path to the sample')
     parser.add_argument('--start_command', help='e.g. start %f, %f will be replaced by file name', required=False)
+    parser.add_argument('--timeout', type=int, default=600, type=int, help='analysis timeout in seconds', required=False)
     args = parser.parse_args()
 
     conf = Config(os.path.join(ETC_DIR, 'config.ini'))
@@ -31,6 +32,9 @@ def main():
 
     if args.start_command is not None:
         task.add_payload("start_command", args.start_command)
+
+    if args.timeout is not None:
+        task.add_payload("timeout", args.timeout)
 
     producer.send_task(task)
 
