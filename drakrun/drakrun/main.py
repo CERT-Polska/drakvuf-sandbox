@@ -20,6 +20,7 @@ import ntpath
 from karton2 import Karton, Config, Task, LocalResource
 
 import drakrun.run as d_run
+import drakrun.office as d_office
 from drakrun.drakpdb import dll_file_list
 from drakrun.drakparse import parse_logs
 from drakrun.config import LIB_DIR, ETC_DIR
@@ -164,15 +165,30 @@ class DrakrunKarton(Karton):
 
         return None
 
-    def _get_start_command(self, extension, sample):
+    @staticmethod
+    def _get_office_file_run_command(extension, file_path):
+        start_command = ['start']
+        if d_office.is_office_word_file(extension):
+            start_command.append('winword.exe')
+        else:
+            start_command.append('excel.exe')
+        start_command.extend(['/t', '%f'])
+
+        outer_macros = d_office.get_outer_nodes_from_vba_file(file_path)
+        if not outer_macros:
+            outer_macros = []
+        for outer_macro in outer_macros:
+            start_command.append(f'/m{outer_macro}')
+
+        return subprocess.list2cmdline(start_command)
+
+    def _get_start_command(self, extension, sample, file_path):
         if extension == 'dll':
             start_command = self.current_task.payload.get("start_command", self._get_dll_run_command(sample.content))
         elif extension == 'exe':
             start_command = 'start %f'
-        elif extension in ['doc', 'docm', 'docx', 'dotm']:
-            start_command = 'start winword.exe /t %f'
-        elif extension in ['xls', 'xlsx', 'xlsm', 'xltx', 'xltm']:
-            start_command = 'start excel.exe /t %f'
+        elif d_office.is_office_file(extension):
+            start_command = self._get_office_file_run_command(extension, file_path)
         else:
             self.log.error("Unknown file extension - %s", extension)
             start_command = None
@@ -306,20 +322,23 @@ class DrakrunKarton(Karton):
         if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
             self.log.error("Filename contains invalid characters")
             return
-
         self.log.info("Using file name %s", file_name)
-        start_command = self.current_task.payload.get("start_command", self._get_start_command(extension, sample))
-        if not start_command:
-            self.log.error("Unable to run malware sample, could not generate any suitable command to run it.")
-            return
 
+        # Save sample to disk here as some branches of _get_start_command require file path.
         try:
             shutil.rmtree(workdir)
         except Exception as e:
             print(e)
+        os.makedirs(workdir, exist_ok=True)
+        with open(os.path.join(workdir, file_name), 'wb') as f:
+            f.write(sample.content)
+
+        start_command = self.current_task.payload.get("start_command", self._get_start_command(extension, sample, os.path.join(workdir, file_name)))
+        if not start_command:
+            self.log.error("Unable to run malware sample, could not generate any suitable command to run it.")
+            return
 
         outdir = os.path.join(workdir, 'output')
-        os.makedirs(workdir, exist_ok=True)
         os.mkdir(outdir)
         os.mkdir(os.path.join(outdir, 'dumps'))
 
@@ -331,9 +350,6 @@ class DrakrunKarton(Karton):
 
         with open(os.path.join(outdir, 'sample_sha256.txt'), 'w') as f:
             f.write(hashlib.sha256(sample.content).hexdigest())
-
-        with open(os.path.join(workdir, file_name), 'wb') as f:
-            f.write(sample.content)
 
         watcher_tcpdump = None
         watcher_dnsmasq = None
