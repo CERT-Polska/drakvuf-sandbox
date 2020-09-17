@@ -146,7 +146,7 @@ You may optionally configure your guests to use
 There is an experimental support for analyzing word and excel samples. However this requires that you have Microsoft Office installed.
 
 The steps below should be completed on guest vm before creating the snapshot (e.g. before you run `draksetup postinstall`).
-1. Install Microsoft Office. You should be able to start word/excel by running `start winword.exe`, `start excel.exe` from command line.
+1. Install Microsoft Office. You can use `draksetup mount /path/to/office.iso` command to insert Office installation media during VM setup. After installation, you should be able to start word/excel by running `start winword.exe`, `start excel.exe` from command line.
 2. Adjust the registry keys by adding 3 values (`DWORD VBAWarnings VALUE=1`, `DWORD AccessVBOM VALUE=1`, `DWORD ExtensionHardening VALUE=0`) both to `Computer\HKEY_CURRENT_USER\SOFTWARE\Microsoft\Office\<version>\Word\Security` and to `Computer\HKEY_CURRENT_USER\SOFTWARE\Microsoft\Office\<version>\Excel\Security` keys.
 
 
