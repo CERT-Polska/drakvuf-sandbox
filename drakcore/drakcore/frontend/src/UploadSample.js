@@ -108,7 +108,7 @@ class UploadSample extends Component {
       errMsg = "File name contains invalid characters";
     } else if (
       !fname.match(
-        /^[\w]+\.(?:dll|exe|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm)$/i
+        /^[\w\-.]+\.(?:dll|exe|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm)$/i
       )
     ) {
       errMsg =
