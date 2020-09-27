@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 
 // TODO change this into a button, requires a little bit of styling
 function TabItem({ active, value, onClick }) {
