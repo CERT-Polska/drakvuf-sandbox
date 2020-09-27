@@ -79,29 +79,30 @@ def detect_defaults():
 def ensure_zfs(ctx, param, value):
     if value is not None and ctx.params['storage_backend'] != "zfs":
         raise click.BadParameter("This parameter is valid only with ZFS backend")
+    return value
 
 
 @click.command(help='Install guest Virtual Machine',
                no_args_is_help=True)
 @click.argument('iso_path', type=click.Path(exists=True))
-@click.option('--storage-backend',
+@click.option('--storage-backend', 'storage_backend',
               type=click.Choice(REGISTERED_BACKEND_NAMES, case_sensitive=False),
               default='qcow2',
               show_default=True,
               help='Storage backend', is_eager=True)
-@click.option('--disk-size',
+@click.option('--disk-size', 'disk_size',
               default='100G',
               show_default=True,
               help='Disk size')
-@click.option('--zfs-tank-name',
+@click.option('--zfs-tank-name', 'zfs_tank_name',
               callback=ensure_zfs,
               help='Tank name (only for ZFS storage backend)')
-@click.option('--max-vms',
+@click.option('--max-vms', 'max_vms',
               type=int,
               default=1,
               show_default=True,
               help='Maximum number of simultaneous VMs')
-@click.option('--unattended-xml',
+@click.option('--unattended-xml', 'unattended_xml',
               type=click.Path(exists=True),
               help='Path to autounattend.xml for automated Windows install')
 def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unattended_xml):
@@ -265,7 +266,7 @@ def create_rekall_profiles(install_info: InstallInfo):
 
 
 @click.command()
-@click.option('--report/--no-report',
+@click.option('--report/--no-report', 'report',
               default=True,
               show_default=True,
               help="Send anonymous usage report")
