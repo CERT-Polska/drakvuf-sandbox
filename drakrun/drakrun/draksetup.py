@@ -79,6 +79,7 @@ def detect_defaults():
 def ensure_zfs(ctx, param, value):
     if value is not None and ctx.params['storage_backend'] != "zfs":
         raise click.BadParameter("This parameter is valid only with ZFS backend")
+    return value
 
 
 @click.command(help='Install guest Virtual Machine',
