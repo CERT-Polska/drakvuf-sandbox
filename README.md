@@ -58,12 +58,17 @@ This instruction assumes that you want to create a single-node installation with
    $ vncviewer localhost:5900
    ```
 6. Perform Windows installation until you are booted to the desktop.
-7. Execute:
+7. **Extra software:** At this point you might optionally install additional software. You can execute:
+   ```
+   draksetup mount /path/to/some-cd.iso
+   ```
+   which would mount a virtual CD disk containing additional software into your VM.
+8. In order to finalize the VM setup process, execute:
    ```
    # draksetup postinstall
    ```
    **Note:** Add `--no-report` if you don't want `draksetup` to send [basic usage report](https://github.com/CERT-Polska/drakvuf-sandbox/blob/master/USAGE_STATISTICS.md). 
-8. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
+9. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
 
 ## Optional features
 
