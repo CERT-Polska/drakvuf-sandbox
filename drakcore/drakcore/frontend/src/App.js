@@ -11,6 +11,7 @@ import AnalysisList from "./AnalysisList";
 import AnalysisMain from "./AnalysisMain";
 import AnalysisStatus from "./AnalysisStatus";
 import AnalysisApicall from "./AnalysisApicall";
+import AnalysisLogs from "./AnalysisLogs";
 import UploadSample from "./UploadSample";
 
 function AnalysisEntry(props) {
@@ -47,6 +48,11 @@ class NavBtns extends Component {
             name="API calls"
             url={`/analysis/${analysis_id}/apicalls`}
             icon="uil-heart-rate"
+          />
+          <AnalysisEntry
+            name="Logs"
+            url={`/analysis/${analysis_id}/logs`}
+            icon="uil-processor"
           />
         </div>
       );
@@ -95,13 +101,20 @@ class App extends Component {
             </div>
           </div>
 
-          <div className="content-page">
-            <div className="content">
+          <div className="content-page d-flex" style={{ flexFlow: "column" }}>
+            <div
+              className="content d-flex"
+              style={{ flexFlow: "column", flex: 1 }}
+            >
               <Switch>
                 <Route path="/progress/:analysis" component={AnalysisStatus} />
                 <Route
                   path="/analysis/:analysis/apicalls/:pid?"
                   component={AnalysisApicall}
+                />
+                <Route
+                  path="/analysis/:analysis/logs/:log?"
+                  component={AnalysisLogs}
                 />
                 <Route path="/analysis/:analysis" component={AnalysisMain} />
                 <Route path="/upload" exact component={UploadSample} />

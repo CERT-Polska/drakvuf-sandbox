@@ -10,6 +10,17 @@ export default {
   async getLog(analysis, type) {
     return axios.get(`/logs/${analysis}/${type}`);
   },
+  async getLogRange(analysis, type, from, to) {
+    return axios.get(`/logs/${analysis}/${type}`, {
+      responseType: "text",
+      headers: {
+        Range: `bytes=${from}-${to || ""}`,
+      },
+    });
+  },
+  async logIndex(analysis, type) {
+    return axios.get(`/logindex/${analysis}/${type}`);
+  },
   async listLogs(analysis) {
     return axios.get(`/logs/${analysis}`);
   },
