@@ -288,12 +288,20 @@ class DrakrunKarton(Karton):
     def slice_logs(self, workdir):
         plugin_fd = {}
 
-        with open(os.path.join(workdir, 'drakmon.log'), 'r') as f:
-            for line in f:
+        with open(os.path.join(workdir, 'drakmon.log'), 'rb') as f:
+            while True:
+                line = f.readline()
+
+                if not line:
+                    break
+
                 try:
-                    obj = json.loads(line)
+                    line_s = line.strip().decode('utf-8')
+                    obj = json.loads(line_s)
+                except UnicodeDecodeError:
+                    self.log.exception("BUG: Failed to decode UTF-8 from drakmon.log line: {}".format(line))
                 except json.JSONDecodeError:
-                    self.log.exception("BUG: Failed to parse drakmon.log line: {}".format(line))
+                    self.log.exception("BUG: Failed to JSON parse drakmon.log line: {}".format(line))
 
                 if 'Plugin' not in obj:
                     obj['Plugin'] = 'unknown'
