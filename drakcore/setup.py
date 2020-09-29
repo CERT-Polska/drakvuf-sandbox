@@ -7,7 +7,7 @@ except ImportError:
 
 setup(
     name="drakcore",
-    version="0.9.0",
+    version="0.10.0",
     description="DRAKVUF Sandbox Core",
     package_dir={"drakcore": "drakcore"},
     packages=["drakcore", "drakcore.postprocess"],
