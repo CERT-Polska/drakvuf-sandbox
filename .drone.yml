@@ -4,7 +4,7 @@ name: lint-drakcore
 
 steps:
 - name: flake8 drakcore
-  image: python
+  image: python:3.8-buster
   commands:
     - pip3 install flake8
     - pip3 install -r drakcore/requirements.txt
@@ -28,7 +28,7 @@ name: lint-drakrun
 
 steps:
 - name: flake8 drakrun
-  image: python
+  image: python:3.8-buster
   commands:
     - pip3 install flake8
     - pip3 install -r drakrun/requirements.txt
@@ -114,7 +114,7 @@ name: test-e2e
 
 steps:
 - name: test-e2e
-  image: python
+  image: python:3.8-buster
   commands:
     - mkdir -p ~/.ssh/
     - echo "$ZEN_SSH_KEY" > ~/.ssh/id_rsa
