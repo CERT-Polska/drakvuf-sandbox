@@ -23,8 +23,7 @@ class DrakrunAnalysisConsumer(Karton):
         self.log.info(f"Storing analysis {analysis_uid} into {tmp_dir}")
 
         for name, resource in self.current_task.iterate_resources():
-            with open(os.path.join(tmp_dir, resource.name), 'wb') as f:
-                f.write(self.download_resource(resource).content)
+            resource.download_to_file(os.path.join(tmp_dir, name))
 
         with open(os.path.join(tmp_dir, "procmon.log"), "r") as f:
             self.log.info(f"First 10 lines of procmon output for analysis {self.current_task.uid}")
