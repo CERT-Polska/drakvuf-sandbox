@@ -9,10 +9,12 @@ class AnalysisApicall extends Component {
     super(props);
 
     this.analysis_id = this.props.match.params.analysis;
+    const pid = parseInt(this.props.match.params.pid);
 
     this.state = {
       calls: null,
       processList: [],
+      selectedPid: pid || null,
     };
 
     this.pidChanged = this.pidChanged.bind(this);
@@ -20,7 +22,7 @@ class AnalysisApicall extends Component {
 
   async pidChanged(new_pid) {
     try {
-      this.setState({ calls: null });
+      this.setState({ calls: null, selectedPid: parseInt(new_pid) });
       const res = await api.getApiCalls(this.analysis_id, new_pid);
       const calls = res.data.split("\n").map(JSON.parse);
       this.setState({ calls });
@@ -58,8 +60,6 @@ class AnalysisApicall extends Component {
   }
 
   render() {
-    const url_pid = parseInt(this.props.match.params.pid);
-
     let content;
     if (this.state.calls === null) {
       content = (
@@ -120,7 +120,7 @@ class AnalysisApicall extends Component {
         <div className="card tilebox-one">
           <div className="card-body">
             <OptionPicker
-              defaultSelection={url_pid}
+              selected={this.state.selectedPid}
               data={this.state.processList}
               onChange={this.pidChanged}
               className="mb-1"
