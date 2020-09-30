@@ -103,7 +103,8 @@ class UploadSample extends Component {
     const fname = hasCustomFileName
       ? this.state.customFileName
       : this.state.file.name;
-    if (!fname.match(
+    if (
+      !fname.match(
         /^((?![\\/><|:&])[\x20-\xfe])+\.(?:dll|exe|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm)$/i
       )
     ) {
