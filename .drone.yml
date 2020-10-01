@@ -147,3 +147,22 @@ trigger:
   event:
     exclude:
     - pull_request
+
+---
+kind: pipeline
+type: docker
+name: build-docs
+
+steps:
+- name: build-docs
+  image: python:3.8-buster
+  commands:
+    - cd docs
+    - pip install -r requirements.txt
+    - make html
+node:
+   purpose: generic
+trigger:
+  event:
+    exclude:
+    - pull_request
