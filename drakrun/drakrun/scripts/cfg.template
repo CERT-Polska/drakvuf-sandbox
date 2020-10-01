@@ -19,7 +19,7 @@ usbdevice = "tablet"
 altp2m = 2
 shadow_memory = 16
 audio=1
-soundhw='hda'
+soundhw='ac97'
 cpuid="host,htt=0"
 vga="stdvga"
 vif = [ 'type=ioemu,model=e1000,bridge=drak{{ VM_ID }}' ]
