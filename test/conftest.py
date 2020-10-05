@@ -18,7 +18,7 @@ from utils import apt_install, dpkg_install, VMRunner
 logging.basicConfig(level=logging.INFO)
 
 DRONE_BUILD_NUMBER = os.getenv("DRONE_BUILD_NUMBER")
-DRAKVUF_COMMIT = subprocess.check_output(["git", "ls-tree", "HEAD", "drakvuf"]).split()[2].decode()
+DRAKVUF_COMMIT = subprocess.check_output(["git", "ls-tree", "HEAD", "../drakvuf"]).split()[2].decode()
 
 VM_SNAPSHOT_BASE = os.getenv("VM_SNAPSHOT_BASE")
 VM_RUNNER_HOST = "http://" + os.getenv("VM_RUNNER_HOST")
