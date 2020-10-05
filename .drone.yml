@@ -110,6 +110,40 @@ trigger:
 ---
 kind: pipeline
 type: docker
+name: build-drakvuf-bundle
+
+steps:
+- name: package drakvuf-bundle
+  image: debian:buster
+  commands:
+    # Install dependencies
+    - export DEBIAN_FRONTEND=noninteractive
+    - apt-get update && apt-get install -y -q git wget
+    # Configure Minio
+    - wget -q -O /usr/local/bin/mc http://192.168.21.1:5000/static/mc
+    - chmod +x /usr/local/bin/mc
+    - mc config host add cache http://192.168.21.131:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+    - mc mb --ignore-existing cache/debs
+    # Checkout submodules
+    - git submodule update --init --recursive
+    - export DRAKVUF_COMMIT=$(git ls-tree HEAD drakvuf | awk '{ print $3 }')
+    # Build drakvuf-bundle
+    - sh drakvuf/package/depends.sh
+    - bash ci/build_bundle.sh
+  environment:
+    MINIO_ACCESS_KEY:
+      from_secret: MINIO_ACCESS_KEY
+    MINIO_SECRET_KEY:
+      from_secret: MINIO_SECRET_KEY
+node:
+   purpose: generic
+trigger:
+  event:
+    exclude:
+    - pull_request
+---
+kind: pipeline
+type: docker
 name: test-e2e
 
 steps:
