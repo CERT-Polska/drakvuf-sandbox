@@ -38,7 +38,7 @@ Feel free to contact us if you have any questions or comments.
 * Michał Leszczyński ([@icedevml](https://github.com/icedevml)) - monk@cert.pl
 * Adam Kliś ([@BonusPlay](https://github.com/BonusPlay)) - bonus@cert.pl
 * Hubert Jasudowicz ([@chivay](https://github.com/chivay)) - chivay@cert.pl
-* Konstanty Cieśliński ([@kcieslinski](https://github.com/kcieslinski)) - konstanty.cieslinski@cert.pl
+* Konstanty Cieśliński ([@kscieslinski](https://github.com/kscieslinski)) - konstanty.cieslinski@cert.pl
 
 You can also reach us on IRC - [#drakvuf-sandbox@irc.freenode.net](https://webchat.freenode.net/#drakvuf-sandbox).
 
