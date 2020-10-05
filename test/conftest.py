@@ -3,6 +3,7 @@ import os
 import logging
 import socket
 import time
+import subprocess
 import paramiko.config
 import pytest
 
@@ -17,6 +18,7 @@ from utils import apt_install, dpkg_install, VMRunner
 logging.basicConfig(level=logging.INFO)
 
 DRONE_BUILD_NUMBER = os.getenv("DRONE_BUILD_NUMBER")
+DRAKVUF_COMMIT = subprocess.check_output(["git", "ls-tree", "HEAD", "drakvuf"]).split()[2].decode()
 
 VM_SNAPSHOT_BASE = os.getenv("VM_SNAPSHOT_BASE")
 VM_RUNNER_HOST = "http://" + os.getenv("VM_RUNNER_HOST")
@@ -26,6 +28,7 @@ MINIO_HOST = os.getenv("MINIO_HOST")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
 
+BUNDLE_DEB = f"drakvuf-bundle-{DRAKVUF_COMMIT}.deb"
 MINIO_DEBS = [
     f"drakcore_drone-{DRONE_BUILD_NUMBER}.deb",
     f"drakrun_drone-{DRONE_BUILD_NUMBER}.deb",
@@ -44,7 +47,6 @@ DRAKMON_DEPS = [
     "ntfs-3g",
 ]
 
-DRAKVUF_BUNDLE_URL = "https://github.com/tklengyel/drakvuf-builds/releases/download/20200927123050-88b9063/drakvuf-bundle-0.8-git20200927080352+88b9063-1-generic.deb"
 DRAKVUF_DEPS = [
     "libpixman-1-0",
     "libpng16-16",
@@ -90,19 +92,6 @@ def server_alive(host, port):
         s.close()
 
 
-def download_file(url, download_path=Path(".")):
-    filename = url.split("/")[-1]
-    logging.info(f"Downloading {filename}")
-    filepath = download_path / filename
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(filepath, "wb") as f:
-            for chunk in r.iter_content(chunk_size=32 * 1024):
-                if chunk:
-                    f.write(chunk)
-    return filepath
-
-
 def download_debs(objects, download_path=Path(".")):
     mc = Minio(
         MINIO_HOST,
@@ -134,7 +123,7 @@ def drakmon_vm():
     logging.info("Running end to end test")
 
     debs = download_debs(MINIO_DEBS)
-    drakvuf_bundle = download_file(DRAKVUF_BUNDLE_URL)
+    [drakvuf_bundle] = download_debs([BUNDLE_DEB])
 
     vm_runner.set_snapshot(VM_SNAPSHOT_BASE)
     vm_runner.rebuild_vm()

@@ -150,6 +150,7 @@ steps:
 - name: test-e2e
   image: python:3.8-buster
   commands:
+    - apt-get update && apt-get install -y git
     - mkdir -p ~/.ssh/
     - echo "$ZEN_SSH_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
@@ -177,6 +178,7 @@ depends_on:
 - lint-drakrun
 - build-drakcore
 - build-drakrun
+- build-drakvuf-bundle
 trigger:
   event:
     exclude:
