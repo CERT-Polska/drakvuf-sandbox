@@ -35,9 +35,10 @@ See the docs for the [installation guide](https://drakvuf-sandbox.readthedocs.io
 
 Feel free to contact us if you have any questions or comments.
 
-* Michał Leszczyński - monk@cert.pl
-* Adam Kliś - bonus@cert.pl
-* Hubert Jasudowicz - chivay@cert.pl
+* Michał Leszczyński ([@icedevml](https://github.com/icedevml)) - monk@cert.pl
+* Adam Kliś ([@BonusPlay](https://github.com/BonusPlay)) - bonus@cert.pl
+* Hubert Jasudowicz ([@chivay](https://github.com/chivay)) - chivay@cert.pl
+* Konstanty Cieśliński ([@kscieslinski](https://github.com/kscieslinski)) - konstanty.cieslinski@cert.pl
 
 You can also reach us on IRC - [#drakvuf-sandbox@irc.freenode.net](https://webchat.freenode.net/#drakvuf-sandbox).
 
