@@ -311,9 +311,9 @@ def is_office_word_file(extension):
     return extension in ['doc', 'docm', 'docx', 'dotm']
 
 
-def is_office_exel_file(extension):
+def is_office_excel_file(extension):
     return extension in ['xls', 'xlsx', 'xlsm', 'xltx', 'xltm']
 
 
 def is_office_file(extension):
-    return is_office_word_file(extension) or is_office_exel_file(extension)
+    return is_office_word_file(extension) or is_office_excel_file(extension)
