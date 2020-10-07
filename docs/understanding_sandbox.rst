@@ -2,11 +2,22 @@
 Understanding the sandbox
 =========================
 
+Tech stack
+----------
+DRAKVUF Sandbox is built on top of a few layers of software and hardware technologies:
+
+* Intel VT-x and EPT - extensions to x64 architecture that allow to run virtual machines natively on a CPU
+* Xen - hypervisor, spawns virtual machines and exposes interfaces for interaction and introspection
+* LibVMI - abstracts away introspection interfaces, provides utilities for reading/writing VM memory, parsing VMs' kernel and handling notifications about certain events happening in a VM
+* DRAKVUF - stealthily hooks various parts of a guest VM and logs interesting events
+* DRAKVUF Sandbox - provides user friendly interface and high level analyses
+
+Project structure
+-----------------
 DRAKVUF Sandbox is divided into two packages:
 
 * drakcore - system core, provides a web interface, an internal task queue and object storage
 * drakrun - sandbox worker, wrapper for DRAKVUF, responsible for managing VMs, running analyses and sending results for further postprocessing.
-
 
 .. note ::
    `DRAKVUF engine <https://github.com/tklengyel/drakvuf>`_ is a separate project authored by Tamas K Lengyel.
