@@ -1,6 +1,7 @@
 import json
 import os
 from tempfile import NamedTemporaryFile
+import re
 
 import requests
 import logging
@@ -71,6 +72,9 @@ def upload():
         filename = request.form.get("file_name")
     else:
         filename = request.files['file'].filename
+    if not re.fullmatch(r'^((?![\\/><|:&])[\x20-\xfe])+\.(?:dll|exe|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm)$',
+                        filename, flags=re.IGNORECASE):
+        return jsonify({"error": "invalid file_name"}), 400
     task.add_payload("file_name", os.path.splitext(filename)[0])
 
     # Extract and add extension
