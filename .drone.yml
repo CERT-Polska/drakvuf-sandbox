@@ -53,21 +53,24 @@ steps:
     - apt-get install -y wget curl python3 python3-venv python3-pip dh-virtualenv debhelper devscripts
     - curl -sL https://deb.nodesource.com/setup_14.x | bash -
     - apt-get install -y nodejs
-    - wget -O /usr/local/bin/mc $CACHE_SERVER/mc
-    - chmod +x /usr/local/bin/mc
-    - mc config host add cache http://192.168.21.131:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
-    - mc mb --ignore-existing cache/debs
     - cd drakcore
-    - wget -O drakcore/systemd/minio $CACHE_SERVER/minio
+    - wget -q -O drakcore/systemd/minio $CACHE_SERVER/minio
     - package/find-python.sh
     - dpkg-buildpackage -us -uc -b
-    - mc cp ../drakcore_*_amd64.deb "cache/debs/drakcore_drone-$DRONE_BUILD_NUMBER.deb"
+  environment:
+    CACHE_SERVER: http://192.168.21.1:5000/static
+- name: upload deb
+  image: minio/mc
+  commands:
+    - mc config host add cache "$MINIO_SERVER" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+    - mc mb --ignore-existing cache/debs
+    - mc cp ./drakcore_*_amd64.deb "cache/debs/drakcore_drone-$DRONE_BUILD_NUMBER.deb"
   environment:
     MINIO_ACCESS_KEY:
       from_secret: MINIO_ACCESS_KEY
     MINIO_SECRET_KEY:
       from_secret: MINIO_SECRET_KEY
-    CACHE_SERVER: http://192.168.21.1:5000/static
+    MINIO_SERVER: http://192.168.21.131:9000
 node:
    purpose: generic
 trigger:
@@ -88,19 +91,21 @@ steps:
     - apt-get install -y wget python3 python3-pip python3-venv dh-virtualenv debhelper devscripts libpixman-1-0 libpng16-16 libfdt1 libglib2.0-dev libjson-c3 libyajl2 libaio1
     - wget -O drakvuf.deb https://github.com/tklengyel/drakvuf-builds/releases/download/20200317014821-a1ef03c/drakvuf-bundle-0.7-a1ef03c-generic.deb
     - dpkg -i drakvuf.deb
-    - wget -O /usr/local/bin/mc http://192.168.21.1:5000/static/mc
-    - chmod +x /usr/local/bin/mc
-    - mc config host add cache http://192.168.21.131:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
-    - mc mb --ignore-existing cache/debs
     - cd drakrun
     - package/find-python.sh
     - dpkg-buildpackage -us -uc -b
-    - mc cp ../drakrun_*_amd64.deb "cache/debs/drakrun_drone-$DRONE_BUILD_NUMBER.deb"
+- name: upload deb
+  image: minio/mc
+  commands:
+    - mc config host add cache "$MINIO_SERVER" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+    - mc mb --ignore-existing cache/debs
+    - mc cp ./drakrun_*_amd64.deb "cache/debs/drakrun_drone-$DRONE_BUILD_NUMBER.deb"
   environment:
     MINIO_ACCESS_KEY:
       from_secret: MINIO_ACCESS_KEY
     MINIO_SECRET_KEY:
       from_secret: MINIO_SECRET_KEY
+    MINIO_SERVER: http://192.168.21.131:9000
 node:
    purpose: generic
 trigger:
