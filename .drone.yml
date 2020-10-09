@@ -207,3 +207,44 @@ trigger:
   event:
     exclude:
     - pull_request
+---
+kind: pipeline
+type: docker
+name: build-base-image
+
+steps:
+- name: get DRAKVUF commit
+  image: alpine/git
+  commands:
+      - git submodule update --init --recursive
+      - export DRAKVUF_COMMIT=$(git ls-tree HEAD drakvuf | awk '{ print $3 }')
+      - echo "$DRAKVUF_COMMIT" > drakvuf_commit.txt
+- name: get mc
+  image: minio/mc
+  commands:
+      # Get mc binary for next step
+      - cp $(which mc) .
+- name: build VM
+  image: hashicorp/packer:light
+  commands:
+      - mv mc /bin
+      - mc config host add cache "$MINIO_SERVER" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+      - mc mb --ignore-existing cache/images
+      - export DRAKVUF_COMMIT=$(cat drakvuf_commit.txt)
+      - apk add qemu-system-x86_64 qemu-img
+      - cd ci/packer
+      - sh build_vm.sh
+  environment:
+    MINIO_ACCESS_KEY:
+      from_secret: MINIO_ACCESS_KEY
+    MINIO_SECRET_KEY:
+      from_secret: MINIO_SECRET_KEY
+    MINIO_SERVER: http://192.168.21.131:9000
+node:
+   purpose: generic
+depends_on:
+- build-drakvuf-bundle
+trigger:
+  event:
+    exclude:
+    - pull_request
