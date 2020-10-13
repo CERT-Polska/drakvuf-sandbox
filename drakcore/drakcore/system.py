@@ -23,6 +23,12 @@ def main():
     config = Config(find_config())
     service = SystemService(config)
 
+    system_disable = config.config["drakmon"].get("system_disable", "1")
+
+    if system_disable == "1":
+        service.log.info("Refusing to start, system_disable=1 is set in config.ini")
+        return
+
     bucket_name = config.minio_config["bucket"]
 
     service.log.info("Verifying bucket existence...")
