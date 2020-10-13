@@ -383,7 +383,7 @@ class DrakrunKarton(Karton):
             return
 
         os.makedirs(workdir, exist_ok=True)
-        
+
         outdir = os.path.join(workdir, 'output')
         os.mkdir(outdir)
         os.mkdir(os.path.join(outdir, 'dumps'))
