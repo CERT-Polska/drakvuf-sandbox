@@ -24,7 +24,7 @@ def main():
     service = SystemService(config)
     drakmon_cfg = {k: v for k, v in config.config.items("drakmon")}
 
-    system_disable = str(drakmon_cfg.get("system_disable", "1"))
+    system_disable = config.config["drakmon"].get("system_disable")
 
     if system_disable == "1":
         service.log.info("Refusing to start, system_disable=1 is set in config.ini")
