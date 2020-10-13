@@ -21,8 +21,15 @@ def get_minio_helper(config: Config):
 
 def main():
     config = Config(find_config())
-    service = SystemService(config)
+    drakmon_cfg = {k: v for k, v in config.config.items("drakmon")}
 
+    system_disable = str(drakmon_cfg.get("system_disable", "1"))
+
+    if system_disable == "1":
+        service.log.info("Refusing to start, system_disable=1 is set in config.ini")
+        return
+
+    service = SystemService(config)
     bucket_name = config.minio_config["bucket"]
 
     service.log.info("Verifying bucket existence...")
