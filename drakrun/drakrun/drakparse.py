@@ -168,7 +168,7 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
 
         try:
             plugin = line_obj["Plugin"]
-        except KeyError as e:
+        except KeyError:
             logging.warning(f"BUG: Line is missing plugin name!\n{line}")
             continue
 
@@ -176,7 +176,7 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
             plugin_obj = switcher[plugin]
             try:
                 converted = str(plugin_obj(line_obj))
-            except Exception as e:
+            except Exception:
                 logging.exception(f"BUG: Failed to parse log entry.\n{line}")
                 continue
 
