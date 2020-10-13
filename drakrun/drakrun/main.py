@@ -15,6 +15,7 @@ import functools
 from io import StringIO
 from typing import Optional, List
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
+from configparser import NoOptionError
 
 import pefile
 import magic
@@ -132,6 +133,8 @@ def with_logs(object_name):
 
 
 class DrakrunKarton(Karton):
+    # this might be changed by initialization
+    # if different identity name is specified in config
     identity = "karton.drakrun-prod"
     filters = [
         {
@@ -583,6 +586,14 @@ def main():
     if not conf.config.get('minio', 'access_key').strip():
         logging.warning(f"Detected blank value for minio access_key in {conf_path}. "
                         "This service may not work properly.")
+
+    try:
+        identity = conf.config.get('drakrun', 'identity')
+    except NoOptionError:
+        pass
+    else:
+        DrakrunKarton.identity = identity
+        logging.warning(f"Overriding identity to: {identity}")
 
     c = DrakrunKarton(conf)
     c.init_drakrun()
