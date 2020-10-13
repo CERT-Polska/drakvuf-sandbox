@@ -20,7 +20,7 @@ class AnalysisList extends Component {
 
   formatTimestamp(ts) {
     if (!ts) {
-        return "-";
+      return "-";
     }
 
     return new Date(ts * 1000)
