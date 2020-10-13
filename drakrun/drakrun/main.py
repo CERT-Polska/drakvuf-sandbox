@@ -376,6 +376,23 @@ class DrakrunKarton(Karton):
 
         workdir = '/tmp/drakrun/vm-{}'.format(int(INSTANCE_ID))
 
+        try:
+            shutil.rmtree(workdir)
+        except Exception as e:
+            self.log.exception("Failed to clear working directory.")
+            return
+
+        os.makedirs(workdir, exist_ok=True)
+
+        metadata = {
+            "sample_sha256": sha256sum,
+            "magic_output": magic_output,
+            "time_started": int(time.time())
+        }
+
+        with open(os.path.join(outdir, 'metadata.json'), 'w') as f:
+            f.write(json.dumps(metadata))
+
         extension = self.current_task.headers.get("extension", "exe").lower()
         if '(DLL)' in magic_output:
             extension = 'dll'
@@ -389,28 +406,17 @@ class DrakrunKarton(Karton):
         self.log.info("Using file name %s", file_name)
 
         # Save sample to disk here as some branches of _get_start_command require file path.
-        try:
-            shutil.rmtree(workdir)
-        except Exception as e:
-            print(e)
-        os.makedirs(workdir, exist_ok=True)
         with open(os.path.join(workdir, file_name), 'wb') as f:
             f.write(sample.content)
-
-        start_command = self.current_task.payload.get("start_command", self._get_start_command(extension, sample, os.path.join(workdir, file_name)))
-        if not start_command:
-            self.log.error("Unable to run malware sample, could not generate any suitable command to run it.")
-            return
 
         outdir = os.path.join(workdir, 'output')
         os.mkdir(outdir)
         os.mkdir(os.path.join(outdir, 'dumps'))
 
-        metadata = {
-            "sample_sha256": sha256sum,
-            "magic_output": magic_output,
-            "time_started": int(time.time())
-        }
+        start_command = self.current_task.payload.get("start_command", self._get_start_command(extension, sample, os.path.join(workdir, file_name)))
+        if not start_command:
+            self.log.error("Unable to run malware sample, could not generate any suitable command to run it.")
+            return
 
         with open(os.path.join(outdir, 'sample_sha256.txt'), 'w') as f:
             f.write(hashlib.sha256(sample.content).hexdigest())
