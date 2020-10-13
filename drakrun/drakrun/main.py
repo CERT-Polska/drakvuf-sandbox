@@ -409,14 +409,14 @@ class DrakrunKarton(Karton):
         with open(os.path.join(workdir, file_name), 'wb') as f:
             f.write(sample.content)
 
-        outdir = os.path.join(workdir, 'output')
-        os.mkdir(outdir)
-        os.mkdir(os.path.join(outdir, 'dumps'))
-
         start_command = self.current_task.payload.get("start_command", self._get_start_command(extension, sample, os.path.join(workdir, file_name)))
         if not start_command:
             self.log.error("Unable to run malware sample, could not generate any suitable command to run it.")
             return
+
+        outdir = os.path.join(workdir, 'output')
+        os.mkdir(outdir)
+        os.mkdir(os.path.join(outdir, 'dumps'))
 
         with open(os.path.join(outdir, 'sample_sha256.txt'), 'w') as f:
             f.write(hashlib.sha256(sample.content).hexdigest())
