@@ -378,11 +378,15 @@ class DrakrunKarton(Karton):
 
         try:
             shutil.rmtree(workdir)
-        except Exception as e:
+        except Exception:
             self.log.exception("Failed to clear working directory.")
             return
 
         os.makedirs(workdir, exist_ok=True)
+        
+        outdir = os.path.join(workdir, 'output')
+        os.mkdir(outdir)
+        os.mkdir(os.path.join(outdir, 'dumps'))
 
         metadata = {
             "sample_sha256": sha256sum,
@@ -392,6 +396,9 @@ class DrakrunKarton(Karton):
 
         with open(os.path.join(outdir, 'metadata.json'), 'w') as f:
             f.write(json.dumps(metadata))
+
+        with open(os.path.join(outdir, 'sample_sha256.txt'), 'w') as f:
+            f.write(hashlib.sha256(sample.content).hexdigest())
 
         extension = self.current_task.headers.get("extension", "exe").lower()
         if '(DLL)' in magic_output:
@@ -413,13 +420,6 @@ class DrakrunKarton(Karton):
         if not start_command:
             self.log.error("Unable to run malware sample, could not generate any suitable command to run it.")
             return
-
-        outdir = os.path.join(workdir, 'output')
-        os.mkdir(outdir)
-        os.mkdir(os.path.join(outdir, 'dumps'))
-
-        with open(os.path.join(outdir, 'sample_sha256.txt'), 'w') as f:
-            f.write(hashlib.sha256(sample.content).hexdigest())
 
         watcher_tcpdump = None
         watcher_dnsmasq = None
