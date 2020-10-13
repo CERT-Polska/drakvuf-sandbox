@@ -176,8 +176,8 @@ def drakmon_vm():
 
 @pytest.fixture(scope="session")
 def karton_bucket(drakmon_vm):
-    """ Wait up to 10 seconds until karton2 bucket appears """
-    for _ in range(10):
+    """ Wait up to 30 seconds until karton2 bucket appears """
+    for _ in range(30):
         try:
             drakmon_vm.run("[[ -f /var/lib/drakcore/minio/karton2 ]]")
             drakmon_vm.run("[[ -f /var/lib/drakcore/minio/drakrun ]]")
