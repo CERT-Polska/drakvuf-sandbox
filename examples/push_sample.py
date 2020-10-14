@@ -2,6 +2,7 @@
 import argparse
 import requests
 import time
+import os
 from requests.exceptions import ConnectionError, HTTPError
 
 parser = argparse.ArgumentParser(description='Analyze a sample in DRAKVUF Sandbox')
@@ -23,7 +24,7 @@ def push_file(host, fpath):
     url = f'{host}/upload'
     try:
         with open(fpath, 'rb') as sample_file:
-            r = requests.post(url, files={'file': sample_file})
+            r = requests.post(url, files={'file': (os.path.basename(sample_file), open(sample_file, "rb"))})
             r.raise_for_status()
         return r.json()["task_uid"]
     except ConnectionError:
