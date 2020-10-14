@@ -8,8 +8,8 @@ parser = argparse.ArgumentParser(description='Analyze a sample in DRAKVUF Sandbo
 parser.add_argument('file',
                     help='Analyzed file')
 parser.add_argument('--url', dest='api_host',
-                    default="http://localhost:5000",
-                    help='API server URL (default: http://localhost:5000)')
+                    default="http://localhost:6300",
+                    help='API server URL (default: http://localhost:6300)')
 parser.add_argument('--wait', dest='wait', action="store_false",
                     help='Wait until analysis is finished')
 
