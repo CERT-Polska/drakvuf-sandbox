@@ -22,11 +22,11 @@ import magic
 import ntpath
 from karton2 import Karton, Config, Task, LocalResource
 
-import drakrun.run as d_run
 import drakrun.office as d_office
 from drakrun.drakpdb import dll_file_list
 from drakrun.drakparse import parse_logs
-from drakrun.config import LIB_DIR, ETC_DIR
+from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
+from drakrun.storage import get_storage_backend
 
 INSTANCE_ID = None
 PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
@@ -348,6 +348,31 @@ class DrakrunKarton(Karton):
 
         return out
 
+    @staticmethod
+    def run_vm(vm_id):
+        install_info = InstallInfo.load()
+
+        try:
+            subprocess.check_output(["xl", "destroy", "vm-{vm_id}".format(vm_id=vm_id)], stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError:
+            pass
+
+        storage_backend = get_storage_backend(install_info)
+        snapshot_version = storage_backend.get_vm0_snapshot_time()
+        storage_backend.rollback_vm_storage(vm_id)
+
+        try:
+            subprocess.run(["xl", "-vvv", "restore",
+                            os.path.join(ETC_DIR, "configs/vm-{vm_id}.cfg".format(vm_id=vm_id)),
+                            os.path.join(LIB_DIR, "volumes/snapshot.sav")], check=True)
+        except subprocess.CalledProcessError:
+            logging.exception("Failed to restore VM {vm_id}".format(vm_id=vm_id))
+
+            with open("/var/log/xen/qemu-dm-vm-{vm_id}.log".format(vm_id=vm_id), "rb") as f:
+                logging.error(f.read())
+
+        return snapshot_version
+
     @with_logs('drakrun.log')
     def process(self):
         sample = self.current_task.get_resource("sample")
@@ -423,8 +448,8 @@ class DrakrunKarton(Karton):
                 self.log.info("running vm {}".format(INSTANCE_ID))
                 watcher_dnsmasq = start_dnsmasq(INSTANCE_ID, self.config.config['drakrun'].get('dns_server', '8.8.8.8'))
 
-                d_run.logging = self.log
-                d_run.run_vm(INSTANCE_ID)
+                snapshot_version = self.run_vm(INSTANCE_ID)
+                metadata['snapshot_version'] = snapshot_version
 
                 watcher_tcpdump = start_tcpdump_collector(INSTANCE_ID, outdir)
 
