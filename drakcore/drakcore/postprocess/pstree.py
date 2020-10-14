@@ -67,7 +67,8 @@ def tree_from_log(file):
     for line in file:
         try:
             entry = json.loads(line)
-            pstree.add_process(entry["PID"], entry["PPID"], entry["ProcessName"])
+            proc_name = entry.get("RunningProcess", entry.get("ProcessName"))
+            pstree.add_process(entry["PID"], entry["PPID"], proc_name)
         except KeyError as e:
             logging.warning(f"JSON is missing required field\n{e}")
             continue
