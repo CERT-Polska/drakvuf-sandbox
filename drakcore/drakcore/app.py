@@ -42,7 +42,7 @@ def route_list():
             tmp = minio.get_object("drakrun", os.path.join(obj.object_name, "metadata.json"))
             meta = json.loads(tmp.read())
         except NoSuchKey:
-            meta = {}
+            continue
 
         analyses.append({"id": obj.object_name.strip('/'), "meta": meta})
 
