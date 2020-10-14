@@ -35,6 +35,10 @@ See the docs for the [installation guide](https://drakvuf-sandbox.readthedocs.io
 
 Feel free to contact us if you have any questions or comments.
 
+**General contact email: drakvuf@cert.pl** (fastest response)
+
+This project is authored by:
+
 * Michał Leszczyński ([@icedevml](https://github.com/icedevml)) - monk@cert.pl
 * Adam Kliś ([@BonusPlay](https://github.com/BonusPlay)) - bonus@cert.pl
 * Hubert Jasudowicz ([@chivay](https://github.com/chivay)) - chivay@cert.pl
