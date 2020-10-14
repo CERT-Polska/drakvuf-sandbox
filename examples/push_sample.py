@@ -23,9 +23,8 @@ def check_status(host, task_uid):
 def push_file(host, fpath):
     url = f'{host}/upload'
     try:
-        with open(fpath, 'rb') as sample_file:
-            r = requests.post(url, files={'file': (os.path.basename(sample_file), open(sample_file, "rb"))})
-            r.raise_for_status()
+        r = requests.post(url, files={'file': (os.path.basename(fpath), open(fpath, "rb"))})
+        r.raise_for_status()
         return r.json()["task_uid"]
     except ConnectionError:
         print(f'Connection failed to {host}')
