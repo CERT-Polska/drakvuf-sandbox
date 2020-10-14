@@ -72,7 +72,7 @@ class Regmon(Base):
 class Procmon(Base):
     def __init__(self, obj: Dict):
         if obj["Method"] == "NtCreateUserProcess":
-            super().__init__(obj, "Process Create", obj["ImagePathName"], detail=f'PID: {obj["NewPid"]}, Command line: {obj["CmdLine"]}')
+            super().__init__(obj, "Process Create", obj["ImagePathName"], detail=f'PID: {obj["NewPid"]}, Command line: {obj["CommandLine"]}')
 
         # fallback
         if not hasattr(self, "valid") or not self.valid:
