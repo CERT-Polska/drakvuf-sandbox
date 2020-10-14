@@ -18,11 +18,6 @@ def run_vm(vm_id):
     except subprocess.CalledProcessError:
         pass
 
-    try:
-        os.unlink(os.path.join(LIB_DIR, "volumes/vm-{vm_id}.img".format(vm_id=vm_id)))
-    except FileNotFoundError:
-        pass
-
     storage_backend = get_storage_backend(install_info)
     storage_backend.rollback_vm_storage(vm_id)
 
