@@ -115,6 +115,24 @@ trigger:
 ---
 kind: pipeline
 type: docker
+name: build-docs
+
+steps:
+- name: build-docs
+  image: python:3.8-buster
+  commands:
+    - cd docs
+    - pip install -r requirements.txt
+    - make html
+node:
+   purpose: generic
+trigger:
+  event:
+    exclude:
+    - pull_request
+---
+kind: pipeline
+type: docker
 name: build-drakvuf-bundle
 
 steps:
@@ -140,67 +158,6 @@ steps:
       from_secret: MINIO_ACCESS_KEY
     MINIO_SECRET_KEY:
       from_secret: MINIO_SECRET_KEY
-node:
-   purpose: generic
-trigger:
-  event:
-    exclude:
-    - pull_request
----
-kind: pipeline
-type: docker
-name: test-e2e
-
-steps:
-- name: test-e2e
-  image: python:3.8-buster
-  commands:
-    - apt-get update && apt-get install -y git
-    - mkdir -p ~/.ssh/
-    - echo "$ZEN_SSH_KEY" > ~/.ssh/id_rsa
-    - chmod 600 ~/.ssh/id_rsa
-    - cd test
-    - pip install -r requirements.txt
-    - pytest --capture=no
-  environment:
-  # Clean debian image
-  # VM_SNAPSHOT_BASE = "snap1585837798"
-  # Debian with preconfigured Windows in /var/lib/drakrun and /etc/drakrun
-    VM_SNAPSHOT_BASE: snap1587390752
-    VM_RUNNER_HOST: "192.168.21.1:5000"
-    VM_HOST: "192.168.21.129"
-    MINIO_HOST: "192.168.21.131:9000"
-    MINIO_ACCESS_KEY:
-      from_secret: MINIO_ACCESS_KEY
-    MINIO_SECRET_KEY:
-      from_secret: MINIO_SECRET_KEY
-    ZEN_SSH_KEY:
-      from_secret: ZEN_SSH_KEY
-node:
-   purpose: e2e
-depends_on:
-- lint-drakcore
-- lint-drakrun
-- build-drakcore
-- build-drakrun
-- build-drakvuf-bundle
-trigger:
-  event:
-    exclude:
-    - pull_request
-
----
-kind: pipeline
-type: docker
-name: build-docs
-
-steps:
-- name: build-docs
-  image: python:3.8-buster
-  commands:
-    - cd docs
-    - pip install -r requirements.txt
-    - make html
 node:
    purpose: generic
 trigger:
@@ -244,6 +201,49 @@ node:
    purpose: generic
 depends_on:
 - build-drakvuf-bundle
+trigger:
+  event:
+    exclude:
+    - pull_request
+---
+kind: pipeline
+type: docker
+name: test-e2e
+
+steps:
+- name: test-e2e
+  image: python:3.8-buster
+  commands:
+    - apt-get update && apt-get install -y git
+    - mkdir -p ~/.ssh/
+    - echo "$ZEN_SSH_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - cd test
+    - pip install -r requirements.txt
+    - pytest --capture=no
+  environment:
+  # Clean debian image
+  # VM_SNAPSHOT_BASE = "snap1585837798"
+  # Debian with preconfigured Windows in /var/lib/drakrun and /etc/drakrun
+    VM_SNAPSHOT_BASE: snap1587390752
+    VM_RUNNER_HOST: "192.168.21.1:5000"
+    VM_HOST: "192.168.21.129"
+    MINIO_HOST: "192.168.21.131:9000"
+    MINIO_ACCESS_KEY:
+      from_secret: MINIO_ACCESS_KEY
+    MINIO_SECRET_KEY:
+      from_secret: MINIO_SECRET_KEY
+    ZEN_SSH_KEY:
+      from_secret: ZEN_SSH_KEY
+node:
+   purpose: e2e
+depends_on:
+- lint-drakcore
+- lint-drakrun
+- build-drakcore
+- build-drakrun
+- build-drakvuf-bundle
+- build-base-image
 trigger:
   event:
     exclude:
