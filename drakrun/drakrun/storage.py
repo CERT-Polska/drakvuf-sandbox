@@ -47,6 +47,10 @@ class StorageBackendBase:
         """ Rolls back changes and prepares fresh storage for new run of this VM """
         raise NotImplementedError
 
+    def get_vm0_snapshot_time(self):
+        """ Get UNIX timestamp of when vm-0 snapshot was last modified """
+        raise NotImplementedError
+
     def vm0_root_as_block(self) -> Generator[str, None, None]:
         """ Mounts vm-0 root partition as block device
 
@@ -137,6 +141,12 @@ class ZfsStorageBackend(StorageBackendBase):
 
         subprocess.run(["zfs", "rollback", vm_snap], check=True)
 
+    def get_vm0_snapshot_time(self):
+        base_snap = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0@booted"))
+        out = subprocess.check_output(f"zfs get -H -p -o value creation {base_snap}", shell=True)
+        ts = int(out.decode('ascii').strip())
+        return ts
+
     @contextlib.contextmanager
     def vm0_root_as_block(self) -> Generator[str, None, None]:
         # workaround for not being able to mount a snapshot
@@ -222,6 +232,9 @@ class Qcow2StorageBackend(StorageBackendBase):
             ],
             check=True,
         )
+
+    def get_vm0_snapshot_time(self):
+        return int(os.path.getmtime(os.path.join(LIB_DIR, 'volumes', 'vm-0.img')))
 
     @contextlib.contextmanager
     def vm0_root_as_block(self) -> Generator[str, None, None]:
