@@ -25,8 +25,8 @@ def process_logfile(log):
                 "arguments": entry["Arguments"],
                 "returnvalue": entry["ReturnValue"],
             }
-        except KeyError as e:
-            logging.warning(f"JSON is missing a required field\n{e}")
+        except KeyError:
+            logging.exception(f"JSON is missing a required field\n{line}")
             continue
         except json.JSONDecodeError as e:
             logging.warning(f"line cannot be parsed as JSON\n{e}")
