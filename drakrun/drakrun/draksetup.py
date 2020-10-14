@@ -274,13 +274,17 @@ def create_rekall_profiles(install_info: InstallInfo):
               default=True,
               show_default=True,
               help="Generate user mode profiles")
-def postinstall(report, generate_usermode):
+@click.option('--timeout', 'timeout',
+              default=30
+              show_default=True,
+              help="Timeout (in seconds) for subprocesses")
+def postinstall(report, generate_usermode, timeout):
     if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
         report = False
 
     install_info = InstallInfo.load()
     max_vms = install_info.max_vms
-    output = subprocess.check_output(['vmi-win-guid', 'name', 'vm-0'], timeout=30).decode('utf-8')
+    output = subprocess.check_output(['vmi-win-guid', 'name', 'vm-0'], timeout=timeout).decode('utf-8')
 
     try:
         version = re.search(r'Version: (.*)', output).group(1)
@@ -304,7 +308,7 @@ def postinstall(report, generate_usermode):
     with open(kernel_profile, 'w') as f:
         f.write(profile)
 
-    output = subprocess.check_output(['vmi-win-offsets', '--name', 'vm-0', '--json-kernel', kernel_profile], timeout=30).decode('utf-8')
+    output = subprocess.check_output(['vmi-win-offsets', '--name', 'vm-0', '--json-kernel', kernel_profile], timeout=timeout).decode('utf-8')
 
     offsets = re.findall(r'^([a-z_]+):(0x[0-9a-f]+)$', output, re.MULTILINE)
     if not offsets:
@@ -319,7 +323,7 @@ def postinstall(report, generate_usermode):
 
     module_dir = os.path.dirname(os.path.realpath(__file__))
     pid_tool = os.path.join(module_dir, "tools", "get-explorer-pid")
-    explorer_pid_s = subprocess.check_output([pid_tool, "vm-0", kernel_profile, offsets_dict['kpgd']], timeout=30).decode('ascii', 'ignore')
+    explorer_pid_s = subprocess.check_output([pid_tool, "vm-0", kernel_profile, offsets_dict['kpgd']], timeout=timeout).decode('ascii', 'ignore')
     m = re.search(r'explorer\.exe:([0-9]+)', explorer_pid_s)
     explorer_pid = m.group(1)
 
