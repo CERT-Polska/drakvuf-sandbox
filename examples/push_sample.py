@@ -2,14 +2,15 @@
 import argparse
 import requests
 import time
+import os
 from requests.exceptions import ConnectionError, HTTPError
 
 parser = argparse.ArgumentParser(description='Analyze a sample in DRAKVUF Sandbox')
 parser.add_argument('file',
                     help='Analyzed file')
 parser.add_argument('--url', dest='api_host',
-                    default="http://localhost:5000",
-                    help='API server URL (default: http://localhost:5000)')
+                    default="http://localhost:6300",
+                    help='API server URL (default: http://localhost:6300)')
 parser.add_argument('--wait', dest='wait', action="store_false",
                     help='Wait until analysis is finished')
 
@@ -22,9 +23,8 @@ def check_status(host, task_uid):
 def push_file(host, fpath):
     url = f'{host}/upload'
     try:
-        with open(fpath, 'rb') as sample_file:
-            r = requests.post(url, files={'file': sample_file})
-            r.raise_for_status()
+        r = requests.post(url, files={'file': (os.path.basename(fpath), open(fpath, "rb"))})
+        r.raise_for_status()
         return r.json()["task_uid"]
     except ConnectionError:
         print(f'Connection failed to {host}')
