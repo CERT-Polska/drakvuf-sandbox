@@ -19,7 +19,20 @@ In `consumer.py`, we provide an exemplary script which is able to collect the re
 
 ### Usage
 
-1. Create a new `config.ini` file in this directory. Copy `[minio]` and `[redis]` sections from `/etc/drakrun/config.py`.
-2. Run `python3 consumer.py`
-3. Done! The script will capture each completed analysis and print some logs from these analyses as an example.
+1. Create a new `config.ini` according to the following template:
+   ```
+   [redis]
+   host = localhost
+   port = 6379
+
+   [minio]
+   address = localhost:9000
+   bucket = karton2
+   secure = 0
+   access_key =
+   secret_key =
+   ```
+2. Fill out `access_key` and `secret_key` fields. Copy these values from `/etc/drakcore/minio.env`.
+3. Run `python3 consumer.py`
+4. Done! The script will capture each completed analysis and print some logs from these analyses as an example.
 

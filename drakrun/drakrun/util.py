@@ -5,21 +5,7 @@ import sys
 from karton2 import Config
 
 
-def find_config():
-    local_path = os.path.join(os.path.dirname(__file__), "config.ini")
-    etc_path = "/etc/drakcore/config.ini"
-
-    if os.path.exists(local_path):
-        return local_path
-    elif os.path.exists(etc_path):
-        return etc_path
-    else:
-        raise RuntimeError("Configuration file was not found neither in {} nor {}".format(local_path, etc_path))
-
-
-def get_config():
-    cfg = Config(find_config())
-
+def patch_config(cfg):
     try:
         access_key = cfg.config['minio']['access_key']
         secret_key = cfg.config['minio']['secret_key']
@@ -43,17 +29,3 @@ def get_config():
             sys.stderr.write('WARNING! Misconfiguration: minio.env doesn\'t contain MINIO_ACCESS_KEY or MINIO_SECRET_KEY.\n')
 
     return cfg
-
-
-def setup_config():
-    if os.path.exists('/etc/drakcore/minio.env'):
-        print('MinIO environment file already exists, skipping...')
-        return
-
-    print('Generating MinIO environment file...')
-    access_key = base64.b64encode(os.urandom(30)).decode('ascii').replace('+', '-').replace('/', '_')
-    secret_key = base64.b64encode(os.urandom(30)).decode('ascii').replace('+', '-').replace('/', '_')
-
-    with open('/etc/drakcore/minio.env', 'w') as f:
-        f.write(f'MINIO_ACCESS_KEY={access_key}\n')
-        f.write(f'MINIO_SECRET_KEY={secret_key}\n')

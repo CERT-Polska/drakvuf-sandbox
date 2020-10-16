@@ -4,7 +4,7 @@ import urllib3
 from minio import Minio
 from karton2 import Config
 from karton2.services.system import SystemService
-from drakcore.util import find_config
+from drakcore.util import get_config
 
 
 def get_minio_helper(config: Config):
@@ -20,7 +20,7 @@ def get_minio_helper(config: Config):
 
 
 def main():
-    config = Config(find_config())
+    config = get_config()
     service = SystemService(config)
 
     system_disable = config.config["drakmon"].get("system_disable", "1")

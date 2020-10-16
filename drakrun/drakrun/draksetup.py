@@ -46,9 +46,7 @@ def detect_defaults():
 
     conf = configparser.ConfigParser()
     conf.read(os.path.join(ETC_DIR, "config.ini"))
-    conf_patched = False
 
-    minio_access_key = conf.get('minio', 'access_key')
     out_interface = conf.get('drakrun', 'out_interface')
 
     if not out_interface:
@@ -57,23 +55,8 @@ def detect_defaults():
         if default_if:
             logging.info(f"Detected default network interface: {default_if}")
             conf['drakrun']['out_interface'] = default_if
-            conf_patched = True
         else:
             logging.warning("Unable to detect default network interface.")
-
-    if os.path.exists("/etc/drakcore/config.ini"):
-        if not minio_access_key:
-            logging.info("Detected single-node setup, copying minio and redis sections from /etc/drakcore/config.ini")
-            core_conf = configparser.ConfigParser()
-            core_conf.read("/etc/drakcore/config.ini")
-
-            conf['redis'] = core_conf['redis']
-            conf['minio'] = core_conf['minio']
-            conf_patched = True
-
-    if conf_patched:
-        with open(os.path.join(ETC_DIR, "config.ini"), "w") as f:
-            conf.write(f)
 
 
 def ensure_zfs(ctx, param, value):

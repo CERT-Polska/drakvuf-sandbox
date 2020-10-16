@@ -27,6 +27,7 @@ from drakrun.drakpdb import dll_file_list
 from drakrun.drakparse import parse_logs
 from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
 from drakrun.storage import get_storage_backend
+from drakrun.util import patch_config
 
 INSTANCE_ID = None
 PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
@@ -606,7 +607,7 @@ def cmdline_main():
 
 def main():
     conf_path = os.path.join(ETC_DIR, "config.ini")
-    conf = Config(conf_path)
+    conf = patch_config(Config(conf_path))
 
     if not conf.config.get('minio', 'access_key').strip():
         logging.warning(f"Detected blank value for minio access_key in {conf_path}. "

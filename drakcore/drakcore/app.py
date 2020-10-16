@@ -7,17 +7,17 @@ import requests
 import logging
 
 from flask import Flask, jsonify, request, send_file, redirect, send_from_directory, Response, abort
-from karton2 import Config, Producer, Resource, Task
+from karton2 import Producer, Resource, Task
 from minio.error import NoSuchKey
 from datetime import datetime
 from time import mktime
 
 from drakcore.system import SystemService
-from drakcore.util import find_config
+from drakcore.util import get_config
 
 
 app = Flask(__name__, static_folder='frontend/build/static')
-conf = Config(find_config())
+conf = get_config()
 
 drakmon_cfg = {k: v for k, v in conf.config.items("drakmon")}
 
