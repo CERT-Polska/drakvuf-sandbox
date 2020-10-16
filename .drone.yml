@@ -18,8 +18,11 @@ steps:
 node:
    purpose: generic
 trigger:
+  branch:
+    include:
+    - master
   event:
-    exclude:
+    include:
     - pull_request
 ---
 kind: pipeline
@@ -36,8 +39,11 @@ steps:
 node:
    purpose: generic
 trigger:
+  branch:
+    include:
+    - master
   event:
-    exclude:
+    include:
     - pull_request
 ---
 kind: pipeline
@@ -74,8 +80,11 @@ steps:
 node:
    purpose: generic
 trigger:
+  branch:
+    include:
+    - master
   event:
-    exclude:
+    include:
     - pull_request
 ---
 kind: pipeline
@@ -109,8 +118,11 @@ steps:
 node:
    purpose: generic
 trigger:
+  branch:
+    include:
+    - master
   event:
-    exclude:
+    include:
     - pull_request
 ---
 kind: pipeline
@@ -127,8 +139,11 @@ steps:
 node:
    purpose: generic
 trigger:
+  branch:
+    include:
+    - master
   event:
-    exclude:
+    include:
     - pull_request
 ---
 kind: pipeline
@@ -161,8 +176,11 @@ steps:
 node:
    purpose: generic
 trigger:
+  branch:
+    include:
+    - master
   event:
-    exclude:
+    include:
     - pull_request
 ---
 kind: pipeline
@@ -202,8 +220,11 @@ node:
 depends_on:
 - build-drakvuf-bundle
 trigger:
+  branch:
+    include:
+    - master
   event:
-    exclude:
+    include:
     - pull_request
 ---
 kind: pipeline
@@ -245,6 +266,9 @@ depends_on:
 - build-drakvuf-bundle
 - build-base-image
 trigger:
+  branch:
+    include:
+    - master
   event:
-    exclude:
+    include:
     - pull_request
