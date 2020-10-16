@@ -18,8 +18,11 @@ steps:
 node:
    purpose: generic
 trigger:
+  branch:
+    include:
+    - master
   event:
-    exclude:
+    include:
     - pull_request
 ---
 kind: pipeline
