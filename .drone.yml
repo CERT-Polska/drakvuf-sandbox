@@ -19,8 +19,7 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
     - pull_request
@@ -40,8 +39,7 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
     - pull_request
@@ -81,8 +79,7 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
     - pull_request
@@ -119,8 +116,7 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
     - pull_request
@@ -140,8 +136,7 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
     - pull_request
@@ -177,8 +172,7 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
     - pull_request
@@ -221,8 +215,7 @@ depends_on:
 - build-drakvuf-bundle
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
     - pull_request
@@ -267,8 +260,7 @@ depends_on:
 - build-base-image
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
     - pull_request
