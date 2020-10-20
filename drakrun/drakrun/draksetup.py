@@ -407,14 +407,21 @@ def postupgrade():
     detect_defaults()
 
 
-@click.command()
-@click.argument('domain', type=str)
-@click.argument('iso_path', type=click.Path(exists=True))
-def mount(domain, iso_path):
+@click.command(help='Mount ISO into guest',
+               no_args_is_help=True)
+@click.argument('iso_path',
+                type=click.Path(exists=True))
+@click.option('--domain', 'domain_name',
+              type=str,
+              default='vm-0',
+              show_default=True,
+              help='Domain name (i.e. Virtual Machine name)')
+def mount(iso_path, domain_name):
     '''Inject ISO file into specified guest vm.
     Domain can be retrieved by running "xl list" command on the host.
     '''
-    subprocess.run(['xl', 'qemu-monitor-command', domain, f'change ide-5632 {iso_path}'])
+    iso_path_full = os.path.abspath(iso_path)
+    subprocess.run(['xl', 'qemu-monitor-command', domain_name, f'change ide-5632 {iso_path_full}'])
 
 
 @click.group()

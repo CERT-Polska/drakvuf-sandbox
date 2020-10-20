@@ -19,10 +19,10 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
+    - push
     - pull_request
 ---
 kind: pipeline
@@ -40,10 +40,10 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
+    - push
     - pull_request
 ---
 kind: pipeline
@@ -81,10 +81,10 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
+    - push
     - pull_request
 ---
 kind: pipeline
@@ -119,10 +119,10 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
+    - push
     - pull_request
 ---
 kind: pipeline
@@ -140,10 +140,10 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
+    - push
     - pull_request
 ---
 kind: pipeline
@@ -177,10 +177,10 @@ node:
    purpose: generic
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
+    - push
     - pull_request
 ---
 kind: pipeline
@@ -221,10 +221,10 @@ depends_on:
 - build-drakvuf-bundle
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
+    - push
     - pull_request
 ---
 kind: pipeline
@@ -267,8 +267,8 @@ depends_on:
 - build-base-image
 trigger:
   branch:
-    include:
-    - master
+  - master
   event:
     include:
+    - push
     - pull_request

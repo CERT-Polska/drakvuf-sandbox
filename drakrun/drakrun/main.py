@@ -508,6 +508,8 @@ class DrakrunKarton(Karton):
                                "-x", "poolmon",
                                "-x", "objmon",
                                "-x", "socketmon",
+                               "-x", "dkommon",
+                               "-x", "envmon",
                                "-j", "5",
                                "-t", str(timeout),
                                "-i", inject_pid,

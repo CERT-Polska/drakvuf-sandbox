@@ -11,19 +11,25 @@ Because it is usually pretty hard to set up a malware sandbox, this project also
 
 ## Supported hardware & software
 
-In order to run DRAKVUF Sandbox, your setup must fullfill all of the listed requirements:
+In order to run DRAKVUF Sandbox, your setup must fullfill all of the listed requirements.
 
-* Processor: Intel processor with VT-x and EPT features.
-* Host system: Debian 10 Buster/Ubuntu 18.04 Bionic/Ubuntu 20.04 Focal with at least 2 core CPU and 5 GB RAM, running GRUB as bootloader.
-* Guest system: Windows 7 (x64), Windows 10 (x64; experimental support)
+* Processor:
+  * ✔️ Required Intel processor with Intel Virtualization Technology (VT-x) and Extended Page Tables (EPT) features
+* Host system with at least 2 core CPU and 5 GB RAM, running GRUB as bootloader, one of:
+  * ✔️ Debian 10 Buster
+  * ✔️ Ubuntu 18.04 Bionic
+  * ✔️ Ubuntu 20.04 Focal
+* Guest system, one of:
+  * ✔️ Windows 7 (x64)
+  * ✔️ Windows 10 build 2004 (x64)
 
 Nested virtualization:
 
-* KVM **does** work, however it is considered experimental. If you experience any bugs, please report them to us for further investigation.
-* Due to lack of exposed CPU features, hosting DRAKVUF Sandbox in the cloud is **not** supported (although it might change in the future).
-* Hyper-V does **not** work.
-* Xen **does** work out of the box.
-* VMware Workstation Player **does** work, but you need to check Virtualize EPT option for a VM; Intel processor with EPT still required.
+* ✔️ Xen - works out of the box.
+* ✔️ VMware Workstation Player - works, but you need to check Virtualize EPT option for a VM; Intel processor with EPT still required.
+* ✔️ KVM - works, however it is considered experimental. If you experience any bugs, please report them to us for further investigation.
+* ❌ AWS, GCP, Azure - due to lack of exposed CPU features, hosting DRAKVUF Sandbox in the cloud is **not** supported (although it might change in the future).
+* ❌ Hyper-V - doesn't work.
 
 
 ## Installation
