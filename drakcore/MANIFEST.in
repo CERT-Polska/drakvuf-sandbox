@@ -1,1 +1,2 @@
 recursive-include drakcore/frontend/build *
+recursive-include drakcore/migrations *

@@ -18,7 +18,8 @@ setup(
              'drakcore/bin/drak-config-setup',
              'drakcore/bin/drak-postprocess',
              'drakcore/bin/drak-healthcheck',
-             'drakcore/bin/drak-vncpasswd'],
+             'drakcore/bin/drak-vncpasswd',
+             'drakcore/bin/drak-upgrade-db'],
     classifiers=[
         "Programming Language :: Python",
         "Operating System :: OS Independent",

@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import pathlib
 from tempfile import NamedTemporaryFile
 
 import requests
@@ -13,6 +14,7 @@ from karton2 import Config, Producer, Task, Resource
 from drakcore.system import SystemService
 from drakcore.util import find_config
 from drakcore.analysis import AnalysisProxy
+from drakcore.database import Database
 
 
 app = Flask(__name__, static_folder='frontend/build/static')
@@ -20,6 +22,8 @@ conf = Config(find_config())
 
 rs = SystemService(conf).rs
 minio = SystemService(conf).minio
+db = Database(conf.config["drakmon"].get("database", "sqlite:///var/lib/drakcore/drakcore.db"),
+              pathlib.Path(__file__).parent / "migrations")
 
 
 @app.errorhandler(NoSuchKey)
@@ -79,12 +83,29 @@ def upload():
     return jsonify({"task_uid": task.uid})
 
 
+def get_analysis_metadata(analysis_uid):
+    db_result = db.select_metadata_by_uid(analysis_uid)
+    if db_result is not None:
+        return db_result
+
+    # Cache miss, have to ask MinIO
+    analysis = AnalysisProxy(minio, analysis_uid)
+    metadata = analysis.get_metadata()
+
+    try:
+        db.insert_metadata(analysis_uid, metadata)
+    except Exception:
+        app.logger.exception("Failed to insert %s metadata", analysis_uid)
+
+    return metadata
+
+
 @app.route("/list")
 def route_list():
     analyses = []
     for analysis in AnalysisProxy(minio, None).enumerate():
         try:
-            analyses.append({"id": analysis.uid, "meta": analysis.get_metadata()})
+            analyses.append({"id": analysis.uid, "meta": get_analysis_metadata(analysis.uid)})
         except NoSuchKey:
             continue
 
@@ -153,8 +174,7 @@ def graph(task_uid):
 
 @app.route("/metadata/<task_uid>")
 def metadata(task_uid):
-    analysis = AnalysisProxy(minio, task_uid)
-    return jsonify(analysis.get_metadata())
+    return jsonify(get_analysis_metadata(task_uid))
 
 
 @app.route("/status/<task_uid>")
