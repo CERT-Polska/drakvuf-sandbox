@@ -60,7 +60,7 @@ This instruction assumes that you want to create a single-node installation with
 
 6. Perform Windows installation until you are booted to the desktop.
 
-7. **Extra software:** At this point you might optionally install additional software. You can execute:
+7. **Optional:** At this point you might optionally install additional software. You can execute:
 
     .. code-block:: console
 
@@ -68,7 +68,16 @@ This instruction assumes that you want to create a single-node installation with
 
    which would mount a virtual CD disk containing additional software into your VM.
 
-8. In order to finalize the VM setup process, execute:
+8. **Optional:** Generate .NET Framework native image cache by executing the following commands in the administrative prompt of your VM.
+
+  .. code-block:: console
+    cd C:\Windows\Microsoft.NET\Framework\v4.0.30319
+    ngen.exe executeQueuedItems
+    cd C:\Windows\Microsoft.NET\Framework64\v4.0.30319
+    ngen.exe executeQueuedItems
+  .. note ::
+
+9. In order to finalize the VM setup process, execute:
 
   .. code-block:: console
 
@@ -77,4 +86,4 @@ This instruction assumes that you want to create a single-node installation with
   .. note ::
     Add ``--no-report`` if you don't want ``draksetup`` to send `basic usage report <https://github.com/CERT-Polska/drakvuf-sandbox/blob/master/USAGE_STATISTICS.md>`_. 
 
-9. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
+10. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
