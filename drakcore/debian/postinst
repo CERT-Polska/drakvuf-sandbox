@@ -19,6 +19,7 @@ esac
 mkdir -p /var/lib/drakcore/minio
 
 /opt/venvs/drakcore/bin/drak-config-setup
+/opt/venvs/drakcore/bin/drak-upgrade-db
 
 systemctl daemon-reload
 systemctl enable --now drak-system.service
