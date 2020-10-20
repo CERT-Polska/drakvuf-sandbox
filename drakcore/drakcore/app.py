@@ -1,28 +1,30 @@
 import json
 import os
-from tempfile import NamedTemporaryFile
 import re
+from tempfile import NamedTemporaryFile
 
 import requests
 import logging
 
-from flask import Flask, jsonify, request, send_file, redirect, send_from_directory, Response, abort
-from karton2 import Config, Producer, Resource, Task
+from flask import Flask, jsonify, request, send_file, send_from_directory, abort
 from minio.error import NoSuchKey
-from datetime import datetime
-from time import mktime
+from karton2 import Config, Producer, Task, Resource
 
 from drakcore.system import SystemService
 from drakcore.util import find_config
+from drakcore.analysis import AnalysisProxy
 
 
 app = Flask(__name__, static_folder='frontend/build/static')
 conf = Config(find_config())
 
-drakmon_cfg = {k: v for k, v in conf.config.items("drakmon")}
-
 rs = SystemService(conf).rs
 minio = SystemService(conf).minio
+
+
+@app.errorhandler(NoSuchKey)
+def resource_not_found(e):
+    return jsonify(error="Object not found"), 404
 
 
 @app.after_request
@@ -30,23 +32,6 @@ def add_header(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Headers'] = 'Range'
     return response
-
-
-@app.route("/list")
-def route_list():
-    analyses = []
-    res = minio.list_objects_v2("drakrun")
-
-    for obj in res:
-        try:
-            tmp = minio.get_object("drakrun", os.path.join(obj.object_name, "metadata.json"))
-            meta = json.loads(tmp.read())
-        except NoSuchKey:
-            continue
-
-        analyses.append({"id": obj.object_name.strip('/'), "meta": meta})
-
-    return jsonify(sorted(analyses, key=lambda o: o.get('meta', {}).get('time_finished', 0), reverse=True))
 
 
 @app.route("/upload", methods=['POST'])
@@ -94,81 +79,82 @@ def upload():
     return jsonify({"task_uid": task.uid})
 
 
+@app.route("/list")
+def route_list():
+    analyses = []
+    for analysis in AnalysisProxy(minio, None).enumerate():
+        try:
+            analyses.append({"id": analysis.uid, "meta": analysis.get_metadata()})
+        except NoSuchKey:
+            continue
+
+    def sorting_key(o):
+        return o.get('meta', {}).get('time_finished', -1)
+    return jsonify(sorted(analyses, key=sorting_key, reverse=True))
+
+
 @app.route("/processed/<task_uid>/<which>")
 def processed(task_uid, which):
-    try:
-        with NamedTemporaryFile() as f:
-            minio.fget_object("drakrun", f"{task_uid}/{which}.json", f.name)
-            return send_file(f.name, mimetype='application/json')
-    except NoSuchKey:
-        abort(404)
+    analysis = AnalysisProxy(minio, task_uid)
+    with NamedTemporaryFile() as f:
+        analysis.get_processed(f, which)
+        return send_file(f.name, mimetype='application/json')
 
 
 @app.route("/processed/<task_uid>/apicall/<pid>")
 def apicall(task_uid, pid):
-    try:
-        with NamedTemporaryFile() as f:
-            minio.fget_object("drakrun", f"{task_uid}/apicall/{pid}.json", f.name)
-            return send_file(f.name)
-    except NoSuchKey:
-        abort(404)
+    analysis = AnalysisProxy(minio, task_uid)
+    with NamedTemporaryFile() as f:
+        analysis.get_apicalls(f, pid)
+        return send_file(f.name)
 
 
 @app.route("/logs/<task_uid>/<log_type>")
 def logs(task_uid, log_type):
+    analysis = AnalysisProxy(minio, task_uid)
     with NamedTemporaryFile() as f:
         # Copy Range header if it exists
         headers = {}
         if "Range" in request.headers:
             headers["Range"] = request.headers["Range"]
-        minio.fget_object("drakrun",
-                          task_uid + "/" + log_type + ".log", f.name,
-                          request_headers=headers)
+        analysis.get_log(log_type, f, headers=headers)
         return send_file(f.name, mimetype='text/plain')
 
 
 @app.route("/logindex/<task_uid>/<log_type>")
 def logindex(task_uid, log_type):
+    analysis = AnalysisProxy(minio, task_uid)
     with NamedTemporaryFile() as f:
-        try:
-            minio.fget_object("drakrun",
-                              task_uid + "/index/" + log_type + ".log", f.name)
-        except NoSuchKey:
-            return jsonify(error="Index not found"), 404
+        analysis.get_log_index(log_type, f)
         return send_file(f.name)
 
 
 @app.route("/dumps/<task_uid>")
 def dumps(task_uid):
-    with NamedTemporaryFile() as f:
-        minio.fget_object("drakrun", task_uid + "/" + "dumps.zip", f.name)
-        return send_file(f.name, mimetype='text/plain')
+    analysis = AnalysisProxy(minio, task_uid)
+    with NamedTemporaryFile() as tmp:
+        analysis.get_dumps(tmp)
+        return send_file(tmp.name, mimetype='application/zip')
 
 
 @app.route("/logs/<task_uid>")
 def list_logs(task_uid):
-    try:
-        objects = minio.list_objects_v2("drakrun", task_uid + "/")
-    except NoSuchKey:
-        return jsonify(None)
-    return jsonify([x.object_name for x in objects if ".log" in x.object_name])
+    analysis = AnalysisProxy(minio, task_uid)
+    return jsonify(list(analysis.list_logs()))
 
 
 @app.route("/graph/<task_uid>")
 def graph(task_uid):
-    with NamedTemporaryFile() as f:
-        try:
-            minio.fget_object("drakrun", task_uid + "/graph.dot", f.name)
-        except NoSuchKey:
-            return jsonify(None)
-        return send_file(f.name, mimetype='text/plain')
+    analysis = AnalysisProxy(minio, task_uid)
+    with NamedTemporaryFile() as tmp:
+        analysis.get_graph(tmp)
+        return send_file(tmp.name, mimetype='text/plain')
 
 
 @app.route("/metadata/<task_uid>")
 def metadata(task_uid):
-    tmp = minio.get_object("drakrun", f"{task_uid}/metadata.json")
-    meta = json.loads(tmp.read())
-    return jsonify(meta)
+    analysis = AnalysisProxy(minio, task_uid)
+    return jsonify(analysis.get_metadata())
 
 
 @app.route("/status/<task_uid>")
@@ -209,6 +195,7 @@ def catchall(path):
 
 
 def main():
+    drakmon_cfg = {k: v for k, v in conf.config.items("drakmon")}
     app.run(host=drakmon_cfg["listen_host"], port=drakmon_cfg["listen_port"])
 
 
