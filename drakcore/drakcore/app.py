@@ -7,18 +7,18 @@ from tempfile import NamedTemporaryFile
 import requests
 import logging
 
-from flask import Flask, jsonify, request, send_file, send_from_directory, abort
-from minio.error import NoSuchKey
+from flask import Flask, jsonify, request, send_file, redirect, send_from_directory, Response, abort
 from karton2 import Config, Producer, Task, Resource
+from minio.error import NoSuchKey
 
 from drakcore.system import SystemService
-from drakcore.util import find_config
+from drakcore.util import get_config
 from drakcore.analysis import AnalysisProxy
 from drakcore.database import Database
 
 
 app = Flask(__name__, static_folder='frontend/build/static')
-conf = Config(find_config())
+conf = get_config()
 
 rs = SystemService(conf).rs
 minio = SystemService(conf).minio

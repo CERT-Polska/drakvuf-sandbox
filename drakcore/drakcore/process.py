@@ -4,10 +4,10 @@ import json
 import functools
 from io import StringIO
 
-from karton2 import Consumer, Config, Karton, LocalResource
+from karton2 import Consumer, Karton, LocalResource
 from minio.error import NoSuchKey
 from drakcore.postprocess import REGISTERED_PLUGINS
-from drakcore.util import find_config
+from drakcore.util import get_config
 
 
 class LocalLogBuffer(logging.Handler):
@@ -89,7 +89,7 @@ class AnalysisProcessor(Consumer):
 
 
 def main():
-    conf = Config(find_config())
+    conf = get_config()
     processor = AnalysisProcessor(conf, REGISTERED_PLUGINS)
     processor.loop()
 

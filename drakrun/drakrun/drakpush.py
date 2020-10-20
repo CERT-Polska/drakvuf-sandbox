@@ -3,6 +3,7 @@ import argparse
 
 from karton2 import Producer, Config, Resource, Task
 from drakrun.config import ETC_DIR
+from drakrun.util import patch_config
 
 
 def main():
@@ -12,7 +13,7 @@ def main():
     parser.add_argument('--timeout', default=600, type=int, help='analysis timeout in seconds', required=False)
     args = parser.parse_args()
 
-    conf = Config(os.path.join(ETC_DIR, 'config.ini'))
+    conf = patch_config(Config(os.path.join(ETC_DIR, 'config.ini')))
     producer = Producer(conf)
 
     task = Task({"type": "sample", "stage": "recognized", "platform": "win32"})
