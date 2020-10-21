@@ -7,12 +7,12 @@ This project provides you with a friendly web interface that allows you to uploa
 
 Because it is usually pretty hard to set up a malware sandbox, this project also provides you with an installer app that would guide you through the necessary steps and configure your system using settings that are recommended for beginners. At the same time, experienced users can tweak some settings or even replace some infrastructure parts to better suit their needs.
 
-![DRAKVUF Sandbox - Analysis view](.github/screenshots/sandbox.png)
-
 ## Quick start
 * **[👋 Getting started](https://drakvuf-sandbox.readthedocs.io/en/latest/usage/getting_started.html)**
 * [Latest releases](https://github.com/CERT-Polska/drakvuf-sandbox/releases)
 * [Latest docs](https://drakvuf-sandbox.readthedocs.io/en/latest/)
+
+![DRAKVUF Sandbox - Analysis view](.github/screenshots/sandbox.png)
 
 ## Supported hardware & software
 
