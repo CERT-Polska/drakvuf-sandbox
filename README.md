@@ -9,6 +9,11 @@ Because it is usually pretty hard to set up a malware sandbox, this project also
 
 ![DRAKVUF Sandbox - Analysis view](.github/screenshots/sandbox.png)
 
+## Quick start
+* **[Getting started](https://drakvuf-sandbox.readthedocs.io/en/latest/usage/getting_started.html)**
+* [Latest releases](https://github.com/CERT-Polska/drakvuf-sandbox/releases)
+* [Latest docs](https://drakvuf-sandbox.readthedocs.io/en/latest/)
+
 ## Supported hardware & software
 
 In order to run DRAKVUF Sandbox, your setup must fullfill all of the listed requirements.
@@ -30,12 +35,6 @@ Nested virtualization:
 * ✔️ KVM - works, however it is considered experimental. If you experience any bugs, please report them to us for further investigation.
 * ❌ AWS, GCP, Azure - due to lack of exposed CPU features, hosting DRAKVUF Sandbox in the cloud is **not** supported (although it might change in the future).
 * ❌ Hyper-V - doesn't work.
-
-
-## Installation
-[Here](https://github.com/CERT-Polska/drakvuf-sandbox/releases) you can find the latest releases.
-
-See the docs for the [installation guide](https://drakvuf-sandbox.readthedocs.io/en/latest/usage/getting_started.html).
 
 ## Maintainers/authors
 
