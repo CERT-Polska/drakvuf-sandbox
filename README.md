@@ -10,7 +10,7 @@ Because it is usually pretty hard to set up a malware sandbox, this project also
 ![DRAKVUF Sandbox - Analysis view](.github/screenshots/sandbox.png)
 
 ## Quick start
-* **[Getting started](https://drakvuf-sandbox.readthedocs.io/en/latest/usage/getting_started.html)**
+* **[👋 Getting started](https://drakvuf-sandbox.readthedocs.io/en/latest/usage/getting_started.html)**
 * [Latest releases](https://github.com/CERT-Polska/drakvuf-sandbox/releases)
 * [Latest docs](https://drakvuf-sandbox.readthedocs.io/en/latest/)
 
