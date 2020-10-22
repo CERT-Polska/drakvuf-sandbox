@@ -321,7 +321,7 @@ class DrakrunKarton(Karton):
                     match = re.match(plugin_heuristic, line)
                     if match:
                         # we've matched a unicode word, this shouldn't fail
-                        plugin = match.group(1).decode()
+                        plugin = match.group(1).decode('utf-8', 'replace')
                     else:
                         plugin = "unknown"
 
