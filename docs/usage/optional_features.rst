@@ -96,6 +96,7 @@ The steps below should be completed on guest vm before creating the snapshot (e.
 2. Adjust the registry keys by executing this `.reg` file:
 
    .. code-block:: console
+
      Windows Registry Editor Version 5.00
 
      [HKEY_CURRENT_USER\Software\Microsoft\Office\14.0\Word\Security]
