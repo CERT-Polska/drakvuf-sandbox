@@ -94,19 +94,20 @@ The steps below should be completed on guest vm before creating the snapshot (e.
 1. Install Microsoft Office. You can use ``draksetup mount /path/to/office.iso`` command to insert Office installation media during VM setup.
    After installation, you should be able to start word/excel by running ``start winword.exe``, ``start excel.exe`` from command line.
 2. Adjust the registry keys by executing this `.reg` file:
-   ```
-   Windows Registry Editor Version 5.00
 
-   [HKEY_CURRENT_USER\Software\Microsoft\Office\14.0\Word\Security]
-   "VBAWarnings"=dword:00000001
-   "AccessVBOM"=dword:00000001
-   "ExtensionHardening"=dword:00000000
+   .. code-block:: console
+     Windows Registry Editor Version 5.00
 
-   [HKEY_CURRENT_USER\Software\Microsoft\Office\14.0\Excel\Security]
-   "VBAWarnings"=dword:00000001
-   "AccessVBOM"=dword:00000001
-   "ExtensionHardening"=dword:00000000
-   ```
+     [HKEY_CURRENT_USER\Software\Microsoft\Office\14.0\Word\Security]
+     "VBAWarnings"=dword:00000001
+     "AccessVBOM"=dword:00000001
+     "ExtensionHardening"=dword:00000000
+
+     [HKEY_CURRENT_USER\Software\Microsoft\Office\14.0\Excel\Security]
+     "VBAWarnings"=dword:00000001
+     "AccessVBOM"=dword:00000001
+     "ExtensionHardening"=dword:00000000
+
    (change 14.0 to your Office version, see [registry key by product name](https://docs.microsoft.com/en-us/office/troubleshoot/word/reset-options-and-settings-in-word#word-key))
 
 ProcDOT integration
