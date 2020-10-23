@@ -253,7 +253,17 @@ class Qcow2StorageBackend(StorageBackendBase):
             raise RuntimeError("Failed to connect QCOW2 file to /dev/nbd0")
 
         # we mount 2nd partition, as 1st partition is windows boot related and 2nd partition is C:\\
-        yield "/dev/nbd0p2"
+        dev = "/dev/nbd0p2"
+
+        # wait for the device to appear
+        for _ in range(60):
+            if os.path.exists(dev):
+                break
+            time.sleep(1.0)
+        else:
+            raise RuntimeError(f"NBD volume not available at {dev}")
+
+        yield dev
 
         subprocess.check_output("qemu-nbd --disconnect /dev/nbd0", shell=True)
 
