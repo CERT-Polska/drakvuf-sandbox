@@ -170,6 +170,8 @@ def drakmon_vm():
 
         # add xen bridge
         c.run("brctl addbr drak0")
+        c.run("systemctl enable drakrun@1")
+        c.run("systemctl start drakrun@1")
 
     return Connection("testvm", config=FABRIC_CONFIG)
 
