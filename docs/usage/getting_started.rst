@@ -70,12 +70,12 @@ This instruction assumes that you want to create a single-node installation with
 
 8. **Optional:** Generate .NET Framework native image cache by executing the following commands in the administrative prompt of your VM.
 
-  .. code-block:: console
-    cd C:\Windows\Microsoft.NET\Framework\v4.0.30319
-    ngen.exe executeQueuedItems
-    cd C:\Windows\Microsoft.NET\Framework64\v4.0.30319
-    ngen.exe executeQueuedItems
-  .. note ::
+    .. code-block:: bat
+
+      cd C:\Windows\Microsoft.NET\Framework\v4.0.30319
+      ngen.exe executeQueuedItems
+      cd C:\Windows\Microsoft.NET\Framework64\v4.0.30319
+      ngen.exe executeQueuedItems
 
 9. In order to finalize the VM setup process, execute:
 
