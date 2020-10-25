@@ -11,6 +11,9 @@ fi
 
 set -e
 
+# Build dwarf2json
+sh -c "cd /build/dwarf2json && /usr/local/go/bin/go build"
+
 # Build Xen
 pushd drakvuf/xen
 
