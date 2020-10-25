@@ -54,6 +54,7 @@ make install
 
 # Build dwarf2json
 sh -c "cd dwarf2json && /usr/local/go/bin/go build"
+mv dwarf2json /build/
 
 mkdir /out
 sh ./package/mkdeb
