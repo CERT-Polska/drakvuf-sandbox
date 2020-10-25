@@ -11,9 +11,6 @@ fi
 
 set -e
 
-# Build dwarf2json
-sh -c "cd /build/dwarf2json && /usr/local/go/bin/go build"
-
 # Build Xen
 pushd drakvuf/xen
 
@@ -54,6 +51,9 @@ autoreconf -vif
 ./configure --prefix=$INSTALL_PATH --enable-debug
 make -j$(nproc)
 make install
+
+# Build dwarf2json
+sh -c "cd dwarf2json && /usr/local/go/bin/go build"
 
 mkdir /out
 sh ./package/mkdeb
