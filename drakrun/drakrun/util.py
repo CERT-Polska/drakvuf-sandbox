@@ -1,6 +1,7 @@
 import base64
 import os
 import sys
+import subprocess
 
 from karton2 import Config
 
@@ -29,3 +30,8 @@ def patch_config(cfg):
             sys.stderr.write('WARNING! Misconfiguration: minio.env doesn\'t contain MINIO_ACCESS_KEY or MINIO_SECRET_KEY.\n')
 
     return cfg
+
+
+def get_domid_from_instance_id(instance_id: str) -> int:
+    output = subprocess.check_output(["xl", "domid", f"vm-{instance_id}"])
+    return int(output.decode('utf-8').strip())
