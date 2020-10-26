@@ -16,11 +16,15 @@ import requests
 from requests import RequestException
 from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
+from drakrun.networking import setup_vm_network, start_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(asctime)s][%(levelname)s] %(message)s',
                     handlers=[logging.StreamHandler()])
+
+conf = configparser.ConfigParser()
+conf.read(os.path.join(ETC_DIR, "config.ini"))
 
 
 def find_default_interface():
@@ -43,9 +47,6 @@ def detect_defaults():
     os.makedirs(LIB_DIR, exist_ok=True)
     os.makedirs(os.path.join(LIB_DIR, "profiles"), exist_ok=True)
     os.makedirs(os.path.join(LIB_DIR, "volumes"), exist_ok=True)
-
-    conf = configparser.ConfigParser()
-    conf.read(os.path.join(ETC_DIR, "config.ini"))
 
     out_interface = conf.get('drakrun', 'out_interface')
 
@@ -161,13 +162,14 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
         logging.exception("Failed to execute brctl show. Make sure you have bridge-utils installed.")
         return
 
-    try:
-        subprocess.check_output('brctl addbr drak0', stderr=subprocess.STDOUT, shell=True)
-    except subprocess.CalledProcessError as e:
-        if b'already exists' in e.output:
-            logging.info("Bridge drak0 already exists.")
-        else:
-            logging.exception("Failed to create bridge drak0.")
+    net_enable = int(conf['drakrun'].get('net_enable', '0'))
+    out_interface = conf['drakrun'].get('out_interface', '')
+    dns_server = conf['drakrun'].get('dns_server', '')
+
+    setup_vm_network(vm_id=0, net_enable=net_enable, out_interface=out_interface, dns_server=dns_server)
+
+    if net_enable:
+        start_dnsmasq(vm_id=0, dns_server=dns_server, background=True)
 
     cfg_path = os.path.join(ETC_DIR, "configs/vm-0.cfg")
 

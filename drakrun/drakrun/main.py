@@ -29,60 +29,11 @@ from drakrun.drakpdb import dll_file_list
 from drakrun.drakparse import parse_logs
 from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
 from drakrun.storage import get_storage_backend
-from drakrun.util import patch_config
+from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
+from drakrun.util import patch_config, get_domid_from_instance_id
 
 INSTANCE_ID = None
 PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
-
-
-def get_domid_from_instance_id(instance_id: str) -> int:
-    output = subprocess.check_output(["xl", "domid", f"vm-{instance_id}"])
-    return int(output.decode('utf-8').strip())
-
-
-def start_tcpdump_collector(instance_id: str, outdir: str) -> Optional[subprocess.Popen]:
-    domid = get_domid_from_instance_id(instance_id)
-
-    try:
-        subprocess.check_output("tcpdump --version", shell=True)
-    except subprocess.CalledProcessError:
-        logging.warning("Seems like tcpdump is not working/not installed on your system. Pcap will not be recorded.")
-        return None
-
-    return subprocess.Popen([
-        "tcpdump",
-        "-i",
-        f"vif{domid}.0-emu",
-        "-w",
-        f"{outdir}/dump.pcap"
-    ])
-
-
-def start_dnsmasq(vm_id: int, dns_server: str) -> Optional[subprocess.Popen]:
-    try:
-        subprocess.check_output("dnsmasq --version", shell=True)
-    except subprocess.CalledProcessError:
-        logging.warning("Seems like dnsmasq is not working/not installed on your system."
-                        "Guest networking may not be fully functional.")
-        return None
-
-    if dns_server == "use-gateway-address":
-        dns_server = f"10.13.{vm_id}.1"
-
-    return subprocess.Popen([
-        "dnsmasq",
-        "--no-daemon",
-        "--conf-file=/dev/null",
-        "--bind-interfaces",
-        f"--interface=drak{vm_id}",
-        "--port=0",
-        "--no-hosts",
-        "--no-resolv",
-        "--no-poll",
-        "--leasefile-ro",
-        f"--dhcp-range=10.13.{vm_id}.100,10.13.{vm_id}.200,255.255.255.0,12h",
-        f"--dhcp-option=option:dns-server,{dns_server}"
-    ])
 
 
 class LocalLogBuffer(logging.Handler):
@@ -152,50 +103,15 @@ class DrakrunKarton(Karton):
         }
     ]
 
-    @staticmethod
-    def _add_iptable_rule(rule):
-        try:
-            subprocess.check_output(f"iptables -C {rule}", shell=True)
-        except subprocess.CalledProcessError as e:
-            if e.returncode == 1:
-                # rule doesn't exist
-                subprocess.check_output(f"iptables -A {rule}", shell=True)
-            else:
-                # some other error
-                raise RuntimeError(f'Failed to check for iptables rule: {rule}')
-
     def init_drakrun(self):
         if not self.minio.bucket_exists('drakrun'):
             self.minio.make_bucket(bucket_name='drakrun')
-
-        try:
-            subprocess.check_output(f'brctl addbr drak{INSTANCE_ID}', stderr=subprocess.STDOUT, shell=True)
-        except subprocess.CalledProcessError as e:
-            if b'already exists' in e.output:
-                logging.info(f"Bridge drak{INSTANCE_ID} already exists.")
-            else:
-                logging.exception(f"Failed to create bridge drak{INSTANCE_ID}.")
-        else:
-            subprocess.check_output(f'ip addr add 10.13.{INSTANCE_ID}.1/24 dev drak{INSTANCE_ID}', shell=True)
-
-        subprocess.check_output(f'ip link set dev drak{INSTANCE_ID} up', shell=True)
-        self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
-        self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -d 0.0.0.0/0 -j DROP")
 
         net_enable = int(self.config.config['drakrun'].get('net_enable', '0'))
         out_interface = self.config.config['drakrun'].get('out_interface', '')
         dns_server = self.config.config['drakrun'].get('dns_server', '')
 
-        if dns_server == "use-gateway-address":
-            self._add_iptable_rule(f"INPUT -i drak{INSTANCE_ID} -p udp --dport 52 --sport 52 -j ACCEPT")
-
-        if net_enable:
-            with open('/proc/sys/net/ipv4/ip_forward', 'w') as f:
-                f.write('1\n')
-
-            self._add_iptable_rule(f"POSTROUTING -t nat -s 10.13.{INSTANCE_ID}.0/24 -o {out_interface} -j MASQUERADE")
-            self._add_iptable_rule(f"FORWARD -i drak{INSTANCE_ID} -o {out_interface} -j ACCEPT")
-            self._add_iptable_rule(f"FORWARD -i {out_interface} -o drak{INSTANCE_ID} -j ACCEPT")
+        setup_vm_network(INSTANCE_ID, net_enable, out_interface, dns_server)
 
     @staticmethod
     def _get_dll_run_command(pe_data):
