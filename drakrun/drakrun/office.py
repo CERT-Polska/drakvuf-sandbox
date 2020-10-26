@@ -292,7 +292,7 @@ def find_outer_nodes(dg):
     for edge in dg.edges:
         inner_nodes.add(edge[1])
     inner_nodes = list(inner_nodes)
-    outer_nodes = list(filter(lambda n: n not in inner_nodes, dg.nodes))
+    outer_nodes = set(filter(lambda n: n not in inner_nodes, dg.nodes))
     return outer_nodes
 
 
