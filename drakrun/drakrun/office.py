@@ -18,14 +18,15 @@ LINE_SEP = "\n"
 
 class Graph:
     '''Simple implementation of directed graph to minimalize number of dependencies.'''
-    edges = []
-    nodes = []
+    def __init__(self):
+        self.nodes = set()
+        self.edges = set()
 
     def add_node(self, node):
-        self.nodes.append(node)
+        self.nodes.add(node)
 
     def add_edge(self, src, dst):
-        self.edges.append((src, dst))
+        self.edges.add((src, dst))
 
 
 def vba2graph_from_vba_object(filepath):
