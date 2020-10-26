@@ -14,7 +14,6 @@ class InstallInfo(DataClassJsonMixin):
     storage_backend: str
     disk_size: str
     iso_path: str
-    max_vms: int
     enable_unattended: bool
     zfs_tank_name: Optional[str] = None
     iso_sha256: Optional[str] = None

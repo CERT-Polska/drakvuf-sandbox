@@ -5,6 +5,7 @@ import shlex
 import os
 import re
 import json
+import time
 import random
 import subprocess
 import string
@@ -18,6 +19,8 @@ from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
 from drakrun.networking import setup_vm_network, start_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
+from drakrun.vmconf import generate_vm_conf
+from tqdm import tqdm
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(asctime)s][%(levelname)s] %(message)s',
@@ -81,15 +84,10 @@ def ensure_zfs(ctx, param, value):
 @click.option('--zfs-tank-name', 'zfs_tank_name',
               callback=ensure_zfs,
               help='Tank name (only for ZFS storage backend)')
-@click.option('--max-vms', 'max_vms',
-              type=int,
-              default=1,
-              show_default=True,
-              help='Maximum number of simultaneous VMs')
 @click.option('--unattended-xml', 'unattended_xml',
               type=click.Path(exists=True),
               help='Path to autounattend.xml for automated Windows install')
-def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unattended_xml):
+def install(storage_backend, disk_size, iso_path, zfs_tank_name, unattended_xml):
     logging.info("Ensuring that drakrun@* services are stopped...")
     subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
 
@@ -122,7 +120,6 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, max_vms, unatte
         disk_size=disk_size,
         iso_path=os.path.abspath(iso_path),
         zfs_tank_name=zfs_tank_name,
-        max_vms=max_vms,
         enable_unattended=unattended_xml is not None,
         iso_sha256=iso_sha256
     )
@@ -264,7 +261,6 @@ def postinstall(report, generate_usermode):
         report = False
 
     install_info = InstallInfo.load()
-    max_vms = install_info.max_vms
     output = subprocess.check_output(['vmi-win-guid', 'name', 'vm-0'], timeout=30).decode('utf-8')
 
     try:
@@ -328,10 +324,6 @@ def postinstall(report, generate_usermode):
             logging.warning("Generating usermode profiles failed")
             logging.exception(e)
 
-    for vm_id in range(max_vms + 1):
-        # we treat vm_id=0 as special internal one
-        generate_vm_conf(install_info, vm_id)
-
     if report:
         send_usage_report({
             "kernel": {
@@ -344,58 +336,17 @@ def postinstall(report, generate_usermode):
             }
         })
 
-    reenable_services()
     logging.info("All right, drakrun setup is done.")
+    logging.info("First instance of drakrun will be enabled automatically...")
+    subprocess.check_output('systemctl enable drakrun@1', shell=True)
+    subprocess.check_output('systemctl start drakrun@1', shell=True)
 
-
-def reenable_services():
-    install_info = InstallInfo.try_load()
-    if not install_info:
-        logging.info("Not re-enabling services, install.json is missing.")
-        return
-
-    subprocess.check_output('systemctl disable \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
-    subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
-
-    for vm_id in range(1, install_info.max_vms + 1):
-        logging.info("Enabling and starting drakrun@{0}...".format(vm_id))
-        subprocess.check_output('systemctl enable drakrun@{0}'.format(vm_id), shell=True, stderr=subprocess.STDOUT)
-        subprocess.check_output('systemctl restart drakrun@{0}'.format(vm_id), shell=True, stderr=subprocess.STDOUT)
-
-
-def generate_vm_conf(install_info: InstallInfo, vm_id: int):
-    with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'r') as f:
-        template = f.read()
-
-    storage_backend = get_storage_backend(install_info)
-
-    disks = []
-    disks.append(storage_backend.get_vm_disk_path(vm_id))
-
-    disks.append('file:{iso},hdc:cdrom,r'.format(iso=os.path.abspath(install_info.iso_path)))
-
-    if install_info.enable_unattended:
-        disks.append('file:{main_dir}/volumes/unattended.iso,hdd:cdrom,r'.format(main_dir=LIB_DIR))
-
-    disks = ', '.join(['"{}"'.format(disk) for disk in disks])
-
-    template = template.replace('{{ VM_ID }}', str(vm_id))
-    template = template.replace('{{ DISKS }}', disks)
-    template = template.replace('{{ VNC_PORT }}', str(6400 + vm_id))
-
-    if vm_id == 0:
-        template = re.sub('on_reboot[ ]*=(.*)', 'on_reboot = "restart"', template)
-
-    with open(os.path.join(ETC_DIR, 'configs/vm-{}.cfg'.format(vm_id)), 'w') as f:
-        f.write(template)
-
-    logging.info("Generated VM configuration for vm-{vm_id}".format(vm_id=vm_id))
+    logging.info("If you want to have more parallel instances, execute:")
+    logging.info("  # draksetup scale <number of instances>")
 
 
 @click.command(help='Perform tasks after drakrun upgrade')
 def postupgrade():
-    reenable_services()
-
     with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'r') as f:
         template = f.read()
 
@@ -403,10 +354,60 @@ def postupgrade():
     passwd = ''.join(random.choice(passwd_characters) for i in range(20))
     template = template.replace('{{ VNC_PASS }}', passwd)
 
-    with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'w') as f:
+    with open(os.path.join(ETC_DIR, 'scripts', 'cfg.template'), 'w') as f:
         f.write(template)
 
     detect_defaults()
+
+
+def get_enabled_drakruns():
+    for fn in os.listdir("/etc/systemd/system/default.target.wants"):
+        if re.fullmatch('drakrun@[0-9]+\\.service', fn):
+            yield fn
+
+
+def wait_processes(descr, popens):
+    total = len(popens)
+
+    if total == 0:
+        return True
+
+    exit_codes = []
+
+    with tqdm(total=total, unit_scale=True) as pbar:
+        pbar.set_description(descr)
+        while True:
+            time.sleep(0.25)
+            for popen in popens:
+                exit_code = popen.poll()
+                if exit_code is not None:
+                    exit_codes.append(exit_code)
+                    popens.remove(popen)
+                    pbar.update(1)
+
+            if len(popens) == 0:
+                return all([exit_code == 0 for exit_code in exit_codes])
+
+
+@click.command(help='Scale drakrun services',
+               no_args_is_help=True)
+@click.argument('scale_count',
+                type=int)
+def scale(scale_count):
+    """Enable or disable additional parallel instances of drakrun service.."""
+    if scale_count < 1:
+        raise RuntimeError('Invalid value of scale parameter. Must be at least 1.')
+
+    cur_services = set(list(get_enabled_drakruns()))
+    new_services = set([f'drakrun@{i}.service' for i in range(1, scale_count + 1)])
+
+    disable_services = cur_services - new_services
+    enable_services = new_services
+
+    wait_processes('disable services', [subprocess.Popen(["systemctl", "disable", service], stdout=subprocess.PIPE, stderr=subprocess.PIPE) for service in disable_services])
+    wait_processes('enable services', [subprocess.Popen(["systemctl", "enable", service], stdout=subprocess.PIPE, stderr=subprocess.PIPE) for service in enable_services])
+    wait_processes('start services', [subprocess.Popen(["systemctl", "start", service], stdout=subprocess.PIPE, stderr=subprocess.PIPE) for service in enable_services])
+    wait_processes('stop services', [subprocess.Popen(["systemctl", "stop", service], stdout=subprocess.PIPE, stderr=subprocess.PIPE) for service in disable_services])
 
 
 @click.command(help='Mount ISO into guest',
@@ -435,6 +436,7 @@ main.add_command(install)
 main.add_command(postinstall)
 main.add_command(postupgrade)
 main.add_command(mount)
+main.add_command(scale)
 
 
 if __name__ == "__main__":
