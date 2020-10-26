@@ -17,7 +17,7 @@ def service_runnning(info):
 
 def get_enabled_drakruns():
     for fn in os.listdir("/etc/systemd/system/default.target.wants"):
-        if re.match('^drakrun@([0-9]+)\.service$', fn):
+        if re.fullmatch('drakrun@[0-9]+\.service', fn):
             yield fn
 
 def print_status(name, is_ok):
