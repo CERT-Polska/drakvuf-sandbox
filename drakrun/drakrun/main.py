@@ -31,6 +31,7 @@ from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
 from drakrun.util import patch_config, get_domid_from_instance_id
+from drakrun.vmconf import generate_vm_conf
 
 INSTANCE_ID = None
 PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
@@ -104,6 +105,8 @@ class DrakrunKarton(Karton):
     ]
 
     def init_drakrun(self):
+        generate_vm_conf(InstallInfo.load(), INSTANCE_ID)
+
         if not self.minio.bucket_exists('drakrun'):
             self.minio.make_bucket(bucket_name='drakrun')
 
@@ -126,22 +129,22 @@ class DrakrunKarton(Karton):
 
         for export in exports:
             if export[1] == 'DllRegisterServer':
-                return 'start regsvr32 %f'
+                return 'regsvr32 %f'
 
             if 'DllMain' in export[1]:
-                return 'start rundll32 %f,{}'.format(export[1])
+                return 'rundll32 %f,{}'.format(export[1])
 
         if exports:
             if exports[0][1]:
-                return 'start rundll32 %f,{}'.format(export[1].split('@')[0])
+                return 'rundll32 %f,{}'.format(export[1].split('@')[0])
             elif exports[0][0]:
-                return 'start rundll32 %f,#{}'.format(export[0])
+                return 'rundll32 %f,#{}'.format(export[0])
 
         return None
 
     @staticmethod
     def _get_office_file_run_command(extension, file_path):
-        start_command = ['start']
+        start_command = ['cmd.exe', '/C', 'start']
         if d_office.is_office_word_file(extension):
             start_command.append('winword.exe')
         else:
@@ -160,7 +163,7 @@ class DrakrunKarton(Karton):
         if extension == 'dll':
             start_command = self.current_task.payload.get("start_command", self._get_dll_run_command(sample.content))
         elif extension == 'exe':
-            start_command = 'start %f'
+            start_command = '%f'
         elif d_office.is_office_file(extension):
             start_command = self._get_office_file_run_command(extension, file_path)
         else:
@@ -411,9 +414,9 @@ class DrakrunKarton(Karton):
                                 "-e", f"%USERPROFILE%\\Desktop\\{file_name}",
                                 "-B", os.path.join(workdir, file_name)]
 
-                self.log.info("Running injector...")
+                self.log.info("Running injector (write sample to VM)...")
                 injector = subprocess.Popen(injector_cmd, stdout=subprocess.PIPE)
-                outs, errs = injector.communicate(b"", 20)
+                outs, errs = injector.communicate(b"", 60)
 
                 if injector.returncode != 0:
                     raise subprocess.CalledProcessError(injector.returncode, injector_cmd)
@@ -429,12 +432,26 @@ class DrakrunKarton(Karton):
 
                 # don't include our internal maintanance commands
                 metadata['start_command'] = cur_start_command
-                cur_start_command = f"cd {cwd} & " + cur_start_command
 
                 if net_enable:
-                    cur_start_command = "ipconfig /renew & " + cur_start_command
+                    injector_cmd = ["injector",
+                                    "-o", "json",
+                                    "-d", "vm-{vm_id}".format(vm_id=INSTANCE_ID),
+                                    "-r", kernel_profile,
+                                    "-i", inject_pid,
+                                    "-k", kpgd,
+                                    "-m", "createproc",
+                                    "-e", "cmd /C ipconfig /renew >nul",
+                                    "-w"]
 
-                full_cmd = subprocess.list2cmdline(["cmd.exe", "/C", cur_start_command])
+                    self.log.info("Running injector...")
+                    injector = subprocess.Popen(injector_cmd, stdout=subprocess.PIPE)
+                    outs, errs = injector.communicate(b"", 120)
+
+                    if injector.returncode != 0:
+                        logging.info("Injector failed!")
+
+                full_cmd = cur_start_command
                 self.log.info("Using command: %s", full_cmd)
 
                 drakvuf_cmd = ["drakvuf",
@@ -452,7 +469,8 @@ class DrakrunKarton(Karton):
                                "--dll-hooks-list", hooks_list,
                                "--memdump-dir", dump_dir,
                                "-r", kernel_profile,
-                               "-e", full_cmd]
+                               "-e", full_cmd,
+                               "-c", cwd]
 
                 drakvuf_cmd.extend(self.get_profile_list())
 
