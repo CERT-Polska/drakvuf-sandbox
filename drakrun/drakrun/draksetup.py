@@ -392,8 +392,7 @@ def wait_processes(descr, popens):
 @click.argument('scale_count',
                 type=int)
 def scale(scale_count):
-    '''Enable or disable additional parallel instances of drakrun service..
-    '''
+    """Enable or disable additional parallel instances of drakrun service.."""
     if scale_count < 1:
         raise RuntimeError('Invalid value of scale parameter. Must be at least 1.')
 
