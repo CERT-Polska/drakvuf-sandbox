@@ -15,10 +15,12 @@ def generate_vm_conf(install_info: InstallInfo, vm_id: int):
     disks = []
     disks.append(storage_backend.get_vm_disk_path(vm_id))
 
-    disks.append('file:{iso},hdc:cdrom,r'.format(iso=os.path.abspath(install_info.iso_path)))
+    install_iso_path = os.path.abspath(install_info.iso_path)
+    disks.append(f'file:{install_iso_path},hdc:cdrom,r')
 
     if install_info.enable_unattended:
-        disks.append('file:{main_dir}/volumes/unattended.iso,hdd:cdrom,r'.format(main_dir=LIB_DIR))
+        unattended_iso_path = os.path.join(LIB_DIR, 'volumes', 'unattended.iso')
+        disks.append(f'file:{unattended_iso_path},hdd:cdrom,r')
 
     disks = ', '.join(['"{}"'.format(disk) for disk in disks])
 
