@@ -352,7 +352,7 @@ def postupgrade():
     passwd = ''.join(random.choice(passwd_characters) for i in range(20))
     template = template.replace('{{ VNC_PASS }}', passwd)
 
-    with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'w') as f:
+    with open(os.path.join(ETC_DIR, 'scripts', 'cfg.template'), 'w') as f:
         f.write(template)
 
     detect_defaults()
