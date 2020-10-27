@@ -5,24 +5,51 @@ on:
     tags:
       - 'v0.*'
       - 'dev-build-*'
+  schedule:
+    - cron: "0 23 * * *"
 
 jobs:
   release:
     runs-on: ubuntu-18.04
     steps:
-    - name: Create a Release
+    - name: Generate variables
+      id: gen_vars
+      run: |
+        echo "::set-output name=tag_name::$(date '+%Y%m%d%H%M%S')-$(echo ${GITHUB_SHA} | cut -c1-8)"
+        echo "::set-output name=short_sha::$(echo ${GITHUB_SHA} | cut -c1-8)"
+        echo "::set-output name=cur_datetime::$(date '+%Y-%m-%d %H:%M:%S')"
+    - name: Create a Release (regular)
+      if: ${{ github.event_name != 'schedule' }}
       uses: actions/create-release@v1
-      id: create_release
+      id: create_release_regular
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       with:
         tag_name: ${{ github.ref }}
         release_name: DRAKVUF Sandbox ${{ github.ref }}
         draft: true
         prerelease: false
-    - name: Store release URL as file
+    - name: Store release URL as file (regular)
+      if: ${{ github.event_name != 'schedule' }}
       run: |
-        echo "${{ steps.create_release.outputs.upload_url }}" > release-url.txt
+        echo "${{ steps.create_release_regular.outputs.upload_url }}" > release-url.txt
+    - name: Create a Release (nightly)
+      if: ${{ github.event_name == 'schedule' }}
+      uses: actions/create-release@v1
+      id: create_release_nightly
+      env:
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      with:
+        owner: icedevml
+        repo: drakvuf-sandbox-nightly
+        tag_name: build-${{ steps.gen_vars.outputs.tag_name }}
+        release_name: DRAKVUF Sandbox Nightly ${{ steps.gen_vars.outputs.cur_datetime }} ${{ steps.gen_vars.outputs.short_sha }}
+        draft: false
+        prerelease: true
+    - name: Store release URL as file (nightly)
+      if: ${{ github.event_name == 'schedule' }}
+      run: |
+        echo "${{ steps.create_release_nightly.outputs.upload_url }}" > release-url.txt
     - name: Upload release URL artifact
       uses: actions/upload-artifact@v1
       with:
@@ -82,7 +109,7 @@ jobs:
     - name: Upload DRAKVUF release asset
       uses: actions/upload-release-asset@v1.0.2
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       with:
         upload_url: ${{ steps.gen_vars.outputs.release_url }}
         asset_path: ${{ steps.build_drakvuf_deb.outputs.drakvuf_deb_path }}
