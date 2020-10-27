@@ -5,8 +5,8 @@ on:
     tags:
       - 'v0.*'
       - 'dev-build-*'
-  schedule:
-    - cron: "0 23 * * *"
+    branches:
+      - master
 
 jobs:
   release:
@@ -19,7 +19,7 @@ jobs:
         echo "::set-output name=short_sha::$(echo ${GITHUB_SHA} | cut -c1-8)"
         echo "::set-output name=cur_datetime::$(date '+%Y-%m-%d %H:%M:%S')"
     - name: Create a Release (regular)
-      if: ${{ github.event_name != 'schedule' }}
+      if: github.ref != 'refs/heads/master'
       uses: actions/create-release@v1
       id: create_release_regular
       env:
@@ -30,11 +30,11 @@ jobs:
         draft: true
         prerelease: false
     - name: Store release URL as file (regular)
-      if: ${{ github.event_name != 'schedule' }}
+      if: github.ref != 'refs/heads/master'
       run: |
         echo "${{ steps.create_release_regular.outputs.upload_url }}" > release-url.txt
     - name: Create a Release (nightly)
-      if: ${{ github.event_name == 'schedule' }}
+      if: github.ref == 'refs/heads/master'
       uses: actions/create-release@v1
       id: create_release_nightly
       env:
@@ -47,7 +47,7 @@ jobs:
         draft: false
         prerelease: true
     - name: Store release URL as file (nightly)
-      if: ${{ github.event_name == 'schedule' }}
+      if: github.ref == 'refs/heads/master'
       run: |
         echo "${{ steps.create_release_nightly.outputs.upload_url }}" > release-url.txt
     - name: Upload release URL artifact
