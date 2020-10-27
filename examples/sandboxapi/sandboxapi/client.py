@@ -1,3 +1,16 @@
+"""Client implementation for DRAKVUF Sandbox.
+
+This module exposes the Client class, which can be instantiated to begin interfacing with DRAKVUF Sandbox
+programmatically
+
+  Typical usage example (see README.md for more usage info):
+
+  # instantiate a client
+  client = Client(url="http://localhost:6300")
+  # submit a file and get the UUID of the new job in response
+  uuid = client.post_file("/path/to/file")
+"""
+
 import requests
 from typing import Tuple
 

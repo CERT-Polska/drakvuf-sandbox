@@ -1,5 +1,15 @@
 # Python client for [DRAKVUF Sandbox](https://github.com/CERT-Polska/drakvuf-sandbox)
 
+## Overview
+
+sandboxapi is a client implementation in Python for the API exposed by
+[DRAKVUF Sandbox](https://github.com/CERT-Polska/drakvuf-sandbox). Below, you'll find some installation and usage
+instructions.
+
+# Prerequisites:
+- Python 3
+- A running DRAKVUF Sandbox instance on an accessible host
+
 ## Installation
 
 * Clone this repo
@@ -9,9 +19,7 @@
     pip install .
     ```
 
-**NOTE**: written for Python 3
-
-## Using the API
+## Using the API Programmatically
 
 ### Instantiating a client
 
@@ -62,7 +70,7 @@ Options for logs to pull include (non-exhaustive):
 * regmon
 * syscalls
 
-## Using the CLI
+## Using the API from the CLI
 
 ```
 $ sandboxcli -h

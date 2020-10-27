@@ -1,3 +1,14 @@
+"""CLI wrapper around the sandboxapi Client implementation for DRAKVUF Sandbox.
+
+This module provides a CLI wrapping the Client class exposed by client.py, facilitating pushing files to and pulling
+results from DRAKVUF Sandbox via the command line.
+
+  Typical usage example (see README.md for more usage info):
+
+  $ sandboxcli -f sample.exe
+  Submitted file sample.exe with job UUID <UUID>
+"""
+
 import argparse
 import time
 from sandboxapi.client import Client
