@@ -92,10 +92,11 @@ def setup_vm_network(vm_id, net_enable, out_interface, dns_server):
 
     subprocess.check_output(f'ip link set dev drak{vm_id} up', shell=True)
     add_iptable_rule(f"INPUT -i drak{vm_id} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
-    add_iptable_rule(f"INPUT -i drak{vm_id} -d 0.0.0.0/0 -j DROP")
 
     if dns_server == "use-gateway-address":
-        add_iptable_rule(f"INPUT -i drak{vm_id} -p udp --dport 52 --sport 52 -j ACCEPT")
+        add_iptable_rule(f"INPUT -i drak{vm_id} -p udp --dport 53 -j ACCEPT")
+
+    add_iptable_rule(f"INPUT -i drak{vm_id} -d 0.0.0.0/0 -j DROP")
 
     if net_enable:
         with open('/proc/sys/net/ipv4/ip_forward', 'w') as f:
