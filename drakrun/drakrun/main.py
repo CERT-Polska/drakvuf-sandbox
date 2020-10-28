@@ -561,7 +561,7 @@ def validate_xen_commandline():
         "altp2m": "1"
     }
 
-    parsed_xl_info = xl_info = get_xl_info()
+    parsed_xl_info = get_xl_info()
     xen_cmdline = get_xen_commandline(parsed_xl_info)
 
     unrecommended = []
