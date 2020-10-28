@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import logging
+import sys
 import os
 import shutil
 import argparse
@@ -32,6 +33,7 @@ from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
 from drakrun.util import patch_config, get_domid_from_instance_id
 from drakrun.vmconf import generate_vm_conf
+from drakrun.parse_xl_info import get_xl_info, get_xen_commandline
 
 INSTANCE_ID = None
 PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
@@ -549,6 +551,30 @@ class DrakrunKarton(Karton):
         self.send_task(t)
 
 
+def validate_xen_commandline():
+    required_cmdline = {
+        "sched": "credit",
+        "force-ept": "1",
+        "ept": "pml=0",
+        "hap_1gb": "0",
+        "hap_2mb": "0",
+        "altp2m": "1"
+    }
+
+    parsed_xl_info = xl_info = get_xl_info()
+    xen_cmdline = get_xen_commandline(parsed_xl_info)
+
+    unrecommended = []
+
+    for k, v in required_cmdline.items():
+        actual_v = xen_cmdline.get(k)
+
+        if actual_v != v:
+            unrecommended.append((k, v, actual_v))
+
+    return unrecommended
+
+
 def cmdline_main():
     parser = argparse.ArgumentParser(description='Kartonized drakrun <3')
     parser.add_argument('instance', type=int, help='Instance identifier')
@@ -566,6 +592,35 @@ def main():
     if not conf.config.get('minio', 'access_key').strip():
         logging.warning(f"Detected blank value for minio access_key in {conf_path}. "
                         "This service may not work properly.")
+
+    unrecommended = validate_xen_commandline()
+
+    if unrecommended:
+        logging.warning("-" * 80)
+        logging.warning("You don't have the recommended settings in your Xen's command line.")
+        logging.warning("Please amend settings in your GRUB_CMDLINE_XEN_DEFAULT in /etc/default/grub.d/xen.cfg file.")
+
+        for k, v, actual_v in unrecommended:
+            if actual_v is not None:
+                logging.warning(f"- Set {k}={v} (instead of {k}={actual_v})")
+            else:
+                logging.warning(f"- Set {k}={v} ({k} is not set right now)")
+
+        logging.warning("Then, please execute the following commands as root: update-grub && reboot")
+        logging.warning("-" * 80)
+        logging.warning("This check can be skipped by adding xen_cmdline_check=ignore in [drakrun] section of drakrun's config.")
+        logging.warning("Please be aware that some bugs may arise when using unrecommended settings.")
+
+        try:
+            xen_cmdline_check = conf.config.get('drakrun', 'xen_cmdline_check')
+        except NoOptionError:
+            xen_cmdline_check = 'fail'
+
+        if xen_cmdline_check == 'ignore':
+            logging.warning("ATTENTION! Configuration specified that check result should be ignored, continuing anyway...")
+        else:
+            logging.error("Exitting due to above warnings. Please ensure that you are using recommended Xen's command line.")
+            sys.exit(1)
 
     try:
         identity = conf.config.get('drakrun', 'identity')
