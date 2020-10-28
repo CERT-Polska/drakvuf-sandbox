@@ -57,6 +57,9 @@ def get_xen_commandline(parsed_xl_info):
     cfg = {}
 
     for opt in opts:
+        if not opt.strip():
+            continue
+
         if '=' not in opt:
             cfg[opt] = '1'
         else:
