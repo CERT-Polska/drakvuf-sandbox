@@ -167,6 +167,8 @@ class DrakrunKarton(Karton):
             start_command = '%f'
         elif d_office.is_office_file(extension):
             start_command = self._get_office_file_run_command(extension, file_path)
+        elif extension == 'ps1':
+            start_command = 'powershell.exe -executionpolicy bypass -File %f'
         else:
             self.log.error("Unknown file extension - %s", extension)
             start_command = None
