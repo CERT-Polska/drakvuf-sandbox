@@ -34,7 +34,6 @@ from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_
 from drakrun.util import patch_config, get_domid_from_instance_id, get_xl_info, get_xen_commandline
 from drakrun.vmconf import generate_vm_conf
 
-INSTANCE_ID = None
 PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
 
 
@@ -105,8 +104,12 @@ class DrakrunKarton(Karton):
         }
     ]
 
+    def __init__(self, config: Config, instance_id: int):
+        super().__init__(config)
+        self.instance_id = instance_id
+
     def init_drakrun(self):
-        generate_vm_conf(InstallInfo.load(), INSTANCE_ID)
+        generate_vm_conf(InstallInfo.load(), self.instance_id)
 
         if not self.minio.bucket_exists('drakrun'):
             self.minio.make_bucket(bucket_name='drakrun')
@@ -115,7 +118,7 @@ class DrakrunKarton(Karton):
         out_interface = self.config.config['drakrun'].get('out_interface', '')
         dns_server = self.config.config['drakrun'].get('dns_server', '')
 
-        setup_vm_network(INSTANCE_ID, net_enable, out_interface, dns_server)
+        setup_vm_network(self.instance_id, net_enable, out_interface, dns_server)
 
     @staticmethod
     def _get_dll_run_command(pe_data):
@@ -338,9 +341,9 @@ class DrakrunKarton(Karton):
             self.log.info(f"override UID: {override_uid}")
             self.log.info("note that artifacts will be stored under this overriden identifier")
 
-        self.rs.set(f"drakvnc:{analysis_uid}", INSTANCE_ID, ex=3600)  # 1h
+        self.rs.set(f"drakvnc:{analysis_uid}", self.instance_id, ex=3600)  # 1h
 
-        workdir = '/tmp/drakrun/vm-{}'.format(int(INSTANCE_ID))
+        workdir = '/tmp/drakrun/vm-{}'.format(self.instance_id)
 
         extension = self.current_task.headers.get("extension", "exe").lower()
         if '(DLL)' in magic_output:
@@ -386,15 +389,15 @@ class DrakrunKarton(Karton):
 
         for _ in range(3):
             try:
-                self.log.info("running vm {}".format(INSTANCE_ID))
-                watcher_dnsmasq = start_dnsmasq(INSTANCE_ID, self.config.config['drakrun'].get('dns_server', '8.8.8.8'))
+                self.log.info("Running VM {}".format(self.instance_id))
+                watcher_dnsmasq = start_dnsmasq(self.instance_id, self.config.config['drakrun'].get('dns_server', '8.8.8.8'))
 
-                snapshot_version = self.run_vm(INSTANCE_ID)
+                snapshot_version = self.run_vm(self.instance_id)
                 metadata['snapshot_version'] = snapshot_version
 
-                watcher_tcpdump = start_tcpdump_collector(INSTANCE_ID, outdir)
+                watcher_tcpdump = start_tcpdump_collector(self.instance_id, outdir)
 
-                self.log.info("running monitor {}".format(INSTANCE_ID))
+                self.log.info("running monitor {}".format(self.instance_id))
 
                 kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
                 runtime_profile = os.path.join(PROFILE_DIR, "runtime.json")
@@ -409,7 +412,7 @@ class DrakrunKarton(Karton):
 
                 injector_cmd = ["injector",
                                 "-o", "json",
-                                "-d", "vm-{vm_id}".format(vm_id=INSTANCE_ID),
+                                "-d", "vm-{vm_id}".format(vm_id=self.instance_id),
                                 "-r", kernel_profile,
                                 "-i", inject_pid,
                                 "-k", kpgd,
@@ -439,7 +442,7 @@ class DrakrunKarton(Karton):
                 if net_enable:
                     injector_cmd = ["injector",
                                     "-o", "json",
-                                    "-d", "vm-{vm_id}".format(vm_id=INSTANCE_ID),
+                                    "-d", "vm-{vm_id}".format(vm_id=self.instance_id),
                                     "-r", kernel_profile,
                                     "-i", inject_pid,
                                     "-k", kpgd,
@@ -468,7 +471,7 @@ class DrakrunKarton(Karton):
                                "-t", str(timeout),
                                "-i", inject_pid,
                                "-k", kpgd,
-                               "-d", "vm-{vm_id}".format(vm_id=INSTANCE_ID),
+                               "-d", "vm-{vm_id}".format(vm_id=self.instance_id),
                                "--dll-hooks-list", hooks_list,
                                "--memdump-dir", dump_dir,
                                "-r", kernel_profile,
@@ -501,12 +504,12 @@ class DrakrunKarton(Karton):
                         raise subprocess.CalledProcessError(exit_code, drakvuf_cmd)
                 break
             except subprocess.CalledProcessError:
-                self.log.info("Something went wrong with the VM {}".format(INSTANCE_ID), exc_info=True)
+                self.log.info("Something went wrong with the VM {}".format(self.instance_id), exc_info=True)
             finally:
                 try:
-                    subprocess.run(["xl", "destroy", "vm-{}".format(INSTANCE_ID)], cwd=workdir, check=True)
+                    subprocess.run(["xl", "destroy", "vm-{}".format(self.instance_id)], cwd=workdir, check=True)
                 except subprocess.CalledProcessError:
-                    self.log.info("Failed to destroy VM {}".format(INSTANCE_ID), exc_info=True)
+                    self.log.info("Failed to destroy VM {}".format(self.instance_id), exc_info=True)
 
                 if watcher_dnsmasq:
                     watcher_dnsmasq.terminate()
@@ -581,12 +584,10 @@ def cmdline_main():
     parser.add_argument('instance', type=int, help='Instance identifier')
     args = parser.parse_args()
 
-    global INSTANCE_ID
-    INSTANCE_ID = args.instance
-    main()
+    main(args)
 
 
-def main():
+def main(args):
     conf_path = os.path.join(ETC_DIR, "config.ini")
     conf = patch_config(Config(conf_path))
 
@@ -631,7 +632,7 @@ def main():
         DrakrunKarton.identity = identity
         logging.warning(f"Overriding identity to: {identity}")
 
-    c = DrakrunKarton(conf)
+    c = DrakrunKarton(conf, args.instance)
     c.init_drakrun()
     c.loop()
 
