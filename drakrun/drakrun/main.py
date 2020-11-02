@@ -31,7 +31,7 @@ from drakrun.drakparse import parse_logs
 from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
-from drakrun.util import patch_config, get_domid_from_instance_id, get_xl_info, get_xen_commandline
+from drakrun.util import patch_config, get_domid_from_instance_id, get_xl_info, get_xen_commandline, RuntimeInfo
 from drakrun.vmconf import generate_vm_conf
 
 PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
@@ -402,9 +402,7 @@ class DrakrunKarton(Karton):
                 kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
                 runtime_profile = os.path.join(PROFILE_DIR, "runtime.json")
                 with open(runtime_profile, 'r') as runtime_f:
-                    rp = json.loads(runtime_f.read())
-                    inject_pid = rp['inject_pid']
-                    kpgd = rp['vmi_offsets']['kpgd']
+                    runtime_info = RuntimeInfo.load(runtime_f)
 
                 hooks_list = os.path.join(ETC_DIR, "hooks.txt")
                 dump_dir = os.path.join(outdir, "dumps")
@@ -414,8 +412,8 @@ class DrakrunKarton(Karton):
                                 "-o", "json",
                                 "-d", "vm-{vm_id}".format(vm_id=self.instance_id),
                                 "-r", kernel_profile,
-                                "-i", inject_pid,
-                                "-k", kpgd,
+                                "-i", str(runtime_info.inject_pid),
+                                "-k", hex(runtime_info.vmi_offsets.kpgd),
                                 "-m", "writefile",
                                 "-e", f"%USERPROFILE%\\Desktop\\{file_name}",
                                 "-B", os.path.join(workdir, file_name)]
@@ -444,8 +442,8 @@ class DrakrunKarton(Karton):
                                     "-o", "json",
                                     "-d", "vm-{vm_id}".format(vm_id=self.instance_id),
                                     "-r", kernel_profile,
-                                    "-i", inject_pid,
-                                    "-k", kpgd,
+                                    "-i", str(runtime_info.inject_pid),
+                                    "-k", hex(runtime_info.vmi_offsets.kpgd),
                                     "-m", "createproc",
                                     "-e", "cmd /C ipconfig /renew >nul",
                                     "-w"]
@@ -469,8 +467,8 @@ class DrakrunKarton(Karton):
                                "-x", "envmon",
                                "-j", "5",
                                "-t", str(timeout),
-                               "-i", inject_pid,
-                               "-k", kpgd,
+                               "-i", str(runtime_info.inject_pid),
+                               "-k", hex(runtime_info.vmi_offsets.kpgd),
                                "-d", "vm-{vm_id}".format(vm_id=self.instance_id),
                                "--dll-hooks-list", hooks_list,
                                "--memdump-dir", dump_dir,
