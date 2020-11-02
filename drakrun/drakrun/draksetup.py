@@ -11,6 +11,7 @@ import subprocess
 import string
 import tempfile
 from shutil import copyfile
+from typing import Optional
 
 import click
 import requests
@@ -20,6 +21,7 @@ from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
 from drakrun.networking import setup_vm_network, start_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
 from drakrun.vmconf import generate_vm_conf
+from drakrun.util import RuntimeInfo, VmiOffsets
 from tqdm import tqdm
 
 logging.basicConfig(level=logging.DEBUG,
@@ -247,6 +249,59 @@ def create_rekall_profiles(install_info: InstallInfo):
         subprocess.check_output(f'umount {mnt_path_quoted}', shell=True)
 
 
+def extract_explorer_pid(
+    domain: str,
+    kernel_profile: str,
+    offsets: VmiOffsets,
+    timeout: int = 30
+) -> Optional[int]:
+    """ Call get-explorer-pid helper and get its PID """
+    module_dir = os.path.dirname(os.path.realpath(__file__))
+    pid_tool = os.path.join(module_dir, "tools", "get-explorer-pid")
+    try:
+        explorer_pid_s = subprocess.check_output([
+            pid_tool,
+            domain,
+            kernel_profile,
+            hex(offsets.kpgd)
+        ], timeout=timeout).decode('utf-8', 'ignore')
+
+        m = re.search(r'explorer\.exe:([0-9]+)', explorer_pid_s)
+        if m is not None:
+            return int(m.group(1))
+
+    except subprocess.CalledProcessError:
+        logging.exception("get-explorer-pid exited with an error")
+    except subprocess.TimeoutExpired:
+        logging.exception("get-explorer-pid timed out")
+
+    raise RuntimeError("Extracting explorer PID failed")
+
+
+def extract_vmi_offsets(
+    domain: str,
+    kernel_profile: str,
+    timeout: int = 30
+) -> Optional[VmiOffsets]:
+    """ Call vmi-win-offsets helper and obtain VmiOffsets values """
+    try:
+        output = subprocess.check_output([
+            'vmi-win-offsets',
+            '--name', domain,
+            '--json-kernel', kernel_profile
+        ], timeout=timeout).decode('utf-8', 'ignore')
+
+        return VmiOffsets.from_tool_output(output)
+    except TypeError:
+        logging.exception("Invalid output of vmi-win-offsets")
+    except subprocess.CalledProcessError:
+        logging.exception("vmi-win-offsets exited with an error")
+    except subprocess.TimeoutExpired:
+        logging.exception("vmi-win-offsets timed out")
+
+    raise RuntimeError("Extracting VMI offsets failed")
+
+
 @click.command()
 @click.option('--report/--no-report', 'report',
               default=True,
@@ -285,30 +340,13 @@ def postinstall(report, generate_usermode):
     with open(kernel_profile, 'w') as f:
         f.write(profile)
 
-    output = subprocess.check_output(['vmi-win-offsets', '--name', 'vm-0', '--json-kernel', kernel_profile], timeout=30).decode('utf-8')
-
-    offsets = re.findall(r'^([a-z_]+):(0x[0-9a-f]+)$', output, re.MULTILINE)
-    if not offsets:
-        logging.error("Failed to parse output of vmi-win-offsets.")
-        return
-
-    offsets_dict = {k: v for k, v in offsets}
-
-    if 'kpgd' not in offsets_dict:
-        logging.error("Failed to obtain KPGD value.")
-        return
-
-    module_dir = os.path.dirname(os.path.realpath(__file__))
-    pid_tool = os.path.join(module_dir, "tools", "get-explorer-pid")
-    explorer_pid_s = subprocess.check_output([pid_tool, "vm-0", kernel_profile, offsets_dict['kpgd']], timeout=30).decode('ascii', 'ignore')
-    m = re.search(r'explorer\.exe:([0-9]+)', explorer_pid_s)
-    explorer_pid = m.group(1)
-
-    runtime_profile = {"vmi_offsets": offsets_dict, "inject_pid": explorer_pid}
+    vmi_offsets = extract_vmi_offsets('vm-0', kernel_profile)
+    explorer_pid = extract_explorer_pid('vm-0', kernel_profile, vmi_offsets)
+    runtime_info = RuntimeInfo(vmi_offsets=vmi_offsets, inject_pid=explorer_pid)
 
     logging.info("Saving runtime profile...")
     with open(os.path.join(LIB_DIR, 'profiles', 'runtime.json'), 'w') as f:
-        f.write(json.dumps(runtime_profile, indent=4))
+        f.write(runtime_info.to_json(indent=4))
 
     logging.info("Saving VM snapshot...")
     subprocess.check_output('xl save vm-0 ' + os.path.join(LIB_DIR, "volumes", "snapshot.sav"), shell=True)
