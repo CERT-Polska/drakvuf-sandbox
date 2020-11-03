@@ -26,6 +26,17 @@ db = Database(conf.config["drakmon"].get("database", "sqlite:///var/lib/drakcore
               pathlib.Path(__file__).parent / "migrations")
 
 
+@app.before_first_request
+def update_metadata_cache():
+    """ Scans whole MinIO bucket and fetch missing metadata files """
+    for analysis in AnalysisProxy(minio, None).enumerate():
+        try:
+            get_analysis_metadata(analysis.uid)
+        except NoSuchKey:
+            # Well, we tried. Too bad
+            pass
+
+
 @app.errorhandler(NoSuchKey)
 def resource_not_found(e):
     return jsonify(error="Object not found"), 404
@@ -102,16 +113,9 @@ def get_analysis_metadata(analysis_uid):
 
 @app.route("/list")
 def route_list():
-    analyses = []
-    for analysis in AnalysisProxy(minio, None).enumerate():
-        try:
-            analyses.append({"id": analysis.uid, "meta": get_analysis_metadata(analysis.uid)})
-        except NoSuchKey:
-            continue
-
-    def sorting_key(o):
-        return o.get('meta', {}).get('time_finished', -1)
-    return jsonify(sorted(analyses, key=sorting_key, reverse=True))
+    limit = int(request.args.get("limit", 100))
+    offset = int(request.args.get("offset", 0))
+    return jsonify(list(db.get_latest_metadata(limit, offset)))
 
 
 @app.route("/processed/<task_uid>/<which>")
