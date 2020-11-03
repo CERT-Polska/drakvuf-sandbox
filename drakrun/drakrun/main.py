@@ -28,13 +28,11 @@ from karton2 import Karton, Config, Task, LocalResource
 import drakrun.office as d_office
 from drakrun.drakpdb import dll_file_list
 from drakrun.drakparse import parse_logs
-from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
+from drakrun.config import InstallInfo, ETC_DIR, VM_CONFIG_DIR, VOLUME_DIR, PROFILE_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
 from drakrun.util import patch_config, get_domid_from_instance_id, get_xl_info, get_xen_commandline, RuntimeInfo
 from drakrun.vmconf import generate_vm_conf
-
-PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
 
 
 class LocalLogBuffer(logging.Handler):
@@ -307,8 +305,8 @@ class DrakrunKarton(Karton):
 
         try:
             subprocess.run(["xl", "-vvv", "restore",
-                            os.path.join(ETC_DIR, "configs/vm-{vm_id}.cfg".format(vm_id=vm_id)),
-                            os.path.join(LIB_DIR, "volumes/snapshot.sav")], check=True)
+                            os.path.join(VM_CONFIG_DIR, "vm-{vm_id}.cfg".format(vm_id=vm_id)),
+                            os.path.join(VOLUME_DIR, "snapshot.sav")], check=True)
         except subprocess.CalledProcessError:
             logging.exception("Failed to restore VM {vm_id}".format(vm_id=vm_id))
 

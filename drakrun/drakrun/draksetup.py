@@ -17,7 +17,7 @@ import click
 import requests
 from requests import RequestException
 from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
-from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
+from drakrun.config import InstallInfo, LIB_DIR, VOLUME_DIR, PROFILE_DIR, ETC_DIR, VM_CONFIG_DIR
 from drakrun.networking import setup_vm_network, start_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
 from drakrun.vmconf import generate_vm_conf
@@ -47,11 +47,11 @@ def find_default_interface():
 
 def detect_defaults():
     os.makedirs(ETC_DIR, exist_ok=True)
-    os.makedirs(os.path.join(ETC_DIR, "configs"), exist_ok=True)
+    os.makedirs(VM_CONFIG_DIR, exist_ok=True)
 
     os.makedirs(LIB_DIR, exist_ok=True)
-    os.makedirs(os.path.join(LIB_DIR, "profiles"), exist_ok=True)
-    os.makedirs(os.path.join(LIB_DIR, "volumes"), exist_ok=True)
+    os.makedirs(PROFILE_DIR, exist_ok=True)
+    os.makedirs(VOLUME_DIR, exist_ok=True)
 
     out_interface = conf.get('drakrun', 'out_interface')
 
@@ -105,7 +105,7 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, unattended_xml)
                     fw.write(fr.read())
 
             try:
-                subprocess.check_output(['genisoimage', '-o', os.path.join(LIB_DIR, "volumes/unattended.iso"), '-J', '-r', tmp_xml_path], stderr=subprocess.STDOUT)
+                subprocess.check_output(['genisoimage', '-o', os.path.join(VOLUME_DIR, "unattended.iso"), '-J', '-r', tmp_xml_path], stderr=subprocess.STDOUT)
             except subprocess.CalledProcessError:
                 logging.exception("Failed to generate unattended.iso.")
 
@@ -170,7 +170,7 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, unattended_xml)
     if net_enable:
         start_dnsmasq(vm_id=0, dns_server=dns_server, background=True)
 
-    cfg_path = os.path.join(ETC_DIR, "configs/vm-0.cfg")
+    cfg_path = os.path.join(VM_CONFIG_DIR, "vm-0.cfg")
 
     try:
         subprocess.run('xl create {}'.format(shlex.quote(cfg_path)), shell=True, check=True)
@@ -219,19 +219,18 @@ def create_rekall_profiles(install_info: InstallInfo):
         except subprocess.CalledProcessError:
             raise RuntimeError(f"Failed to mount {block_device} as NTFS.")
 
-        profiles_path = os.path.join(LIB_DIR, "profiles")
         for file in dll_file_list:
             try:
                 logging.info(f"Fetching rekall profile for {file.path}")
-                local_dll_path = os.path.join(profiles_path, file.dest)
+                local_dll_path = os.path.join(PROFILE_DIR, file.dest)
 
                 copyfile(os.path.join(mount_path, file.path), local_dll_path)
                 guid = pdb_guid(local_dll_path)
-                tmp = fetch_pdb(guid["filename"], guid["GUID"], profiles_path)
+                tmp = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
 
                 logging.debug("Parsing PDB into JSON profile...")
                 profile = make_pdb_profile(tmp)
-                with open(os.path.join(profiles_path, f"{file.dest}.json"), 'w') as f:
+                with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), 'w') as f:
                     f.write(profile)
             except FileNotFoundError:
                 logging.warning(f"Failed to copy file {file.path}, skipping...")
@@ -242,8 +241,8 @@ def create_rekall_profiles(install_info: InstallInfo):
             finally:
                 if os.path.exists(local_dll_path):
                     os.remove(local_dll_path)
-                if os.path.exists(os.path.join(profiles_path, tmp)):
-                    os.remove(os.path.join(profiles_path, tmp))
+                if os.path.exists(os.path.join(PROFILE_DIR, tmp)):
+                    os.remove(os.path.join(PROFILE_DIR, tmp))
 
         # cleanup
         subprocess.check_output(f'umount {mnt_path_quoted}', shell=True)
@@ -330,13 +329,13 @@ def postinstall(report, generate_usermode):
     logging.info("Determined kernel filename: {}".format(fn))
 
     logging.info("Fetching PDB file...")
-    dest = fetch_pdb(fn, pdb, destdir=os.path.join(LIB_DIR, 'profiles/'))
+    dest = fetch_pdb(fn, pdb, destdir=PROFILE_DIR)
 
     logging.info("Generating profile out of PDB file...")
     profile = make_pdb_profile(dest)
 
     logging.info("Saving profile...")
-    kernel_profile = os.path.join(LIB_DIR, 'profiles', 'kernel.json')
+    kernel_profile = os.path.join(PROFILE_DIR, 'kernel.json')
     with open(kernel_profile, 'w') as f:
         f.write(profile)
 
@@ -345,11 +344,11 @@ def postinstall(report, generate_usermode):
     runtime_info = RuntimeInfo(vmi_offsets=vmi_offsets, inject_pid=explorer_pid)
 
     logging.info("Saving runtime profile...")
-    with open(os.path.join(LIB_DIR, 'profiles', 'runtime.json'), 'w') as f:
+    with open(os.path.join(PROFILE_DIR, 'runtime.json'), 'w') as f:
         f.write(runtime_info.to_json(indent=4))
 
     logging.info("Saving VM snapshot...")
-    subprocess.check_output('xl save vm-0 ' + os.path.join(LIB_DIR, "volumes", "snapshot.sav"), shell=True)
+    subprocess.check_output('xl save vm-0 ' + os.path.join(VOLUME_DIR, "snapshot.sav"), shell=True)
 
     storage_backend = get_storage_backend(install_info)
     storage_backend.snapshot_vm0_volume()

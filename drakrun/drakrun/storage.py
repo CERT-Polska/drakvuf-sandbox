@@ -8,7 +8,7 @@ import time
 import shlex
 
 from typing import Generator, Tuple
-from drakrun.config import InstallInfo, LIB_DIR
+from drakrun.config import InstallInfo, VOLUME_DIR
 
 
 class StorageBackendBase:
@@ -196,7 +196,7 @@ class Qcow2StorageBackend(StorageBackendBase):
                         "create",
                         "-f",
                         "qcow2",
-                        os.path.join(LIB_DIR, "volumes", "vm-0.img"),
+                        os.path.join(VOLUME_DIR, "vm-0.img"),
                         shlex.quote(disk_size),
                     ]
                 ),
@@ -210,11 +210,12 @@ class Qcow2StorageBackend(StorageBackendBase):
         pass
 
     def get_vm_disk_path(self, vm_id: int) -> str:
-        return f"tap:qcow2:{LIB_DIR}/volumes/vm-{vm_id}.img,xvda,w"
+        disk_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
+        return f"tap:qcow2:{disk_path},xvda,w"
 
     def rollback_vm_storage(self, vm_id: int):
-        volume_path = os.path.join(LIB_DIR, "volumes", f"vm-{vm_id}.img")
-        vm0_path = os.path.join(LIB_DIR, "volumes", "vm-0.img")
+        volume_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
+        vm0_path = os.path.join(VOLUME_DIR, "vm-0.img")
         try:
             os.unlink(volume_path)
         except FileNotFoundError:
@@ -234,7 +235,7 @@ class Qcow2StorageBackend(StorageBackendBase):
         )
 
     def get_vm0_snapshot_time(self):
-        return int(os.path.getmtime(os.path.join(LIB_DIR, 'volumes', 'vm-0.img')))
+        return int(os.path.getmtime(os.path.join(VOLUME_DIR, 'vm-0.img')))
 
     @contextlib.contextmanager
     def vm0_root_as_block(self) -> Generator[str, None, None]:
@@ -245,8 +246,9 @@ class Qcow2StorageBackend(StorageBackendBase):
 
         try:
             # TODO: this assumes /dev/nbd0 is free
+            volume = os.path.join(VOLUME_DIR, 'vm-0.img')
             subprocess.check_output(
-                f"qemu-nbd -c /dev/nbd0 --read-only {os.path.join(LIB_DIR, 'volumes', 'vm-0.img')}",
+                f"qemu-nbd -c /dev/nbd0 --read-only {volume}",
                 shell=True,
             )
         except subprocess.CalledProcessError:
