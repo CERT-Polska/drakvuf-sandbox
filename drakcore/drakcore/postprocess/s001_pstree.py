@@ -5,7 +5,6 @@ from io import BytesIO
 from typing import List, Set, Optional, Dict, Any
 from drakcore.postprocess import postprocess
 from karton2 import Task, RemoteResource
-from tempfile import NamedTemporaryFile
 
 
 @dataclass

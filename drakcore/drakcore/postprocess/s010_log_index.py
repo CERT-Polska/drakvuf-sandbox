@@ -9,7 +9,6 @@ some reasonable size. Unfortunately, length of JSON records is also variable
 so we build and index, to quickly look up where n-th line begins.
 
 """
-import os
 import io
 import json
 from drakcore.postprocess import postprocess
@@ -50,6 +49,7 @@ def generate_file_index(file, chunk_size=1024 * 1024):
 @postprocess()
 def generate_log_index(task: Task, resources: Dict[str, RemoteResource], minio):
     analysis_uid = task.payload["analysis_uid"]
+
     for name, resource in resources.items():
         # Process only newline-delimited *.log files
         # TODO - use resource metadata

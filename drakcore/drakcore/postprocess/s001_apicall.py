@@ -1,8 +1,6 @@
 import json
 import os
 import logging
-from io import BytesIO
-from collections import defaultdict
 from drakcore.postprocess import postprocess
 from karton2 import Task, RemoteResource
 from typing import Dict
@@ -54,6 +52,7 @@ def process_api_log(task: Task, resources: Dict[str, RemoteResource], minio):
         size = file.tell()
         file.seek(0)
         minio.put_object("drakrun", f"{analysis_uid}/apicall/{pid}.json", file, size)
+        yield f"apicall/{pid}.json"
 
         file.close()
         os.unlink(file.name)

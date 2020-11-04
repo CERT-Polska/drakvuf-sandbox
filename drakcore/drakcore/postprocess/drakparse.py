@@ -1,7 +1,6 @@
 import json
-import re
 import logging
-from typing import List, Dict, Iterable, Generator, Union
+from typing import Dict, Iterable, Generator, Union
 from datetime import datetime
 from sys import argv, exit
 

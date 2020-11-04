@@ -4,8 +4,7 @@ import json
 import functools
 from io import StringIO
 
-from karton2 import Consumer, Karton, LocalResource
-from minio.error import NoSuchKey
+from karton2 import Consumer, Karton, RemoteResource, LocalResource
 from drakcore.postprocess import REGISTERED_PLUGINS
 from drakcore.util import get_config
 
@@ -83,7 +82,13 @@ class AnalysisProcessor(Consumer):
 
             try:
                 self.log.info("Running postprocess - %s", plugin.handler.__name__)
-                plugin.handler(self.current_task, task_resources, self.minio)
+                outputs = plugin.handler(self.current_task, task_resources, self.minio)
+
+                if outputs:
+                    for out in outputs:
+                        self.log.info(f"New resource: {out}")
+                        res_name = os.path.join(self.current_task.payload["analysis_uid"], out)
+                        task_resources[out] = RemoteResource(res_name, uid=res_name, bucket='drakrun', minio=self.minio)
             except Exception:
                 self.log.error("Postprocess failed", exc_info=True)
 

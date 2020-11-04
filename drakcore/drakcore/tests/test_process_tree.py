@@ -1,5 +1,3 @@
-import os
-import pytest
 from drakcore.postprocess.pstree import ProcessTree
 
 

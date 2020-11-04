@@ -1,5 +1,4 @@
 import importlib
-import logging
 import os.path
 from collections import namedtuple
 
@@ -17,7 +16,7 @@ def postprocess(required=[]):
 
 
 fdir = os.path.dirname(__file__)
-for module in os.listdir(fdir):
+for module in sorted(os.listdir(fdir)):
     # skip __init__ or __pycache__
     if module.startswith("__") or not module.endswith(".py"):
         continue
