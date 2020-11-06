@@ -33,6 +33,7 @@ from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
 from drakrun.util import patch_config, get_domid_from_instance_id, get_xl_info, get_xen_commandline, RuntimeInfo
 from drakrun.vmconf import generate_vm_conf
+from drakrun.injector import Injector
 
 
 class LocalLogBuffer(logging.Handler):
@@ -106,6 +107,8 @@ class DrakrunKarton(Karton):
         super().__init__(config)
         self.instance_id = instance_id
         self.install_info = InstallInfo.load()
+        with open(os.path.join(PROFILE_DIR, "runtime.json"), 'r') as runtime_f:
+            self.runtime_info = RuntimeInfo.load(runtime_f)
 
     @property
     def vm_name(self) -> str:
@@ -399,33 +402,19 @@ class DrakrunKarton(Karton):
 
                 self.log.info("running monitor {}".format(self.instance_id))
 
-                kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
-                runtime_profile = os.path.join(PROFILE_DIR, "runtime.json")
-                with open(runtime_profile, 'r') as runtime_f:
-                    runtime_info = RuntimeInfo.load(runtime_f)
-
                 hooks_list = os.path.join(ETC_DIR, "hooks.txt")
+                kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
                 dump_dir = os.path.join(outdir, "dumps")
                 drakmon_log_fp = os.path.join(outdir, "drakmon.log")
 
-                injector_cmd = ["injector",
-                                "-o", "json",
-                                "-d", self.vm_name,
-                                "-r", kernel_profile,
-                                "-i", str(runtime_info.inject_pid),
-                                "-k", hex(runtime_info.vmi_offsets.kpgd),
-                                "-m", "writefile",
-                                "-e", f"%USERPROFILE%\\Desktop\\{file_name}",
-                                "-B", os.path.join(workdir, file_name)]
+                self.log.info("Copying sample to VM...")
+                injector = Injector(self.vm_name, self.runtime_info, kernel_profile)
+                result = injector.write_file(
+                    os.path.join(workdir, file_name),
+                    f"%USERPROFILE%\\Desktop\\{file_name}"
+                )
 
-                self.log.info("Running injector (write sample to VM)...")
-                injector = subprocess.Popen(injector_cmd, stdout=subprocess.PIPE)
-                outs, errs = injector.communicate(b"", 60)
-
-                if injector.returncode != 0:
-                    raise subprocess.CalledProcessError(injector.returncode, injector_cmd)
-
-                injected_fn = json.loads(outs)['ProcessName']
+                injected_fn = json.loads(result.stdout)['ProcessName']
                 net_enable = int(self.config.config['drakrun'].get('net_enable', '0'))
 
                 if "%f" not in start_command:
@@ -438,22 +427,8 @@ class DrakrunKarton(Karton):
                 metadata['start_command'] = cur_start_command
 
                 if net_enable:
-                    injector_cmd = ["injector",
-                                    "-o", "json",
-                                    "-d", self.vm_name,
-                                    "-r", kernel_profile,
-                                    "-i", str(runtime_info.inject_pid),
-                                    "-k", hex(runtime_info.vmi_offsets.kpgd),
-                                    "-m", "createproc",
-                                    "-e", "cmd /C ipconfig /renew >nul",
-                                    "-w"]
-
-                    self.log.info("Running injector...")
-                    injector = subprocess.Popen(injector_cmd, stdout=subprocess.PIPE)
-                    outs, errs = injector.communicate(b"", 120)
-
-                    if injector.returncode != 0:
-                        logging.info("Injector failed!")
+                    self.log.info("Setting up network...")
+                    injector.create_process("cmd /C ipconfig /renew >nul", wait=True, timeout=120)
 
                 full_cmd = cur_start_command
                 self.log.info("Using command: %s", full_cmd)
@@ -467,8 +442,8 @@ class DrakrunKarton(Karton):
                                "-x", "envmon",
                                "-j", "5",
                                "-t", str(timeout),
-                               "-i", str(runtime_info.inject_pid),
-                               "-k", hex(runtime_info.vmi_offsets.kpgd),
+                               "-i", str(self.runtime_info.inject_pid),
+                               "-k", hex(self.runtime_info.vmi_offsets.kpgd),
                                "-d", self.vm_name,
                                "--dll-hooks-list", hooks_list,
                                "--memdump-dir", dump_dir,
