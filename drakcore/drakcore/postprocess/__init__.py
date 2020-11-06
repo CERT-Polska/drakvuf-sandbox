@@ -15,10 +15,15 @@ def postprocess(required=[]):
     return wrapper
 
 
-fdir = os.path.dirname(__file__)
-for module in sorted(os.listdir(fdir)):
-    # skip __init__ or __pycache__
-    if module.startswith("__") or not module.endswith(".py"):
-        continue
-    modname = module[:-3]
-    importlib.import_module(f"drakcore.postprocess.{modname}")
+# plugins will be called in load order
+# preliminary stage
+import drakcore.postprocess.slice_logs
+
+# middle stage
+import drakcore.postprocess.pstree
+import drakcore.postprocess.apicall
+import drakcore.postprocess.generate_graphs
+
+# final stage
+import drakcore.postprocess.log_index
+import drakcore.postprocess.cache_update
