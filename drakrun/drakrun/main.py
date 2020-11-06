@@ -105,9 +105,14 @@ class DrakrunKarton(Karton):
     def __init__(self, config: Config, instance_id: int):
         super().__init__(config)
         self.instance_id = instance_id
+        self.install_info = InstallInfo.load()
+
+    @property
+    def vm_name(self) -> str:
+        return f"vm-{self.instance_id}"
 
     def init_drakrun(self):
-        generate_vm_conf(InstallInfo.load(), self.instance_id)
+        generate_vm_conf(self.install_info, self.instance_id)
 
         if not self.minio.bucket_exists('drakrun'):
             self.minio.make_bucket(bucket_name='drakrun')
@@ -290,27 +295,24 @@ class DrakrunKarton(Karton):
 
         return out
 
-    @staticmethod
-    def run_vm(vm_id):
-        install_info = InstallInfo.load()
-
+    def run_vm(self):
         try:
-            subprocess.check_output(["xl", "destroy", "vm-{vm_id}".format(vm_id=vm_id)], stderr=subprocess.STDOUT)
+            subprocess.check_output(["xl", "destroy", self.vm_name], stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError:
             pass
 
-        storage_backend = get_storage_backend(install_info)
+        storage_backend = get_storage_backend(self.install_info)
         snapshot_version = storage_backend.get_vm0_snapshot_time()
-        storage_backend.rollback_vm_storage(vm_id)
+        storage_backend.rollback_vm_storage(self.instance_id)
 
         try:
             subprocess.run(["xl", "-vvv", "restore",
-                            os.path.join(VM_CONFIG_DIR, "vm-{vm_id}.cfg".format(vm_id=vm_id)),
+                            os.path.join(VM_CONFIG_DIR, f"{self.vm_name}.cfg"),
                             os.path.join(VOLUME_DIR, "snapshot.sav")], check=True)
         except subprocess.CalledProcessError:
-            logging.exception("Failed to restore VM {vm_id}".format(vm_id=vm_id))
+            logging.exception(f"Failed to restore VM {self.vm_name}")
 
-            with open("/var/log/xen/qemu-dm-vm-{vm_id}.log".format(vm_id=vm_id), "rb") as f:
+            with open(f"/var/log/xen/qemu-dm-{self.vm_name}.log", "rb") as f:
                 logging.error(f.read())
 
         return snapshot_version
@@ -341,7 +343,7 @@ class DrakrunKarton(Karton):
 
         self.rs.set(f"drakvnc:{analysis_uid}", self.instance_id, ex=3600)  # 1h
 
-        workdir = '/tmp/drakrun/vm-{}'.format(self.instance_id)
+        workdir = f"/tmp/drakrun/{self.vm_name}"
 
         extension = self.current_task.headers.get("extension", "exe").lower()
         if '(DLL)' in magic_output:
@@ -408,7 +410,7 @@ class DrakrunKarton(Karton):
 
                 injector_cmd = ["injector",
                                 "-o", "json",
-                                "-d", "vm-{vm_id}".format(vm_id=self.instance_id),
+                                "-d", self.vm_name,
                                 "-r", kernel_profile,
                                 "-i", str(runtime_info.inject_pid),
                                 "-k", hex(runtime_info.vmi_offsets.kpgd),
@@ -438,7 +440,7 @@ class DrakrunKarton(Karton):
                 if net_enable:
                     injector_cmd = ["injector",
                                     "-o", "json",
-                                    "-d", "vm-{vm_id}".format(vm_id=self.instance_id),
+                                    "-d", self.vm_name,
                                     "-r", kernel_profile,
                                     "-i", str(runtime_info.inject_pid),
                                     "-k", hex(runtime_info.vmi_offsets.kpgd),
@@ -467,7 +469,7 @@ class DrakrunKarton(Karton):
                                "-t", str(timeout),
                                "-i", str(runtime_info.inject_pid),
                                "-k", hex(runtime_info.vmi_offsets.kpgd),
-                               "-d", "vm-{vm_id}".format(vm_id=self.instance_id),
+                               "-d", self.vm_name,
                                "--dll-hooks-list", hooks_list,
                                "--memdump-dir", dump_dir,
                                "-r", kernel_profile,
@@ -503,7 +505,7 @@ class DrakrunKarton(Karton):
                 self.log.info("Something went wrong with the VM {}".format(self.instance_id), exc_info=True)
             finally:
                 try:
-                    subprocess.run(["xl", "destroy", "vm-{}".format(self.instance_id)], cwd=workdir, check=True)
+                    subprocess.run(["xl", "destroy", self.vm_name], cwd=workdir, check=True)
                 except subprocess.CalledProcessError:
                     self.log.info("Failed to destroy VM {}".format(self.instance_id), exc_info=True)
 
