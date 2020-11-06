@@ -392,7 +392,7 @@ class DrakrunKarton(Karton):
                 self.log.info("Running VM {}".format(self.instance_id))
                 watcher_dnsmasq = start_dnsmasq(self.instance_id, self.config.config['drakrun'].get('dns_server', '8.8.8.8'))
 
-                snapshot_version = self.run_vm(self.instance_id)
+                snapshot_version = self.run_vm()
                 metadata['snapshot_version'] = snapshot_version
 
                 watcher_tcpdump = start_tcpdump_collector(self.instance_id, outdir)
