@@ -6,7 +6,6 @@ from drakcore.postprocess.generate_graphs import generate_graphs
 from drakcore.postprocess.log_index import generate_log_index
 from drakcore.postprocess.pstree import build_process_tree
 from drakcore.postprocess.slice_logs import slice_drakmon_logs
-from drakcore.postprocess.delete_drakmon_log import delete_drakmon_log
 
 PostprocessPlugin = namedtuple("PostprocessPlugin", ('handler', 'required'))
 
