@@ -1,6 +1,6 @@
 kind: pipeline
 type: docker
-name: lint-drakcore
+name: check-drakcore
 
 steps:
 - name: flake8 drakcore
@@ -27,15 +27,21 @@ trigger:
 ---
 kind: pipeline
 type: docker
-name: lint-drakrun
+name: check-drakrun
 
 steps:
-- name: flake8 drakrun
+- name: lint drakrun
   image: python:3.8-buster
   commands:
     - pip3 install flake8
     - pip3 install -r drakrun/requirements.txt
     - cd drakrun && flake8 --ignore E402,F401,E501
+- name: run drakrun tests
+  image: python:3.8-buster
+  commands:
+    - pip3 install pytest
+    - pip3 install ./drakrun
+    - pytest drakrun/drakrun/test/
 node:
    purpose: generic
 trigger:
@@ -259,8 +265,8 @@ steps:
 node:
    purpose: e2e
 depends_on:
-- lint-drakcore
-- lint-drakrun
+- check-drakcore
+- check-drakrun
 - build-drakcore
 - build-drakrun
 - build-drakvuf-bundle
