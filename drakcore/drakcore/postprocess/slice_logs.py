@@ -59,3 +59,5 @@ def slice_drakmon_logs(task: Task, resources: Dict[str, RemoteResource], minio):
                 fd.close()
                 minio.fput_object("drakrun", f"{analysis_uid}/{plugin_name}.log", target_dir / f'{plugin_name}.log')
                 yield f"{plugin_name}.log"
+
+    minio.remove_object("drakrun", f"{analysis_uid}/drakmon.log")
