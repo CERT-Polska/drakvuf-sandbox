@@ -5,11 +5,9 @@ import subprocess
 
 from karton2 import Task, RemoteResource
 from typing import Dict
-from drakcore.postprocess import postprocess
 from drakcore.postprocess.drakparse import parse_logs
 
 
-@postprocess(required=["drakmon.log"])
 def generate_graphs(task: Task, resources: Dict[str, RemoteResource], minio):
     analysis_uid = task.payload["analysis_uid"]
 

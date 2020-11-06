@@ -11,7 +11,6 @@ so we build and index, to quickly look up where n-th line begins.
 """
 import io
 import json
-from drakcore.postprocess import postprocess
 from karton2 import Task, RemoteResource
 from typing import Dict
 
@@ -46,7 +45,6 @@ def generate_file_index(file, chunk_size=1024 * 1024):
     }
 
 
-@postprocess()
 def generate_log_index(task: Task, resources: Dict[str, RemoteResource], minio):
     analysis_uid = task.payload["analysis_uid"]
 

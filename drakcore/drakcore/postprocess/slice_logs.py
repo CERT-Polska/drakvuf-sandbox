@@ -7,10 +7,8 @@ from typing import Dict
 from karton2 import Task, RemoteResource
 from collections import Counter
 from pathlib import Path
-from drakcore.postprocess import postprocess
 
 
-@postprocess(required=["drakmon.log"])
 def slice_drakmon_logs(task: Task, resources: Dict[str, RemoteResource], minio):
     analysis_uid = task.payload["analysis_uid"]
 

@@ -1,7 +1,6 @@
 import json
 import os
 import logging
-from drakcore.postprocess import postprocess
 from karton2 import Task, RemoteResource
 from typing import Dict
 from tempfile import NamedTemporaryFile
@@ -42,7 +41,6 @@ def process_logfile(log):
     return temp_files
 
 
-@postprocess(required=["apimon.log"])
 def process_api_log(task: Task, resources: Dict[str, RemoteResource], minio):
     with resources["apimon.log"].download_temporary_file() as tmp_file:
         out_files = process_logfile(tmp_file)
