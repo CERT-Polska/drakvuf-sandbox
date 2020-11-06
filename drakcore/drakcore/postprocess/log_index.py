@@ -11,8 +11,10 @@ so we build and index, to quickly look up where n-th line begins.
 """
 import io
 import json
+import logging
 from karton2 import Task, RemoteResource
 from typing import Dict
+from minio.error import NoSuchKey
 
 
 def line_marker(line, offset):
@@ -53,8 +55,12 @@ def generate_log_index(task: Task, resources: Dict[str, RemoteResource], minio):
         # TODO - use resource metadata
         if not name.endswith(".log"):
             continue
-        with resource.download_temporary_file() as tmp_file:
-            index = generate_file_index(tmp_file)
-            data = json.dumps(index).encode()
-            stream = io.BytesIO(data)
-            minio.put_object("drakrun", f"{analysis_uid}/index/{name}", stream, len(data))
+        try:
+            with resource.download_temporary_file() as tmp_file:
+                index = generate_file_index(tmp_file)
+                data = json.dumps(index).encode()
+                stream = io.BytesIO(data)
+                minio.put_object("drakrun", f"{analysis_uid}/index/{name}", stream, len(data))
+        except NoSuchKey:
+            # some resources might be already deleted by other plugins
+            pass

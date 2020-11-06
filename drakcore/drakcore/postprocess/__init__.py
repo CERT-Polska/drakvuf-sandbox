@@ -6,6 +6,7 @@ from drakcore.postprocess.generate_graphs import generate_graphs
 from drakcore.postprocess.log_index import generate_log_index
 from drakcore.postprocess.pstree import build_process_tree
 from drakcore.postprocess.slice_logs import slice_drakmon_logs
+from drakcore.postprocess.ipt_disasm import generate_ipt_disasm
 
 PostprocessPlugin = namedtuple("PostprocessPlugin", ('handler', 'required'))
 
@@ -21,6 +22,8 @@ REGISTERED_PLUGINS = [
     PostprocessPlugin(process_api_log, required=['apimon.log']),
     # yields process_tree.json
     PostprocessPlugin(build_process_tree, required=['procmon.log']),
+
+    PostprocessPlugin(generate_ipt_disasm, required=['ipt.zip']),
 
     # yields index/{name}
     PostprocessPlugin(generate_log_index, required=[]),

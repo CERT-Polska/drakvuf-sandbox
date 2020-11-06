@@ -205,6 +205,13 @@ class DrakrunKarton(Karton):
         if current_size > max_total_size:
             self.log.error('Some dumps were deleted, because the configured size threshold was exceeded.')
 
+    def compress_ipt(self, dirpath, target_zip):
+        zipf = zipfile.ZipFile(target_zip, 'w', zipfile.ZIP_DEFLATED)
+
+        for root, dirs, files in os.walk(dirpath):
+            for file in files:
+                zipf.write(os.path.join(root, file), os.path.join("ipt", os.path.relpath(os.path.join(root, file), dirpath)))
+
     def upload_artifacts(self, analysis_uid, workdir, subdir=''):
         base_path = os.path.join(workdir, 'output')
 
@@ -311,6 +318,7 @@ class DrakrunKarton(Karton):
         outdir = os.path.join(workdir, 'output')
         os.mkdir(outdir)
         os.mkdir(os.path.join(outdir, 'dumps'))
+        os.mkdir(os.path.join(outdir, 'ipt'))
 
         metadata = {
             "sample_sha256": sha256sum,
@@ -339,6 +347,7 @@ class DrakrunKarton(Karton):
                 hooks_list = os.path.join(ETC_DIR, "hooks.txt")
                 kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
                 dump_dir = os.path.join(outdir, "dumps")
+                ipt_dir = os.path.join(outdir, "ipt")
                 drakmon_log_fp = os.path.join(outdir, "drakmon.log")
 
                 self.log.info("Copying sample to VM...")
@@ -384,6 +393,9 @@ class DrakrunKarton(Karton):
                                "-r", kernel_profile,
                                "-e", full_cmd,
                                "-c", cwd]
+
+                if self.config.config['drakrun'].get('enable_ipt', '0') == '1':
+                    drakvuf_cmd.extend(["--ipt-dir", ipt_dir])
 
                 drakvuf_cmd.extend(self.get_profile_list())
 
@@ -433,6 +445,10 @@ class DrakrunKarton(Karton):
                 self.log.exception("tcpdump doesn't exit cleanly after 60s")
 
         self.crop_dumps(os.path.join(outdir, 'dumps'), os.path.join(outdir, 'dumps.zip'))
+
+        if self.config.config['drakrun'].get('enable_ipt', '0') == '1':
+            self.compress_ipt(os.path.join(outdir, 'ipt'), os.path.join(outdir, 'ipt.zip'))
+
         self.log.info("uploading artifacts")
 
         metadata['time_finished'] = int(time.time())
