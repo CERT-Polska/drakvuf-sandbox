@@ -1,10 +1,8 @@
-from drakcore.postprocess import postprocess
 from drakcore.app import get_analysis_metadata
 from karton2 import Task, RemoteResource
 from typing import Dict
 
 
-@postprocess(required=["metadata.json"])
 def insert_metadata(task: Task, resources: Dict[str, RemoteResource], minio):
     """
     Why is this required?

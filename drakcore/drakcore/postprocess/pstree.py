@@ -3,9 +3,7 @@ import logging
 from dataclasses import dataclass, field
 from io import BytesIO
 from typing import List, Set, Optional, Dict, Any
-from drakcore.postprocess import postprocess
 from karton2 import Task, RemoteResource
-from tempfile import NamedTemporaryFile
 
 
 @dataclass
@@ -78,7 +76,6 @@ def tree_from_log(file):
     return pstree.as_dict()
 
 
-@postprocess(required=["procmon.log"])
 def build_process_tree(task: Task, resources: Dict[str, RemoteResource], minio):
     with resources["procmon.log"].download_temporary_file() as tmp_file:
         data = json.dumps(tree_from_log(tmp_file)).encode()
