@@ -29,9 +29,9 @@ class Injector:
         cmd.extend(["-B", local])
         return cmd
 
-    def _get_cmdline_createproc(self, cmd: str, wait: bool = False) -> List[str]:
+    def _get_cmdline_createproc(self, exec_cmd: str, wait: bool = False) -> List[str]:
         cmd = self._get_cmdline_generic("createproc")
-        cmd.extend(["-e", cmd])
+        cmd.extend(["-e", exec_cmd])
         if wait:
             cmd.append("-w")
         return cmd
