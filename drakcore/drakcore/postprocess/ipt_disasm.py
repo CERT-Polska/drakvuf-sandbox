@@ -26,7 +26,7 @@ def debug_faults(page_faults):
         else:
             ranges.append(current)
             current = []
-        
+
     for chunk in ranges:
         beg = chunk[0]
         end = chunk[-1] + 0xfff
