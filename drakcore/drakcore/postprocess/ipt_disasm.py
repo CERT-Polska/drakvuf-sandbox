@@ -1,5 +1,6 @@
 import os
 import argparse
+import json
 import pprint
 from pathlib import Path
 from functools import reduce
@@ -9,7 +10,7 @@ import tempfile
 
 from karton2 import Task, RemoteResource
 from typing import Dict
-from drakcore.postprocess.ipt_utils import load_drakvuf_output, hexint, get_fault_va, get_fault_pa, get_trap_pa, get_frame_va, page_align, is_page_aligned, select_cr3
+from drakcore.postprocess.ipt_utils import log, load_drakvuf_output, hexint, get_fault_va, get_fault_pa, get_trap_pa, get_frame_va, page_align, is_page_aligned, select_cr3
 from zipfile import ZipFile
 
 
@@ -65,7 +66,6 @@ def match_frames(page_faults, frames, foreign_frames):
         va_page = page_align(va)
         pa_page = page_align(pa)
 
-        has_frame = False
         frame = select_frame(frame_map[va_page], pa_page)
 
         if frame is None:
