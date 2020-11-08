@@ -9,7 +9,7 @@ import tempfile
 
 from karton2 import Task, RemoteResource
 from typing import Dict
-from drakcore.postprocess.ipt_utils import *
+from drakcore.postprocess.ipt_utils import load_drakvuf_output, hexint, get_fault_va, get_fault_pa, get_trap_pa, get_frame_va, page_align, is_page_aligned, select_cr3
 from zipfile import ZipFile
 
 
@@ -32,6 +32,7 @@ def debug_faults(page_faults):
         length = (end + 1 - beg) / 0x1000
         log.debug("%#016x - %#016x (%d pages)", beg, end, length)
 
+
 def build_frame_va_map(frames):
     frame_map = defaultdict(list)
     for frame in frames:
@@ -39,18 +40,19 @@ def build_frame_va_map(frames):
         frame_map[addr].append(frame)
     return frame_map
 
+
 def select_frame(frames, phys_addr):
     for frame in frames:
         if phys_addr == page_align(get_trap_pa(frame)):
             return frame
     return None
 
+
 def match_frames(page_faults, frames, foreign_frames):
     log.info("Matching frames for each fault")
 
     frame_map = build_frame_va_map(frames)
     foreign_frame_map = build_frame_va_map(foreign_frames)
-
 
     unresolved = 0
     foreign_resolved = 0
@@ -59,7 +61,6 @@ def match_frames(page_faults, frames, foreign_frames):
     for fault in page_faults:
         va = get_fault_va(fault)
         pa = get_fault_pa(fault)
-
 
         va_page = page_align(va)
         pa_page = page_align(pa)
@@ -91,10 +92,8 @@ def main(analysis_dir, cr3_value):
         log.critical("CR3 must be aligned to page! Got %#x", cr3_value)
         return
 
-
     page_faults = load_drakvuf_output(analysis_dir / "pagefault.log")
     executed_frames = load_drakvuf_output(analysis_dir / "execframe.log")
-
 
     faults_in_process = list(select_cr3(lambda cr3: cr3 == cr3_value, page_faults))
     frames_in_process = list(select_cr3(lambda cr3: cr3 == cr3_value, executed_frames))
@@ -103,7 +102,6 @@ def main(analysis_dir, cr3_value):
     log.info("%d frames dumped from this process", len(frames_in_process))
     log.info("%d frames outside this process", len(frames_out_process))
     log.info("%d faults in process", len(faults_in_process))
-
 
     faults_in_process.sort(key=get_fault_va)
     debug_faults(faults_in_process)
