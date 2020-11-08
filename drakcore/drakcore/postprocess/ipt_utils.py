@@ -46,26 +46,34 @@ def load_drakvuf_output(path):
     log.info("Loaded %d entries", len(result))
     return result
 
+
 def hexint(v):
     return int(v, 16)
+
 
 def get_fault_va(fault):
     return hexint(fault['VA'])
 
+
 def get_fault_pa(fault):
     return hexint(fault['PA'])
+
 
 def get_trap_pa(execframe):
     return hexint(execframe['TrapPA'])
 
+
 def get_frame_va(execframe):
     return hexint(execframe['FrameVA'])
+
 
 def page_align(addr):
     return addr & ~0xfff
 
+
 def is_page_aligned(addr):
     return (addr & 0xfff) == 0
+
 
 def select_cr3(pred, entries):
     return filter(lambda v: pred(hexint(v['CR3'])), entries)
