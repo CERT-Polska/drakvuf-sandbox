@@ -1,6 +1,7 @@
 import logging
 import json
 
+
 class CustomFormatter(logging.Formatter):
     """Logging Formatter to add colors and count warning / errors"""
 
@@ -10,7 +11,7 @@ class CustomFormatter(logging.Formatter):
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
     format = "%(levelname)8s - %(message)s"
-    #format = "%(asctime)s %(levelname)8s - %(message)s (%(filename)s:%(lineno)d)"
+    # format = "%(asctime)s %(levelname)8s - %(message)s (%(filename)s:%(lineno)d)"
 
     FORMATS = {
         logging.DEBUG: grey + format + reset,
@@ -24,6 +25,7 @@ class CustomFormatter(logging.Formatter):
         log_fmt = self.FORMATS.get(record.levelno)
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
+
 
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
