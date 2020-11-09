@@ -394,7 +394,7 @@ class DrakrunKarton(Karton):
                                "-e", full_cmd,
                                "-c", cwd]
 
-                if self.config.config['drakrun'].get('enable_ipt', '0') == '1':
+                if self.config.config['drakrun'].getboolean('enable_ipt', fallback=False):
                     drakvuf_cmd.extend(["--ipt-dir", ipt_dir])
 
                 drakvuf_cmd.extend(self.get_profile_list())
@@ -446,7 +446,7 @@ class DrakrunKarton(Karton):
 
         self.crop_dumps(os.path.join(outdir, 'dumps'), os.path.join(outdir, 'dumps.zip'))
 
-        if self.config.config['drakrun'].get('enable_ipt', '0') == '1':
+        if self.config.config['drakrun'].getboolean('enable_ipt', fallback=False):
             self.compress_ipt(os.path.join(outdir, 'ipt'), os.path.join(outdir, 'ipt.zip'))
 
         self.log.info("uploading artifacts")
