@@ -15,7 +15,7 @@ import re
 import functools
 from collections import Counter
 from io import StringIO
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pathlib import Path
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 from configparser import NoOptionError
@@ -86,10 +86,9 @@ def with_logs(object_name):
 
 
 class DrakrunKarton(Karton):
-    # this might be changed by initialization
-    # if different identity name is specified in config
-    identity = "karton.drakrun-prod"
-    filters = [
+    # Karton configuration defaults, may be overriden by config file
+    DEFAULT_IDENTITY = "karton.drakrun-prod"
+    DEFAULT_FILTERS = [
         {
             "type": "sample",
             "stage": "recognized",
@@ -101,6 +100,10 @@ class DrakrunKarton(Karton):
             "platform": "win64"
         }
     ]
+    DEFAULT_HEADERS = {
+        "type": "analysis",
+        "kind": "drakrun",
+    }
 
     def __init__(self, config: Config, instance_id: int):
         super().__init__(config)
@@ -108,6 +111,19 @@ class DrakrunKarton(Karton):
         self.install_info = InstallInfo.load()
         with open(os.path.join(PROFILE_DIR, "runtime.json"), 'r') as runtime_f:
             self.runtime_info = RuntimeInfo.load(runtime_f)
+
+    @classmethod
+    def reconfigure(cls, config: Dict[str, str]):
+        """ Reconfigure DrakrunKarton class """
+        def load_json(config, key):
+            try:
+                return json.loads(config.get(key)) if key in config else None
+            except json.JSONDecodeError:
+                raise RuntimeError(f"Key '{key}' in section [drakrun] is not valid JSON")
+
+        cls.identity = config.get('identity', cls.DEFAULT_IDENTITY)
+        cls.filters = load_json(config, 'filters') or cls.DEFAULT_FILTERS
+        cls.headers = load_json(config, 'headers') or cls.DEFAULT_HEADERS
 
     @property
     def vm_name(self) -> str:
@@ -443,14 +459,10 @@ class DrakrunKarton(Karton):
         payload = {"analysis_uid": analysis_uid}
         payload.update(metadata)
 
-        t = Task(
-            {
-                "type": "analysis",
-                "kind": "drakrun",
-                "quality": self.current_task.headers.get("quality", "high")
-            },
-            payload=payload
-        )
+        headers = dict(self.headers)
+        headers["quality"] = self.current_task.headers.get("quality", "high")
+
+        t = Task(headers, payload=payload)
 
         for resource in self.upload_artifacts(analysis_uid, workdir):
             t.add_payload(resource.name, resource)
@@ -528,13 +540,9 @@ def main(args):
             logging.error("Exitting due to above warnings. Please ensure that you are using recommended Xen's command line.")
             sys.exit(1)
 
-    try:
-        identity = conf.config.get('drakrun', 'identity')
-    except NoOptionError:
-        pass
-    else:
-        DrakrunKarton.identity = identity
-        logging.warning(f"Overriding identity to: {identity}")
+    # Apply Karton configuration overrides
+    drakrun_conf = conf.config["drakrun"] if conf.config.has_section("drakrun") else {}
+    DrakrunKarton.reconfigure(drakrun_conf)
 
     c = DrakrunKarton(conf, args.instance)
     c.init_drakrun()
