@@ -153,7 +153,7 @@ def generate_ipt_disasm(task: Task, resources: Dict[str, RemoteResource], minio)
                 obj = json.loads(line)
 
                 if obj.get("PID") == injected_pid:
-                    injected_cr3 = int(obj["CR3"], 16)
+                    injected_cr3 = hexint(obj["CR3"])
                     break
             else:
                 log.error("Failed to find injected process' CR3, not doing IPT disasm")
