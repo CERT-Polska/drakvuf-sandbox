@@ -1,3 +1,4 @@
 /configs/
 /venv/
 /*.sav
+.vscode/
