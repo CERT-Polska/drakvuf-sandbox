@@ -24,3 +24,4 @@ cpuid="host,htt=0"
 vga="stdvga"
 vif = [ 'type=ioemu,model=e1000,bridge=drak{{ VM_ID }}' ]
 disk = [ {{ DISKS }} ]
+processor_trace_buf_kb = 65536
