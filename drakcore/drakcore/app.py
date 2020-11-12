@@ -187,7 +187,10 @@ def status(task_uid):
     res = {"status": "done"}
 
     for task_key in tasks:
-        task = json.loads(rs.get(task_key))
+        data = rs.get(task_key)
+        if not data:
+            continue
+        task = json.loads(data)
 
         if task["root_uid"] == task_uid:
             if task["status"] != "Finished":
