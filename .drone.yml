@@ -20,10 +20,6 @@ node:
 trigger:
   branch:
   - master
-  event:
-    include:
-    - push
-    - pull_request
 ---
 kind: pipeline
 type: docker
@@ -47,10 +43,6 @@ node:
 trigger:
   branch:
   - master
-  event:
-    include:
-    - push
-    - pull_request
 ---
 kind: pipeline
 type: docker
@@ -88,10 +80,6 @@ node:
 trigger:
   branch:
   - master
-  event:
-    include:
-    - push
-    - pull_request
 ---
 kind: pipeline
 type: docker
@@ -126,10 +114,6 @@ node:
 trigger:
   branch:
   - master
-  event:
-    include:
-    - push
-    - pull_request
 ---
 kind: pipeline
 type: docker
@@ -147,10 +131,6 @@ node:
 trigger:
   branch:
   - master
-  event:
-    include:
-    - push
-    - pull_request
 ---
 kind: pipeline
 type: docker
@@ -184,10 +164,6 @@ node:
 trigger:
   branch:
   - master
-  event:
-    include:
-    - push
-    - pull_request
 ---
 kind: pipeline
 type: docker
@@ -228,10 +204,6 @@ depends_on:
 trigger:
   branch:
   - master
-  event:
-    include:
-    - push
-    - pull_request
 ---
 kind: pipeline
 type: docker
@@ -274,7 +246,3 @@ depends_on:
 trigger:
   branch:
   - master
-  event:
-    include:
-    - push
-    - pull_request
