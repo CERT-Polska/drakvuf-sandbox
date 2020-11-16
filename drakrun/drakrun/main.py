@@ -109,6 +109,7 @@ class DrakrunKarton(Karton):
         super().__init__(config)
         self.instance_id = instance_id
         self.install_info = InstallInfo.load()
+        self.default_timeout = int(self.config.config['drakrun'].get('analysis_timeout') or 60 * 10)
         with open(os.path.join(PROFILE_DIR, "runtime.json"), 'r') as runtime_f:
             self.runtime_info = RuntimeInfo.load(runtime_f)
 
@@ -285,7 +286,7 @@ class DrakrunKarton(Karton):
         magic_output = magic.from_buffer(sample.content)
         self.log.info("running sample sha256: {}".format(sha256sum))
 
-        timeout = self.current_task.payload.get('timeout') or 60 * 10
+        timeout = self.current_task.payload.get('timeout') or self.default_timeout
         hard_time_limit = 60 * 20
         if timeout > hard_time_limit:
             self.log.error("Tried to run the analysis for more than hard limit of %d seconds", hard_time_limit)
