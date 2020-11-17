@@ -158,31 +158,20 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
     yield '"","minibis-cpp.exe","*1*","Process Create","","SUCCESS","PID: *2*, Command line: ++++++++",""'
     yield '"","minibis-cpp.exe","*2*","Process Create","","SUCCESS","PID: {}, Command line: Explorer.EXE",""'.format(injected_pid)
 
+    errors = 0
     for line in lines:
         try:
             line_obj = json.loads(line)
-        except Exception:
-            logging.exception(f"BUG: Unparseable log entry!\n{line}")
-            continue
-
-        try:
             plugin = line_obj["Plugin"]
-        except KeyError:
-            logging.warning(f"BUG: Line is missing plugin name!\n{line}")
-            continue
-
-        if plugin in switcher:
-            plugin_obj = switcher[plugin]
-            try:
+            if plugin in switcher:
+                plugin_obj = switcher[plugin]
                 converted = str(plugin_obj(line_obj))
-            except Exception:
-                logging.exception(f"BUG: Failed to parse log entry.\n{line}")
-                continue
+                if converted:
+                    yield converted
+        except Exception:
+            errors += 1
 
-            if converted:
-                yield converted
-        elif not void_unknown:
-            logging.info(f"unparsed: {line}")
+    logging.warning("Failed to parse %d lines", errors)
 
 
 if __name__ == "__main__":
