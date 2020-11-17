@@ -69,6 +69,7 @@ class AnalysisProcessor(Consumer):
         if len(enabled_plugins) == 0:
             raise ValueError("No plugins enabled")
         self.plugins = enabled_plugins
+        self.log.setLevel(logging.INFO)
 
     @with_logs('drak-postprocess.log')
     def process(self):
@@ -81,12 +82,12 @@ class AnalysisProcessor(Consumer):
                 continue
 
             try:
-                self.log.info("Running postprocess - %s", plugin.handler.__name__)
+                self.log.debug("Running postprocess - %s", plugin.handler.__name__)
                 outputs = plugin.handler(self.current_task, task_resources, self.minio)
 
                 if outputs:
                     for out in outputs:
-                        self.log.info(f"Step {plugin.handler.__name__} outputted new resource: {out}")
+                        self.log.debug(f"Step {plugin.handler.__name__} outputted new resource: {out}")
                         res_name = os.path.join(self.current_task.payload["analysis_uid"], out)
                         task_resources[out] = RemoteResource(res_name, uid=res_name, bucket='drakrun', minio=self.minio)
             except Exception:
