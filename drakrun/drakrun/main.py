@@ -219,6 +219,10 @@ class DrakrunKarton(Karton):
                 zipf.write(path, os.path.join("dumps", os.path.basename(path)))
             os.unlink(path)
 
+        # No dumps, force empty directory
+        if current_size == 0:
+            zipf.writestr(zipfile.ZipInfo("dumps/"), "")
+
         if current_size > max_total_size:
             self.log.error('Some dumps were deleted, because the configured size threshold was exceeded.')
 
