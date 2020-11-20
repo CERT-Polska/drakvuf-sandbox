@@ -285,7 +285,7 @@ class DrakrunKarton(Karton):
     @property
     def analysis_uid(self):
         override_uid = self.current_task.payload.get('override_uid')
-        
+
         if override_uid:
             return override_uid
 
