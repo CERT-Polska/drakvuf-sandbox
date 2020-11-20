@@ -282,6 +282,16 @@ class DrakrunKarton(Karton):
 
         return snapshot_version
 
+    @property
+    def analysis_uid(self):
+        override_uid = self.current_task.payload.get('override_uid')
+        
+        if override_uid:
+            return override_uid
+
+        if self.config.getboolean('drakrun', 'use_root_uid'):
+            return self.current_task.root_uid
+
     @with_logs('drakrun.log')
     def process(self):
         sample = self.current_task.get_resource("sample")
@@ -296,17 +306,8 @@ class DrakrunKarton(Karton):
             self.log.error("Tried to run the analysis for more than hard limit of %d seconds", hard_time_limit)
             return
 
-        analysis_uid = self.current_task.uid
-        override_uid = self.current_task.payload.get('override_uid')
-
-        self.log.info(f"analysis UID: {analysis_uid}")
-
-        if override_uid:
-            analysis_uid = override_uid
-            self.log.info(f"override UID: {override_uid}")
-            self.log.info("note that artifacts will be stored under this overriden identifier")
-
-        self.rs.set(f"drakvnc:{analysis_uid}", self.instance_id, ex=3600)  # 1h
+        self.log.info(f"analysis UID: {self.analysis_uid}")
+        self.rs.set(f"drakvnc:{self.analysis_uid}", self.instance_id, ex=3600)  # 1h
 
         workdir = f"/tmp/drakrun/{self.vm_name}"
 
@@ -477,7 +478,7 @@ class DrakrunKarton(Karton):
         with open(os.path.join(outdir, 'metadata.json'), 'w') as f:
             f.write(json.dumps(metadata))
 
-        payload = {"analysis_uid": analysis_uid}
+        payload = {"analysis_uid": self.analysis_uid}
         payload.update(metadata)
 
         headers = dict(self.headers)
@@ -485,7 +486,7 @@ class DrakrunKarton(Karton):
 
         t = Task(headers, payload=payload)
 
-        for resource in self.upload_artifacts(analysis_uid, workdir):
+        for resource in self.upload_artifacts(self.analysis_uid, workdir):
             t.add_payload(resource.name, resource)
 
         t.add_payload('sample', sample)
