@@ -291,6 +291,8 @@ class DrakrunKarton(Karton):
 
         if self.config.getboolean('drakrun', 'use_root_uid'):
             return self.current_task.root_uid
+        
+        return self.current_task.uid
 
     @with_logs('drakrun.log')
     def process(self):
