@@ -38,3 +38,16 @@ Analogously, you can scale down by repeating the same command with the smaller n
 
 
 Assuming you had 10 instances previously, it will cause ``drakrun@8`` to ``drakrun@10`` to be disabled and shut down. If the analysis is pending on these instances, the command will gracefully wait until it's finished.
+
+Postprocess
+-----------
+
+Analysis postprocessing doesn't need hypervisor access, so it can be done in separate servers, assuming they have same configuration and connect to same minio & redis instances. This is highly recommended if you can afford such setup, as this frees resources on servers running hypervisor.
+
+By default only 1 instance of postprocess worker is started and when running multiple instances of drakrun - needs to be scaled up. As a rule of thumb you can assume safe ratio of postprocess to drakrun workers to be 3:1 (however, this ratio can vary depending on performance of the platform and analysis duration). To startup more postprocessing instances just start more instances of ``drak-postprocess@`` service. By default only 1 is present, so be sure to scale it accordingly to your needs.
+
+The following command will start second postprocessing worker.
+
+.. code-block:: console
+
+  systemctl enable --now drak-postprocess@2

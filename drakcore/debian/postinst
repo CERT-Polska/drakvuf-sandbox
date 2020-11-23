@@ -25,4 +25,4 @@ systemctl daemon-reload
 systemctl enable --now drak-system.service
 systemctl enable --now drak-web.service
 systemctl enable --now drak-minio.service
-systemctl enable --now drak-postprocess.service
+systemctl enable --now drak-postprocess@1.service
