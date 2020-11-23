@@ -35,7 +35,8 @@ popd
 # Build dwarf2json
 pushd drakvuf/dwarf2json
 /usr/local/go/bin/go build
-mv dwarf2json /build/
+mkdir -p /build/dwarf2json/
+mv dwarf2json /build/dwarf2json/
 popd
 
 # Package DRAKVUF
