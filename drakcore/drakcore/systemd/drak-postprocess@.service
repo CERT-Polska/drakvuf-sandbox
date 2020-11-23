@@ -11,8 +11,9 @@ Restart=on-failure
 RestartSec=5
 StartLimitInterval=60s
 StartLimitBurst=3
-KillSignal=SIGQUIT
 WorkingDirectory=/var/lib/drakcore
+KillMode=process
+TimeoutStopSec=700
 
 [Install]
 WantedBy=default.target

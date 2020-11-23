@@ -2,12 +2,13 @@
 import os
 import re
 import subprocess
-import json
 import colorama
+
 
 def get_service_info(service):
     lines = subprocess.check_output(["systemctl", "show", service]).decode().splitlines()
     return dict(map(lambda l: l.split("=", maxsplit=1), lines))
+
 
 def service_runnning(info):
     is_loaded = info["LoadState"] == "loaded"
@@ -15,10 +16,18 @@ def service_runnning(info):
     is_running = info["SubState"] == "running"
     return all((is_loaded, is_active, is_running))
 
+
 def get_enabled_drakruns():
     for fn in os.listdir("/etc/systemd/system/default.target.wants"):
-        if re.fullmatch('drakrun@[0-9]+\.service', fn):
+        if re.fullmatch(r'drakrun@[0-9]+\.service', fn):
             yield fn
+
+
+def get_enabled_postprocess_workers():
+    for fn in os.listdir("/etc/systemd/system/default.target.wants"):
+        if re.fullmatch(r'drak-postprocess@[0-9]+\.service', fn):
+            yield fn
+
 
 def print_status(name, is_ok):
     if is_ok:
@@ -28,6 +37,7 @@ def print_status(name, is_ok):
 
     print(f"{name: <30}{status}")
 
+
 def main():
     colorama.init(autoreset=True)
 
@@ -35,7 +45,6 @@ def main():
         "drak-web.service",
         "drak-system.service",
         "drak-minio.service",
-        "drak-postprocess.service",
     ]
 
     print("Checking daemon status...")
@@ -45,6 +54,10 @@ def main():
 
     print("Checking worker status...")
     for service in get_enabled_drakruns():
+        info = get_service_info(service)
+        print_status(service, service_runnning(info))
+
+    for service in get_enabled_postprocess_workers():
         info = get_service_info(service)
         print_status(service, service_runnning(info))
 
