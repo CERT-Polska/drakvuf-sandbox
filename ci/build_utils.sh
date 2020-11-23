@@ -23,12 +23,12 @@ function build_libvmi() {
 
 function build_drakvuf() {
     PREFIX=/usr
-    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PREFIX/lib" && \
-    export C_INCLUDE_PATH="$PREFIX/include" && \
-    export CPLUS_INCLUDE_PATH="$PREFIX/include" && \
-    export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig/" && \
-    export LDFLAGS="-L$PREFIX/lib" && \
-    export CFLAGS="-I$PREFIX/include" && \
+    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$PREFIX/lib"
+    export C_INCLUDE_PATH="$PREFIX/include"
+    export CPLUS_INCLUDE_PATH="$PREFIX/include"
+    export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig/"
+    export LDFLAGS="-L$PREFIX/lib"
+    export CFLAGS="-I$PREFIX/include"
     autoreconf -vif
     ./configure --prefix=$PREFIX --enable-debug
     make -j$(nproc)

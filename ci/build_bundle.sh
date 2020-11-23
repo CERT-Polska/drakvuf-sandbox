@@ -18,18 +18,18 @@ set -e
 
 # Build Xen
 pushd drakvuf/xen
-build_xen /usr
+build_xen
 mv dist/install /dist-xen
 popd
 
 # Build LibVMI
 pushd drakvuf/libvmi
-build_libvmi $INSTALL_PATH
+build_libvmi
 popd
 
 # Build DRAKVUF
 pushd drakvuf
-build_drakvuf $INSTALL_PATH
+build_drakvuf
 popd
 
 # Build dwarf2json
