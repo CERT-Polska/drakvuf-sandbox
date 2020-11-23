@@ -64,7 +64,7 @@ DRAKMON_SERVICES = [
     "drak-system.service",
     "drak-minio.service",
     "drak-web.service",
-    "drak-postprocess.service",
+    "drak-postprocess@1.service",
     "redis-server.service",
 ]
 
