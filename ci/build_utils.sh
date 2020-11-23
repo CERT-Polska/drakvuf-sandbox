@@ -9,7 +9,7 @@ function build_xen() {
 function build_libvmi() {
     mkdir -p $(pwd)/build
     cd build
-    cmake .. -DCMAKE_INSTALL_PREFIX=/usr \
+    cmake .. -DCMAKE_INSTALL_PREFIX=/build/usr \
              -DENABLE_FILE=OFF \
              -DENABLE_LINUX=OFF \
              -DENABLE_FREEBSD=OFF \
