@@ -17,7 +17,7 @@ function build_libvmi() {
              -DENABLE_KVM=OFF \
              -DENABLE_BAREFLANK=OFF \
              -DENV_DEBUG=ON \
-             -DXen_INCLUDE_DIR=/build/usr/include/xen
+             -DCMAKE_BUILD_TYPE=RelWithDebInfo
     make -j$(nproc)
     make install
 }

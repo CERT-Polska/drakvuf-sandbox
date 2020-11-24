@@ -14,12 +14,15 @@ fi
 
 set -e
 
+# Usage of /build as root is required by DRAKVUF's mkdeb script
 INSTALL_PATH=/build/usr
 mkdir -p $INSTALL_PATH
 
 # Build Xen
 pushd drakvuf/xen
-build_xen /usr
+# We use /usr because LibVMI wants to see
+# Xen headers. /dist-xen is used by DRAKVUF's mkdeb
+build_xen /build/usr
 mv dist/install /dist-xen
 popd
 
