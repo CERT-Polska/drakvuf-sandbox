@@ -5,8 +5,6 @@ SCRIPT=`realpath $0`
 SCRIPTPATH=`dirname $SCRIPT`
 source $SCRIPTPATH/build_utils.sh
 
-INSTALL_PATH=/build/usr
-mkdir -p $INSTALL_PATH
 
 mc stat cache/debs/drakvuf-bundle-${DRAKVUF_COMMIT}.deb
 if [ $? -eq 0 ]; then
@@ -16,20 +14,23 @@ fi
 
 set -e
 
+INSTALL_PATH=/build/usr
+mkdir -p $INSTALL_PATH
+
 # Build Xen
 pushd drakvuf/xen
-build_xen
+build_xen $INSTALL_PATH
 mv dist/install /dist-xen
 popd
 
 # Build LibVMI
 pushd drakvuf/libvmi
-build_libvmi
+build_libvmi $INSTALL_PATH
 popd
 
 # Build DRAKVUF
 pushd drakvuf
-build_drakvuf
+build_drakvuf $INSTALL_PATH
 popd
 
 # Build dwarf2json
