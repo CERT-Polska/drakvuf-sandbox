@@ -22,7 +22,7 @@ mkdir -p $INSTALL_PATH
 pushd drakvuf/xen
 # We use /usr because LibVMI wants to see
 # Xen headers. /dist-xen is used by DRAKVUF's mkdeb
-build_xen /build/usr
+build_xen /usr
 mv dist/install /dist-xen
 popd
 
