@@ -19,7 +19,7 @@ mkdir -p $INSTALL_PATH
 
 # Build Xen
 pushd drakvuf/xen
-build_xen $INSTALL_PATH
+build_xen /usr
 mv dist/install /dist-xen
 popd
 
