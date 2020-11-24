@@ -1,7 +1,10 @@
 #!/bin/bash
 
-INSTALL_PATH=/build/usr
-mkdir -p $INSTALL_PATH
+# Import utils
+SCRIPT=`realpath $0`
+SCRIPTPATH=`dirname $SCRIPT`
+source $SCRIPTPATH/build_utils.sh
+
 
 mc stat cache/debs/drakvuf-bundle-${DRAKVUF_COMMIT}.deb
 if [ $? -eq 0 ]; then
@@ -11,54 +14,39 @@ fi
 
 set -e
 
+# Usage of /build as root is required by DRAKVUF's mkdeb script
+INSTALL_PATH=/build/usr
+mkdir -p $INSTALL_PATH
+
 # Build Xen
 pushd drakvuf/xen
-
-./configure --prefix=/usr --enable-githttp --disable-pvshim > /dev/null 2>&1
-make -j$(nproc) dist > /dev/null 2>&1
-echo "Running Xen's make install-xen..."
-make -j$(nproc) install-xen
-echo "Running Xen's make install-tools..."
-make -j$(nproc) install-tools
-
+# We use /usr because LibVMI wants to see
+# Xen headers. /dist-xen is used by DRAKVUF's mkdeb
+build_xen /usr
 mv dist/install /dist-xen
 popd
-# Build DRAKVUF
-mkdir -p drakvuf/libvmi/build
 
 # Build LibVMI
-pushd drakvuf/libvmi/build
-cmake .. -DCMAKE_INSTALL_PREFIX=$INSTALL_PATH \
-         -DENABLE_FILE=OFF \
-         -DENABLE_LINUX=OFF \
-         -DENABLE_FREEBSD=OFF \
-         -DENABLE_KVM=OFF \
-         -DENABLE_BAREFLANK=OFF
-make -j$(nproc)
-make install
-ldconfig
+pushd drakvuf/libvmi
+build_libvmi $INSTALL_PATH
 popd
 
-# Package DRAKVUF and Xen
+# Build DRAKVUF
 pushd drakvuf
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$INSTALL_PATH/lib" && \
-export C_INCLUDE_PATH="$INSTALL_PATH/include" && \
-export CPLUS_INCLUDE_PATH="$INSTALL_PATH/include" && \
-export PKG_CONFIG_PATH="$INSTALL_PATH/lib/pkgconfig/" && \
-export LDFLAGS="-L$INSTALL_PATH/lib" && \
-export CFLAGS="-I$INSTALL_PATH/include" && \
-autoreconf -vif
-./configure --prefix=$INSTALL_PATH --enable-debug
-make -j$(nproc)
-make install
+build_drakvuf $INSTALL_PATH
+popd
 
 # Build dwarf2json
-sh -c "cd dwarf2json && /usr/local/go/bin/go build"
-mv dwarf2json /build/
+pushd drakvuf/dwarf2json
+/usr/local/go/bin/go build
+mkdir -p /build/dwarf2json/
+mv dwarf2json /build/dwarf2json/
+popd
 
+# Package DRAKVUF
+pushd drakvuf
 mkdir /out
 sh ./package/mkdeb
 popd
-
 
 mc cp /out/drakvuf-bundle*.deb "cache/debs/drakvuf-bundle-$DRAKVUF_COMMIT.deb"
