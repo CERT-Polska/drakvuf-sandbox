@@ -1,8 +1,8 @@
 function build_xen() {
     PREFIX=$1
     # Expects the cwd to be Xen repository
-    ./configure --prefix=$PREFIX --enable-githttp --disable-pvshim > /dev/null 2>&1
-    make -j$(nproc) dist > /dev/null 2>&1
+    ./configure --prefix=$PREFIX --enable-githttp --disable-pvshim
+    make -j$(nproc) dist
     make -j$(nproc) install-xen
     make -j$(nproc) install-tools
 }

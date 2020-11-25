@@ -22,7 +22,7 @@ fi
 SANDBOX_DIR=$1
 
 # Don't clobber local repository
-cp -r $SANDBOX_DIR /repo-local
+cp -ra $SANDBOX_DIR /repo-local
 SANDBOX_DIR=/repo-local
 
 PATCH_DIR=$2
@@ -92,6 +92,6 @@ popd
 
 echo "[+] Packaging DRAKVUF"
 mkdir -p /out
-pushd $SANDBOX_DIR-sandbox/drakvuf
+pushd $SANDBOX_DIR/drakvuf
 sh ./package/mkdeb
 popd
