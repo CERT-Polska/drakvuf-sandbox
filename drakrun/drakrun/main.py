@@ -126,7 +126,7 @@ class DrakrunKarton(Karton):
             plugins = [x for x in list_str.split(',') if x.strip()]
             self.active_plugins[quality] = plugins
 
-    def generate_plugin_cmdline(quality):
+    def generate_plugin_cmdline(self, quality):
         plugin_list = self.active_plugins["_all_"]
 
         if quality in self.active_plugins:
