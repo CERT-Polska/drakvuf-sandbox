@@ -94,8 +94,8 @@ class AnalysisProcessor(Karton):
                 self.log.error("Postprocess failed", exc_info=True)
 
         task = Task({
-            "type": "postprocess",
-            "kind": "drakcore",
+            "type": "analysis",
+            "kind": "drakrun-processed",
         })
 
         for (name, resource) in task_resources.items():
