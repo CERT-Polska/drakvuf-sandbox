@@ -399,19 +399,19 @@ class DrakrunKarton(Karton):
 
                 full_cmd = cur_start_command
                 self.log.info("Using command: %s", full_cmd)
-                
+
                 task_quality = self.current_task.headers.get("quality", "high")
                 excl_str = self.config.config['drakrun'].get('excluded_plugins', 'poolmon, objmon, socketmon, dkommon, envmon')
                 excl_q_str = self.config.config['drakrun'].get(f'excluded_plugins_quality_{task_quality}', '')
                 excl_cmdline = []
-                
+
                 for excluded_plugin in excl_str.split(',') + excl_q_str.split(','):
                     if excluded_plugin.strip():
                         excl_cmdline.append('-x')
                         excl_cmdline.append(excluded_plugin.strip())
 
-                drakvuf_cmd = ["drakvuf"] + excl_cmdline + [
-                               "-o", "json"
+                drakvuf_cmd = ["drakvuf"] + excl_cmdline + \
+                              ["-o", "json"
                                "-j", "5",
                                "-t", str(timeout),
                                "-i", str(self.runtime_info.inject_pid),
