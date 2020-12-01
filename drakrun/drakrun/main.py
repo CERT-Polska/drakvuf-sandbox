@@ -315,10 +315,6 @@ class DrakrunKarton(Karton):
 
         return self.current_task.uid
 
-    @property
-    def ():
-        pass
-
     @with_logs('drakrun.log')
     def process(self):
         sample = self.current_task.get_resource("sample")
