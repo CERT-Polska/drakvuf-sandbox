@@ -4,7 +4,7 @@ import json
 import functools
 from io import StringIO
 
-from karton2 import Consumer, Karton, RemoteResource, LocalResource
+from karton2 import Karton, RemoteResource, LocalResource, Task
 from drakcore.postprocess import REGISTERED_PLUGINS
 from drakcore.util import get_config
 
@@ -60,7 +60,7 @@ def with_logs(object_name):
     return decorator
 
 
-class AnalysisProcessor(Consumer):
+class AnalysisProcessor(Karton):
     identity = "karton.drakrun.processor"
     filters = [{"type": "analysis", "kind": "drakrun"}]
 
@@ -92,6 +92,15 @@ class AnalysisProcessor(Consumer):
                         task_resources[out] = RemoteResource(res_name, uid=res_name, bucket='drakrun', minio=self.minio)
             except Exception:
                 self.log.error("Postprocess failed", exc_info=True)
+
+        task = Task({
+            "type": "postprocess",
+            "kind": "drakcore",
+        })
+
+        for (name, resource) in task_resources.items():
+            task.add_payload(name, resource)
+        self.send_task(task)
 
 
 def main():
