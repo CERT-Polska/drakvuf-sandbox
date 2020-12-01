@@ -132,7 +132,7 @@ class DrakrunKarton(Karton):
         if quality in self.active_plugins:
             plugin_list = self.active_plugins[quality]
 
-        return list(chain.from_iterable([["-x", plugin] for plugin in plugin_list]))
+        return list(chain.from_iterable([["-a", plugin] for plugin in plugin_list]))
 
     @classmethod
     def reconfigure(cls, config: Dict[str, str]):
