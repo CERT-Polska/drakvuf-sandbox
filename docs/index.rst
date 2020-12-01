@@ -14,6 +14,7 @@ Because it is usually pretty hard to set up a malware sandbox, this project also
    
    usage/getting_started
    usage/optional_features
+   usage/managing_snapshots
    usage/scaling
    usage/troubleshooting
    usage/upgrading

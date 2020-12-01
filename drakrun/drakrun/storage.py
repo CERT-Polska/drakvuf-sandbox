@@ -6,6 +6,7 @@ import os
 import subprocess
 import time
 import shlex
+import shutil
 
 from typing import Generator, Tuple
 from drakrun.config import InstallInfo, VOLUME_DIR
@@ -57,6 +58,14 @@ class StorageBackendBase:
         Mounts second partition (C:) on the volume as block device.
         This assumes that first partition is used for booting.
         """
+        raise NotImplementedError
+
+    def export_vm0(self, file):
+        """ Export vm-0 disk into a file (symmetric to import_vm0) """
+        raise NotImplementedError
+
+    def import_vm0(self, file):
+        """ Import vm-0 disk from a file (symmetric to export_vm0) """
         raise NotImplementedError
 
 
@@ -170,6 +179,27 @@ class ZfsStorageBackend(StorageBackendBase):
 
         subprocess.check_output(f"zfs destroy {tmp_snap}", shell=True)
 
+    def export_vm0(self, file):
+        with open(file, "wb") as snapshot_file:
+            subprocess.run(
+                ["zfs", "send", f"{self.zfs_tank_name}/vm-0@booted"],
+                check=True,
+                stdout=snapshot_file
+            )
+
+    def import_vm0(self, file):
+        # Clean ZFS dataset
+        subprocess.run(
+            ["zfs", "destroy", "-r", "self.zfs_tank_name"],
+            check=True
+        )
+        with open(file, "rb") as snapshot_file:
+            subprocess.run(
+                ["zfs", "recv", f"{self.zfs_tank_name}/vm-0@booted"],
+                check=True,
+                stdout=snapshot_file
+            )
+
 
 class Qcow2StorageBackend(StorageBackendBase):
     """ Implements storage backend based on QEMU QCOW2 image format """
@@ -268,6 +298,12 @@ class Qcow2StorageBackend(StorageBackendBase):
         yield dev
 
         subprocess.check_output("qemu-nbd --disconnect /dev/nbd0", shell=True)
+
+    def export_vm0(self, path: str):
+        shutil.copy(os.path.join(VOLUME_DIR, 'vm-0.img'), path)
+
+    def import_vm0(self, path: str):
+        shutil.copy(path, os.path.join(VOLUME_DIR, 'vm-0.img'))
 
 
 REGISTERED_BACKENDS = {
