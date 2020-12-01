@@ -19,6 +19,7 @@ from typing import Optional, List, Dict
 from pathlib import Path
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 from configparser import NoOptionError
+from itertools import chain
 
 import pefile
 import magic
@@ -112,6 +113,26 @@ class DrakrunKarton(Karton):
         self.default_timeout = int(self.config.config['drakrun'].get('analysis_timeout') or 60 * 10)
         with open(os.path.join(PROFILE_DIR, "runtime.json"), 'r') as runtime_f:
             self.runtime_info = RuntimeInfo.load(runtime_f)
+
+        self.active_plugins = {}
+        self.active_plugins["_all_"] = [
+            'apimon', 'bsodmon', 'clipboardmon', 'cpuidmon', 'crashmon',
+            'debugmon', 'delaymon', 'exmon', 'filedelete', 'filetracer',
+            'librarymon', 'memdump', 'procdump', 'procmon', 'regmon',
+            'rpcmon', 'ssdtmon', 'syscalls', 'tlsmon', 'windowmon',
+            'wmimon']
+
+        for quality, list_str in self.config.config.items('drakvuf_plugins'):
+            plugins = [x for x in list_str.split(',') if x.strip()]
+            self.active_plugins[quality] = plugins
+
+    def generate_plugin_cmdline(self, quality):
+        plugin_list = self.active_plugins["_all_"]
+
+        if quality in self.active_plugins:
+            plugin_list = self.active_plugins[quality]
+
+        return list(chain.from_iterable([["-a", plugin] for plugin in plugin_list]))
 
     @classmethod
     def reconfigure(cls, config: Dict[str, str]):
@@ -400,13 +421,10 @@ class DrakrunKarton(Karton):
                 full_cmd = cur_start_command
                 self.log.info("Using command: %s", full_cmd)
 
-                drakvuf_cmd = ["drakvuf",
-                               "-o", "json",
-                               "-x", "poolmon",
-                               "-x", "objmon",
-                               "-x", "socketmon",
-                               "-x", "dkommon",
-                               "-x", "envmon",
+                task_quality = self.current_task.headers.get("quality", "high")
+
+                drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality) + \
+                              ["-o", "json"
                                "-j", "5",
                                "-t", str(timeout),
                                "-i", str(self.runtime_info.inject_pid),
