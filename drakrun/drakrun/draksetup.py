@@ -301,6 +301,10 @@ def extract_vmi_offsets(
     raise RuntimeError("Extracting VMI offsets failed")
 
 
+def eject_cd(domain, drive):
+    subprocess.run(["xl", "cd-eject", domain, drive], check=True)
+
+
 @click.command()
 @click.option('--report/--no-report', 'report',
               default=True,
@@ -315,6 +319,13 @@ def postinstall(report, generate_usermode):
         report = False
 
     install_info = InstallInfo.load()
+
+    logging.info("Ejecting installation CDs")
+    eject_cd("vm-0", "hdc")
+    if install_info.enable_unattended:
+        # If unattended install is enabled, we have an additional CD-ROM drive
+        eject_cd("vm-0", "hdd")
+
     output = subprocess.check_output(['vmi-win-guid', 'name', 'vm-0'], timeout=30).decode('utf-8')
 
     try:
