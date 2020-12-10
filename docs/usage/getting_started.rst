@@ -19,6 +19,8 @@ Nested virtualization:
 * Xen **does** work out of the box.
 * VMware Workstation Player **does** work, but you need to check Virtualize EPT option for a VM; Intel processor with EPT still required.
 
+.. _basic_installation:
+
 Basic installation
 ==================
 
