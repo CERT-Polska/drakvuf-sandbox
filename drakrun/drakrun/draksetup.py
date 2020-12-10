@@ -698,7 +698,6 @@ main.add_command(snapshot)
 
 
 if __name__ == "__main__":
-
     if os.geteuid() != 0:
         logging.warning('Not running as root, draksetup may work improperly!')
     main()
