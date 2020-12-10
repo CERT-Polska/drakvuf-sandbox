@@ -484,15 +484,10 @@ def mount(iso_path, domain_name):
 
 def get_minio_client(config):
     minio_cfg = config['minio']
-    mc = Minio(endpoint=minio_cfg['address'],
-               access_key=minio_cfg['access_key'],
-               secret_key=minio_cfg['secret_key'],
-               secure=minio_cfg.getboolean('secure', fallback=True))
-    return mc
-
-
-def minio_prefix_empty(mc, bucket, prefix):
-    return len(list(mc.list_objects(bucket, prefix=prefix))) == 0
+    return Minio(endpoint=minio_cfg['address'],
+                 access_key=minio_cfg['access_key'],
+                 secret_key=minio_cfg['secret_key'],
+                 secure=minio_cfg.getboolean('secure', fallback=True))
 
 
 @click.group(help="Manage VM snapshots")
@@ -517,7 +512,7 @@ def snapshot_export(name, bucket, full, force):
         logging.error("Bucket %s doesn't exist", bucket)
         return
 
-    if not minio_prefix_empty(mc, bucket, f"{name}/") and not force:
+    if len(list(mc.list_objects(bucket, f"{name}/"))) > 0 and not force:
         logging.error("There are objects in bucket %s at path %s. Aborting...", bucket, f"{name}/")
         return
 
@@ -558,6 +553,39 @@ def snapshot_import(name, bucket, full, zpool):
             do_import_full(mc, name, bucket, zpool)
         else:
             do_import_minimal(mc, name, bucket, zpool)
+
+            # This could probably use some refactoring
+            # We're duplicating quite a lot of code from install function
+            install_info = InstallInfo.load()
+            generate_vm_conf(install_info, 0)
+            backend = get_storage_backend(install_info)
+            backend.rollback_vm_storage(0)
+
+            net_enable = int(conf['drakrun'].get('net_enable', '0'))
+            out_interface = conf['drakrun'].get('out_interface', '')
+            dns_server = conf['drakrun'].get('dns_server', '')
+            setup_vm_network(
+                vm_id=0,
+                net_enable=net_enable,
+                out_interface=out_interface,
+                dns_server=dns_server
+            )
+
+            if net_enable:
+                start_dnsmasq(vm_id=0, dns_server=dns_server, background=True)
+
+            cfg_path = os.path.join(VM_CONFIG_DIR, "vm-0.cfg")
+
+            try:
+                subprocess.run(['xl' 'create', cfg_path], check=True)
+            except subprocess.CalledProcessError:
+                logging.exception("Failed to launch VM vm-0")
+                return
+
+            logging.info("Minimal snapshots require postinstall to work correctly")
+            logging.info("Please VNC to the port 5900 to ensure the OS booted correctly")
+            logging.info("After that, execute this command to finish the setup")
+            logging.info("# draksetup postinstall")
     except NoSuchKey:
         logging.error("Import failed. Missing files in bucket.")
 
@@ -596,6 +624,7 @@ def do_import_minimal(mc, name, bucket, zpool):
     # Patch ZFS pool name
     if zpool is not None:
         install_info.zfs_tank_name = zpool
+        # Save patched ZFS dataset name (storage backend has to know it)
         install_info.save()
 
     storage = get_storage_backend(install_info)
@@ -606,39 +635,6 @@ def do_import_minimal(mc, name, bucket, zpool):
 
         logging.info("Importing VM disk")
         storage.import_vm0(disk_image.name)
-
-    # This could probably use some refactoring
-    # We're duplicating quite a lot of code from install function
-
-    generate_vm_conf(install_info, 0)
-    backend = get_storage_backend(install_info)
-    backend.rollback_vm_storage(0)
-
-    net_enable = int(conf['drakrun'].get('net_enable', '0'))
-    out_interface = conf['drakrun'].get('out_interface', '')
-    dns_server = conf['drakrun'].get('dns_server', '')
-    setup_vm_network(
-        vm_id=0,
-        net_enable=net_enable,
-        out_interface=out_interface,
-        dns_server=dns_server
-    )
-
-    if net_enable:
-        start_dnsmasq(vm_id=0, dns_server=dns_server, background=True)
-
-    cfg_path = os.path.join(VM_CONFIG_DIR, "vm-0.cfg")
-
-    try:
-        subprocess.run(['xl' 'create', cfg_path], check=True)
-    except subprocess.CalledProcessError:
-        logging.exception("Failed to launch VM vm-0")
-        return
-
-    logging.info("Minimal snapshots require postinstall to work correctly")
-    logging.info("Please VNC to the port 5900 to ensure the OS booted correctly")
-    logging.info("After that, execute this command to finish the setup")
-    logging.info("# draksetup postinstall")
 
 
 def do_export_full(mc, bucket, name):
