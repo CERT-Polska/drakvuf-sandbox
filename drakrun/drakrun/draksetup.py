@@ -607,6 +607,39 @@ def do_import_minimal(mc, name, bucket, zpool):
         logging.info("Importing VM disk")
         storage.import_vm0(disk_image.name)
 
+    # This could probably use some refactoring
+    # We're duplicating quite a lot of code from install function
+
+    generate_vm_conf(install_info, 0)
+    backend = get_storage_backend(install_info)
+    backend.rollback_vm_storage(0)
+
+    net_enable = int(conf['drakrun'].get('net_enable', '0'))
+    out_interface = conf['drakrun'].get('out_interface', '')
+    dns_server = conf['drakrun'].get('dns_server', '')
+    setup_vm_network(
+        vm_id=0,
+        net_enable=net_enable,
+        out_interface=out_interface,
+        dns_server=dns_server
+    )
+
+    if net_enable:
+        start_dnsmasq(vm_id=0, dns_server=dns_server, background=True)
+
+    cfg_path = os.path.join(VM_CONFIG_DIR, "vm-0.cfg")
+
+    try:
+        subprocess.run(['xl' 'create', cfg_path], check=True)
+    except subprocess.CalledProcessError:
+        logging.exception("Failed to launch VM vm-0")
+        return
+
+    logging.info("Minimal snapshots require postinstall to work correctly")
+    logging.info("Please VNC to the port 5900 to ensure the OS booted correctly")
+    logging.info("After that, execute this command to finish the setup")
+    logging.info("# draksetup postinstall")
+
 
 def do_export_full(mc, bucket, name):
     """ Perform full snapshot export, symmetric to do_import_full """
