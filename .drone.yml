@@ -180,7 +180,7 @@ steps:
   image: minio/mc
   commands:
       # Get mc binary for next step
-      - cp $(which mc) .
+      - cp /bin/mc .
 - name: build VM
   image: hashicorp/packer:light
   commands:
