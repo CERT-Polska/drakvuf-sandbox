@@ -187,7 +187,7 @@ class DrakrunKarton(Karton):
             elif exports[0][0]:
                 return 'rundll32 %f,#{}'.format(export[0])
 
-        return None
+        return 'rundll32 %f'
 
     @staticmethod
     def _get_office_file_run_command(extension, file_path):
