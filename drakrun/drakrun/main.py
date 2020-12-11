@@ -172,7 +172,7 @@ class DrakrunKarton(Karton):
         try:
             exports = [(e.ordinal, e.name.decode('utf-8', 'ignore')) for e in pe.DIRECTORY_ENTRY_EXPORT.symbols]
         except AttributeError:
-            return None
+            return 'rundll32 %f'
 
         for export in exports:
             if export[1] == 'DllRegisterServer':
