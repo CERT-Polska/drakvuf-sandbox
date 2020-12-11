@@ -31,7 +31,7 @@ function build_drakvuf() {
     export LDFLAGS="-L$PREFIX/lib"
     export CFLAGS="-I$PREFIX/include"
     autoreconf -vif
-    ./configure --prefix=$PREFIX --enable-debug
+    ./configure --prefix=$PREFIX --enable-debug --enable-ipt
     make -j$(nproc)
     make install
 }
