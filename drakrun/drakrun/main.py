@@ -172,7 +172,7 @@ class DrakrunKarton(Karton):
         try:
             exports = [(e.ordinal, e.name.decode('utf-8', 'ignore')) for e in pe.DIRECTORY_ENTRY_EXPORT.symbols]
         except AttributeError:
-            return 'rundll32 %f'
+            return 'cmd.exe /C regsvr32 /s %f | rundll32 %f'
 
         for export in exports:
             if export[1] == 'DllRegisterServer':
@@ -187,7 +187,7 @@ class DrakrunKarton(Karton):
             elif exports[0][0]:
                 return 'rundll32 %f,#{}'.format(export[0])
 
-        return 'rundll32 %f'
+        return 'cmd.exe /C regsvr32 /s %f | rundll32 %f'
 
     @staticmethod
     def _get_office_file_run_command(extension, file_path):
