@@ -364,7 +364,7 @@ def main():
         print(make_pdb_profile(args.pdb_name))
     elif args.action == "fetch_pdb":
         fetch_pdb(args.pdb_name, args.guid_age)
-    if args.action == "pdb_guid":
+    elif args.action == "pdb_guid":
         print(pdb_guid(args.file))
     else:
         raise RuntimeError('Unknown action')
