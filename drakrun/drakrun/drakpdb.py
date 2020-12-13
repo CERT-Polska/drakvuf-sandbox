@@ -18,6 +18,7 @@ DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", str)])
 
 # profile file list, without 'C:\' and with '/' instead of '\'
 dll_file_list = [
+    DLL("Windows/SysWOW64/ntdll.dll", "wow_ntdll_profile", "--json-wow"),
     DLL("Windows/System32/drivers/tcpip.sys", "tcpip_profile", "--json-tcpip"),
     DLL("Windows/System32/win32k.sys", "win32k_profile", "--json-win32k"),
     DLL("Windows/System32/sspicli.dll", "sspicli_profile", "--json-sspicli"),
