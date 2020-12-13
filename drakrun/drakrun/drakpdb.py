@@ -351,7 +351,7 @@ def pdb_guid(file):
     return {"filename": tmp.Filename, "GUID": guidstr}
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description='drakpdb')
     parser.add_argument('action', type=str, help='one of: fetch_pdb (requires --pdb-name), parse_pdb (requires --pdb-name and --guid_age), pdb_guid (requires --file)')
     parser.add_argument('--pdb_name', type=str, help='name of pdb file without extension, e.g. ntkrnlmp')
@@ -368,3 +368,7 @@ if __name__ == "__main__":
         print(pdb_guid(args.file))
     else:
         raise RuntimeError('Unknown action')
+
+
+if __name__ == "__main__":
+    main()
