@@ -425,8 +425,8 @@ class DrakrunKarton(Karton):
 
                 drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality) + \
                               ["-o", "json"
-                               # be aware of https://github.com/tklengyel/drakvuf/pull/951
-                               "-F", # enable fast singlestep
+                               #  be aware of https://github.com/tklengyel/drakvuf/pull/951
+                               "-F", #  enable fast singlestep
                                "-j", "5",
                                "-t", str(timeout),
                                "-i", str(self.runtime_info.inject_pid),
