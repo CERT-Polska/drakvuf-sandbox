@@ -23,7 +23,7 @@ REGISTERED_PLUGINS = [
     # yields process_tree.json
     PostprocessPlugin(build_process_tree, required=['procmon.log']),
 
-    PostprocessPlugin(generate_ipt_disasm, required=['ipt.zip']),
+    PostprocessPlugin(generate_ipt_disasm, required=['execframe.log', 'pagefault.log', 'ipt.zip']),
 
     # yields index/{name}
     PostprocessPlugin(generate_log_index, required=[]),
