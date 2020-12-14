@@ -1,0 +1,4 @@
+#!/bin/bash
+
+set -e
+ptdump --cr3 "$2" --raw "$1" | cut -f3 '-d ' | xxd -p -r
