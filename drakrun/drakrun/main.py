@@ -253,6 +253,7 @@ class DrakrunKarton(Karton):
         for root, dirs, files in os.walk(dirpath):
             for file in files:
                 zipf.write(os.path.join(root, file), os.path.join("ipt", os.path.relpath(os.path.join(root, file), dirpath)))
+                os.unlink(os.path.join(root, file))
 
     def upload_artifacts(self, analysis_uid, workdir, subdir=''):
         base_path = os.path.join(workdir, 'output')
