@@ -5,3 +5,5 @@ opt/venvs/drakcore/bin/drak-postprocess usr/bin/drak-postprocess
 opt/venvs/drakcore/bin/drak-healthcheck usr/bin/drak-healthcheck
 opt/venvs/drakcore/bin/drak-vncpasswd usr/bin/drak-vncpasswd
 opt/venvs/drakcore/bin/drak-upgrade-db usr/bin/drak-upgrade-db
+opt/venvs/drakcore/bin/drak-gen-ptxed usr/bin/drak-gen-ptxed
+opt/venvs/drakcore/bin/drak-ipt-filter usr/bin/drak-ipt-filter
