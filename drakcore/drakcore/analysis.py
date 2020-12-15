@@ -47,7 +47,7 @@ class AnalysisProxy:
             output_file.name)
 
     def get_wireshark_key_file(self, output_file):
-        """ 
+        """
         Download tls session keys in format that is accepted by wireshark.
         """
         return self.minio.fget_object(self.bucket, f"{self.uid}/wireshark_key_file.txt", output_file.name)

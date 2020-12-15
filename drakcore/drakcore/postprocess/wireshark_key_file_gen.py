@@ -6,8 +6,6 @@ from typing import Dict
 from tempfile import NamedTemporaryFile
 
 
-
-
 def gen_key_file_from_log(tlsmon_log):
     key_file_content = ''
     for line in tlsmon_log:
@@ -26,8 +24,8 @@ def gen_key_file_from_log(tlsmon_log):
     key_file = NamedTemporaryFile(delete=False)
     key_file.write(key_file_content.encode())
     return key_file
-    
-    
+
+
 def generate_wireshark_key_file(task: Task, resources: Dict[str, RemoteResource], minio):
     analysis_uid = task.payload['analysis_uid']
 
