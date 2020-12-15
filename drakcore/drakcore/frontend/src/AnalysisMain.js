@@ -338,6 +338,12 @@ class AnalysisMain extends Component {
                 <span>Download dumps</span>
               </a>
             </div>
+            <div className="card">
+              <a href={`/wireshark_key_file/${this.analysisID}`} className="btn btn-primary">
+                <i className="mdi mdi-download mr-2"></i>
+                <span>Download wireshark key file</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>

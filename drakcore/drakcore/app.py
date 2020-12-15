@@ -154,6 +154,14 @@ def logindex(task_uid, log_type):
         return send_file(f.name)
 
 
+@app.route("/wireshark_key_file/<task_uid>")
+def wireshark_key_file(task_uid):
+    analysis = AnalysisProxy(minio, task_uid)
+    with NamedTemporaryFile() as f:
+        analysis.get_wireshark_key_file(f)
+        return send_file(f.name)
+
+
 @app.route("/dumps/<task_uid>")
 def dumps(task_uid):
     analysis = AnalysisProxy(minio, task_uid)
