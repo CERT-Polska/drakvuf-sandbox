@@ -425,7 +425,7 @@ class DrakrunKarton(Karton):
                 task_quality = self.current_task.headers.get("quality", "high")
 
                 drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality) + \
-                              ["-o", "json"
+                              ["-o", "json",
                                # be aware of https://github.com/tklengyel/drakvuf/pull/951
                                "-F",  # enable fast singlestep
                                "-j", "5",
