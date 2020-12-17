@@ -182,7 +182,7 @@ def cmdline_main():
         sys.exit(0)
 
     with tempfile.NamedTemporaryFile() as f:
-        filter_cmdline = [f'drak-ipt-filter {analysis_dir}/ipt/ipt_stream_vcpu{args.vcpu} {args.cr3_value}']
+        filter_cmdline = [f'drak-ipt-filter {analysis_dir}/ipt/ipt_stream_vcpu{args.vcpu} {args.cr3}']
 
         if args.verbose:
             filter_cmdline.append('pv')
