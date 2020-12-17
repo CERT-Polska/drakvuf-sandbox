@@ -1,7 +1,7 @@
 Using drakpdb tool
 ##################
 
-The `drakpdb` tool allows you to:
+The ``drakpdb`` tool allows you to:
 
 * determine PDB name and GUID age given an executable file (e.g. DLL)
 * fetch PDB with given name and GUID age
@@ -11,6 +11,7 @@ Usage examples
 ==============
 
 .. code-block:: console
+
     root@zen2:~/drakvuf# drakpdb pdb_guid --file ntdll.dll
     {'filename': 'wntdll.pdb', 'GUID': 'dccff2d483fa4dee81dc04552c73bb5e2'}
     root@zen2:~/drakvuf# drakpdb fetch_pdb --pdb_name wntdll.pdb --guid_age dccff2d483fa4dee81dc04552c73bb5e2
