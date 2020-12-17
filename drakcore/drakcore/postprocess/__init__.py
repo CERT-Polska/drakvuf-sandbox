@@ -26,7 +26,7 @@ REGISTERED_PLUGINS = [
     # yields wireshark_key_file.txt
     PostprocessPlugin(generate_wireshark_key_file, required=['tlsmon.log']),
 
-    PostprocessPlugin(generate_ipt_disasm, required=['ipt.zip']),
+    PostprocessPlugin(generate_ipt_disasm, required=['execframe.log', 'pagefault.log', 'ipt.zip']),
 
     # yields index/{name}
     PostprocessPlugin(generate_log_index, required=[]),

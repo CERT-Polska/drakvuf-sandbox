@@ -18,6 +18,7 @@ DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", str)])
 
 # profile file list, without 'C:\' and with '/' instead of '\'
 dll_file_list = [
+    DLL("Windows/SysWOW64/ntdll.dll", "wow_ntdll_profile", "--json-wow"),
     DLL("Windows/System32/drivers/tcpip.sys", "tcpip_profile", "--json-tcpip"),
     DLL("Windows/System32/win32k.sys", "win32k_profile", "--json-win32k"),
     DLL("Windows/System32/sspicli.dll", "sspicli_profile", "--json-sspicli"),
@@ -351,12 +352,12 @@ def pdb_guid(file):
     return {"filename": tmp.Filename, "GUID": guidstr}
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description='drakpdb')
-    parser.add_argument('action', type=str, help='one of: fetch_pdb, parse_pdb, pdb_guid')
-    parser.add_argument('pdb_name', type=str, help='name of pdb file without extension, e.g. ntkrnlmp')
-    parser.add_argument('guid_age', nargs='?', help='guid/age of the pdb file')
-    parser.add_argument('file', type=str, help='file to get GUID age from')
+    parser.add_argument('action', type=str, help='one of: fetch_pdb (requires --pdb-name), parse_pdb (requires --pdb-name and --guid_age), pdb_guid (requires --file)')
+    parser.add_argument('--pdb_name', type=str, help='name of pdb file without extension, e.g. ntkrnlmp')
+    parser.add_argument('--guid_age', type=str, help='guid/age of the pdb file')
+    parser.add_argument('--file', type=str, help='file to get GUID age from')
 
     args = parser.parse_args()
 
@@ -364,7 +365,11 @@ if __name__ == "__main__":
         print(make_pdb_profile(args.pdb_name))
     elif args.action == "fetch_pdb":
         fetch_pdb(args.pdb_name, args.guid_age)
-    if args.action == "pdb_guid":
+    elif args.action == "pdb_guid":
         print(pdb_guid(args.file))
     else:
         raise RuntimeError('Unknown action')
+
+
+if __name__ == "__main__":
+    main()

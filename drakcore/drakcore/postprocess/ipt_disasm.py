@@ -7,10 +7,12 @@ from functools import reduce
 from collections import defaultdict
 import subprocess
 import tempfile
+import logging
+import sys
 
 from karton2 import Task, RemoteResource
 from typing import Dict
-from drakcore.postprocess.ipt_utils import log, load_drakvuf_output, hexint, get_fault_va, get_fault_pa, get_trap_pa, get_frame_va, page_align, is_page_aligned, select_cr3
+from drakcore.postprocess.ipt_utils import log, load_drakvuf_output, get_fault_va, get_fault_pa, get_trap_pa, get_frame_va, page_align, is_page_aligned, select_cr3, hexint
 from zipfile import ZipFile
 
 
@@ -84,7 +86,7 @@ def match_frames(page_faults, frames, foreign_frames):
     return results
 
 
-def main(analysis_dir, cr3_value):
+def main(analysis_dir, cr3_value, vcpu):
     log.debug("Analysis directory: %s", analysis_dir)
     log.debug("CR3: %#x", cr3_value)
 
@@ -118,23 +120,12 @@ def main(analysis_dir, cr3_value):
         "/opt/libipt/bin/ptxed",
         "--block-decoder",
         "--pt",
-        os.path.join(analysis_dir, "ipt", "ipt_stream_vcpu0"),
+        os.path.join(analysis_dir, "ipt", f"ipt_stream_vcpu{vcpu}"),
         *pages
     ]
 
-    log.error("IPT: Generated ptxed command line: %s", ptxed_cmdline)
-    ptxed_proc = subprocess.Popen(subprocess.list2cmdline(ptxed_cmdline), shell=True, stdout=subprocess.PIPE)
-    cnt = 0
-
-    while True:
-        line = ptxed_proc.stdout.readline()
-
-        if not line:
-            break
-
-        cnt += 1
-
-    log.info("IPT: Disasm length %d", cnt)
+    log.info("IPT: Succesfully generated ptxed command line")
+    return ptxed_cmdline
 
 
 def generate_ipt_disasm(task: Task, resources: Dict[str, RemoteResource], minio):
@@ -146,9 +137,9 @@ def generate_ipt_disasm(task: Task, resources: Dict[str, RemoteResource], minio)
             inject_log = json.loads(f.read().split('\n')[0].strip())
 
         injected_pid = inject_log["InjectedPid"]
-        resources["syscall.log"].download_to_file(str(tmpdir / "syscall.log"))
+        resources["execframe.log"].download_to_file(str(tmpdir / "execframe.log"))
 
-        with open(str(tmpdir / "syscall.log"), "r") as f:
+        with open(str(tmpdir / "execframe.log"), "r") as f:
             for line in f:
                 obj = json.loads(line)
 
@@ -169,13 +160,37 @@ def generate_ipt_disasm(task: Task, resources: Dict[str, RemoteResource], minio)
         main(tmpdir, injected_cr3)
 
 
-if __name__ == "__main__":
+def cmdline_main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("analysis_dir", help="Analysis output directory")
-    parser.add_argument("cr3_value", type=hexint, help="CR3 value of process of interest")
+    parser.add_argument("--dry-run", action="store_true", default=False, help="Print generated ptxed command, don't run it")
+    parser.add_argument("--verbose", action="store_true", default=False, help="Print additional debug messages")
+    parser.add_argument("--analysis", help="Analysis directory (as downloaded from MinIO)")
+    parser.add_argument("--cr3", type=hexint, help="CR3 of process of interest")
+    parser.add_argument("--vcpu", type=int, help="Number of vCPU to disassemble")
     args = parser.parse_args()
 
-    analysis_dir = Path(args.analysis_dir)
-    cr3_value = args.cr3_value
+    if not args.dry_run:
+        log.setLevel(logging.WARNING)
 
-    main(analysis_dir, cr3_value)
+    analysis_dir = Path(args.analysis)
+    cr3_value = args.cr3
+
+    ptxed_cmdline = main(analysis_dir, cr3_value, args.vcpu)
+
+    if args.dry_run:
+        print(subprocess.list2cmdline(ptxed_cmdline))
+        sys.exit(0)
+
+    with tempfile.NamedTemporaryFile() as f:
+        filter_cmdline = [f'drak-ipt-filter {analysis_dir}/ipt/ipt_stream_vcpu{args.vcpu} {args.cr3}']
+
+        if args.verbose:
+            filter_cmdline.append('pv')
+
+        filter_cmdline.append(f'cat > {f.name}')
+
+        logging.info(f"Filtering IPT stream for CR3: {args.cr3}")
+        subprocess.run(' | '.join(filter_cmdline), shell=True)
+
+        logging.info("Generating trace disassembly")
+        subprocess.run(ptxed_cmdline)

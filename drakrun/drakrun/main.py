@@ -172,11 +172,11 @@ class DrakrunKarton(Karton):
         try:
             exports = [(e.ordinal, e.name.decode('utf-8', 'ignore')) for e in pe.DIRECTORY_ENTRY_EXPORT.symbols]
         except AttributeError:
-            return None
+            return 'regsvr32 /s %f'
 
         for export in exports:
             if export[1] == 'DllRegisterServer':
-                return 'regsvr32 %f'
+                return 'regsvr32 /s %f'
 
             if 'DllMain' in export[1]:
                 return 'rundll32 %f,{}'.format(export[1])
@@ -187,7 +187,7 @@ class DrakrunKarton(Karton):
             elif exports[0][0]:
                 return 'rundll32 %f,#{}'.format(export[0])
 
-        return None
+        return 'regsvr32 /s %f'
 
     @staticmethod
     def _get_office_file_run_command(extension, file_path):
@@ -253,6 +253,7 @@ class DrakrunKarton(Karton):
         for root, dirs, files in os.walk(dirpath):
             for file in files:
                 zipf.write(os.path.join(root, file), os.path.join("ipt", os.path.relpath(os.path.join(root, file), dirpath)))
+                os.unlink(os.path.join(root, file))
 
     def upload_artifacts(self, analysis_uid, workdir, subdir=''):
         base_path = os.path.join(workdir, 'output')
@@ -424,7 +425,9 @@ class DrakrunKarton(Karton):
                 task_quality = self.current_task.headers.get("quality", "high")
 
                 drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality) + \
-                              ["-o", "json"
+                              ["-o", "json",
+                               # be aware of https://github.com/tklengyel/drakvuf/pull/951
+                               "-F",  # enable fast singlestep
                                "-j", "5",
                                "-t", str(timeout),
                                "-i", str(self.runtime_info.inject_pid),
