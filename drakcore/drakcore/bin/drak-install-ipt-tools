@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+rm -rf /tmp/iptbuild
+mkdir /tmp/iptbuild
+cd /tmp/iptbuild
+
+git clone https://github.com/icedevml/libipt.git
+git clone https://github.com/intelxed/xed.git
+git clone https://github.com/intelxed/mbuild.git
+
+cd xed
+./mfile.py --share
+sudo ./mfile.py --prefix=/usr/local install
+sudo ldconfig
+
+cd ../libipt
+git checkout
+cmake -D PTDUMP=On -D PTXED=On .
+make install

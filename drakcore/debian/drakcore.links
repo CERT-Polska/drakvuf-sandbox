@@ -7,3 +7,4 @@ opt/venvs/drakcore/bin/drak-vncpasswd usr/bin/drak-vncpasswd
 opt/venvs/drakcore/bin/drak-upgrade-db usr/bin/drak-upgrade-db
 opt/venvs/drakcore/bin/drak-gen-ptxed usr/bin/drak-gen-ptxed
 opt/venvs/drakcore/bin/drak-ipt-filter usr/bin/drak-ipt-filter
+opt/venvs/drakcore/bin/drak-install-ipt-tools usr/bin/drak-install-ipt-tools

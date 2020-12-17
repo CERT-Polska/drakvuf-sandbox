@@ -20,6 +20,7 @@ setup(
              'drakcore/bin/drak-healthcheck',
              'drakcore/bin/drak-vncpasswd',
              'drakcore/bin/drak-upgrade-db',
+             'drakcore/bin/drak-install-ipt-tools',
              'drakcore/bin/drak-gen-ptxed',
              'drakcore/bin/drak-ipt-filter'],
     classifiers=[
