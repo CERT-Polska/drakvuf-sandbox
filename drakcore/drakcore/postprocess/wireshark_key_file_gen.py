@@ -22,7 +22,7 @@ def gen_key_file_from_log(tlsmon_log):
         except json.JSONDecodeError as e:
             logging.warning(f"line cannot be parsed as JSON\n{e}")
             continue
-    return key_file_content
+    return key_file_content.encode()
 
 
 def generate_wireshark_key_file(task: Task, resources: Dict[str, RemoteResource], minio):
