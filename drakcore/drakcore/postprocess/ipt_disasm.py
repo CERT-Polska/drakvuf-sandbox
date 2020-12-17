@@ -85,7 +85,7 @@ def match_frames(page_faults, frames, foreign_frames):
     return results
 
 
-def main(analysis_dir, cr3_value):
+def main(analysis_dir, cr3_value, vcpu):
     log.debug("Analysis directory: %s", analysis_dir)
     log.debug("CR3: %#x", cr3_value)
 
@@ -119,7 +119,7 @@ def main(analysis_dir, cr3_value):
         "/opt/libipt/bin/ptxed",
         "--block-decoder",
         "--pt",
-        os.path.join(analysis_dir, "ipt", "ipt_stream_vcpu0"),
+        os.path.join(analysis_dir, "ipt", f"ipt_stream_vcpu{vcpu}"),
         *pages
     ]
 
@@ -161,20 +161,35 @@ def generate_ipt_disasm(task: Task, resources: Dict[str, RemoteResource], minio)
 
 def cmdline_main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("analysis_dir", help="Analysis output directory")
-    parser.add_argument("cr3_value", type=hexint, help="CR3 of process of interest")
-    parser.add_argument("--dry-run", action="store_true", default=False)
+    parser.add_argument("--dry-run", action="store_true", default=False, help="Print generated ptxed command, don't run it")
+    parser.add_argument("--verbose", action="store_true", default=False, help="Print additional debug messages")
+    parser.add_argument("--analysis", help="Analysis directory (as downloaded from MinIO)")
+    parser.add_argument("--cr3", type=hexint, help="CR3 of process of interest")
+    parser.add_argument("--vcpu", type=int, help="Number of vCPU to disassemble")
     args = parser.parse_args()
-    
+
     if not args.dry_run:
         log.setLevel(logging.WARNING)
 
-    analysis_dir = Path(args.analysis_dir)
-    cr3_value = args.cr3_value
+    analysis_dir = Path(args.analysis)
+    cr3_value = args.cr3
 
-    ptxed_cmdline = main(analysis_dir, cr3_value)
+    ptxed_cmdline = main(analysis_dir, cr3_value, args.vcpu)
 
     if args.dry_run:
         print(subprocess.list2cmdline(ptxed_cmdline))
-    else:
+        sys.exit(0)
+
+    filter_cmdline = [f'drak-ipt-filter {analysis_dir}/ipt/ipt_stream_vcpu{args.vcpu} {args.cr3_value}']
+    
+    if args.verbose:
+        filter_cmdline.append('pv')
+    
+    filter_cmdline.append(f'cat > {f.name}')
+
+    with tempfile.NamedTemporaryFile() as f:
+        logging.info(f"Filtering IPT stream for CR3: {ars.cr3}")
+        subprocess.run(' | '.join(filter_cmdline), shell=True)
+
+        logging.info("Generating trace disassembly")
         subprocess.run(ptxed_cmdline)
