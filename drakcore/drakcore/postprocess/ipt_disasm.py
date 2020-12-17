@@ -7,6 +7,7 @@ from functools import reduce
 from collections import defaultdict
 import subprocess
 import tempfile
+import logging
 
 from karton2 import Task, RemoteResource
 from typing import Dict
@@ -170,7 +171,7 @@ def cmdline_main():
     cr3_value = args.cr3_value
 
     ptxed_cmdline = main(analysis_dir, cr3_value)
-    
+
     if args.dry_run:
         print(ptxed_cmdline)
     else:
