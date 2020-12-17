@@ -8,6 +8,7 @@ from collections import defaultdict
 import subprocess
 import tempfile
 import logging
+import sys
 
 from karton2 import Task, RemoteResource
 from typing import Dict
@@ -180,15 +181,15 @@ def cmdline_main():
         print(subprocess.list2cmdline(ptxed_cmdline))
         sys.exit(0)
 
-    filter_cmdline = [f'drak-ipt-filter {analysis_dir}/ipt/ipt_stream_vcpu{args.vcpu} {args.cr3_value}']
-    
-    if args.verbose:
-        filter_cmdline.append('pv')
-    
-    filter_cmdline.append(f'cat > {f.name}')
-
     with tempfile.NamedTemporaryFile() as f:
-        logging.info(f"Filtering IPT stream for CR3: {ars.cr3}")
+        filter_cmdline = [f'drak-ipt-filter {analysis_dir}/ipt/ipt_stream_vcpu{args.vcpu} {args.cr3_value}']
+
+        if args.verbose:
+            filter_cmdline.append('pv')
+
+        filter_cmdline.append(f'cat > {f.name}')
+
+        logging.info(f"Filtering IPT stream for CR3: {args.cr3}")
         subprocess.run(' | '.join(filter_cmdline), shell=True)
 
         logging.info("Generating trace disassembly")
