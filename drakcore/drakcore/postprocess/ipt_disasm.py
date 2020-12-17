@@ -159,14 +159,20 @@ def generate_ipt_disasm(task: Task, resources: Dict[str, RemoteResource], minio)
         main(tmpdir, injected_cr3)
 
 
-if __name__ == "__main__":
+def cmdline_main():
     parser = argparse.ArgumentParser()
     parser.add_argument("analysis_dir", help="Analysis output directory")
     parser.add_argument("cr3_value", type=hexint, help="CR3 of process of interest")
+    parser.add_argument("--dry-run", action="store_true", default=False)
     args = parser.parse_args()
 
     analysis_dir = Path(args.analysis_dir)
     cr3_value = args.cr3_value
 
     ptxed_cmdline = main(analysis_dir, cr3_value)
-    print(ptxed_cmdline)
+    
+    if args.dry_run:
+        print(ptxed_cmdline)
+    else:
+        log.setLevel(logging.WARNING)
+        subprocess.run(ptxed_cmdline)
