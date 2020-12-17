@@ -1,6 +1,7 @@
 import json
 import os
 import logging
+from io import BytesIO
 from karton2 import Task, RemoteResource
 from typing import Dict
 from tempfile import NamedTemporaryFile
@@ -21,19 +22,13 @@ def gen_key_file_from_log(tlsmon_log):
         except json.JSONDecodeError as e:
             logging.warning(f"line cannot be parsed as JSON\n{e}")
             continue
-    key_file = NamedTemporaryFile(delete=False)
-    key_file.write(key_file_content.encode())
-    return key_file
+    return key_file_content
 
 
 def generate_wireshark_key_file(task: Task, resources: Dict[str, RemoteResource], minio):
     analysis_uid = task.payload['analysis_uid']
 
     with resources['tlsmon.log'].download_temporary_file() as tlsmon_log:
-        key_file = gen_key_file_from_log(tlsmon_log)
-        size = key_file.tell()
-        key_file.seek(0)
-        minio.put_object('drakrun', f'{analysis_uid}/wireshark_key_file.txt', key_file, size)
+        key_file_content = gen_key_file_from_log(tlsmon_log)
+        minio.put_object('drakrun', f'{analysis_uid}/wireshark_key_file.txt', BytesIO(key_file_content), len(key_file_content))
         yield 'wireshark_key_file.txt'
-        key_file.close()
-        os.unlink(key_file.name)
