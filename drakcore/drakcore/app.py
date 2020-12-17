@@ -2,7 +2,8 @@ import json
 import os
 import re
 import pathlib
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
+from zipfile import ZipFile, ZIP_DEFLATED
 
 import requests
 import logging
@@ -154,12 +155,28 @@ def logindex(task_uid, log_type):
         return send_file(f.name)
 
 
-@app.route("/wireshark_key_file/<task_uid>")
-def wireshark_key_file(task_uid):
+@app.route("/pcap_dump/<task_uid>")
+def pcap_dump(task_uid):
+    """
+    Return archaive containing dump.pcap along with extracted tls sessions
+    keys in format acceptable by wireshark.
+    """
     analysis = AnalysisProxy(minio, task_uid)
-    with NamedTemporaryFile() as f:
-        analysis.get_wireshark_key_file(f)
-        return send_file(f.name)
+    try:
+        with NamedTemporaryFile() as f_pcap, NamedTemporaryFile() as f_keys, NamedTemporaryFile() as f_archive:
+            with ZipFile(f_archive, 'w', ZIP_DEFLATED) as archive:
+                analysis.get_pcap_dump(f_pcap)
+                archive.write(f_pcap.name, 'dump.pcap')
+                try:
+                    analysis.get_wireshark_key_file(f_keys)
+                    archive.write(f_keys.name, 'dump.keys')
+                except NoSuchKey:
+                    # No dumped keys.
+                    pass
+            f_archive.seek(0)
+            return send_file(f_archive.name, mimetype='application/zip')
+    except NoSuchKey:
+        abort(404, description="No network traffic avaible.")
 
 
 @app.route("/dumps/<task_uid>")

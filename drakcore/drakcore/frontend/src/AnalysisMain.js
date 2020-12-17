@@ -340,11 +340,11 @@ class AnalysisMain extends Component {
             </div>
             <div className="card">
               <a
-                href={`/wireshark_key_file/${this.analysisID}`}
+                href={`/pcap_dump/${this.analysisID}`}
                 className="btn btn-primary"
               >
                 <i className="mdi mdi-download mr-2"></i>
-                <span>Download wireshark key file</span>
+                <span>Download network traffic</span>
               </a>
             </div>
           </div>

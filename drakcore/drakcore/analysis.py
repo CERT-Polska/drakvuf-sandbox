@@ -46,6 +46,10 @@ class AnalysisProxy:
             f"{self.uid}/index/{log_type}",
             output_file.name)
 
+    def get_pcap_dump(self, output_file):
+        """ Download dump.pcap file. """
+        return self.minio.fget_object(self.bucket, f"{self.uid}/dump.pcap", output_file.name)
+
     def get_wireshark_key_file(self, output_file):
         """
         Download tls session keys in format that is accepted by wireshark.
