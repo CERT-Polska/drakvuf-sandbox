@@ -124,8 +124,7 @@ def main(analysis_dir, cr3_value):
     ]
 
     log.info("IPT: Succesfully generated ptxed command line")
-    # TODO automatically call ptxed in the future(?)
-    return subprocess.list2cmdline(ptxed_cmdline)
+    return ptxed_cmdline
 
 
 def generate_ipt_disasm(task: Task, resources: Dict[str, RemoteResource], minio):
@@ -166,6 +165,9 @@ def cmdline_main():
     parser.add_argument("cr3_value", type=hexint, help="CR3 of process of interest")
     parser.add_argument("--dry-run", action="store_true", default=False)
     args = parser.parse_args()
+    
+    if not args.dry_run:
+        log.setLevel(logging.WARNING)
 
     analysis_dir = Path(args.analysis_dir)
     cr3_value = args.cr3_value
@@ -173,7 +175,6 @@ def cmdline_main():
     ptxed_cmdline = main(analysis_dir, cr3_value)
 
     if args.dry_run:
-        print(ptxed_cmdline)
+        print(subprocess.list2cmdline(ptxed_cmdline))
     else:
-        log.setLevel(logging.WARNING)
         subprocess.run(ptxed_cmdline)
