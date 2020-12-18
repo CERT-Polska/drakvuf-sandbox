@@ -338,6 +338,15 @@ class AnalysisMain extends Component {
                 <span>Download dumps</span>
               </a>
             </div>
+            <div className="card">
+              <a
+                href={`/pcap_dump/${this.analysisID}`}
+                className="btn btn-primary"
+              >
+                <i className="mdi mdi-download mr-2"></i>
+                <span>Download network traffic</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>
