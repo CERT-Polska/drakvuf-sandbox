@@ -9,7 +9,8 @@ import requests
 import logging
 
 from flask import Flask, jsonify, request, send_file, redirect, send_from_directory, Response, abort
-from karton2 import Config, Producer, Task, Resource
+from karton.core import Config, Producer, Task, Resource
+from karton.core.task import TaskState
 from minio.error import NoSuchKey
 
 from drakcore.system import SystemService
@@ -21,8 +22,8 @@ from drakcore.database import Database
 app = Flask(__name__, static_folder='frontend/build/static')
 conf = get_config()
 
-rs = SystemService(conf).rs
-minio = SystemService(conf).minio
+backend = SystemService(conf).backend
+minio = backend.minio
 db = Database(conf.config["drakmon"].get("database", "sqlite:///var/lib/drakcore/drakcore.db"),
               pathlib.Path(__file__).parent / "migrations")
 
@@ -208,21 +209,15 @@ def metadata(task_uid):
 
 @app.route("/status/<task_uid>")
 def status(task_uid):
-    tasks = rs.keys("karton.task:*")
     res = {"status": "done"}
 
-    for task_key in tasks:
-        data = rs.get(task_key)
-        if not data:
-            continue
-        task = json.loads(data)
-
-        if task["root_uid"] == task_uid:
-            if task["status"] != "Finished":
+    for task in backend.get_all_tasks():
+        if task.root_uid == task_uid:
+            if task.status != TaskState.FINISHED:
                 res["status"] = "pending"
                 break
 
-    res["vm_id"] = rs.get(f"drakvnc:{task_uid}")
+    res["vm_id"] = backend.redis.get(f"drakvnc:{task_uid}")
     return jsonify(res)
 
 

@@ -178,10 +178,10 @@ def drakmon_vm():
 
 @pytest.fixture(scope="session")
 def karton_bucket(drakmon_vm):
-    """ Wait up to 10 seconds until karton2 bucket appears """
+    """ Wait up to 10 seconds until karton bucket appears """
     for _ in range(10):
         try:
-            drakmon_vm.run("[[ -f /var/lib/drakcore/minio/karton2 ]]")
+            drakmon_vm.run("[[ -f /var/lib/drakcore/minio/karton ]]")
             drakmon_vm.run("[[ -f /var/lib/drakcore/minio/drakrun ]]")
             break
         except UnexpectedExit:

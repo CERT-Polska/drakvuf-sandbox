@@ -2,7 +2,7 @@ import json
 import os
 import logging
 from io import BytesIO
-from karton2 import Task, RemoteResource
+from karton.core import Task, RemoteResource
 from typing import Dict
 from tempfile import NamedTemporaryFile
 

@@ -1,4 +1,4 @@
-karton2==3.1.0
+karton-core==4.0.4
 minio==5.0.7
 pefile==2019.4.18
 pdbparse==1.4

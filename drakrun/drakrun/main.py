@@ -24,7 +24,7 @@ from itertools import chain
 import pefile
 import magic
 import ntpath
-from karton2 import Karton, Config, Task, LocalResource
+from karton.core import Karton, Config, Task, LocalResource
 
 import drakrun.office as d_office
 from drakrun.drakpdb import dll_file_list
@@ -79,7 +79,7 @@ def with_logs(object_name):
                                         bucket="drakrun")
                     task_uid = self.current_task.payload.get('override_uid') or self.current_task.uid
                     res._uid = f"{task_uid}/{res.name}"
-                    res.upload(self.minio)
+                    res.upload(self.backend)
                 except Exception:
                     self.log.exception("Failed to upload analysis logs")
         return wrapper
@@ -154,8 +154,8 @@ class DrakrunKarton(Karton):
     def init_drakrun(self):
         generate_vm_conf(self.install_info, self.instance_id)
 
-        if not self.minio.bucket_exists('drakrun'):
-            self.minio.make_bucket(bucket_name='drakrun')
+        if not self.backend.minio.bucket_exists('drakrun'):
+            self.backend.minio.make_bucket(bucket_name='drakrun')
 
         net_enable = int(self.config.config['drakrun'].get('net_enable', '0'))
         out_interface = self.config.config['drakrun'].get('out_interface', '')
@@ -331,7 +331,7 @@ class DrakrunKarton(Karton):
             return
 
         self.log.info(f"analysis UID: {self.analysis_uid}")
-        self.rs.set(f"drakvnc:{self.analysis_uid}", self.instance_id, ex=3600)  # 1h
+        self.backend.redis.set(f"drakvnc:{self.analysis_uid}", self.instance_id, ex=3600)  # 1h
 
         workdir = f"/tmp/drakrun/{self.vm_name}"
 

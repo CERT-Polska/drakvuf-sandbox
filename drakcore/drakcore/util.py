@@ -2,7 +2,7 @@ import base64
 import os
 import sys
 
-from karton2 import Config
+from karton.core import Config
 
 
 def find_config():
@@ -38,7 +38,6 @@ def get_config():
         try:
             cfg.config['minio']['access_key'] = minio_cfg['MINIO_ACCESS_KEY']
             cfg.config['minio']['secret_key'] = minio_cfg['MINIO_SECRET_KEY']
-            cfg.minio_config = dict(cfg.config.items("minio"))
         except KeyError:
             sys.stderr.write('WARNING! Misconfiguration: minio.env doesn\'t contain MINIO_ACCESS_KEY or MINIO_SECRET_KEY.\n')
 

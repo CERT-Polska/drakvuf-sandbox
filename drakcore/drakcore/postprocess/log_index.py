@@ -11,7 +11,7 @@ so we build and index, to quickly look up where n-th line begins.
 """
 import io
 import json
-from karton2 import Task, RemoteResource
+from karton.core import Task, RemoteResource
 from typing import Dict
 from minio.error import NoSuchKey
 

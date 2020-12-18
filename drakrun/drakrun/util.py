@@ -6,7 +6,7 @@ import subprocess
 from dataclasses import dataclass, field
 from typing import Dict, AnyStr, IO
 
-from karton2 import Config
+from karton.core import Config
 from dataclasses_json import dataclass_json, config
 
 hexstring = config(
@@ -74,7 +74,6 @@ def patch_config(cfg):
         try:
             cfg.config['minio']['access_key'] = minio_cfg['MINIO_ACCESS_KEY']
             cfg.config['minio']['secret_key'] = minio_cfg['MINIO_SECRET_KEY']
-            cfg.minio_config = dict(cfg.config.items("minio"))
         except KeyError:
             sys.stderr.write('WARNING! Misconfiguration: minio.env doesn\'t contain MINIO_ACCESS_KEY or MINIO_SECRET_KEY.\n')
 

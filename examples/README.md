@@ -27,7 +27,7 @@ In `consumer.py`, we provide an exemplary script which is able to collect the re
 
    [minio]
    address = localhost:9000
-   bucket = karton2
+   bucket = karton
    secure = 0
    access_key =
    secret_key =
