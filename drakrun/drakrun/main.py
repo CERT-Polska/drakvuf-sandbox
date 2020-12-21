@@ -209,7 +209,7 @@ class DrakrunKarton(Karton):
     def _get_start_command(self, extension, sample, file_path):
         if extension == 'dll':
             start_command = self.current_task.payload.get("start_command", self._get_dll_run_command(sample.content))
-        elif extension == 'exe':
+        elif extension in ['exe', 'vbs']:
             start_command = '%f'
         elif d_office.is_office_file(extension):
             start_command = self._get_office_file_run_command(extension, file_path)
