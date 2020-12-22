@@ -3,7 +3,7 @@ import logging
 from dataclasses import dataclass, field
 from io import BytesIO
 from typing import List, Set, Optional, Dict, Any
-from karton2 import Task, RemoteResource
+from karton.core import Task, RemoteResource
 
 
 @dataclass

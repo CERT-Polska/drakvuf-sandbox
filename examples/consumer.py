@@ -4,7 +4,7 @@ import os
 import argparse
 import tempfile
 
-from karton2 import Karton, Config, Task, DirectoryResource
+from karton.core import Karton, Config, Task, DirectoryResource
 
 
 class DrakrunAnalysisConsumer(Karton):

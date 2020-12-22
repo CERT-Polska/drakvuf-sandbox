@@ -10,7 +10,7 @@ import tempfile
 import logging
 import sys
 
-from karton2 import Task, RemoteResource
+from karton.core import Task, RemoteResource
 from typing import Dict
 from drakcore.postprocess.ipt_utils import log, load_drakvuf_output, get_fault_va, get_fault_pa, get_trap_pa, get_frame_va, page_align, is_page_aligned, select_cr3, hexint
 from zipfile import ZipFile

@@ -3,7 +3,7 @@ import tempfile
 import logging
 import subprocess
 
-from karton2 import Task, RemoteResource
+from karton.core import Task, RemoteResource
 from typing import Dict
 from drakcore.postprocess.drakparse import parse_logs
 

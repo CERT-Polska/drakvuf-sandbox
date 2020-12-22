@@ -4,7 +4,7 @@ import tempfile
 import logging
 
 from typing import Dict
-from karton2 import Task, RemoteResource
+from karton.core import Task, RemoteResource
 from collections import Counter
 from pathlib import Path
 

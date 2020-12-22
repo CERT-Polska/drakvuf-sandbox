@@ -4,7 +4,7 @@ import json
 import functools
 from io import StringIO
 
-from karton2 import Karton, RemoteResource, LocalResource, Task
+from karton.core import Karton, RemoteResource, LocalResource, Task
 from drakcore.postprocess import REGISTERED_PLUGINS
 from drakcore.util import get_config
 
@@ -52,7 +52,7 @@ def with_logs(object_name):
                                         bucket="drakrun")
                     task_uid = self.current_task.payload.get('analysis_uid') or self.current_task.uid
                     res._uid = f"{task_uid}/{res.name}"
-                    res.upload(self.minio)
+                    res.upload(self.backend)
                 except Exception:
                     self.log.exception("Failed to upload analysis logs")
         return wrapper
@@ -83,13 +83,18 @@ class AnalysisProcessor(Karton):
 
             try:
                 self.log.debug("Running postprocess - %s", plugin.handler.__name__)
-                outputs = plugin.handler(self.current_task, task_resources, self.minio)
+                outputs = plugin.handler(self.current_task, task_resources, self.backend.minio)
 
                 if outputs:
                     for out in outputs:
                         self.log.debug(f"Step {plugin.handler.__name__} outputted new resource: {out}")
                         res_name = os.path.join(self.current_task.payload["analysis_uid"], out)
-                        task_resources[out] = RemoteResource(res_name, uid=res_name, bucket='drakrun', minio=self.minio)
+                        task_resources[out] = RemoteResource(
+                            res_name,
+                            uid=res_name,
+                            bucket='drakrun',
+                            backend=self.backend,
+                        )
             except Exception:
                 self.log.error("Postprocess failed", exc_info=True)
 

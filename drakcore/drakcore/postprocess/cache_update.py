@@ -1,5 +1,5 @@
 from drakcore.app import get_analysis_metadata
-from karton2 import Task, RemoteResource
+from karton.core import Task, RemoteResource
 from typing import Dict
 
 

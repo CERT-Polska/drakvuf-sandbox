@@ -1,7 +1,7 @@
 import os
 import argparse
 
-from karton2 import Producer, Config, Resource, Task
+from karton.core import Producer, Config, Resource, Task
 from drakrun.config import ETC_DIR
 from drakrun.util import patch_config
 
