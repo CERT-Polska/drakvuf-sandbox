@@ -93,6 +93,7 @@ class AnalysisProcessor(Karton):
                             res_name,
                             uid=res_name,
                             bucket='drakrun',
+                            backend=self.backend,
                         )
             except Exception:
                 self.log.error("Postprocess failed", exc_info=True)
