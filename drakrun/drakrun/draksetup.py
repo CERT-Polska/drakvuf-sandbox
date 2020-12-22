@@ -676,8 +676,8 @@ def do_import_full(mc, name, bucket, zpool):
     profile_prefix = f"{name}/profiles/"
     for object in mc.list_objects(bucket, prefix=profile_prefix):
         # Strip profile prefix
-        profile_name = object.name[profile_prefix:]
-        mc.fget_object(bucket, object.name, os.path.join(PROFILE_DIR, profile_name))
+        profile_name = object.object_name[len(profile_prefix):]
+        mc.fget_object(bucket, object.object_name, os.path.join(PROFILE_DIR, profile_name))
 
 
 @click.group()
