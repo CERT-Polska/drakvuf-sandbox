@@ -312,6 +312,10 @@ def eject_cd(domain, drive):
     subprocess.run(["xl", "cd-eject", domain, drive], check=True)
 
 
+def insert_cd(domain, drive, iso):
+    subprocess.run(["xl", "cd-insert", domain, drive, iso], check=True)
+
+
 @click.command()
 @click.option('--report/--no-report', 'report',
               default=True,
@@ -479,7 +483,7 @@ def mount(iso_path, domain_name):
     Domain can be retrieved by running "xl list" command on the host.
     '''
     iso_path_full = os.path.abspath(iso_path)
-    subprocess.run(['xl', 'qemu-monitor-command', domain_name, f'change ide-5632 {iso_path_full}'])
+    insert_cd(domain_name, "hdc", iso_path_full)
 
 
 def get_minio_client(config):
