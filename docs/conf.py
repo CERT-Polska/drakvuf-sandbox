@@ -30,6 +30,7 @@ author = 'CERT Polska'
 # The full version, including alpha/beta/rc tags
 release = 'v0.11.0'
 
+latex_engine = 'xelatex'
 
 # -- General configuration ---------------------------------------------------
 
