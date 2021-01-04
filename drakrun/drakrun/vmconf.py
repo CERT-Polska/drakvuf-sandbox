@@ -8,6 +8,7 @@ from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
 FIRST_CDROM_DRIVE = "hdc"
 SECOND_CDROM_DRIVE = "hdd"
 
+
 def generate_vm_conf(install_info: InstallInfo, vm_id: int):
     with open(os.path.join(ETC_DIR, 'scripts', 'cfg.template'), 'r') as f:
         template = f.read()

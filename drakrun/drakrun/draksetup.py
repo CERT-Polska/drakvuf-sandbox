@@ -332,7 +332,7 @@ def postinstall(report, generate_usermode):
     install_info = InstallInfo.load()
 
     logging.info("Ejecting installation CDs")
-    eject_cd("vm-0",  FIRST_CDROM_DRIVE)
+    eject_cd("vm-0", FIRST_CDROM_DRIVE)
     if install_info.enable_unattended:
         # If unattended install is enabled, we have an additional CD-ROM drive
         eject_cd("vm-0", SECOND_CDROM_DRIVE)
