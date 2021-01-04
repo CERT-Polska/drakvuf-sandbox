@@ -311,7 +311,7 @@ class DrakrunKarton(Karton):
         if override_uid:
             return override_uid
 
-        if self.config.config.getboolean('drakrun', 'use_root_uid'):
+        if self.config.config.getboolean('drakrun', 'use_root_uid', fallback=False):
             return self.current_task.root_uid
 
         return self.current_task.uid
