@@ -5,6 +5,8 @@ import logging
 from drakrun.storage import get_storage_backend
 from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
 
+FIRST_CDROM_DRIVE = "hdc"
+SECOND_CDROM_DRIVE = "hdd"
 
 def generate_vm_conf(install_info: InstallInfo, vm_id: int):
     with open(os.path.join(ETC_DIR, 'scripts', 'cfg.template'), 'r') as f:
@@ -16,11 +18,11 @@ def generate_vm_conf(install_info: InstallInfo, vm_id: int):
     disks.append(storage_backend.get_vm_disk_path(vm_id))
 
     install_iso_path = os.path.abspath(install_info.iso_path)
-    disks.append(f'file:{install_iso_path},hdc:cdrom,r')
+    disks.append(f'file:{install_iso_path},{FIRST_CDROM_DRIVE}:cdrom,r')
 
     if install_info.enable_unattended:
         unattended_iso_path = os.path.join(LIB_DIR, 'volumes', 'unattended.iso')
-        disks.append(f'file:{unattended_iso_path},hdd:cdrom,r')
+        disks.append(f'file:{unattended_iso_path},{SECOND_CDROM_DRIVE}:cdrom,r')
 
     disks = ', '.join(['"{}"'.format(disk) for disk in disks])
 
