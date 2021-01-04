@@ -392,11 +392,7 @@ def postinstall(report, generate_usermode):
         })
 
     logging.info("All right, drakrun setup is done.")
-    logging.info("First instance of drakrun will be enabled automatically...")
-    subprocess.check_output('systemctl enable drakrun@1', shell=True)
-    subprocess.check_output('systemctl start drakrun@1', shell=True)
-
-    logging.info("If you want to have more parallel instances, execute:")
+    logging.info("To startup your drakrun instances, execute:")
     logging.info("  # draksetup scale <number of instances>")
 
 

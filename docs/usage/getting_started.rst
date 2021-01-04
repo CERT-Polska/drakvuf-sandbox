@@ -88,4 +88,10 @@ This instruction assumes that you want to create a single-node installation with
   .. note ::
     Add ``--no-report`` if you don't want ``draksetup`` to send `basic usage report <https://github.com/CERT-Polska/drakvuf-sandbox/blob/master/USAGE_STATISTICS.md>`_. 
 
-10. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
+10. Scale up drakrun instances. To read more about this step, read: :ref:`Scaling` docs. The following command will start 1 drakrun instance.
+
+  .. code-block:: console
+
+    # draksetup scale 1
+
+11. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.

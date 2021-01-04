@@ -4,7 +4,7 @@ Scaling
 Introduction
 ------------
 
-After performing installation, by default, your sandbox instance will be capable of processing one sample at a time. The service that performs the actual analysis is called `drakrun@<instance_number>`. You can check the state of a particular instance by executing:
+The service that performs the actual analysis is called `drakrun@<instance_number>`. You can check the state of a particular instance by executing:
 
 .. code-block:: console
 
