@@ -23,7 +23,7 @@ from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from drakrun.config import InstallInfo, LIB_DIR, VOLUME_DIR, PROFILE_DIR, ETC_DIR, VM_CONFIG_DIR
 from drakrun.networking import setup_vm_network, start_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
-from drakrun.vmconf import generate_vm_conf
+from drakrun.vmconf import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE
 from drakrun.util import RuntimeInfo, VmiOffsets
 from tqdm import tqdm
 
@@ -312,6 +312,10 @@ def eject_cd(domain, drive):
     subprocess.run(["xl", "cd-eject", domain, drive], check=True)
 
 
+def insert_cd(domain, drive, iso):
+    subprocess.run(["xl", "cd-insert", domain, drive, iso], check=True)
+
+
 @click.command()
 @click.option('--report/--no-report', 'report',
               default=True,
@@ -328,10 +332,10 @@ def postinstall(report, generate_usermode):
     install_info = InstallInfo.load()
 
     logging.info("Ejecting installation CDs")
-    eject_cd("vm-0", "hdc")
+    eject_cd("vm-0", FIRST_CDROM_DRIVE)
     if install_info.enable_unattended:
         # If unattended install is enabled, we have an additional CD-ROM drive
-        eject_cd("vm-0", "hdd")
+        eject_cd("vm-0", SECOND_CDROM_DRIVE)
 
     output = subprocess.check_output(['vmi-win-guid', 'name', 'vm-0'], timeout=30).decode('utf-8')
 
@@ -479,7 +483,7 @@ def mount(iso_path, domain_name):
     Domain can be retrieved by running "xl list" command on the host.
     '''
     iso_path_full = os.path.abspath(iso_path)
-    subprocess.run(['xl', 'qemu-monitor-command', domain_name, f'change ide-5632 {iso_path_full}'])
+    insert_cd(domain_name, FIRST_CDROM_DRIVE, iso_path_full)
 
 
 def get_minio_client(config):
