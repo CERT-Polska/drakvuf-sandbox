@@ -18,14 +18,13 @@ def add_iptable_rule(rule):
             raise RuntimeError(f'Failed to check for iptables rule: {rule}')
 
 
-def start_tcpdump_collector(instance_id: str, outdir: str) -> Optional[subprocess.Popen]:
+def start_tcpdump_collector(instance_id: str, outdir: str) -> subprocess.Popen:
     domid = get_domid_from_instance_id(instance_id)
 
     try:
         subprocess.check_output("tcpdump --version", shell=True)
     except subprocess.CalledProcessError:
-        logging.warning("Seems like tcpdump is not working/not installed on your system. Pcap will not be recorded.")
-        return None
+        raise RuntimeError("Failed to start tcpdump")
 
     return subprocess.Popen([
         "tcpdump",
@@ -40,9 +39,7 @@ def start_dnsmasq(vm_id: int, dns_server: str, background=False) -> Optional[sub
     try:
         subprocess.check_output("dnsmasq --version", shell=True)
     except subprocess.CalledProcessError:
-        logging.warning("Seems like dnsmasq is not working/not installed on your system."
-                        "Guest networking may not be fully functional.")
-        return None
+        raise RuntimeError("Failed to start dnsmasq")
 
     if dns_server == "use-gateway-address":
         dns_server = f"10.13.{vm_id}.1"
