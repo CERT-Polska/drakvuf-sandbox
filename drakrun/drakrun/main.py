@@ -316,6 +316,36 @@ class DrakrunKarton(Karton):
 
         return self.current_task.uid
 
+    def build_drakvuf_cmdline(self, timeout, cwd, full_cmd, dump_dir, ipt_dir):
+        hooks_list = os.path.join(ETC_DIR, "hooks.txt")
+        kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
+
+        task_quality = self.current_task.headers.get("quality", "high")
+        drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality) + \
+                      ["-o", "json",
+                       # be aware of https://github.com/tklengyel/drakvuf/pull/951
+                       "-F",  # enable fast singlestep
+                       "-j", "5",
+                       "-t", str(timeout),
+                       "-i", str(self.runtime_info.inject_pid),
+                       "-k", hex(self.runtime_info.vmi_offsets.kpgd),
+                       "-d", self.vm_name,
+                       "--dll-hooks-list", hooks_list,
+                       "--memdump-dir", dump_dir,
+                       "-r", kernel_profile,
+                       "-e", full_cmd,
+                       "-c", cwd]
+        if self.config.config['drakrun'].getboolean('enable_ipt', fallback=False):
+            drakvuf_cmd.extend(["--ipt-dir", ipt_dir])
+
+        drakvuf_cmd.extend(self.get_profile_list())
+
+        syscall_filter = self.config.config['drakrun'].get('syscall_filter', None)
+        if syscall_filter:
+            drakvuf_cmd.extend(["-S", syscall_filter])
+
+        return drakvuf_cmd
+
     @with_logs('drakrun.log')
     def process(self):
         sample = self.current_task.get_resource("sample")
@@ -390,11 +420,7 @@ class DrakrunKarton(Karton):
 
                 self.log.info("running monitor {}".format(self.instance_id))
 
-                hooks_list = os.path.join(ETC_DIR, "hooks.txt")
                 kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
-                dump_dir = os.path.join(outdir, "dumps")
-                ipt_dir = os.path.join(outdir, "ipt")
-                drakmon_log_fp = os.path.join(outdir, "drakmon.log")
 
                 self.log.info("Copying sample to VM...")
                 injector = Injector(self.vm_name, self.runtime_info, kernel_profile)
@@ -409,45 +435,24 @@ class DrakrunKarton(Karton):
                 if "%f" not in start_command:
                     self.log.warning("No file name in start command")
 
-                cwd = subprocess.list2cmdline([ntpath.dirname(injected_fn)])
                 cur_start_command = start_command.replace("%f", injected_fn)
 
                 # don't include our internal maintanance commands
                 metadata['start_command'] = cur_start_command
+                self.log.info("Using command: %s", cur_start_command)
 
                 if net_enable:
                     self.log.info("Setting up network...")
                     injector.create_process("cmd /C ipconfig /renew >nul", wait=True, timeout=120)
 
-                full_cmd = cur_start_command
-                self.log.info("Using command: %s", full_cmd)
-
-                task_quality = self.current_task.headers.get("quality", "high")
-
-                drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality) + \
-                              ["-o", "json",
-                               # be aware of https://github.com/tklengyel/drakvuf/pull/951
-                               "-F",  # enable fast singlestep
-                               "-j", "5",
-                               "-t", str(timeout),
-                               "-i", str(self.runtime_info.inject_pid),
-                               "-k", hex(self.runtime_info.vmi_offsets.kpgd),
-                               "-d", self.vm_name,
-                               "--dll-hooks-list", hooks_list,
-                               "--memdump-dir", dump_dir,
-                               "-r", kernel_profile,
-                               "-e", full_cmd,
-                               "-c", cwd]
-
-                if self.config.config['drakrun'].getboolean('enable_ipt', fallback=False):
-                    drakvuf_cmd.extend(["--ipt-dir", ipt_dir])
-
-                drakvuf_cmd.extend(self.get_profile_list())
-
-                syscall_filter = self.config.config['drakrun'].get('syscall_filter', None)
-                if syscall_filter:
-                    drakvuf_cmd.extend(["-S", syscall_filter])
-
+                drakvuf_cmd = self.build_drakvuf_cmdline(
+                    timeout=timeout,
+                    cwd=subprocess.list2cmdline([ntpath.dirname(injected_fn)]),
+                    full_cmd=cur_start_command,
+                    dump_dir=os.path.join(outdir, "dumps"),
+                    ipt_dir=os.path.join(outdir, "ipt")
+                )
+                drakmon_log_fp = os.path.join(outdir, "drakmon.log")
                 with open(drakmon_log_fp, "wb") as drakmon_log:
                     drakvuf = subprocess.Popen(drakvuf_cmd, stdout=drakmon_log)
 
