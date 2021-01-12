@@ -1,6 +1,6 @@
 requests==2.22.0
 Flask==1.1.1
-karton-core==4.0.4
+karton-core==4.1.0
 redis==3.5.3
 uwsgi==2.0.17.1
 minio==5.0.7
