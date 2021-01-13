@@ -5,9 +5,13 @@ try:
 except ImportError:
     from distutils.core import setup
 
+version = {}
+with open("drakrun/version.py") as f:
+    exec(f.read(), version)
+
 setup(
     name="drakrun",
-    version="0.13.0",
+    version=version['__version__'],
     description="DRAKRUN",
     package_dir={"drakrun": "drakrun"},
     packages=["drakrun"],
