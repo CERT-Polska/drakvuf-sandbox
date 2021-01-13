@@ -6,6 +6,9 @@ from typing import Optional
 from drakrun.util import get_domid_from_instance_id
 
 
+log = logging.getLogger("drakrun")
+
+
 def add_iptable_rule(rule):
     try:
         subprocess.check_output(f"iptables -C {rule}", shell=True)
@@ -54,9 +57,9 @@ def start_dnsmasq(vm_id: int, dns_server: str, background=False) -> Optional[sub
             try:
                 os.kill(dnsmasq_pid, 0)
             except OSError:
-                logging.info("Starting dnsmasq in background")
+                log.info("Starting dnsmasq in background")
             else:
-                logging.info("Already running dnsmasq in background")
+                log.info("Already running dnsmasq in background")
                 return
 
     return subprocess.Popen([
@@ -81,9 +84,9 @@ def setup_vm_network(vm_id, net_enable, out_interface, dns_server):
         subprocess.check_output(f'brctl addbr drak{vm_id}', stderr=subprocess.STDOUT, shell=True)
     except subprocess.CalledProcessError as e:
         if b'already exists' in e.output:
-            logging.info(f"Bridge drak{vm_id} already exists.")
+            log.info(f"Bridge drak{vm_id} already exists.")
         else:
-            logging.exception(f"Failed to create bridge drak{vm_id}.")
+            log.exception(f"Failed to create bridge drak{vm_id}.")
     else:
         subprocess.check_output(f'ip addr add 10.13.{vm_id}.1/24 dev drak{vm_id}', shell=True)
 

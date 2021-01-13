@@ -5,6 +5,8 @@ import logging
 from drakrun.storage import get_storage_backend
 from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
 
+log = logging.getLogger("drakrun")
+
 FIRST_CDROM_DRIVE = "hdc"
 SECOND_CDROM_DRIVE = "hdd"
 
@@ -40,4 +42,4 @@ def generate_vm_conf(install_info: InstallInfo, vm_id: int):
         f.write("# and restart drakrun@<vm_id> service.\n\n")
         f.write(template)
 
-    logging.info("Generated VM configuration for vm-{vm_id}".format(vm_id=vm_id))
+    log.info("Generated VM configuration for vm-{vm_id}".format(vm_id=vm_id))
