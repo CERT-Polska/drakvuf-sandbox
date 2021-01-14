@@ -109,7 +109,7 @@ The steps below should be completed on guest vm before creating the snapshot (e.
      "AccessVBOM"=dword:00000001
      "ExtensionHardening"=dword:00000000
 
-   (change 14.0 to your Office version, see [registry key by product name](https://docs.microsoft.com/en-us/office/troubleshoot/word/reset-options-and-settings-in-word#word-key))
+   (change 14.0 to your Office version, see `registry key by product name <https://docs.microsoft.com/en-us/office/troubleshoot/word/reset-options-and-settings-in-word#word-key>`_)
 
 ProcDOT integration
 -------------------
