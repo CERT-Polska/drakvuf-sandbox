@@ -22,13 +22,10 @@ DRAKVUF Sandbox is divided into two packages:
 .. note ::
    `DRAKVUF engine <https://github.com/tklengyel/drakvuf>`_ is a separate project authored by Tamas K Lengyel.
    
-DRAKVUF Sandbox is built around *karton* -- microservice framework created at CERT Poland
+DRAKVUF Sandbox is built around `karton <https://github.com/CERT-Polska/karton>`_ -- microservice framework created at CERT Poland
 as a specialized tool for building flexible malware analysis pipelines. Its main goal
 is routing tasks between multiple services.
 
-As of now, documentation for *karton* isn't publically available, however this will change
-in the future.
-   
 Daemons
 -------
 
