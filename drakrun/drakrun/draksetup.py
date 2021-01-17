@@ -27,9 +27,6 @@ from drakrun.vmconf import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRI
 from drakrun.util import RuntimeInfo, VmiOffsets
 from tqdm import tqdm
 
-logging.basicConfig(level=logging.DEBUG,
-                    format='[%(asctime)s][%(levelname)s] %(message)s',
-                    handlers=[logging.StreamHandler()])
 
 conf = configparser.ConfigParser()
 conf.read(os.path.join(ETC_DIR, "config.ini"))
@@ -686,7 +683,11 @@ def do_import_full(mc, name, bucket, zpool):
 
 @click.group()
 def main():
-    pass
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='[%(asctime)s][%(levelname)s] %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
 
 
 main.add_command(install)
