@@ -682,12 +682,12 @@ def do_import_full(mc, name, bucket, zpool):
 
 
 @click.group()
-def main():  
-  logging.basicConfig(
-      level=logging.DEBUG,
-      format='[%(asctime)s][%(levelname)s] %(message)s',
-      handlers=[logging.StreamHandler()]
-  )
+def main():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='[%(asctime)s][%(levelname)s] %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
 
 
 main.add_command(install)
