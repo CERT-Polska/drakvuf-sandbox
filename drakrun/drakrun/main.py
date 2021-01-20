@@ -157,6 +157,10 @@ class DrakrunKarton(Karton):
         cls.headers = load_json(config, 'headers') or cls.DEFAULT_HEADERS
 
     @property
+    def net_enable(self) -> bool:
+        return self.config.config['drakrun'].getboolean('net_enable', fallback=False)
+
+    @property
     def vm_name(self) -> str:
         return f"vm-{self.instance_id}"
 
@@ -166,11 +170,10 @@ class DrakrunKarton(Karton):
         if not self.backend.minio.bucket_exists('drakrun'):
             self.backend.minio.make_bucket(bucket_name='drakrun')
 
-        net_enable = int(self.config.config['drakrun'].get('net_enable', '0'))
         out_interface = self.config.config['drakrun'].get('out_interface', '')
         dns_server = self.config.config['drakrun'].get('dns_server', '')
 
-        setup_vm_network(self.instance_id, net_enable, out_interface, dns_server)
+        setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
 
     @staticmethod
     def _get_dll_run_command(pe_data):
@@ -436,7 +439,6 @@ class DrakrunKarton(Karton):
                 )
 
                 injected_fn = json.loads(result.stdout)['ProcessName']
-                net_enable = int(self.config.config['drakrun'].get('net_enable', '0'))
 
                 if "%f" not in start_command:
                     self.log.warning("No file name in start command")
@@ -447,7 +449,7 @@ class DrakrunKarton(Karton):
                 metadata['start_command'] = cur_start_command
                 self.log.info("Using command: %s", cur_start_command)
 
-                if net_enable:
+                if self.net_enable:
                     self.log.info("Setting up network...")
                     injector.create_process("cmd /C ipconfig /renew >nul", wait=True, timeout=120)
 
