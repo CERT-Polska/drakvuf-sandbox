@@ -23,7 +23,7 @@ from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from drakrun.config import InstallInfo, LIB_DIR, VOLUME_DIR, PROFILE_DIR, ETC_DIR, VM_CONFIG_DIR
 from drakrun.networking import setup_vm_network, start_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
-from drakrun.vmconf import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE
+from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE
 from drakrun.util import RuntimeInfo, VmiOffsets
 from tqdm import tqdm
 

@@ -31,7 +31,7 @@ from drakrun.config import InstallInfo, ETC_DIR, VM_CONFIG_DIR, VOLUME_DIR, PROF
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
 from drakrun.util import patch_config, get_xl_info, get_xen_commandline, RuntimeInfo
-from drakrun.vmconf import generate_vm_conf
+from drakrun.vm import generate_vm_conf
 from drakrun.injector import Injector
 
 
