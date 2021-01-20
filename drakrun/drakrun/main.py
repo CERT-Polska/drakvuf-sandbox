@@ -389,12 +389,14 @@ class DrakrunKarton(Karton):
             return
         self.log.info("Using file name %s", file_name)
 
-        # Save sample to disk here as some branches of _get_start_command require file path.
         try:
             shutil.rmtree(workdir)
-        except Exception as e:
-            print(e)
+        except OSError:
+            self.log.exception("Failed to clean work directory")
+
         os.makedirs(workdir, exist_ok=True)
+
+        # Save sample to disk here as some branches of _get_start_command require file path.
         with open(os.path.join(workdir, file_name), 'wb') as f:
             f.write(sample.content)
 
