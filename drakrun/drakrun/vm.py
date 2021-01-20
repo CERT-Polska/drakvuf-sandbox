@@ -1,9 +1,17 @@
 import os
 import re
 import logging
+import subprocess
+from pathlib import Path
 
-from drakrun.storage import get_storage_backend
-from drakrun.config import ETC_DIR, LIB_DIR, InstallInfo
+from drakrun.storage import get_storage_backend, StorageBackendBase
+from drakrun.config import (
+    VM_CONFIG_DIR,
+    VOLUME_DIR,
+    ETC_DIR,
+    LIB_DIR,
+    InstallInfo
+)
 
 log = logging.getLogger("drakrun")
 
@@ -43,3 +51,34 @@ def generate_vm_conf(install_info: InstallInfo, vm_id: int):
         f.write(template)
 
     log.info("Generated VM configuration for vm-{vm_id}".format(vm_id=vm_id))
+
+
+class VirtualMachine:
+    def __init__(self, backend: StorageBackendBase, vm_id: int) -> None:
+        self.backend = backend
+        self.vm_id = vm_id
+
+    @property
+    def vm_name(self) -> str:
+        return f"vm-{self.vm_id}"
+
+    @property
+    def is_running(self) -> bool:
+        res = subprocess.run(
+            ["xl", "list", self.vm_name],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return res.returncode == 0
+
+    def restore(self):
+        if self.is_running:
+            self.destroy()
+        cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg"
+        snapshot_path = Path(VOLUME_DIR) / "snapshot.sav"
+        self.backend.rollback_vm_storage(self.vm_id)
+        subprocess.run(["xl", "restore", cfg_path, snapshot_path], check=True)
+
+    def destroy(self):
+        if self.is_running:
+            subprocess.run(["xl", "destroy", self.vm_name], check=True)
