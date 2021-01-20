@@ -411,9 +411,6 @@ class DrakrunKarton(Karton):
             "time_started": int(time.time())
         }
 
-        with open(os.path.join(outdir, 'sample_sha256.txt'), 'w') as f:
-            f.write(hashlib.sha256(sample.content).hexdigest())
-
         watcher_tcpdump = None
         watcher_dnsmasq = None
 
