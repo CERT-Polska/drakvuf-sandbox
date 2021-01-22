@@ -106,6 +106,8 @@ class DrakrunKarton(Karton):
         "kind": "drakrun",
     }
 
+    HARD_TIME_LIMIT = 60 * 20
+
     def __init__(self, config: Config, instance_id: int):
         super().__init__(config)
 
@@ -365,8 +367,7 @@ class DrakrunKarton(Karton):
         self.log.info("running sample sha256: {}".format(sha256sum))
 
         timeout = self.current_task.payload.get('timeout') or self.default_timeout
-        hard_time_limit = 60 * 20
-        if timeout > hard_time_limit:
+        if timeout > self.HARD_TIME_LIMIT:
             self.log.error("Tried to run the analysis for more than hard limit of %d seconds", hard_time_limit)
             return
 
