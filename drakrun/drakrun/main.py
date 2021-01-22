@@ -13,10 +13,8 @@ import zipfile
 import json
 import re
 import functools
-from collections import Counter
 from io import StringIO
-from typing import Optional, List, Dict
-from pathlib import Path
+from typing import List, Dict
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 from configparser import NoOptionError
 from itertools import chain
@@ -32,7 +30,7 @@ from drakrun.drakpdb import dll_file_list
 from drakrun.config import InstallInfo, ETC_DIR, VM_CONFIG_DIR, VOLUME_DIR, PROFILE_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
-from drakrun.util import patch_config, get_domid_from_instance_id, get_xl_info, get_xen_commandline, RuntimeInfo
+from drakrun.util import patch_config, get_xl_info, get_xen_commandline, RuntimeInfo
 from drakrun.vmconf import generate_vm_conf
 from drakrun.injector import Injector
 
