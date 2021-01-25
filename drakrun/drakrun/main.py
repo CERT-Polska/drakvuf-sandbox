@@ -326,8 +326,8 @@ class DrakrunKarton(Karton):
 
         return self.current_task.uid
 
-    def build_drakvuf_cmdline(self, timeout, cwd, full_cmd, dump_dir, ipt_dir):
-        hooks_list = os.path.join(ETC_DIR, "hooks.txt")
+    def build_drakvuf_cmdline(self, timeout, cwd, full_cmd, dump_dir, ipt_dir, workdir):
+        hooks_list = os.path.join(workdir, "hooks.txt")
         kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
 
         task_quality = self.current_task.headers.get("quality", "high")
@@ -398,6 +398,15 @@ class DrakrunKarton(Karton):
         with open(os.path.join(workdir, file_name), 'wb') as f:
             f.write(sample.content)
 
+        # If task contains 'custom_hooks' override local defaults
+        with open(os.path.join(workdir, "hooks.txt"), "wb") as hooks:
+            if self.current_task.has_payload("custom_hooks"):
+                custom_hooks = self.current_task.get_resource("custom_hooks")
+                hooks.write(custom_hooks.content)
+            else:
+                with open(os.path.join(ETC_DIR, "hooks.txt"), "rb") as default_hooks:
+                    hooks.write(default_hooks.read())
+
         start_command = self.current_task.payload.get("start_command", self._get_start_command(extension, sample, os.path.join(workdir, file_name)))
         if not start_command:
             self.log.error("Unable to run malware sample, could not generate any suitable command to run it.")
@@ -458,7 +467,8 @@ class DrakrunKarton(Karton):
                     cwd=subprocess.list2cmdline([ntpath.dirname(injected_fn)]),
                     full_cmd=cur_start_command,
                     dump_dir=os.path.join(outdir, "dumps"),
-                    ipt_dir=os.path.join(outdir, "ipt")
+                    ipt_dir=os.path.join(outdir, "ipt"),
+                    workdir=workdir,
                 )
                 drakmon_log_fp = os.path.join(outdir, "drakmon.log")
                 with open(drakmon_log_fp, "wb") as drakmon_log:
