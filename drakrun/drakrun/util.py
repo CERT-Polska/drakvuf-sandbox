@@ -79,7 +79,7 @@ def patch_config(cfg):
     return cfg
 
 
-def get_domid_from_instance_id(instance_id: str) -> int:
+def get_domid_from_instance_id(instance_id: int) -> int:
     output = subprocess.check_output(["xl", "domid", f"vm-{instance_id}"])
     return int(output.decode('utf-8').strip())
 

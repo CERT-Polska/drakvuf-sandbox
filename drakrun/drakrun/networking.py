@@ -21,7 +21,7 @@ def add_iptable_rule(rule):
             raise RuntimeError(f'Failed to check for iptables rule: {rule}')
 
 
-def start_tcpdump_collector(instance_id: str, outdir: str) -> subprocess.Popen:
+def start_tcpdump_collector(instance_id: int, outdir: str) -> subprocess.Popen:
     domid = get_domid_from_instance_id(instance_id)
 
     try:
