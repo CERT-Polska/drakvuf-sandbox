@@ -1,13 +1,11 @@
-import base64
 import os
 import re
-import sys
 import subprocess
+import sys
 from dataclasses import dataclass, field
-from typing import Dict, AnyStr, IO
+from typing import IO, AnyStr
 
-from karton.core import Config
-from dataclasses_json import dataclass_json, config
+from dataclasses_json import config, dataclass_json
 
 hexstring = config(
     encoder=lambda v: hex(v),
@@ -35,6 +33,7 @@ class VmiOffsets:
 
     kpgd: int = field(metadata=hexstring)
 
+    @staticmethod
     def from_tool_output(output: str) -> 'VmiOffsets':
         """
         Parse vmi-win-offsets tool output and return VmiOffsets.
