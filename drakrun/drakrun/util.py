@@ -1,3 +1,5 @@
+import contextlib
+import logging
 import os
 import re
 import subprocess
@@ -6,6 +8,8 @@ from dataclasses import dataclass, field
 from typing import IO, AnyStr
 
 from dataclasses_json import config, dataclass_json
+
+log = logging.getLogger("drakrun")
 
 hexstring = config(
     encoder=lambda v: hex(v),
@@ -114,3 +118,18 @@ def get_xen_commandline(parsed_xl_info):
             cfg[k] = v
 
     return cfg
+
+
+@contextlib.contextmanager
+def graceful_exit(proc: subprocess.Popen):
+    try:
+        yield proc
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(5)
+        except subprocess.TimeoutExpired as err:
+            log.error("Process %s doesn't exit after timeout.", err.cmd)
+            proc.kill()
+            proc.wait()
+            log.error("Process was forceully killed")

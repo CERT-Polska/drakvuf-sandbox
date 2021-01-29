@@ -31,7 +31,13 @@ from drakrun.drakpdb import dll_file_list
 from drakrun.config import InstallInfo, ETC_DIR, VM_CONFIG_DIR, VOLUME_DIR, PROFILE_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
-from drakrun.util import patch_config, get_xl_info, get_xen_commandline, RuntimeInfo
+from drakrun.util import (
+    patch_config,
+    get_xl_info,
+    get_xen_commandline,
+    graceful_exit,
+    RuntimeInfo,
+)
 from drakrun.vm import generate_vm_conf, VirtualMachine
 from drakrun.injector import Injector
 
@@ -410,20 +416,6 @@ class DrakrunKarton(Karton):
 
         dns_server = self.config.config['drakrun'].get('dns_server', '8.8.8.8')
         drakmon_log_fp = os.path.join(outdir, "drakmon.log")
-
-        @contextlib.contextmanager
-        def graceful_exit(proc: subprocess.Popen):
-            try:
-                yield proc
-            finally:
-                proc.terminate()
-                try:
-                    proc.wait(5)
-                except subprocess.TimeoutExpired as err:
-                    self.log.error("Process %s doesn't exit after timeout.", err.cmd)
-                    proc.kill()
-                    proc.wait()
-                    self.log.error("Process was forceully killed")
 
         with self.run_vm() as vm, \
              graceful_exit(start_dnsmasq(self.instance_id, dns_server)), \
