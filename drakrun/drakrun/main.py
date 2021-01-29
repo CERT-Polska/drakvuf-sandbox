@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import contextlib
 import logging
 import sys
 import os
@@ -30,8 +31,14 @@ from drakrun.drakpdb import dll_file_list
 from drakrun.config import InstallInfo, ETC_DIR, VM_CONFIG_DIR, VOLUME_DIR, PROFILE_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
-from drakrun.util import patch_config, get_xl_info, get_xen_commandline, RuntimeInfo
-from drakrun.vmconf import generate_vm_conf
+from drakrun.util import (
+    patch_config,
+    get_xl_info,
+    get_xen_commandline,
+    graceful_exit,
+    RuntimeInfo,
+)
+from drakrun.vm import generate_vm_conf, VirtualMachine
 from drakrun.injector import Injector
 
 
@@ -159,6 +166,11 @@ class DrakrunKarton(Karton):
         return self.config.config['drakrun'].getboolean('net_enable', fallback=False)
 
     @property
+    def enable_ipt(self) -> bool:
+        # TODO: Inconsistent naming - net_enable vs enable_ipt
+        return self.config.config['drakrun'].getboolean('enable_ipt', fallback=False)
+
+    @property
     def vm_name(self) -> str:
         return f"vm-{self.instance_id}"
 
@@ -257,6 +269,17 @@ class DrakrunKarton(Karton):
         if current_size > max_total_size:
             self.log.error('Some dumps were deleted, because the configured size threshold was exceeded.')
 
+    def update_vnc_info(self):
+        """
+        Put analysis ID -> drakrun node mapping into Redis.
+        Required to know where to connect VNC client
+        """
+        self.backend.redis.set(
+            f"drakvnc:{self.analysis_uid}",
+            self.instance_id,
+            ex=3600  # 1h
+        )
+
     def compress_ipt(self, dirpath, target_zip):
         zipf = zipfile.ZipFile(target_zip, 'w', zipfile.ZIP_DEFLATED)
 
@@ -265,11 +288,9 @@ class DrakrunKarton(Karton):
                 zipf.write(os.path.join(root, file), os.path.join("ipt", os.path.relpath(os.path.join(root, file), dirpath)))
                 os.unlink(os.path.join(root, file))
 
-    def upload_artifacts(self, analysis_uid, workdir, subdir=''):
-        base_path = os.path.join(workdir, 'output')
-
-        for fn in os.listdir(os.path.join(base_path, subdir)):
-            file_path = os.path.join(base_path, subdir, fn)
+    def upload_artifacts(self, analysis_uid, outdir, subdir=''):
+        for fn in os.listdir(os.path.join(outdir, subdir)):
+            file_path = os.path.join(outdir, subdir, fn)
 
             if os.path.isfile(file_path):
                 object_name = os.path.join(analysis_uid, subdir, fn)
@@ -278,7 +299,23 @@ class DrakrunKarton(Karton):
                 resource._uid = object_name
                 yield resource
             elif os.path.isdir(file_path):
-                yield from self.upload_artifacts(analysis_uid, workdir, os.path.join(subdir, fn))
+                yield from self.upload_artifacts(analysis_uid, outdir, os.path.join(subdir, fn))
+
+    def send_analysis(self, sample, outdir, metadata, quality):
+        payload = {"analysis_uid": self.analysis_uid}
+        payload.update(metadata)
+
+        headers = dict(self.headers)
+        headers["quality"] = quality
+
+        task = Task(headers, payload=payload)
+        task.add_payload('sample', sample)
+
+        self.log.info("Uploading artifacts...")
+        for resource in self.upload_artifacts(self.analysis_uid, outdir):
+            task.add_payload(resource.name, resource)
+
+        self.send_task(task)
 
     @staticmethod
     def get_profile_list() -> List[str]:
@@ -292,27 +329,27 @@ class DrakrunKarton(Karton):
 
         return out
 
+    @contextlib.contextmanager
     def run_vm(self):
-        try:
-            subprocess.check_output(["xl", "destroy", self.vm_name], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError:
-            pass
-
-        storage_backend = get_storage_backend(self.install_info)
-        snapshot_version = storage_backend.get_vm0_snapshot_time()
-        storage_backend.rollback_vm_storage(self.instance_id)
+        backend = get_storage_backend(self.install_info)
+        vm = VirtualMachine(backend, self.instance_id)
 
         try:
-            subprocess.run(["xl", "-vvv", "restore",
-                            os.path.join(VM_CONFIG_DIR, f"{self.vm_name}.cfg"),
-                            os.path.join(VOLUME_DIR, "snapshot.sav")], check=True)
+            vm.restore()
         except subprocess.CalledProcessError:
-            logging.exception(f"Failed to restore VM {self.vm_name}")
-
+            self.log.exception(f"Failed to restore VM {self.vm_name}")
             with open(f"/var/log/xen/qemu-dm-{self.vm_name}.log", "rb") as f:
                 logging.error(f.read())
 
-        return snapshot_version
+        self.log.info("VM restored")
+
+        try:
+            yield vm
+        finally:
+            try:
+                vm.destroy()
+            except Exception:
+                self.log.exception("Failed to destroy VM")
 
     @property
     def analysis_uid(self):
@@ -325,6 +362,24 @@ class DrakrunKarton(Karton):
             return self.current_task.root_uid
 
         return self.current_task.uid
+
+    def _prepare_workdir(self):
+        workdir = os.path.join("/tmp/drakrun", self.vm_name)
+
+        try:
+            if os.path.isdir(workdir):
+                shutil.rmtree(workdir)
+        except OSError:
+            self.log.exception("Failed to clean work directory")
+
+        os.makedirs(workdir, exist_ok=True)
+
+        outdir = os.path.join(workdir, 'output')
+        os.mkdir(outdir)
+        os.mkdir(os.path.join(outdir, 'dumps'))
+        os.mkdir(os.path.join(outdir, 'ipt'))
+
+        return (workdir, outdir)
 
     def build_drakvuf_cmdline(self, timeout, cwd, full_cmd, dump_dir, ipt_dir, workdir):
         hooks_list = os.path.join(workdir, "hooks.txt")
@@ -356,66 +411,132 @@ class DrakrunKarton(Karton):
 
         return drakvuf_cmd
 
-    @with_logs('drakrun.log')
-    def process(self):
-        sample = self.current_task.get_resource("sample")
-        self.log.info("hostname: {}".format(socket.gethostname()))
-        sha256sum = hashlib.sha256(sample.content).hexdigest()
-        magic_output = magic.from_buffer(sample.content)
-        self.log.info("running sample sha256: {}".format(sha256sum))
+    def analyze_sample(self, sample_path, workdir, outdir, start_command, timeout):
+        analysis_info = dict()
 
-        timeout = self.current_task.payload.get('timeout') or self.default_timeout
+        dns_server = self.config.config['drakrun'].get('dns_server', '8.8.8.8')
+        drakmon_log_fp = os.path.join(outdir, "drakmon.log")
+
+        with self.run_vm() as vm, \
+             graceful_exit(start_dnsmasq(self.instance_id, dns_server)), \
+             graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), \
+             open(drakmon_log_fp, "wb") as drakmon_log:
+
+            analysis_info['snapshot_version'] = vm.backend.get_vm0_snapshot_time()
+
+            kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
+
+            self.log.info("Copying sample to VM...")
+            injector = Injector(self.vm_name, self.runtime_info, kernel_profile)
+            result = injector.write_file(
+                sample_path,
+                f"%USERPROFILE%\\Desktop\\{os.path.basename(sample_path)}"
+            )
+            injected_fn = json.loads(result.stdout)['ProcessName']
+
+            if "%f" not in start_command:
+                self.log.warning("No file name in start command")
+            cur_start_command = start_command.replace("%f", injected_fn)
+
+            # don't include our internal maintanance commands
+            analysis_info['start_command'] = cur_start_command
+            self.log.info("Using command: %s", cur_start_command)
+
+            if self.net_enable:
+                self.log.info("Setting up network...")
+                injector.create_process("cmd /C ipconfig /renew >nul", wait=True, timeout=120)
+
+            drakvuf_cmd = self.build_drakvuf_cmdline(
+                timeout=timeout,
+                cwd=subprocess.list2cmdline([ntpath.dirname(injected_fn)]),
+                full_cmd=cur_start_command,
+                dump_dir=os.path.join(outdir, "dumps"),
+                ipt_dir=os.path.join(outdir, "ipt"),
+                workdir=workdir,
+            )
+
+            try:
+                subprocess.run(
+                    drakvuf_cmd,
+                    stdout=drakmon_log,
+                    check=True,
+                    timeout=timeout + 60
+                )
+            except subprocess.TimeoutExpired:
+                self.log.exception("DRAKVUF timeout expired")
+
+        return analysis_info
+
+    @with_logs('drakrun.log')
+    def process(self, task: Task):
+        # Gather basic facts
+        sample = task.get_resource("sample")
+        magic_output = magic.from_buffer(sample.content)
+        sha256sum = hashlib.sha256(sample.content).hexdigest()
+
+        self.log.info(f"Running on: {socket.gethostname()}")
+        self.log.info(f"Sample SHA256: {sha256sum}")
+        self.log.info(f"Analysis UID: {self.analysis_uid}")
+
+        # Timeout sanity check
+        timeout = task.payload.get('timeout') or self.default_timeout
         hard_time_limit = 60 * 20
         if timeout > hard_time_limit:
-            self.log.error("Tried to run the analysis for more than hard limit of %d seconds", hard_time_limit)
+            self.log.error(
+                "Tried to run the analysis for more than hard limit of %d seconds",
+                hard_time_limit
+            )
             return
 
-        self.log.info(f"analysis UID: {self.analysis_uid}")
-        self.backend.redis.set(f"drakvnc:{self.analysis_uid}", self.instance_id, ex=3600)  # 1h
+        self.update_vnc_info()
 
-        workdir = f"/tmp/drakrun/{self.vm_name}"
-
-        extension = self.current_task.headers.get("extension", "exe").lower()
+        # Get sample extension. If none set, fall back to exe/dll
+        extension = task.headers.get("extension", "exe").lower()
         if '(DLL)' in magic_output:
             extension = 'dll'
         self.log.info("Running file as %s", extension)
 
-        file_name = self.current_task.payload.get("file_name", "malwar") + f".{extension}"
+        # Prepare sample file name
+        file_name = task.payload.get("file_name", "malwar") + f".{extension}"
         # Alphanumeric, dot, underscore, dash
         if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
             self.log.error("Filename contains invalid characters")
             return
         self.log.info("Using file name %s", file_name)
 
-        try:
-            shutil.rmtree(workdir)
-        except OSError:
-            self.log.exception("Failed to clean work directory")
+        # workdir - configs, sample, etc.
+        # outdir - analysis artifacts
+        workdir, outdir = self._prepare_workdir()
 
-        os.makedirs(workdir, exist_ok=True)
+        sample_path = os.path.join(workdir, file_name)
+        sample.download_to_file(sample_path)
 
-        # Save sample to disk here as some branches of _get_start_command require file path.
-        with open(os.path.join(workdir, file_name), 'wb') as f:
-            f.write(sample.content)
+        # Try to come up with a start command for this file
+        # or use the one provided by the sender
+        cmd = self._get_start_command(
+            extension,
+            sample,
+            sample_path
+        )
+
+        start_command = task.payload.get("start_command", cmd)
+        if not start_command:
+            self.log.error(
+                "Unable to run malware sample. Could not generate any suitable"
+                " command to run it."
+            )
+            return
+        self.log.info("Start command: %s", start_command)
 
         # If task contains 'custom_hooks' override local defaults
         with open(os.path.join(workdir, "hooks.txt"), "wb") as hooks:
-            if self.current_task.has_payload("custom_hooks"):
-                custom_hooks = self.current_task.get_resource("custom_hooks")
+            if task.has_payload("custom_hooks"):
+                custom_hooks = task.get_resource("custom_hooks")
+                assert custom_hooks.content is not None
                 hooks.write(custom_hooks.content)
             else:
                 with open(os.path.join(ETC_DIR, "hooks.txt"), "rb") as default_hooks:
                     hooks.write(default_hooks.read())
-
-        start_command = self.current_task.payload.get("start_command", self._get_start_command(extension, sample, os.path.join(workdir, file_name)))
-        if not start_command:
-            self.log.error("Unable to run malware sample, could not generate any suitable command to run it.")
-            return
-
-        outdir = os.path.join(workdir, 'output')
-        os.mkdir(outdir)
-        os.mkdir(os.path.join(outdir, 'dumps'))
-        os.mkdir(os.path.join(outdir, 'ipt'))
 
         metadata = {
             "sample_sha256": sha256sum,
@@ -423,120 +544,35 @@ class DrakrunKarton(Karton):
             "time_started": int(time.time())
         }
 
-        watcher_tcpdump = None
-        watcher_dnsmasq = None
-
-        for _ in range(3):
+        max_attempts = 3
+        for i in range(max_attempts):
             try:
-                self.log.info("Running VM {}".format(self.instance_id))
-                watcher_dnsmasq = start_dnsmasq(self.instance_id, self.config.config['drakrun'].get('dns_server', '8.8.8.8'))
-
-                snapshot_version = self.run_vm()
-                metadata['snapshot_version'] = snapshot_version
-
-                watcher_tcpdump = start_tcpdump_collector(self.instance_id, outdir)
-
-                self.log.info("running monitor {}".format(self.instance_id))
-
-                kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
-
-                self.log.info("Copying sample to VM...")
-                injector = Injector(self.vm_name, self.runtime_info, kernel_profile)
-                result = injector.write_file(
-                    os.path.join(workdir, file_name),
-                    f"%USERPROFILE%\\Desktop\\{file_name}"
-                )
-
-                injected_fn = json.loads(result.stdout)['ProcessName']
-
-                if "%f" not in start_command:
-                    self.log.warning("No file name in start command")
-
-                cur_start_command = start_command.replace("%f", injected_fn)
-
-                # don't include our internal maintanance commands
-                metadata['start_command'] = cur_start_command
-                self.log.info("Using command: %s", cur_start_command)
-
-                if self.net_enable:
-                    self.log.info("Setting up network...")
-                    injector.create_process("cmd /C ipconfig /renew >nul", wait=True, timeout=120)
-
-                drakvuf_cmd = self.build_drakvuf_cmdline(
-                    timeout=timeout,
-                    cwd=subprocess.list2cmdline([ntpath.dirname(injected_fn)]),
-                    full_cmd=cur_start_command,
-                    dump_dir=os.path.join(outdir, "dumps"),
-                    ipt_dir=os.path.join(outdir, "ipt"),
-                    workdir=workdir,
-                )
-                drakmon_log_fp = os.path.join(outdir, "drakmon.log")
-                with open(drakmon_log_fp, "wb") as drakmon_log:
-                    drakvuf = subprocess.Popen(drakvuf_cmd, stdout=drakmon_log)
-
-                    try:
-                        exit_code = drakvuf.wait(timeout + 60)
-                    except subprocess.TimeoutExpired as e:
-                        logging.error("BUG: Monitor command doesn\'t terminate automatically after timeout expires.")
-                        logging.error("Trying to terminate DRAKVUF...")
-                        drakvuf.terminate()
-                        drakvuf.wait(10)
-                        logging.error("BUG: Monitor command also doesn\'t terminate after sending SIGTERM.")
-                        drakvuf.kill()
-                        drakvuf.wait()
-                        logging.error("Monitor command was forcefully killed.")
-                        raise e
-
-                    if exit_code != 0:
-                        raise subprocess.CalledProcessError(exit_code, drakvuf_cmd)
+                self.log.info(f"Trying to analyze sample (attempt {i + 1}/{max_attempts})")
+                info = self.analyze_sample(sample_path, workdir, outdir, start_command, timeout)
+                metadata.update(info)
                 break
-            except subprocess.CalledProcessError:
-                self.log.info("Something went wrong with the VM {}".format(self.instance_id), exc_info=True)
-            finally:
-                try:
-                    subprocess.run(["xl", "destroy", self.vm_name], cwd=workdir, check=True)
-                except subprocess.CalledProcessError:
-                    self.log.info("Failed to destroy VM {}".format(self.instance_id), exc_info=True)
-
-                if watcher_dnsmasq:
-                    watcher_dnsmasq.terminate()
+            except Exception:
+                self.log.exception("Analysis attempt failed. Retrying...")
         else:
-            self.log.info("Failed to analyze sample after 3 retries, giving up.")
+            self.log.error(f"Giving up after {max_attempts} failures...")
             return
 
-        self.log.info("waiting for tcpdump to exit")
+        self.log.info("Analysis done. Collecting artifacts...")
 
-        if watcher_tcpdump:
-            try:
-                watcher_tcpdump.wait(timeout=60)
-            except subprocess.TimeoutExpired:
-                self.log.exception("tcpdump doesn't exit cleanly after 60s")
-
+        # Make sure dumps have a reasonable size
         self.crop_dumps(os.path.join(outdir, 'dumps'), os.path.join(outdir, 'dumps.zip'))
 
-        if self.config.config['drakrun'].getboolean('enable_ipt', fallback=False):
+        # Compress IPT traces, they're quite large however they compress well
+        if self.enable_ipt:
             self.compress_ipt(os.path.join(outdir, 'ipt'), os.path.join(outdir, 'ipt.zip'))
-
-        self.log.info("uploading artifacts")
 
         metadata['time_finished'] = int(time.time())
 
         with open(os.path.join(outdir, 'metadata.json'), 'w') as f:
             f.write(json.dumps(metadata))
 
-        payload = {"analysis_uid": self.analysis_uid}
-        payload.update(metadata)
-
-        headers = dict(self.headers)
-        headers["quality"] = self.current_task.headers.get("quality", "high")
-
-        t = Task(headers, payload=payload)
-
-        for resource in self.upload_artifacts(self.analysis_uid, workdir):
-            t.add_payload(resource.name, resource)
-
-        t.add_payload('sample', sample)
-        self.send_task(t)
+        quality = task.headers.get("quality", "high")
+        self.send_analysis(sample, outdir, metadata, quality)
 
 
 def validate_xen_commandline():
