@@ -71,7 +71,10 @@ class VirtualMachine:
         )
         return res.returncode == 0
 
-    def restore(self):
+    def restore(self) -> None:
+        """ Restore virtual machine from snapshot.
+        :raises: subprocess.CalledProcessError
+        """
         if self.is_running:
             self.destroy()
         cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg"
@@ -80,5 +83,8 @@ class VirtualMachine:
         subprocess.run(["xl", "restore", cfg_path, snapshot_path], check=True)
 
     def destroy(self):
+        """ Destroy a running virtual machine.
+        :raises: subprocess.CalledProcessError
+        """
         if self.is_running:
             subprocess.run(["xl", "destroy", self.vm_name], check=True)
