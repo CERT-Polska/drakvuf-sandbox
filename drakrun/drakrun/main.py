@@ -140,12 +140,12 @@ class DrakrunKarton(Karton):
             plugins = [x for x in list_str.split(',') if x.strip()]
             self.active_plugins[quality] = plugins
 
-    def generate_plugin_cmdline(self, quality):
+    def generate_plugin_cmdline(self, quality, enabled_plugins):
         plugin_list = self.active_plugins["_all_"]
-
         if quality in self.active_plugins:
             plugin_list = self.active_plugins[quality]
 
+        plugin_list = list(set(plugin_list) & set(enabled_plugins))
         return list(chain.from_iterable([["-a", plugin] for plugin in plugin_list]))
 
     @classmethod
@@ -386,7 +386,8 @@ class DrakrunKarton(Karton):
         kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
 
         task_quality = self.current_task.headers.get("quality", "high")
-        drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality) + \
+        task_enabled_plugins = self.current_task.payload.get("plugins", self.active_plugins['_all_'])
+        drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality, task_enabled_plugins) + \
                       ["-o", "json",
                        # be aware of https://github.com/tklengyel/drakvuf/pull/951
                        "-F",  # enable fast singlestep
