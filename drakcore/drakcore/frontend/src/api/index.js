@@ -48,8 +48,7 @@ export default {
     for (const option in options) {
       if (option === "plugins")
         formData.append(option, JSON.stringify(options[option]));
-      else
-        formData.append(option, options[option]);
+      else formData.append(option, options[option]);
     }
     return axios.post("/upload", formData, {
       headers: {

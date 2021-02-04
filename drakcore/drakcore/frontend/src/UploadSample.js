@@ -1,6 +1,6 @@
 import React from "react";
 import { Component } from "react";
-import { Multiselect } from 'multiselect-react-dropdown';
+import { Multiselect } from "multiselect-react-dropdown";
 import "./App.css";
 import api from "./api";
 
@@ -76,22 +76,40 @@ class UploadSample extends Component {
       customFileName: "",
       customStartCmd: "",
       timeout: 10 * 60,
-      enabledPlugins: ["apimon", "syscalls", , "procmon", "tlsmon", "memdump"],
+      enabledPlugins: ["apimon", "syscalls", "procmon", "tlsmon", "memdump"],
 
       error: null,
       uploadInProgress: false,
     };
 
-    this.allPlugins = ["apimon", "bsodmon", "clipboardmon", "cpuidmon", "crashmon",
-    "debugmon", "delaymon", "exmon", "filedelete", "filetracer",
-    "librarymon", "memdump", "procdump", "procmon", "regmon",
-    "rpcmon", "ssdtmon", "syscalls", "tlsmon", "windowmon",
-    "wmimon"];
+    this.allPlugins = [
+      "apimon",
+      "bsodmon",
+      "clipboardmon",
+      "cpuidmon",
+      "crashmon",
+      "debugmon",
+      "delaymon",
+      "exmon",
+      "filedelete",
+      "filetracer",
+      "librarymon",
+      "memdump",
+      "procdump",
+      "procmon",
+      "regmon",
+      "rpcmon",
+      "ssdtmon",
+      "syscalls",
+      "tlsmon",
+      "windowmon",
+      "wmimon",
+    ];
 
     this.multiselectStyle = {
       chips: {
         color: "#98a6ad",
-        background: "#e9ecef"
+        background: "#e9ecef",
       },
     };
 
@@ -191,7 +209,7 @@ class UploadSample extends Component {
 
   handlePluginsChange(enabledPlugins) {
     this.setState({ error: null });
-    this.setState({enabledPlugins: enabledPlugins});
+    this.setState({ enabledPlugins: enabledPlugins });
   }
 
   render() {
