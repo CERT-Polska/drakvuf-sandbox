@@ -30,3 +30,11 @@
 .apicallTable td {
   padding: 0.5rem;
 }
+
+/* Overriding element hover */
+.optionListContainer > .optionContainer li:hover,
+.optionContainer .highlight {
+  background: #e9ecef;
+  color: #6c757d;
+}
+/* Ends overriding */

@@ -1,5 +1,6 @@
 import React from "react";
 import { Component } from "react";
+import { Multiselect } from "multiselect-react-dropdown";
 import "./App.css";
 import api from "./api";
 
@@ -75,13 +76,46 @@ class UploadSample extends Component {
       customFileName: "",
       customStartCmd: "",
       timeout: 10 * 60,
+      enabledPlugins: ["apimon", "syscalls", "procmon", "tlsmon", "memdump"],
 
       error: null,
       uploadInProgress: false,
     };
 
+    this.allPlugins = [
+      "apimon",
+      "bsodmon",
+      "clipboardmon",
+      "cpuidmon",
+      "crashmon",
+      "debugmon",
+      "delaymon",
+      "exmon",
+      "filedelete",
+      "filetracer",
+      "librarymon",
+      "memdump",
+      "procdump",
+      "procmon",
+      "regmon",
+      "rpcmon",
+      "ssdtmon",
+      "syscalls",
+      "tlsmon",
+      "windowmon",
+      "wmimon",
+    ];
+
+    this.multiselectStyle = {
+      chips: {
+        color: "#98a6ad",
+        background: "#e9ecef",
+      },
+    };
+
     this.handleSubmit = this.handleSubmit.bind(this);
     this.handleInput = this.handleInput.bind(this);
+    this.handlePluginsChange = this.handlePluginsChange.bind(this);
     this.formValid = this.formValid.bind(this);
     this.setError = this.setError.bind(this);
   }
@@ -142,6 +176,7 @@ class UploadSample extends Component {
       if (this.state.customStartCmd !== "") {
         options.start_command = this.state.customStartCmd;
       }
+      options.plugins = this.state.enabledPlugins;
 
       let response = await api.uploadSample(this.state.file, options);
       this.props.history.push(`/progress/${response.data.task_uid}`);
@@ -170,6 +205,11 @@ class UploadSample extends Component {
       default:
         console.log("Unexpected field name: ", field);
     }
+  }
+
+  handlePluginsChange(enabledPlugins) {
+    this.setState({ error: null });
+    this.setState({ enabledPlugins: enabledPlugins });
   }
 
   render() {
@@ -225,6 +265,21 @@ class UploadSample extends Component {
               onInput={this.handleInput}
             />
             <small>{this.state.timeout / 60} min</small>
+          </div>
+          <div className="form-group">
+            <label>Enabled Plugins</label>
+            <Multiselect
+              name="enabledPlugins"
+              placeholder=""
+              avoidHighlightFirstOption={true}
+              closeOnSelect={false}
+              style={this.multiselectStyle}
+              isObject={false}
+              options={this.allPlugins}
+              selectedValues={this.state.enabledPlugins}
+              onSelect={this.handlePluginsChange}
+              onRemove={this.handlePluginsChange}
+            />
           </div>
           <div className="collapse" id="customOptions">
             <OptionalField

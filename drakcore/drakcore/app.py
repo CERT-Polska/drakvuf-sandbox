@@ -89,6 +89,12 @@ def upload():
     if start_command:
         task.add_payload("start_command", start_command)
 
+    # Add plugins to task
+    plugins = request.form.get("plugins")
+    if plugins:
+        plugins = json.loads(plugins)
+        task.add_payload("plugins", plugins)
+
     task.add_resource("sample", sample)
 
     producer.send_task(task)

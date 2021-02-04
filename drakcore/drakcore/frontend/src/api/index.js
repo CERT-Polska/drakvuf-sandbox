@@ -46,7 +46,9 @@ export default {
     let formData = new FormData();
     formData.append("file", file);
     for (const option in options) {
-      formData.append(option, options[option]);
+      if (option === "plugins")
+        formData.append(option, JSON.stringify(options[option]));
+      else formData.append(option, options[option]);
     }
     return axios.post("/upload", formData, {
       headers: {
