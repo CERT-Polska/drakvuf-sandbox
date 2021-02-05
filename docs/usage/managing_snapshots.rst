@@ -2,6 +2,66 @@
 Managing snapshots
 ==================
 
+Snapshot modification
+=====================
+
+Before trying to modify the installation, make sure that all ``drakrun@`` services are stopped.
+
+Execute ``drakplayground 0`` as root. Output of the command should look similarly to this:
+
+.. code-block:: ipython
+
+    dnsmasq: started, version 2.83 DNS disabled
+    dnsmasq: compile time options: IPv6 GNU-getopt DBus no-UBus i18n IDN2 DHCP DHCPv6 no-Lua TFTP conntrack ipset auth nettlehash DNSSEC loop-detect inotify dumpfile
+    dnsmasq-dhcp: DHCP, IP range 10.13.0.100 -- 10.13.0.200, lease time 12h
+    dnsmasq-dhcp: DHCP, sockets bound exclusively to interface drak0
+    Loading new save file /var/lib/drakrun/volumes/snapshot.sav (new xl fmt info 0x3/0x0/2015)
+     Savefile contains xl domain config in JSON format
+    Parsing config from /etc/drakrun/configs/vm-0.cfg
+    xc: info: Found x86 HVM domain from Xen 4.15
+    xc: info: Restoring domain
+    xc: info: Restore successful
+    xc: info: XenStore: mfn 0xfeffc, dom 0, evt 1
+    xc: info: Console: mfn 0xfefff, dom 0, evt 2
+    Python 3.7.3 (default, Jul 25 2020, 13:03:44)
+    Type 'copyright', 'credits' or 'license' for more information
+    IPython 7.9.0 -- An enhanced Interactive Python. Type '?' for help.
+
+    In [1]:
+
+You will be dropped into a IPython shell, with vm-0 running and internet connection configured.
+At this point you can connect to VNC and perform the modifications. **Don't exit** the shell or
+close the terminal.
+
+If you have some scripts, executables or other files on the host, you can copy them into the VM
+with a helper function:
+
+.. code-block:: ipython
+
+    In [1]: copy("/root/examples/example1.exe")
+
+Copied files should appear on the desktop.
+
+When you're done, open another terminal window and execute ``draksetup postinstall``. The command
+will recreate the snapshot and profiles for other virtual machines.
+
+It is now safe to close the shell. To do this execute:
+
+.. code-block:: ipython
+
+    In [10]: exit()
+
+or hit Ctrl+D.
+
+.. warning::
+    vm-0 is a base for other virtual machines. Leaving it in a broken or inconsistent state will
+    result in analysis failures, BSODs and other unexpected errors. When modifying the vm-0 always
+    make sure to perform the postinstall step.
+
+
+Importing and exporting snapshots
+=================================
+
 Current sandbox implemention allows for a single VM snapshot installed on a machine.
 However, it is possible to export and import snapshots from a remote server.
 
