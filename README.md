@@ -35,6 +35,7 @@ Nested virtualization:
 * ✔️ KVM - works, however it is considered experimental. If you experience any bugs, please report them to us for further investigation.
 * ❌ AWS, GCP, Azure - due to lack of exposed CPU features, hosting DRAKVUF Sandbox in the cloud is **not** supported (although it might change in the future).
 * ❌ Hyper-V - doesn't work.
+* ❌ VMWare Fusion (Mac) - doesn't work.
 
 ## Maintainers/authors
 
