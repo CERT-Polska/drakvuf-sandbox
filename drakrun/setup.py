@@ -17,7 +17,13 @@ setup(
     packages=["drakrun"],
     include_package_data=True,
     install_requires=open("requirements.txt").read().splitlines(),
-    scripts=['drakrun/py-scripts/drakrun', 'drakrun/py-scripts/draksetup', 'drakrun/py-scripts/drakpush', 'drakrun/py-scripts/drakpdb'],
+    scripts=[
+        'drakrun/py-scripts/drakrun',
+        'drakrun/py-scripts/draksetup',
+        'drakrun/py-scripts/drakpush',
+        'drakrun/py-scripts/drakpdb',
+        'drakrun/py-scripts/drakplayground',
+    ],
     classifiers=[
         "Programming Language :: Python",
         "Operating System :: OS Independent",
