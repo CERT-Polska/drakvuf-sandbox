@@ -7,5 +7,5 @@ Standards-Version: 3.9.5
 
 Package: drakcore
 Architecture: amd64
-Pre-Depends: dpkg (>= 1.16.1), {{PYTHON_PACKAGES}}, python3-distutils, libmagic1
+Pre-Depends: dpkg (>= 1.16.1), python3 (>= 3.7), python3-distutils, libmagic1
 Description: DRAKVUF Sandbox Core (standalone)
