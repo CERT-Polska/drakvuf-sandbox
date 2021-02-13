@@ -24,7 +24,8 @@ Because it is usually pretty hard to set up a malware sandbox, this project also
 .. toctree::
    :maxdepth: 2
    :caption: Developer guide
-   
+
+   sandbox_development
    building_packages
 
 .. toctree::
