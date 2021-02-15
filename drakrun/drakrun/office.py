@@ -309,7 +309,7 @@ def get_outer_nodes_from_vba_file(filename):
 
 
 def is_office_word_file(extension):
-    return extension in ['doc', 'docm', 'docx', 'dotm']
+    return extension in ['doc', 'docm', 'docx', 'dotm', 'rtf']
 
 
 def is_office_excel_file(extension):
