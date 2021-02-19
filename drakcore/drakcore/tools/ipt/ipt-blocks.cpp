@@ -129,7 +129,7 @@ class Decoder {
     }
   }
 
-  void decode_stream(const Image *image) {
+  void decode_stream(Image *image) {
     using BlockDecDeleter = std::function<void(pt_block_decoder *)>;
     auto block_dec = std::unique_ptr<pt_block_decoder, BlockDecDeleter>(
         pt_blk_alloc_decoder(&config_), pt_blk_free_decoder);
