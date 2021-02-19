@@ -100,7 +100,7 @@ class Image {
     return 0;
   }
 
-  pt_image *get_pt_image() const {
+  pt_image *get_pt_image() {
     return image_.get();
   }
 
