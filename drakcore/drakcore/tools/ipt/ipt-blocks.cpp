@@ -28,7 +28,7 @@
 
 #define PTW_CMD_SHIFT 32
 
-bool is_drakvuf_ptwrite(const struct pt_event *event) {
+bool is_drakvuf_ptwrite(const pt_event *event) {
   if (event->type != ptev_ptwrite) {
     return false;
   }
@@ -77,10 +77,10 @@ class Image {
  public:
   Image() : cr3_value{0} {
     section_cache_ =
-        std::unique_ptr<struct pt_image_section_cache, ImageSecDeleter>(
+        std::unique_ptr<pt_image_section_cache, ImageSecDeleter>(
             pt_iscache_alloc(nullptr), pt_iscache_free);
 
-    image_ = std::unique_ptr<struct pt_image, ImageDeleter>(
+    image_ = std::unique_ptr<pt_image, ImageDeleter>(
         pt_image_alloc(nullptr), pt_image_free);
   }
 
@@ -100,19 +100,19 @@ class Image {
     return 0;
   }
 
-  struct pt_image *get_pt_image() const {
+  pt_image *get_pt_image() const {
     return image_.get();
   }
 
   uint32_t cr3_value;
 
  private:
-  using ImageSecDeleter = std::function<void(struct pt_image_section_cache *)>;
-  using ImageDeleter = std::function<void(struct pt_image *)>;
+  using ImageSecDeleter = std::function<void(pt_image_section_cache *)>;
+  using ImageDeleter = std::function<void(pt_image *)>;
 
-  std::unique_ptr<struct pt_image_section_cache, ImageSecDeleter>
+  std::unique_ptr<pt_image_section_cache, ImageSecDeleter>
       section_cache_;
-  std::unique_ptr<struct pt_image, ImageDeleter> image_;
+  std::unique_ptr<pt_image, ImageDeleter> image_;
 };
 
 class Decoder {
@@ -134,8 +134,8 @@ class Decoder {
   }
 
   void decode_stream(const Image *image) {
-    using BlockDecDeleter = std::function<void(struct pt_block_decoder *)>;
-    auto block_dec = std::unique_ptr<struct pt_block_decoder, BlockDecDeleter>(
+    using BlockDecDeleter = std::function<void(pt_block_decoder *)>;
+    auto block_dec = std::unique_ptr<pt_block_decoder, BlockDecDeleter>(
         pt_blk_alloc_decoder(&config_), pt_blk_free_decoder);
 
     pt_blk_set_image(block_dec.get(), image->get_pt_image());
@@ -144,7 +144,7 @@ class Decoder {
 
     auto decoder = block_dec.get();
     for (;;) {
-      struct pt_block block;
+      pt_block block;
       block.ip = 0;
       block.ninsn = 0;
 
@@ -198,10 +198,10 @@ class Decoder {
     }
   }
 
-  int process_events(struct pt_block_decoder *decoder) {
+  int process_events(pt_block_decoder *decoder) {
     int status;
     do {
-      struct pt_event event;
+      pt_event event;
       status = pt_blk_event(decoder, &event, sizeof(event));
       if (status < 0) {
         return status;
@@ -212,7 +212,7 @@ class Decoder {
     return status;
   }
 
-  void process_event(const struct pt_event *event) {
+  void process_event(const pt_event *event) {
     switch (event->type) {
       case ptev_ptwrite:
         if (is_drakvuf_ptwrite(event)) {
@@ -275,7 +275,7 @@ class Decoder {
       throw std::runtime_error("Cannot open " + filename);
     }
 
-    struct stat file_stat;
+    stat file_stat;
     int err = fstat(fd, &file_stat);
     if (err < 0) {
       throw std::runtime_error("Cannot stat PT file");
@@ -314,7 +314,7 @@ class Decoder {
   bool enable_mmap_ = true;
 
  private:
-  struct pt_config config_;
+  pt_config config_;
 
   void *mmap_buffer_;
   size_t mmap_size_;
