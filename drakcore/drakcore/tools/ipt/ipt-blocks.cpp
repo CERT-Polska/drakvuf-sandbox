@@ -73,6 +73,29 @@ void emit_event(const std::string &type, T payload) {
   json_object_put(root);
 }
 
+std::pair<uint32_t, uint32_t> unpack_drakvuf_ptwrite(uint64_t payload) {
+  uint32_t cmd = payload >> PTW_CMD_SHIFT;
+  uint32_t data = payload;
+  return std::make_pair(cmd, data);
+}
+
+void emit_drakvuf_event(const pt_event *event) {
+  auto [cmd, data] = unpack_drakvuf_ptwrite(event->variant.ptwrite.payload);
+  switch (cmd) {
+    case PTW_CURRENT_CR3:
+      emit_event("drakvuf_cr3", to_hex(data));
+      break;
+    case PTW_CURRENT_TID:
+      emit_event("drakvuf_tid", data);
+      break;
+    case PTW_EVENT_ID:
+      emit_event("drakvuf_event", data);
+      break;
+    default:
+      emit_event("ptwrite", to_hex(event->variant.ptwrite.payload));
+  }
+}
+
 class Image {
  public:
   Image() : cr3_value{0} {
@@ -212,28 +235,15 @@ class Decoder {
     switch (event->type) {
       case ptev_ptwrite:
         if (is_drakvuf_ptwrite(event)) {
-          uint32_t cmd = event->variant.ptwrite.payload >> PTW_CMD_SHIFT;
-          uint32_t data = event->variant.ptwrite.payload;
+          auto [cmd, data] =
+              unpack_drakvuf_ptwrite(event->variant.ptwrite.payload);
 
           if (cmd == PTW_CURRENT_CR3) {
             current_cr3_ = data;
           }
-          if (!show_drakvuf_) {
-            break;
-          }
 
-          switch (cmd) {
-            case PTW_CURRENT_CR3:
-              emit_event("drakvuf_cr3", to_hex(data));
-              break;
-            case PTW_CURRENT_TID:
-              emit_event("drakvuf_tid", data);
-              break;
-            case PTW_EVENT_ID:
-              emit_event("drakvuf_event", data);
-              break;
-            default:
-              emit_event("ptwrite", to_hex(event->variant.ptwrite.payload));
+          if (show_drakvuf_) {
+            emit_drakvuf_event(event);
           }
         }
         break;
@@ -271,7 +281,7 @@ class Decoder {
       throw std::runtime_error("Cannot open " + filename);
     }
 
-    stat file_stat;
+    struct stat file_stat;
     int err = fstat(fd, &file_stat);
     if (err < 0) {
       throw std::runtime_error("Cannot stat PT file");
