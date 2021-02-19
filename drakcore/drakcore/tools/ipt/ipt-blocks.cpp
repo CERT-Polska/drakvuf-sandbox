@@ -76,12 +76,11 @@ void emit_event(const std::string &type, T payload) {
 class Image {
  public:
   Image() : cr3_value{0} {
-    section_cache_ =
-        std::unique_ptr<pt_image_section_cache, ImageSecDeleter>(
-            pt_iscache_alloc(nullptr), pt_iscache_free);
+    section_cache_ = std::unique_ptr<pt_image_section_cache, ImageSecDeleter>(
+        pt_iscache_alloc(nullptr), pt_iscache_free);
 
-    image_ = std::unique_ptr<pt_image, ImageDeleter>(
-        pt_image_alloc(nullptr), pt_image_free);
+    image_ = std::unique_ptr<pt_image, ImageDeleter>(pt_image_alloc(nullptr),
+                                                     pt_image_free);
   }
 
   int map_page(const std::string &fname, uint64_t address) {
@@ -100,9 +99,7 @@ class Image {
     return 0;
   }
 
-  pt_image *get_pt_image() {
-    return image_.get();
-  }
+  pt_image *get_pt_image() { return image_.get(); }
 
   uint32_t cr3_value;
 
@@ -110,8 +107,7 @@ class Image {
   using ImageSecDeleter = std::function<void(pt_image_section_cache *)>;
   using ImageDeleter = std::function<void(pt_image *)>;
 
-  std::unique_ptr<pt_image_section_cache, ImageSecDeleter>
-      section_cache_;
+  std::unique_ptr<pt_image_section_cache, ImageSecDeleter> section_cache_;
   std::unique_ptr<pt_image, ImageDeleter> image_;
 };
 
