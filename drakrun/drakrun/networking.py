@@ -108,15 +108,13 @@ def setup_vm_network(vm_id, net_enable, out_interface, dns_server):
         
 #Functions for toggling the interface on and off while malware analysis.
         
- def disable_interface(interface_name,togglevar):
+ def disable_interface(interface_name):
     try:
         subprocess.check_output(f'ip link set dev out_interface up', stderr=subprocess.STDOUT, shell=True)
-        
 
-def enable_interface(interface_name,togglevar):
-    if togglevar==1:
- #1=off
+
+def enable_interface(interface_name):
+    
         try:
             subprocess.check_output(f'ip link set dev out_interface down', stderr=subprocess.STDOUT, shell=True)
-
 
