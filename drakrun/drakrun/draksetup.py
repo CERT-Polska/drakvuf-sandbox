@@ -78,6 +78,16 @@ def ensure_zfs(ctx, param, value):
 @click.command(help='Install guest Virtual Machine',
                no_args_is_help=True)
 @click.argument('iso_path', type=click.Path(exists=True))
+@click.option('--vcpus', 'vcpus',
+              default=2,
+              type=int,
+              show_default=True,
+              help='Number of vCPUs per single VM')
+@click.option('--memory', 'memory',
+              default=3072,
+              type=int,
+              show_default=True,
+              help='Memory per single VM (in MB)')
 @click.option('--storage-backend', 'storage_backend',
               type=click.Choice(REGISTERED_BACKEND_NAMES, case_sensitive=False),
               default='qcow2',
@@ -122,6 +132,8 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, unattended_xml)
         iso_sha256 = sha256_hash.hexdigest()
 
     install_info = InstallInfo(
+        vcpus=vcpus,
+        memory=memory,
         storage_backend=storage_backend,
         disk_size=disk_size,
         iso_path=os.path.abspath(iso_path),
