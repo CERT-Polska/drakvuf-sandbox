@@ -49,12 +49,22 @@ This instruction assumes that you want to create a single-node installation with
 
    Read the command's output carefully. This command will run a virtual machine with Windows system installation process.
    
-   **Customize vCPUS/memory:** You can pass additional options in order to customize number of vCPUs (``--vcpus <number>``) and amount of memory (``--memory <num_mbytes>``) per single VM. For instance: ``--vcpus 1 --memory 2048``.
+   **Customize vCPUs/memory:** You can pass additional options in order to customize number of vCPUs (``--vcpus <number>``) and amount of memory (``--memory <num_mbytes>``) per single VM. For instance: ``--vcpus 1 --memory 2048``.
+   
+   *Recommended minimal values that are known to work properly with DRAKVUF Sandbox:*
+
+   +-----------------+---------------+-------------+
+   | System version  | Minimal vCPUs | Minimal RAM |
+   +=================+===============+=============+
+   | Windows 7       | 1             | 1536        |
+   +-----------------+---------------+-------------+
+   | Windows 10      | 2             | 3072        |
+   +-----------------+---------------+-------------+
    
    **Unattended installation:** If you have ``autounattend.xml`` matching your Windows ISO, you can request unattended installation by adding ``--unattended-xml /path/to/autounattend.xml``. Unattended install configuration can be generated with `Windows Answer File Generator <https://www.windowsafg.com/win10x86_x64.html>`_.
    
-  .. note::
-   By default, DRAKVUF Sandbox will store virtual machine's HDD in a ``qcow2`` file. If you want to use ZFS instead, please check the :ref:`ZFS storage backend<zfs-backend>` docs.
+    .. note::
+     By default, DRAKVUF Sandbox will store virtual machine's HDD in a ``qcow2`` file. If you want to use ZFS instead, please check the :ref:`ZFS storage backend<zfs-backend>` docs.
 
 5. Use VNC to connect to the installation process:
 
@@ -86,7 +96,8 @@ This instruction assumes that you want to create a single-node installation with
   .. code-block:: console
 
     # draksetup postinstall
-
+  
+  
   .. note ::
     Add ``--no-report`` if you don't want ``draksetup`` to send `basic usage report <https://github.com/CERT-Polska/drakvuf-sandbox/blob/master/USAGE_STATISTICS.md>`_. 
 
