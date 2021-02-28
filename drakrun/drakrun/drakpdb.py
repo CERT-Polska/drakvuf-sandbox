@@ -324,7 +324,7 @@ def fetch_pdb(pdbname, guidage, destdir='.'):
 
             with tqdm(total=total_size, unit='iB', unit_scale=True) as pbar:
                 with open(dest, "wb") as f:
-                    for chunk in res.iter_content(chunk_size=1024 * 8):
+                    for chunk in res.iter_content(chunk_size=1024 * 1024 * 8):
                         if chunk:
                             f.write(chunk)
                             pbar.update(len(chunk))
