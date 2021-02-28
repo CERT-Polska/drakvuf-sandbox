@@ -78,7 +78,7 @@ def ensure_zfs(ctx, param, value):
 
 def check_root():
     if os.getuid() != 0:
-        logging.exception("Please run the command as root")
+        logging.error("Please run the command as root")
         return False
     else:
         return True
