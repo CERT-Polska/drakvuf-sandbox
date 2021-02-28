@@ -105,18 +105,17 @@ def setup_vm_network(vm_id, net_enable, out_interface, dns_server):
         add_iptable_rule(f"POSTROUTING -t nat -s 10.13.{vm_id}.0/24 -o {out_interface} -j MASQUERADE")
         add_iptable_rule(f"FORWARD -i drak{vm_id} -o {out_interface} -j ACCEPT")
         add_iptable_rule(f"FORWARD -i {out_interface} -o drak{vm_id} -j ACCEPT")
-        
-        
-#Functions to be called by the interface toggle
-        
+
+
+# Functions to be called by the interface toggle
+
 def disable_interface(out_interface):
     try:
         subprocess.check_output(f'ip link set dev out_interface up', stderr=subprocess.STDOUT, shell=True)
 
 def enable_interface(out_interface):
-    
-        try:
-            subprocess.check_output(f'ip link set dev out_interface down', stderr=subprocess.STDOUT, shell=True)
+    try:
+        subprocess.check_output(f'ip link set dev out_interface down', stderr=subprocess.STDOUT, shell=True)
 
      
         
