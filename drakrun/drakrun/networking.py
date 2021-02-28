@@ -113,8 +113,11 @@ def setup_vm_network(vm_id, net_enable, out_interface, dns_server):
 def disable_interface(out_interface):
     try:
         subprocess.check_output(f'ip link set dev out_interface up', stderr=subprocess.STDOUT, shell=True)
-
+    except:
+        print("error")
 
 def enable_interface(out_interface):
     try:
         subprocess.check_output(f'ip link set dev out_interface down', stderr=subprocess.STDOUT, shell=True)
+    except:
+        print("error")
