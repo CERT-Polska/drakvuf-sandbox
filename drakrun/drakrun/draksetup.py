@@ -84,6 +84,7 @@ def check_root():
     else:
         return True
 
+
 @click.command(help='Install guest Virtual Machine',
                no_args_is_help=True)
 @click.argument('iso_path', type=click.Path(exists=True))
@@ -128,10 +129,10 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, unattended_xml)
     sha256_hash = hashlib.sha256()
 
     logging.info("Calculating hash of iso")
-    iso_file_size=os.stat(iso_path).st_size
-    block_size=65536*1024
+    iso_file_size = os.stat(iso_path).st_size
+    block_size = 65536 * 1024
     with open(iso_path, "rb") as f:
-        for byte_block in tqdm(iter(lambda: f.read(block_size), b""),total=math.ceil(iso_file_size/block_size)):
+        for byte_block in tqdm(iter(lambda: f.read(block_size), b""), total=math.ceil(iso_file_size / block_size)):
             sha256_hash.update(byte_block)
 
         iso_sha256 = sha256_hash.hexdigest()
