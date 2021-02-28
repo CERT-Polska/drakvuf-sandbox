@@ -1,4 +1,5 @@
 import configparser
+import math
 import hashlib
 import logging
 import io
@@ -94,6 +95,10 @@ def ensure_zfs(ctx, param, value):
               type=click.Path(exists=True),
               help='Path to autounattend.xml for automated Windows install')
 def install(storage_backend, disk_size, iso_path, zfs_tank_name, unattended_xml):
+    if os.getuid()!=0 :
+        logging.exception("Please run the installer as root")
+        return
+
     logging.info("Ensuring that drakrun@* services are stopped...")
     subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
 
@@ -115,8 +120,11 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, unattended_xml)
 
     sha256_hash = hashlib.sha256()
 
+    logging.info("Calculating hash of iso")
+    iso_file_size=os.stat(iso_path).st_size
+    block_size=65536*1024
     with open(iso_path, "rb") as f:
-        for byte_block in iter(lambda: f.read(4096), b""):
+        for byte_block in tqdm(iter(lambda: f.read(block_size), b""),total=math.ceil(iso_file_size/block_size)):
             sha256_hash.update(byte_block)
 
         iso_sha256 = sha256_hash.hexdigest()
@@ -323,6 +331,10 @@ def insert_cd(domain, drive, iso):
               show_default=True,
               help="Generate user mode profiles")
 def postinstall(report, generate_usermode):
+    if os.getuid() != 0:
+        logging.exception("Please run the command as root")
+        return
+
     if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
         report = False
 
