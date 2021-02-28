@@ -9,6 +9,7 @@ import re
 import json
 import time
 import random
+import secrets
 import subprocess
 import string
 import tempfile
@@ -424,7 +425,7 @@ def postupgrade():
         template = f.read()
 
     passwd_characters = string.ascii_letters + string.digits
-    passwd = ''.join(random.choice(passwd_characters) for i in range(20))
+    passwd = ''.join(secrets.choice(passwd_characters) for i in range(20))
     template = template.replace('{{ VNC_PASS }}', passwd)
 
     with open(os.path.join(ETC_DIR, 'scripts', 'cfg.template'), 'w') as f:
