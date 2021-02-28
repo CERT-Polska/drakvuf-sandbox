@@ -108,6 +108,17 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
     subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
 
     logging.info("Performing installation...")
+    
+    if vcpus < 1:
+        logging.error("Your VM must have at least 1 vCPU.")
+        return
+    
+    if memory < 512:
+        logging.error("Your VM must have at least 512 MB RAM.")
+        return
+
+    if memory < 1536:
+        logging.warning("Using less than 1.5 GB RAM per VM is not recommended for any supported system.")
 
     if unattended_xml:
         logging.info("Baking unattended.iso for automated installation")
