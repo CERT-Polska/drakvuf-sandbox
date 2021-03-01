@@ -257,6 +257,8 @@ class Qcow2StorageBackend(StorageBackendBase):
                 "create",
                 "-f",
                 "qcow2",
+                "-F",
+                "qcow2",
                 "-o",
                 f"backing_file={vm0_path}",
                 volume_path
