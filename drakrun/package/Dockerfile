@@ -18,6 +18,7 @@ RUN wget -O drakvuf.deb "https://debs.icedev.pl/manual/drakvuf-bundle/$(lsb_rele
     git clone https://xenbits.xen.org/git-http/xtf.git && \
     cd xtf && \
     git checkout 8ab15139728a8efd3ebbb60beb16a958a6a93fa1 && \
+    sed -i 's/PYTHON          := python/PYTHON          := python2/' Makefile && \
     make -j4
 
 COPY drakrun /build
