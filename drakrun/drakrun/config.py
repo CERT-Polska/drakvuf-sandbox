@@ -16,8 +16,8 @@ VOLUME_DIR = os.path.join(LIB_DIR, "volumes")
 
 @dataclass
 class InstallInfo(DataClassJsonMixin):
-    vcpus: int
-    memory: int
+    vcpus: int = 2
+    memory: int = 3048
     storage_backend: str
     disk_size: str
     iso_path: str
