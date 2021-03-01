@@ -81,7 +81,12 @@ class VirtualMachine:
             self.destroy()
         cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg"
         snapshot_path = Path(VOLUME_DIR) / "snapshot.sav"
-        self.backend.rollback_vm_storage(self.vm_id)
+
+        # No need to rollback vm-0. Since the state of vm-0
+        # is correct by definition.
+        if self.vm_id != 0:
+            self.backend.rollback_vm_storage(self.vm_id)
+
         subprocess.run(["xl", "restore", cfg_path, snapshot_path], check=True)
 
     def destroy(self):
