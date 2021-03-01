@@ -1,11 +1,16 @@
+# DomU config template for DRAKVUF Sandbox
+
+# This is the template used to generate DomU configuration instances.
+# Please don't edit this file unless you know what you are doing.
+
 arch = 'x86_64'
 name = "vm-{{ VM_ID }}"
-maxmem = 3048
-memory = 3048
-vcpus = 2
-maxvcpus = 2
+maxmem = {{ MEMORY }}
+memory = {{ MEMORY }}
+vcpus = {{ VCPUS }}
+maxvcpus = {{ VCPUS }}
 type = "hvm"
-boot = "cd,menu=on,splash=/usr/share/drakrun/splash.jpg,splash-time=2000"
+boot = "cd"
 hap = 1
 acpi = 1
 on_poweroff = "destroy"
@@ -24,4 +29,4 @@ cpuid="host,htt=0"
 vga="stdvga"
 vif = [ 'type=ioemu,model=e1000,bridge=drak{{ VM_ID }}' ]
 disk = [ {{ DISKS }} ]
-processor_trace_buf_kb = 65536
+vmtrace_buf_kb = 8192

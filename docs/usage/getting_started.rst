@@ -49,6 +49,18 @@ This instruction assumes that you want to create a single-node installation with
 
    Read the command's output carefully. This command will run a virtual machine with Windows system installation process.
    
+   **Customize vCPUs/memory:** You can pass additional options in order to customize number of vCPUs (``--vcpus <number>``) and amount of memory (``--memory <num_mbytes>``) per single VM. For instance: ``--vcpus 1 --memory 2048``.
+   
+   *Recommended minimal values that are known to work properly with DRAKVUF Sandbox:*
+
+   +-----------------+---------------+-------------+
+   | System version  | Minimal vCPUs | Minimal RAM |
+   +=================+===============+=============+
+   | Windows 7       | 1             | 1536        |
+   +-----------------+---------------+-------------+
+   | Windows 10      | 2             | 3072        |
+   +-----------------+---------------+-------------+
+   
    **Unattended installation:** If you have ``autounattend.xml`` matching your Windows ISO, you can request unattended installation by adding ``--unattended-xml /path/to/autounattend.xml``. Unattended install configuration can be generated with `Windows Answer File Generator <https://www.windowsafg.com/win10x86_x64.html>`_.
    
   .. note::
