@@ -130,12 +130,14 @@ def install(storage_backend, disk_size, iso_path, zfs_tank_name, unattended_xml)
 
     logging.info("Calculating hash of iso")
     iso_file_size = os.stat(iso_path).st_size
-    block_size = 65536 * 1024
-    with open(iso_path, "rb") as f:
-        for byte_block in tqdm(iter(lambda: f.read(block_size), b""), total=math.ceil(iso_file_size / block_size)):
-            sha256_hash.update(byte_block)
+    block_size = 128 * 1024
+    with tqdm(total=math.ceil(iso_file_size), unit_scale=True) as pbar:
+        with open(iso_path, "rb") as f:
+            for byte_block in iter(lambda: f.read(block_size), b""):
+                pbar.update(block_size)
+                sha256_hash.update(byte_block)
 
-        iso_sha256 = sha256_hash.hexdigest()
+            iso_sha256 = sha256_hash.hexdigest()
 
     install_info = InstallInfo(
         storage_backend=storage_backend,
@@ -426,7 +428,7 @@ def postupgrade():
         template = f.read()
 
     passwd_characters = string.ascii_letters + string.digits
-    passwd = ''.join(secrets.choice(passwd_characters) for i in range(20))
+    passwd = ''.join(secrets.choice(passwd_characters) for _ in range(20))
     template = template.replace('{{ VNC_PASS }}', passwd)
 
     with open(os.path.join(ETC_DIR, 'scripts', 'cfg.template'), 'w') as f:
