@@ -1,5 +1,4 @@
 import configparser
-import math
 import hashlib
 import logging
 import io
@@ -8,7 +7,6 @@ import os
 import re
 import json
 import time
-import random
 import secrets
 import subprocess
 import string
@@ -152,7 +150,7 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
     logging.info("Calculating hash of iso")
     iso_file_size = os.stat(iso_path).st_size
     block_size = 128 * 1024
-    with tqdm(total=math.ceil(iso_file_size), unit_scale=True) as pbar:
+    with tqdm(total=iso_file_size, unit_scale=True) as pbar:
         with open(iso_path, "rb") as f:
             for byte_block in iter(lambda: f.read(block_size), b""):
                 pbar.update(block_size)
