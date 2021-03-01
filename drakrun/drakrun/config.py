@@ -20,6 +20,8 @@ class InstallInfo(DataClassJsonMixin):
     disk_size: str
     iso_path: str
     enable_unattended: bool
+    vcpus: int = 2
+    memory: int = 3072
     zfs_tank_name: Optional[str] = None
     iso_sha256: Optional[str] = None
 
