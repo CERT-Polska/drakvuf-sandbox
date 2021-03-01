@@ -7,7 +7,7 @@ import os
 import re
 import json
 import time
-import random
+import secrets
 import subprocess
 import string
 import tempfile
@@ -75,6 +75,14 @@ def ensure_zfs(ctx, param, value):
     return value
 
 
+def check_root():
+    if os.getuid() != 0:
+        logging.error("Please run the command as root")
+        return False
+    else:
+        return True
+
+
 @click.command(help='Install guest Virtual Machine',
                no_args_is_help=True)
 @click.argument('iso_path', type=click.Path(exists=True))
@@ -104,6 +112,9 @@ def ensure_zfs(ctx, param, value):
               type=click.Path(exists=True),
               help='Path to autounattend.xml for automated Windows install')
 def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, unattended_xml):
+    if not check_root():
+        return
+
     logging.info("Ensuring that drakrun@* services are stopped...")
     subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
 
@@ -136,11 +147,16 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
 
     sha256_hash = hashlib.sha256()
 
-    with open(iso_path, "rb") as f:
-        for byte_block in iter(lambda: f.read(4096), b""):
-            sha256_hash.update(byte_block)
+    logging.info("Calculating hash of iso")
+    iso_file_size = os.stat(iso_path).st_size
+    block_size = 128 * 1024
+    with tqdm(total=iso_file_size, unit_scale=True) as pbar:
+        with open(iso_path, "rb") as f:
+            for byte_block in iter(lambda: f.read(block_size), b""):
+                pbar.update(block_size)
+                sha256_hash.update(byte_block)
 
-        iso_sha256 = sha256_hash.hexdigest()
+            iso_sha256 = sha256_hash.hexdigest()
 
     install_info = InstallInfo(
         vcpus=vcpus,
@@ -346,6 +362,9 @@ def insert_cd(domain, drive, iso):
               show_default=True,
               help="Generate user mode profiles")
 def postinstall(report, generate_usermode):
+    if not check_root():
+        return
+
     if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
         report = False
 
@@ -430,7 +449,7 @@ def postupgrade():
         template = f.read()
 
     passwd_characters = string.ascii_letters + string.digits
-    passwd = ''.join(random.choice(passwd_characters) for i in range(20))
+    passwd = ''.join(secrets.choice(passwd_characters) for _ in range(20))
     template = template.replace('{{ VNC_PASS }}', passwd)
 
     with open(os.path.join(ETC_DIR, 'scripts', 'cfg.template'), 'w') as f:
