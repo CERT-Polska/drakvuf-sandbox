@@ -1,6 +1,4 @@
-"""
-TODO: Add logging
-"""
+import logging
 import contextlib
 import os
 import subprocess
@@ -10,6 +8,13 @@ import shutil
 
 from typing import Generator, Tuple
 from drakrun.config import InstallInfo, VOLUME_DIR
+from drakrun.util import safe_delete
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='[%(asctime)s][%(levelname)s] %(message)s',
+    handlers=[logging.StreamHandler()]
+)
 
 
 class StorageBackendBase:
@@ -66,6 +71,10 @@ class StorageBackendBase:
 
     def import_vm0(self, file):
         """ Import vm-0 disk from a file (symmetric to export_vm0) """
+        raise NotImplementedError
+
+    def delete_vm_volume(self, vm_id: int) -> bool:
+        """ Delete vm_id disk volume """
         raise NotImplementedError
 
 
@@ -190,7 +199,7 @@ class ZfsStorageBackend(StorageBackendBase):
     def import_vm0(self, file):
         # Clean ZFS dataset
         subprocess.run(
-            ["zfs", "destroy", "-r", "self.zfs_tank_name"],
+            ["zfs", "destroy", "-r", f"{self.zfs_tank_name}"],
             check=True
         )
         with open(file, "rb") as snapshot_file:
@@ -199,6 +208,17 @@ class ZfsStorageBackend(StorageBackendBase):
                 check=True,
                 stdout=snapshot_file
             )
+
+    def delete_vm_volume(self, vm_id: int) -> bool:
+        vm_id_vol = shlex.quote(os.path.join(self.zfs_tank_name, f"vm-{vm_id}"))
+        try:
+            subprocess.check_output(
+                f"zfs destroy -Rfr {vm_id_vol}", stderr=subprocess.STDOUT, shell=True
+            )
+            return True
+        except subprocess.CalledProcessError as exc:
+            logging.error(exc.stdout)
+            return False
 
 
 class Qcow2StorageBackend(StorageBackendBase):
@@ -306,6 +326,11 @@ class Qcow2StorageBackend(StorageBackendBase):
 
     def import_vm0(self, path: str):
         shutil.copy(path, os.path.join(VOLUME_DIR, 'vm-0.img'))
+
+    def delete_vm_volume(self, vm_id: str) -> bool:
+        # unmount can be done here
+        disk_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
+        return safe_delete(disk_path)
 
 
 REGISTERED_BACKENDS = {

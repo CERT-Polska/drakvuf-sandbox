@@ -23,7 +23,7 @@ from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from drakrun.config import InstallInfo, LIB_DIR, VOLUME_DIR, PROFILE_DIR, ETC_DIR, VM_CONFIG_DIR
 from drakrun.networking import setup_vm_network, start_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
-from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE, get_all_vm_conf, delete_vm_conf
+from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE, get_all_vm_conf, delete_vm_conf, VirtualMachine
 from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
 from tqdm import tqdm
 
@@ -87,7 +87,7 @@ def check_root():
 def cleanup():
     install_info = InstallInfo.try_load()
 
-    if install_info == None:
+    if install_info is None:
         logging.warning("The cleanup has been performed")
 
     backend = get_storage_backend(install_info)
@@ -96,7 +96,13 @@ def cleanup():
 
     with tqdm(total=len(vm_ids)) as pbar:
         for vm_id in vm_ids:
+
             delete_vm_conf(vm_id)
+
+            vm = VirtualMachine(backend, vm_id)
+            vm.destroy()
+
+            backend.delete_vm_volume(vm_id)
             pbar.update(1)
 
     logging.info("Deleting install.json")
