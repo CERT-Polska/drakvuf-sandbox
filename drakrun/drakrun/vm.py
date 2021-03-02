@@ -57,14 +57,14 @@ def generate_vm_conf(install_info: InstallInfo, vm_id: int):
 
 
 def get_all_vm_conf() -> list:
-    regex = re.compile('vm-(\d+)\.cfg')
+    regex = re.compile(r'vm-(\d+)\.cfg')
     config_dir = os.path.join(ETC_DIR, 'configs')
     vm_ids = []
 
     for f in os.listdir(config_dir):
         reg = regex.search(f)
 
-        if reg != None:
+        if reg is not None:
             vm_ids.append(int(reg.group(1)))
 
     return vm_ids
@@ -106,6 +106,9 @@ class VirtualMachine:
         # is correct by definition.
         if self.vm_id != 0:
             self.backend.rollback_vm_storage(self.vm_id)
+        else:
+            if not os.path.exists(os.path.join(VOLUME_DIR, "vm-0.img")):
+                self.backend.initialize_vm0_volume(InstallInfo.try_load().disk_size)
 
         subprocess.run(["xl", "restore", cfg_path, snapshot_path], check=True)
 
