@@ -13,6 +13,9 @@ from drakrun.config import (
     InstallInfo
 )
 from drakrun.util import safe_delete
+from multiprocessing import Process
+from tqdm import tqdm
+import time
 
 log = logging.getLogger("drakrun")
 
@@ -74,8 +77,34 @@ def delete_vm_conf(vm_id: int) -> bool:
     config_dir = os.path.join(ETC_DIR, 'configs')
     return safe_delete(os.path.join(config_dir, f"vm-{vm_id}.cfg"))
 
-# def get_restore_percentage(vm_id: int) -> bool:
-#     subprocess.check_output("xl list vm-{vm_id} | tail -n 1 | tr -s ' ' | cut -f 3 -d ' '")
+
+def get_restore_percentage(vm_id: int) -> bool:
+    install_info = InstallInfo.try_load()
+    if install_info is None:
+        return
+    time.sleep(3)
+    cur_mem = 0
+    safe_zero_count = 0
+    with tqdm(total=install_info.memory) as pbar:
+        while cur_mem != install_info.memory:
+            try:
+                proc = subprocess.run(f"xl list vm-{vm_id} | tail -n 1 | tr -s ' ' | cut -f 3 -d ' '", shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError:
+                break
+
+            try:
+                cur_mem = int(proc.stdout.decode())
+                if safe_zero_count == 10:
+                    break
+                if cur_mem == pbar.n:
+                    safe_zero_count += 1
+                else:
+                    pbar.update(cur_mem - pbar.n)
+                    if cur_mem == install_info.memory:
+                        break
+            except ValueError:
+                pass
+            time.sleep(1)
 
 
 class VirtualMachine:
@@ -113,6 +142,8 @@ class VirtualMachine:
             if not os.path.exists(os.path.join(VOLUME_DIR, "vm-0.img")):
                 self.backend.initialize_vm0_volume(InstallInfo.try_load().disk_size)
 
+        p = Process(target=get_restore_percentage, args=(self.vm_id,))
+        p.start()
         subprocess.run(["xl", "restore", cfg_path, snapshot_path], check=True)
 
     def destroy(self):
