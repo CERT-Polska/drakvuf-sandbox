@@ -197,11 +197,7 @@ class ZfsStorageBackend(StorageBackendBase):
             )
 
     def import_vm0(self, file):
-        # Clean ZFS dataset
-        subprocess.run(
-            ["zfs", "destroy", "-r", f"{self.zfs_tank_name}"],
-            check=True
-        )
+        self.delete_zfs_tank()
         with open(file, "rb") as snapshot_file:
             subprocess.run(
                 ["zfs", "recv", f"{self.zfs_tank_name}/vm-0@booted"],
@@ -214,6 +210,17 @@ class ZfsStorageBackend(StorageBackendBase):
         try:
             subprocess.check_output(
                 f"zfs destroy -Rfr {vm_id_vol}", stderr=subprocess.STDOUT, shell=True
+            )
+            return True
+        except subprocess.CalledProcessError as exc:
+            logging.error(exc.stdout)
+            return False
+
+    def delete_zfs_tank(self) -> bool:
+        try:
+            subprocess.run(
+                ["zfs", "destroy", "-r", f"{self.zfs_tank_name}"],
+                check=True
             )
             return True
         except subprocess.CalledProcessError as exc:

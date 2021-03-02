@@ -105,6 +105,9 @@ def cleanup():
             backend.delete_vm_volume(vm_id)
             pbar.update(1)
 
+    if install_info.zfs_tank_name is not None:
+        backend.delete_zfs_tank()
+
     logging.info("Deleting install.json")
     InstallInfo.delete()
 
