@@ -1,4 +1,5 @@
 import argparse
+import logging
 import tempfile
 import subprocess
 from pathlib import Path, PureWindowsPath as WinPath
@@ -16,8 +17,21 @@ from drakrun.injector import Injector
 from drakrun.draksetup import find_default_interface
 
 
+def cleanup():
+
+    logging.info("Ensuring that drakrun@* services are stopped...")
+    try:
+        subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError:
+        logging.error("drakrun services not stopped")
+        return
+
+
 class DrakmonShell:
     def __init__(self, vm_id: int, dns: str):
+
+        cleanup()
+
         install_info = InstallInfo.load()
         backend = get_storage_backend(install_info)
 
@@ -94,8 +108,14 @@ def main():
 
     args = parser.parse_args()
 
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='[%(asctime)s][%(levelname)s] %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
+
     with graceful_exit(start_dnsmasq(args.vm_id, args.dns)), \
-         DrakmonShell(args.vm_id, args.dns) as shell:
+            DrakmonShell(args.vm_id, args.dns) as shell:
         helpers = {
             'copy': shell.copy,
             'drakvuf': shell.drakvuf,
