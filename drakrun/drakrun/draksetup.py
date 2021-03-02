@@ -112,6 +112,21 @@ def cleanup():
 
     if install_info.zfs_tank_name is not None:
         backend.delete_zfs_tank()
+        volume_path = os.path.join("/", "dev", "zvol", install_info.zfs_tank_name, "tmp-part2")
+        try:
+            subprocess.check_output(f'umount {volume_path}', shell=True)
+            logging.info("Unmounted")
+        except subprocess.CalledProcessError as ext:
+            logging.info(ext.stdout)
+        tmp_snap = shlex.quote(os.path.join(install_info.zfs_tank_name, "tmp"))
+        try:
+            subprocess.check_output(f"zfs destroy {tmp_snap}", shell=True)
+        except subprocess.CalledProcessError:
+            pass
+
+    logging.info("Deleting postinstall files")
+    for _ in os.listdir(PROFILE_DIR):
+        safe_delete(os.path.join(PROFILE_DIR, _))
 
     InstallInfo.delete()
 
