@@ -23,8 +23,8 @@ from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from drakrun.config import InstallInfo, LIB_DIR, VOLUME_DIR, PROFILE_DIR, ETC_DIR, VM_CONFIG_DIR
 from drakrun.networking import setup_vm_network, start_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
-from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE
-from drakrun.util import RuntimeInfo, VmiOffsets
+from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE, get_all_vm_conf, delete_vm_conf
+from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
 from tqdm import tqdm
 
 
@@ -81,6 +81,26 @@ def check_root():
         return False
     else:
         return True
+
+
+@click.command(help='Cleanup the changes made by draksetup')
+def cleanup():
+    install_info = InstallInfo.try_load()
+
+    if install_info == None:
+        logging.warning("The cleanup has been performed")
+
+    backend = get_storage_backend(install_info)
+
+    vm_ids = get_all_vm_conf()
+
+    with tqdm(total=len(vm_ids)) as pbar:
+        for vm_id in vm_ids:
+            delete_vm_conf(vm_id)
+            pbar.update(1)
+
+    logging.info("Deleting install.json")
+    InstallInfo.delete()
 
 
 @click.command(help='Install guest Virtual Machine',
@@ -738,6 +758,7 @@ main.add_command(postupgrade)
 main.add_command(mount)
 main.add_command(scale)
 main.add_command(snapshot)
+main.add_command(cleanup)
 
 
 if __name__ == "__main__":

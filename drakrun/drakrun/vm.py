@@ -12,6 +12,7 @@ from drakrun.config import (
     LIB_DIR,
     InstallInfo
 )
+from drakrun.util import safe_delete
 
 log = logging.getLogger("drakrun")
 
@@ -53,6 +54,25 @@ def generate_vm_conf(install_info: InstallInfo, vm_id: int):
         f.write(template)
 
     log.info("Generated VM configuration for vm-{vm_id}".format(vm_id=vm_id))
+
+
+def get_all_vm_conf() -> list:
+    regex = re.compile('vm-(\d+)\.cfg')
+    config_dir = os.path.join(ETC_DIR, 'configs')
+    vm_ids = []
+
+    for f in os.listdir(config_dir):
+        reg = regex.search(f)
+
+        if reg != None:
+            vm_ids.append(int(reg.group(1)))
+
+    return vm_ids
+
+
+def delete_vm_conf(vm_id: int) -> bool:
+    config_dir = os.path.join(ETC_DIR, 'configs')
+    return safe_delete(os.path.join(config_dir, f"vm-{vm_id}.cfg"))
 
 
 class VirtualMachine:
