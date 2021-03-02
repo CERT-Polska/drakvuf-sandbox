@@ -21,7 +21,7 @@ from minio import Minio
 from minio.error import NoSuchKey
 from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from drakrun.config import InstallInfo, LIB_DIR, VOLUME_DIR, PROFILE_DIR, ETC_DIR, VM_CONFIG_DIR
-from drakrun.networking import setup_vm_network, start_dnsmasq
+from drakrun.networking import setup_vm_network, start_dnsmasq, delete_vm_network, stop_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
 from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE, get_all_vm_conf, delete_vm_conf, VirtualMachine
 from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
@@ -85,30 +85,34 @@ def check_root():
 
 @click.command(help='Cleanup the changes made by draksetup')
 def cleanup():
+    if not check_root():
+        return
+
     install_info = InstallInfo.try_load()
 
     if install_info is None:
-        logging.warning("The cleanup has been performed")
+        logging.error("The cleanup has been performed")
+        return
 
     backend = get_storage_backend(install_info)
-
     vm_ids = get_all_vm_conf()
 
-    with tqdm(total=len(vm_ids)) as pbar:
-        for vm_id in vm_ids:
+    for vm_id in vm_ids:
+        delete_vm_conf(vm_id)
+        vm = VirtualMachine(backend, vm_id)
+        vm.destroy()
 
-            delete_vm_conf(vm_id)
+        net_enable = int(conf['drakrun'].get('net_enable', '0'))
+        out_interface = conf['drakrun'].get('out_interface', '')
+        dns_server = conf['drakrun'].get('dns_server', '')
 
-            vm = VirtualMachine(backend, vm_id)
-            vm.destroy()
-
-            backend.delete_vm_volume(vm_id)
-            pbar.update(1)
+        delete_vm_network(vm_id=vm_id, net_enable=net_enable, out_interface=out_interface, dns_server=dns_server)
+        if net_enable:
+            stop_dnsmasq(vm_id=vm_id)
 
     if install_info.zfs_tank_name is not None:
         backend.delete_zfs_tank()
 
-    logging.info("Deleting install.json")
     InstallInfo.delete()
 
 

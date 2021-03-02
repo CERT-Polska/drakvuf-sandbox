@@ -123,6 +123,7 @@ def get_xen_commandline(parsed_xl_info):
 def safe_delete(file_path) -> bool:
     try:
         os.remove(file_path)
+        logging.info(f"Deleted {file_path}")
         return True
     except OSError as e:
         logging.warning(f"{e.filename}: {e.strerror}")

@@ -8,6 +8,8 @@ from IPython import embed
 from drakrun.networking import (
     setup_vm_network,
     start_dnsmasq,
+    delete_vm_network,
+    stop_dnsmasq,
 )
 from drakrun.vm import generate_vm_conf, VirtualMachine
 from drakrun.config import InstallInfo, PROFILE_DIR, ETC_DIR
@@ -37,6 +39,7 @@ class DrakmonShell:
 
         generate_vm_conf(install_info, vm_id)
         self.vm = VirtualMachine(backend, vm_id)
+        self._dns = dns
 
         with open(Path(PROFILE_DIR) / "runtime.json", 'r') as f:
             self.runtime_info = RuntimeInfo.load(f)
@@ -99,6 +102,8 @@ class DrakmonShell:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.vm.destroy()
+        delete_vm_network(self.vm.vm_id, True, find_default_interface(), self._dns)
+        stop_dnsmasq(self.vm.vm_id)
 
 
 def main():

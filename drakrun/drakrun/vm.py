@@ -74,6 +74,9 @@ def delete_vm_conf(vm_id: int) -> bool:
     config_dir = os.path.join(ETC_DIR, 'configs')
     return safe_delete(os.path.join(config_dir, f"vm-{vm_id}.cfg"))
 
+# def get_restore_percentage(vm_id: int) -> bool:
+#     subprocess.check_output("xl list vm-{vm_id} | tail -n 1 | tr -s ' ' | cut -f 3 -d ' '")
+
 
 class VirtualMachine:
     def __init__(self, backend: StorageBackendBase, vm_id: int) -> None:
@@ -117,4 +120,5 @@ class VirtualMachine:
         :raises: subprocess.CalledProcessError
         """
         if self.is_running:
+            logging.info(f"Destroying {self.vm_name}")
             subprocess.run(["xl", "destroy", self.vm_name], check=True)

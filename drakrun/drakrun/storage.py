@@ -208,6 +208,7 @@ class ZfsStorageBackend(StorageBackendBase):
     def delete_vm_volume(self, vm_id: int) -> bool:
         vm_id_vol = shlex.quote(os.path.join(self.zfs_tank_name, f"vm-{vm_id}"))
         try:
+            logging.info(f"Deleting zfs volume {vm_id_vol}")
             subprocess.check_output(
                 f"zfs destroy -Rfr {vm_id_vol}", stderr=subprocess.STDOUT, shell=True
             )
@@ -218,6 +219,7 @@ class ZfsStorageBackend(StorageBackendBase):
 
     def delete_zfs_tank(self) -> bool:
         try:
+            logging.info("Deleting zfs tank")
             subprocess.run(
                 ["zfs", "destroy", "-r", f"{self.zfs_tank_name}"],
                 check=True
