@@ -95,7 +95,7 @@ def sanity_check():
     logging.info("Testing if xl tool is sane...")
 
     try:
-        subprocess.check_output('xl info', shell=True, stderr=subprocess.STDOUT)
+        subprocess.run('xl info', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
     except subprocess.CalledProcessError:
         logging.exception("Failed to test xl command.")
         return False
@@ -121,24 +121,24 @@ def perform_xtf():
         tmpf.flush()
 
         try:
-            subprocess.check_output('xl destroy test-hvm64-example', shell=True, stderr=subprocess.STDOUT)
+            subprocess.run('xl destroy test-hvm64-example', shell=True, check=True)
         except subprocess.CalledProcessError:
             pass
 
-        subprocess.check_output(f'xl create -p {tmpf.name}', shell=True, stderr=subprocess.STDOUT, timeout=30)
+        subprocess.run(f'xl create -p {tmpf.name}', shell=True, stderr=subprocess.STDOUT, timeout=30, check=True)
 
         module_dir = os.path.dirname(os.path.realpath(__file__))
         test_altp2m_tool = os.path.join(module_dir, "tools", "test-altp2m")
 
         try:
-            output = subprocess.check_output([test_altp2m_tool, 'test-hvm64-example'], stderr=subprocess.STDOUT)
+            subprocess.run([test_altp2m_tool, 'test-hvm64-example'], stderr=subprocess.STDOUT, check=True)
         except subprocess.CalledProcessError as e:
             output = e.output.decode('utf-8', 'replace')
             logging.error(f'Failed to enable altp2m on domain. Your hardware might not support Extended Page Tables. Logs:\n{output}')
             return False
 
         p = subprocess.Popen(['xl', 'console', 'test-hvm64-example'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        subprocess.check_output('xl unpause test-hvm64-example', shell=True, stderr=subprocess.STDOUT, timeout=30)
+        subprocess.run('xl unpause test-hvm64-example', shell=True, stderr=subprocess.STDOUT, timeout=30, check=True)
         stdout_b, _ = p.communicate(timeout=10)
 
         stdout_text = stdout_b.decode('utf-8')
