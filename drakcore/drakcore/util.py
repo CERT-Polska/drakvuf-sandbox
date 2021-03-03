@@ -50,8 +50,8 @@ def setup_config():
         return
 
     print('Generating MinIO environment file...')
-    access_key = base64.b64encode(os.urandom(30)).decode('ascii').replace('+', '-').replace('/', '_')
-    secret_key = base64.b64encode(os.urandom(30)).decode('ascii').replace('+', '-').replace('/', '_')
+    access_key = base64.urlsafe_b64encode(os.urandom(30)).decode('ascii')
+    secret_key = base64.urlsafe_b64encode(os.urandom(30)).decode('ascii')
 
     with open('/etc/drakcore/minio.env', 'w') as f:
         f.write(f'MINIO_ACCESS_KEY={access_key}\n')
