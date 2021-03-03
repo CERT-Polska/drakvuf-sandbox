@@ -159,7 +159,7 @@ def perform_xtf():
 
 
 @click.command(help='Perform self-test to check Xen installation')
-def selftest():
+def test():
     if not sanity_check():
         sys.exit(1)
 
@@ -802,7 +802,7 @@ def main():
     )
 
 
-main.add_command(selftest)
+main.add_command(test)
 main.add_command(install)
 main.add_command(postinstall)
 main.add_command(postupgrade)
