@@ -210,17 +210,16 @@ class ZfsStorageBackend(StorageBackendBase):
             logging.error(exc.stdout)
             raise Exception(f"Couldn't delete {vm_id_vol}")
 
-    def delete_zfs_tank(self) -> bool:
+    def delete_zfs_tank(self):
         try:
             logging.info("Deleting zfs tank")
             subprocess.run(
                 ["zfs", "destroy", "-r", f"{self.zfs_tank_name}"],
                 check=True
             )
-            return True
         except subprocess.CalledProcessError as exc:
             logging.error(exc.stdout)
-            return False
+            raise Exception(f"Couldn't delete {self.zfs_tank_name}")
 
 
 class Qcow2StorageBackend(StorageBackendBase):
