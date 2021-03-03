@@ -120,23 +120,28 @@ def perform_xtf():
         tmpf.write(test_cfg)
         tmpf.flush()
 
+        logging.info('Checking if the test domain already exists...')
         try:
             subprocess.run('xl destroy test-hvm64-example', shell=True, check=True)
         except subprocess.CalledProcessError:
             pass
 
+        logging.info('Creating new test domain...')
         subprocess.run(f'xl create -p {tmpf.name}', shell=True, stderr=subprocess.STDOUT, timeout=30, check=True)
 
         module_dir = os.path.dirname(os.path.realpath(__file__))
         test_altp2m_tool = os.path.join(module_dir, "tools", "test-altp2m")
 
+        logging.info('Testing altp2m feature...')
         try:
             subprocess.run([test_altp2m_tool, 'test-hvm64-example'], stderr=subprocess.STDOUT, check=True)
         except subprocess.CalledProcessError as e:
             output = e.output.decode('utf-8', 'replace')
             logging.error(f'Failed to enable altp2m on domain. Your hardware might not support Extended Page Tables. Logs:\n{output}')
+            subprocess.run('xl destroy test-hvm64-example', shell=True)
             return False
 
+        logging.info('Performing simple XTF test...')
         p = subprocess.Popen(['xl', 'console', 'test-hvm64-example'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         subprocess.run('xl unpause test-hvm64-example', shell=True, stderr=subprocess.STDOUT, timeout=30, check=True)
         stdout_b, _ = p.communicate(timeout=10)
@@ -146,7 +151,7 @@ def perform_xtf():
 
         for line in stdout:
             if line == 'Test result: SUCCESS':
-                logging.info('Preflight check with Xen Test Framework: PASS')
+                logging.info('All tests passed. Your Xen installation seems to work properly.')
                 return True
 
     logging.error('Preflight check with Xen Test Framework doesn\'t pass. Your hardware might not support VT-x. Logs: \n{stdout_text}')
