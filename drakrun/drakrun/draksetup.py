@@ -121,10 +121,7 @@ def perform_xtf():
         tmpf.flush()
 
         logging.info('Checking if the test domain already exists...')
-        try:
-            subprocess.run('xl destroy test-hvm64-example', shell=True, check=True)
-        except subprocess.CalledProcessError:
-            pass
+        subprocess.run('xl destroy test-hvm64-example', shell=True)
 
         logging.info('Creating new test domain...')
         subprocess.run(f'xl create -p {tmpf.name}', shell=True, stderr=subprocess.STDOUT, timeout=30, check=True)
