@@ -163,10 +163,6 @@ def delete_vm_network(vm_id, net_enable, out_interface, dns_server):
 
     if net_enable:
 
-        # disable ip_forward
-        with open('/proc/sys/net/ipv4/ip_forward', 'w') as f:
-            f.write('0\n')
-
         del_iptable_rule(f"POSTROUTING -t nat -s 10.13.{vm_id}.0/24 -o {out_interface} -j MASQUERADE")
         del_iptable_rule(f"FORWARD -i drak{vm_id} -o {out_interface} -j ACCEPT")
         del_iptable_rule(f"FORWARD -i {out_interface} -o drak{vm_id} -j ACCEPT")

@@ -10,12 +10,6 @@ from typing import Generator, Tuple
 from drakrun.config import InstallInfo, VOLUME_DIR
 from drakrun.util import safe_delete
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='[%(asctime)s][%(levelname)s] %(message)s',
-    handlers=[logging.StreamHandler()]
-)
-
 
 class StorageBackendBase:
     """Base class for all storage backends
@@ -73,7 +67,7 @@ class StorageBackendBase:
         """ Import vm-0 disk from a file (symmetric to export_vm0) """
         raise NotImplementedError
 
-    def delete_vm_volume(self, vm_id: int) -> bool:
+    def delete_vm_volume(self, vm_id: int):
         """ Delete vm_id disk volume """
         raise NotImplementedError
 
@@ -212,10 +206,9 @@ class ZfsStorageBackend(StorageBackendBase):
             subprocess.check_output(
                 f"zfs destroy -Rfr {vm_id_vol}", stderr=subprocess.STDOUT, shell=True
             )
-            return True
         except subprocess.CalledProcessError as exc:
             logging.error(exc.stdout)
-            return False
+            raise Exception(f"Couldn't delete {vm_id_vol}")
 
     def delete_zfs_tank(self) -> bool:
         try:
@@ -336,10 +329,11 @@ class Qcow2StorageBackend(StorageBackendBase):
     def import_vm0(self, path: str):
         shutil.copy(path, os.path.join(VOLUME_DIR, 'vm-0.img'))
 
-    def delete_vm_volume(self, vm_id: str) -> bool:
+    def delete_vm_volume(self, vm_id: str):
         # unmount can be done here
         disk_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
-        return safe_delete(disk_path)
+        if safe_delete(disk_path) is False:
+            raise Exception(f"Couldn't delete vm-{vm_id}.img")
 
 
 REGISTERED_BACKENDS = {

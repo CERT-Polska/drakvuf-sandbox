@@ -88,6 +88,9 @@ def cleanup():
     if not check_root():
         return
 
+    logging.info("Ensuring that drakrun@* services are stopped...")
+    subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+
     install_info = InstallInfo.try_load()
 
     if install_info is None:
@@ -112,21 +115,6 @@ def cleanup():
 
     if install_info.zfs_tank_name is not None:
         backend.delete_zfs_tank()
-        volume_path = os.path.join("/", "dev", "zvol", install_info.zfs_tank_name, "tmp-part2")
-        try:
-            subprocess.check_output(f'umount {volume_path}', shell=True)
-            logging.info("Unmounted")
-        except subprocess.CalledProcessError as ext:
-            logging.info(ext.stdout)
-        tmp_snap = shlex.quote(os.path.join(install_info.zfs_tank_name, "tmp"))
-        try:
-            subprocess.check_output(f"zfs destroy {tmp_snap}", shell=True)
-        except subprocess.CalledProcessError:
-            pass
-
-    logging.info("Deleting postinstall files")
-    for _ in os.listdir(PROFILE_DIR):
-        safe_delete(os.path.join(PROFILE_DIR, _))
 
     InstallInfo.delete()
 
@@ -417,6 +405,24 @@ def postinstall(report, generate_usermode):
         report = False
 
     install_info = InstallInfo.load()
+
+    logging.info("Cleaning up leftovers(if any)")
+    if install_info.zfs_tank_name:
+        volume_path = os.path.join("/", "dev", "zvol", install_info.zfs_tank_name, "tmp-part2")
+        try:
+            subprocess.check_output(f'umount {volume_path}', shell=True)
+            logging.info("Unmounted disk")
+        except subprocess.CalledProcessError as ext:
+            logging.exception(ext.stdout)
+
+        tmp_snap = shlex.quote(os.path.join(install_info.zfs_tank_name, "tmp"))
+        try:
+            subprocess.check_output(f"zfs destroy {tmp_snap}", shell=True)
+        except subprocess.CalledProcessError:
+            pass
+
+    for _ in os.listdir(PROFILE_DIR):
+        safe_delete(os.path.join(PROFILE_DIR, _))
 
     logging.info("Ejecting installation CDs")
     eject_cd("vm-0", FIRST_CDROM_DRIVE)

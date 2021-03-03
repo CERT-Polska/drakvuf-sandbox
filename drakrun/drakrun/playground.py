@@ -17,22 +17,23 @@ from drakrun.storage import get_storage_backend
 from drakrun.util import RuntimeInfo, graceful_exit
 from drakrun.injector import Injector
 from drakrun.draksetup import find_default_interface
+import sys
 
 
-def cleanup():
+def cleanup(vm_id: int):
 
     logging.info("Ensuring that drakrun@* services are stopped...")
     try:
-        subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+        subprocess.check_output(f'systemctl stop \'drakrun@{vm_id}\'', shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError:
         logging.error("drakrun services not stopped")
-        return
+        sys.exit(0)
 
 
 class DrakmonShell:
     def __init__(self, vm_id: int, dns: str):
 
-        cleanup()
+        cleanup(vm_id)
 
         install_info = InstallInfo.load()
         backend = get_storage_backend(install_info)
@@ -102,8 +103,6 @@ class DrakmonShell:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.vm.destroy()
-        delete_vm_network(self.vm.vm_id, True, find_default_interface(), self._dns)
-        stop_dnsmasq(self.vm.vm_id)
 
 
 def main():

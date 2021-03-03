@@ -44,8 +44,9 @@ class InstallInfo(DataClassJsonMixin):
             return None
 
     @staticmethod
-    def delete() -> bool:
-        return safe_delete(InstallInfo._INSTALL_FILE_PATH)
+    def delete():
+        if safe_delete(InstallInfo._INSTALL_FILE_PATH) is False:
+            raise Exception("install.json not deleted")
 
     def save(self):
         """ Serializes self and writes to install.json """
