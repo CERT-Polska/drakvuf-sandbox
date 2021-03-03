@@ -1,6 +1,7 @@
 import base64
 import os
 import sys
+import secrets
 
 from karton.core import Config
 
@@ -50,8 +51,8 @@ def setup_config():
         return
 
     print('Generating MinIO environment file...')
-    access_key = base64.urlsafe_b64encode(os.urandom(30)).decode('ascii')
-    secret_key = base64.urlsafe_b64encode(os.urandom(30)).decode('ascii')
+    access_key = secrets.token_urlsafe(30)
+    secret_key = secrets.token_urlsafe(30)
 
     with open('/etc/drakcore/minio.env', 'w') as f:
         f.write(f'MINIO_ACCESS_KEY={access_key}\n')
