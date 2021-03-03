@@ -41,7 +41,12 @@ This instruction assumes that you want to create a single-node installation with
       # apt install redis-server
       # apt install ./drakcore*.deb
       # apt install ./drakrun*.deb
-4. Execute:
+4. Check if your Xen installation is compliant. This command should print "All tests passed":
+
+    .. code-block:: console
+    
+      # draksetup test
+5. Execute:
 
     .. code-block:: console
 
@@ -66,15 +71,15 @@ This instruction assumes that you want to create a single-node installation with
   .. note::
    By default, DRAKVUF Sandbox will store virtual machine's HDD in a ``qcow2`` file. If you want to use ZFS instead, please check the :ref:`ZFS storage backend<zfs-backend>` docs.
 
-5. Use VNC to connect to the installation process:
+6. Use VNC to connect to the installation process:
 
     .. code-block:: console
 
       $ vncviewer localhost:5900
 
-6. Perform Windows installation until you are booted to the desktop.
+7. Perform Windows installation until you are booted to the desktop.
 
-7. **Optional:** At this point you might optionally install additional software. You can execute:
+8. **Optional:** At this point you might optionally install additional software. You can execute:
 
     .. code-block:: console
 
@@ -82,7 +87,7 @@ This instruction assumes that you want to create a single-node installation with
 
    which would mount a virtual CD disk containing additional software into your VM.
 
-8. **Optional:** Generate .NET Framework native image cache by executing the following commands in the administrative prompt of your VM.
+9. **Optional:** Generate .NET Framework native image cache by executing the following commands in the administrative prompt of your VM.
 
     .. code-block:: bat
 
@@ -91,7 +96,7 @@ This instruction assumes that you want to create a single-node installation with
       cd C:\Windows\Microsoft.NET\Framework64\v4.0.30319
       ngen.exe executeQueuedItems
 
-9. In order to finalize the VM setup process, execute:
+10. In order to finalize the VM setup process, execute:
 
   .. code-block:: console
 
@@ -100,4 +105,4 @@ This instruction assumes that you want to create a single-node installation with
   .. note ::
     Add ``--no-report`` if you don't want ``draksetup`` to send `basic usage report <https://github.com/CERT-Polska/drakvuf-sandbox/blob/master/USAGE_STATISTICS.md>`_. 
 
-10. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
+11. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.

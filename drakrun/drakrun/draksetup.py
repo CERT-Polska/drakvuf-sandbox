@@ -3,6 +3,7 @@ import hashlib
 import logging
 import io
 import shlex
+import sys
 import os
 import re
 import json
@@ -83,6 +84,83 @@ def check_root():
         return True
 
 
+def sanity_check():
+    logging.info("Checking xen-detect...")
+    proc = subprocess.run('xen-detect -N', shell=True)
+
+    if proc.returncode != 1:
+        logging.error('It looks like the system is not running on Xen. Please reboot your machine into Xen hypervisor.')
+        return False
+
+    logging.info("Testing if xl tool is sane...")
+
+    try:
+        subprocess.run('xl info', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    except subprocess.CalledProcessError:
+        logging.exception("Failed to test xl command.")
+        return False
+
+    if not perform_xtf():
+        logging.error("Your Xen installation doesn\'t pass the necessary tests.")
+        return False
+
+    return True
+
+
+def perform_xtf():
+    logging.info('Testing your Xen installation...')
+    module_dir = os.path.dirname(os.path.realpath(__file__))
+    cfg_path = os.path.join(module_dir, "tools", "test-hvm64-example.cfg")
+    firmware_path = os.path.join(module_dir, "tools", "test-hvm64-example")
+
+    with open(cfg_path, 'r') as f:
+        test_cfg = f.read().replace('{{ FIRMWARE_PATH }}', firmware_path).encode('utf-8')
+
+    with tempfile.NamedTemporaryFile() as tmpf:
+        tmpf.write(test_cfg)
+        tmpf.flush()
+
+        logging.info('Checking if the test domain already exists...')
+        subprocess.run('xl destroy test-hvm64-example', shell=True)
+
+        logging.info('Creating new test domain...')
+        subprocess.run(f'xl create -p {tmpf.name}', shell=True, stderr=subprocess.STDOUT, timeout=30, check=True)
+
+        module_dir = os.path.dirname(os.path.realpath(__file__))
+        test_altp2m_tool = os.path.join(module_dir, "tools", "test-altp2m")
+
+        logging.info('Testing altp2m feature...')
+        try:
+            subprocess.run([test_altp2m_tool, 'test-hvm64-example'], stderr=subprocess.STDOUT, check=True)
+        except subprocess.CalledProcessError as e:
+            output = e.output.decode('utf-8', 'replace')
+            logging.error(f'Failed to enable altp2m on domain. Your hardware might not support Extended Page Tables. Logs:\n{output}')
+            subprocess.run('xl destroy test-hvm64-example', shell=True)
+            return False
+
+        logging.info('Performing simple XTF test...')
+        p = subprocess.Popen(['xl', 'console', 'test-hvm64-example'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.run('xl unpause test-hvm64-example', shell=True, stderr=subprocess.STDOUT, timeout=30, check=True)
+        stdout_b, _ = p.communicate(timeout=10)
+
+        stdout_text = stdout_b.decode('utf-8')
+        stdout = [line.strip() for line in stdout_text.split('\n')]
+
+        for line in stdout:
+            if line == 'Test result: SUCCESS':
+                logging.info('All tests passed. Your Xen installation seems to work properly.')
+                return True
+
+    logging.error(f'Preflight check with Xen Test Framework doesn\'t pass. Your hardware might not support VT-x. Logs: \n{stdout_text}')
+    return False
+
+
+@click.command(help='Perform self-test to check Xen installation')
+def test():
+    if not sanity_check():
+        sys.exit(1)
+
+
 @click.command(help='Install guest Virtual Machine',
                no_args_is_help=True)
 @click.argument('iso_path', type=click.Path(exists=True))
@@ -113,6 +191,10 @@ def check_root():
               help='Path to autounattend.xml for automated Windows install')
 def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, unattended_xml):
     if not check_root():
+        return
+
+    if not sanity_check():
+        logging.error("Sanity check failed.")
         return
 
     logging.info("Ensuring that drakrun@* services are stopped...")
@@ -169,21 +251,6 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
         iso_sha256=iso_sha256
     )
     install_info.save()
-
-    logging.info("Checking xen-detect...")
-    proc = subprocess.run('xen-detect -N', shell=True)
-
-    if proc.returncode != 1:
-        logging.error('It looks like the system is not running on Xen. Please reboot your machine into Xen hypervisor.')
-        return
-
-    logging.info("Testing if xl tool is sane...")
-
-    try:
-        subprocess.check_output('xl info', shell=True, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError:
-        logging.exception("Failed to test xl command.")
-        return
 
     try:
         subprocess.check_output('xl uptime vm-0', shell=True, stderr=subprocess.STDOUT)
@@ -732,6 +799,7 @@ def main():
     )
 
 
+main.add_command(test)
 main.add_command(install)
 main.add_command(postinstall)
 main.add_command(postupgrade)
