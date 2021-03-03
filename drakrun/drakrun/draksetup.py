@@ -151,7 +151,7 @@ def perform_xtf():
                 logging.info('All tests passed. Your Xen installation seems to work properly.')
                 return True
 
-    logging.error('Preflight check with Xen Test Framework doesn\'t pass. Your hardware might not support VT-x. Logs: \n{stdout_text}')
+    logging.error(f'Preflight check with Xen Test Framework doesn\'t pass. Your hardware might not support VT-x. Logs: \n{stdout_text}')
     return False
 
 
