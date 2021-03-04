@@ -200,11 +200,11 @@ class ZfsStorageBackend(StorageBackendBase):
             )
 
     def delete_vm_volume(self, vm_id: int) -> bool:
-        vm_id_vol = shlex.quote(os.path.join(self.zfs_tank_name, f"vm-{vm_id}"))
+        vm_id_vol = os.path.join(self.zfs_tank_name, f"vm-{vm_id}")
         try:
             logging.info(f"Deleting zfs volume {vm_id_vol}")
             subprocess.check_output(
-                f"zfs destroy -Rfr {vm_id_vol}", stderr=subprocess.STDOUT, shell=True
+                ["zfs", "destroy", "-Rfr", vm_id_vol], stderr=subprocess.STDOUT
             )
         except subprocess.CalledProcessError as exc:
             logging.error(exc.stdout)
