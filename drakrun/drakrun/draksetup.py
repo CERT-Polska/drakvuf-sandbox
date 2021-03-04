@@ -116,6 +116,8 @@ def cleanup():
         if net_enable:
             stop_dnsmasq(vm_id=vm_id)
 
+        backend.delete_vm_volume(vm_id)
+
         delete_vm_conf(vm_id)
 
     if install_info.zfs_tank_name is not None:
