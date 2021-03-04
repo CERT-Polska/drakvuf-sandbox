@@ -41,6 +41,7 @@ class InstallInfo(DataClassJsonMixin):
         try:
             return InstallInfo.load()
         except FileNotFoundError:
+            logging.warning("install.json not found, please run draksetup install")
             return None
 
     @staticmethod
