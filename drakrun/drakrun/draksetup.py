@@ -89,20 +89,22 @@ def cleanup():
     if not check_root():
         return
 
-    logging.info("Ensuring that drakrun@* services are stopped...")
-    subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
-
     install_info = InstallInfo.try_load()
 
     if install_info is None:
         logging.error("The cleanup has been performed")
         return
 
+    logging.info("Ensuring that drakrun@* services are stopped...")
+    try:
+        subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError:
+        raise Exception("Drakrun services not stopped")
+
     backend = get_storage_backend(install_info)
     vm_ids = get_all_vm_conf()
 
     for vm_id in vm_ids:
-        delete_vm_conf(vm_id)
         vm = VirtualMachine(backend, vm_id)
         vm.destroy()
 
@@ -113,6 +115,8 @@ def cleanup():
         delete_vm_network(vm_id=vm_id, net_enable=net_enable, out_interface=out_interface, dns_server=dns_server)
         if net_enable:
             stop_dnsmasq(vm_id=vm_id)
+
+        delete_vm_conf(vm_id)
 
     if install_info.zfs_tank_name is not None:
         backend.delete_zfs_tank()
