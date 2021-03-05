@@ -313,7 +313,7 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
         logging.exception("Failed to execute brctl show. Make sure you have bridge-utils installed.")
         return
 
-    net_enable = int(conf['drakrun'].get('net_enable', '0'))
+    net_enable = conf['drakrun'].getboolean('net_enable', fallback=False)
     out_interface = conf['drakrun'].get('out_interface', '')
     dns_server = conf['drakrun'].get('dns_server', '')
 
