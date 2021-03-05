@@ -113,7 +113,7 @@ def stop_dnsmasq(vm_id: int):
 
 def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server: str):
     try:
-        subprocess.check_output(f'brctl addbr drak{vm_id}', stderr=subprocess.STDOUT, shell=True)
+        subprocess.run(f'brctl addbr drak{vm_id}', stderr=subprocess.STDOUT, shell=True, check=True)
         logging.info(f"Created bridge drak{vm_id}")
     except subprocess.CalledProcessError as e:
         if b'already exists' in e.output:
@@ -121,9 +121,9 @@ def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server
         else:
             log.exception(f"Failed to create bridge drak{vm_id}.")
     else:
-        subprocess.check_output(f'ip addr add 10.13.{vm_id}.1/24 dev drak{vm_id}', shell=True)
+        subprocess.run(f'ip addr add 10.13.{vm_id}.1/24 dev drak{vm_id}', shell=True, check=True)
 
-    subprocess.check_output(f'ip link set dev drak{vm_id} up', shell=True)
+    subprocess.run(f'ip link set dev drak{vm_id} up', shell=True, check=True)
     logging.info(f"Bridge drak{vm_id} is up")
 
     add_iptable_rule(f"INPUT -i drak{vm_id} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
@@ -144,7 +144,7 @@ def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server
 
 def delete_vm_network(vm_id, net_enable, out_interface, dns_server):
     try:
-        subprocess.check_output(f'ip link set dev drak{vm_id} down', shell=True, stderr=subprocess.PIPE)
+        subprocess.run(f'ip link set dev drak{vm_id} down', shell=True, stderr=subprocess.PIPE, check=True)
         logging.info(f"Bridge drak{vm_id} is down")
     except subprocess.CalledProcessError as e:
         if b"Cannot find device" in e.stderr:
@@ -152,7 +152,7 @@ def delete_vm_network(vm_id, net_enable, out_interface, dns_server):
         else:
             log.exception(f"Couldn't delete drak{vm_id}")
     else:
-        subprocess.check_output(f'brctl delbr drak{vm_id}', stderr=subprocess.STDOUT, shell=True)
+        subprocess.run(f'brctl delbr drak{vm_id}', stderr=subprocess.STDOUT, shell=True)
         logging.info(f"Deleted drak{vm_id} bridge")
 
     del_iptable_rule(f"INPUT -i drak{vm_id} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")

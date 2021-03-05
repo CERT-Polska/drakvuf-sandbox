@@ -20,20 +20,10 @@ from drakrun.draksetup import find_default_interface
 import sys
 
 
-def cleanup(vm_id: int):
-
-    logging.info("Ensuring that drakrun@* services are stopped...")
-    try:
-        subprocess.check_output(f'systemctl stop \'drakrun@{vm_id}\'', shell=True, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError:
-        logging.error("drakrun services not stopped")
-        sys.exit(0)
-
-
 class DrakmonShell:
     def __init__(self, vm_id: int, dns: str):
 
-        cleanup(vm_id)
+        self.cleanup(vm_id)
 
         install_info = InstallInfo.load()
         backend = get_storage_backend(install_info)
@@ -53,6 +43,14 @@ class DrakmonShell:
             self.kernel_profile,
         )
         setup_vm_network(vm_id, True, find_default_interface(), dns)
+
+    def cleanup(self, vm_id: int):
+
+        logging.info(f"Ensuring that drakrun@{vm_id} service is stopped...")
+        try:
+            subprocess.run('systemctl', 'stop', f'drakrun@{vm_id}', shell=True, stderr=subprocess.STDOUT, check=True)
+        except subprocess.CalledProcessError:
+            raise Exception(f"drakrun@{vm_id} not stopped")
 
     def drakvuf(self, plugins, timeout=60):
         d = tempfile.TemporaryDirectory(prefix="drakvuf_")

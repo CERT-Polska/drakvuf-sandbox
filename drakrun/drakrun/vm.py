@@ -13,9 +13,6 @@ from drakrun.config import (
     InstallInfo
 )
 from drakrun.util import safe_delete
-from multiprocessing import Process
-from tqdm import tqdm
-import time
 
 log = logging.getLogger("drakrun")
 
@@ -61,10 +58,9 @@ def generate_vm_conf(install_info: InstallInfo, vm_id: int):
 
 def get_all_vm_conf() -> list:
     regex = re.compile(r'vm-(\d+)\.cfg')
-    config_dir = os.path.join(ETC_DIR, 'configs')
     vm_ids = []
 
-    for f in os.listdir(config_dir):
+    for f in os.listdir(VM_CONFIG_DIR):
         reg = regex.search(f)
 
         if reg is not None:
@@ -74,8 +70,7 @@ def get_all_vm_conf() -> list:
 
 
 def delete_vm_conf(vm_id: int) -> bool:
-    config_dir = os.path.join(ETC_DIR, 'configs')
-    return safe_delete(os.path.join(config_dir, f"vm-{vm_id}.cfg"))
+    return safe_delete(os.path.join(VM_CONFIG_DIR, f"vm-{vm_id}.cfg"))
 
 
 class VirtualMachine:
