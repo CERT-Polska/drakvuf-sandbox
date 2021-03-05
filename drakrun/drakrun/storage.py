@@ -199,7 +199,7 @@ class ZfsStorageBackend(StorageBackendBase):
                 stdout=snapshot_file
             )
 
-    def delete_vm_volume(self, vm_id: int) -> bool:
+    def delete_vm_volume(self, vm_id: int):
         vm_id_vol = os.path.join(self.zfs_tank_name, f"vm-{vm_id}")
         try:
             logging.info(f"Deleting zfs volume {vm_id_vol}")
