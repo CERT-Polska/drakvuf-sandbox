@@ -7,6 +7,8 @@ import subprocess
 import time
 import shlex
 import shutil
+import logging
+import re
 
 from typing import Generator, Tuple
 from drakrun.config import InstallInfo, VOLUME_DIR
@@ -308,9 +310,118 @@ class Qcow2StorageBackend(StorageBackendBase):
         shutil.copy(path, os.path.join(VOLUME_DIR, 'vm-0.img'))
 
 
+class LvmStorageBackend(StorageBackendBase):
+    """Implements storage backend based on lvm storage"""
+
+    def __init__(self, install_info: InstallInfo):
+        super().__init__(install_info)
+        self.lvm_volume_group = install_info.lvm_volume_group
+        self.check_tools()
+
+    def check_tools(self):
+        """ Verify existence of lvm command utility """
+        try:
+            subprocess.run(["vgs", self.lvm_volume_group], check=True, stdout=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            raise RuntimeError("Failed to execute vgs command"
+                               f"Make sure you have LVM support installed with {self.lvm_volume_group} as a volume group")
+
+    def initialize_vm0_volume(self, disk_size: str):
+        """Create base volume for vm-0 with given size
+
+        disk_size - string representing volume size with M/G/T suffix, eg. 100G
+        """
+        try:
+            logging.info("Deleting existing logical volume")
+            subprocess.run(
+                [
+                    "lvremove",
+                    f"{self.lvm_volume_group}/vm-0"
+                ],
+                check=True
+            )
+        except subprocess.CalledProcessError as exc:
+            if b"Failed to find logical volume" not in exc.output:
+                raise RuntimeError(f"Failed to destroy logical volume {self.lvm_volume_group}/vm-0")
+        try:
+            logging.info("Creating new volume vm-0")
+            subprocess.run(
+                [
+                    "lvcreate",
+                    "-L",
+                    disk_size,
+                    "-n",
+                    "vm-0",
+                    self.lvm_volume_group
+                ],
+                check=True
+            )
+        except subprocess.CalledProcessError:
+            raise RuntimeError("Failed to create a new volume using lvcreate.")
+
+    def snapshot_vm0_volume(self):
+        """ Saves or snapshots base vm-0 volume for later use by other VMs """
+        try:
+            logging.info("Creating new volume vm-0")
+            subprocess.run(
+                [
+                    "lvcreate",
+                    "-L",
+                    "--snapshot",
+                    self.install_info.disk_size,
+                    "-n",
+                    "vm-0-snap",
+                    f"{self.lvm_volume_group}/vm-0"
+                ],
+                check=True
+            )
+        except subprocess.CalledProcessError:
+            raise RuntimeError("Failed to create a snapshot of vm-0")
+
+        raise NotImplementedError
+
+    def get_vm_disk_path(self, vm_id: int) -> str:
+        """ Returns disk path for given VM as defined by XL configuration """
+        return f"phy:/dev/{self.lvm_volume_group}/vm-{vm_id},hda,w"
+
+    def rollback_vm_storage(self, vm_id: int):
+        """ Rolls back changes and prepares fresh storage for new run of this VM """
+        raise NotImplementedError
+
+    def get_vm0_snapshot_time(self):
+        """ Get UNIX timestamp of when vm-0 snapshot was last modified """
+
+        dir_path = '/etc/lvm/archive'
+        proc = subprocess.run(f"ls {dir_path} -t | grep {self.lvm_volume_group} | head -n 1", shell=True, stdout=subprocess.PIPE)
+        file_name = proc.stdout.decode().strip()
+
+        # Should I use this or os.path.getmtime(file_path)?
+        with open(os.path.join(dir_path, file_name), 'r') as f:
+            timestamp = re.search(r'creation_time = (\d*)', f.read()).group(1)
+
+        return timestamp
+
+    def vm0_root_as_block(self) -> Generator[str, None, None]:
+        """ Mounts vm-0 root partition as block device
+
+        Mounts second partition (C:) on the volume as block device.
+        This assumes that first partition is used for booting.
+        """
+        raise NotImplementedError
+
+    def export_vm0(self, file):
+        """ Export vm-0 disk into a file (symmetric to import_vm0) """
+        raise NotImplementedError
+
+    def import_vm0(self, file):
+        """ Import vm-0 disk from a file (symmetric to export_vm0) """
+        raise NotImplementedError
+
+
 REGISTERED_BACKENDS = {
     "qcow2": Qcow2StorageBackend,
     "zfs": ZfsStorageBackend,
+    "lvm": LvmStorageBackend,
 }
 
 REGISTERED_BACKEND_NAMES: Tuple[str] = tuple(REGISTERED_BACKENDS.keys())
