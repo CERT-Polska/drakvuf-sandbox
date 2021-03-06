@@ -332,7 +332,13 @@ class LvmStorageBackend(StorageBackendBase):
         disk_size - string representing volume size with M/G/T suffix, eg. 100G
         """
         try:
-            logging.info("Deleting existing logical volume")
+            logging.info("Deleting existing logical volume and snapshot")
+            subprocess.run(
+                [
+                    "lvremove",
+                    f"{self.lvm_volume_group}/vm-0-snap"
+                ],
+            )
             subprocess.run(
                 [
                     "lvremove",
@@ -348,10 +354,8 @@ class LvmStorageBackend(StorageBackendBase):
             subprocess.run(
                 [
                     "lvcreate",
-                    "-L",
-                    disk_size,
-                    "-n",
-                    "vm-0",
+                    "-L", disk_size,
+                    "-n", "vm-0",
                     self.lvm_volume_group
                 ],
                 check=True
@@ -362,21 +366,20 @@ class LvmStorageBackend(StorageBackendBase):
     def snapshot_vm0_volume(self):
         """ Saves or snapshots base vm-0 volume for later use by other VMs """
         try:
-            logging.info("Creating new volume vm-0")
+            logging.info("Creating snapshot of vm-0")
             subprocess.run(
                 [
                     "lvcreate",
-                    "-L",
-                    "--snapshot",
-                    self.install_info.disk_size,
-                    "-n",
-                    "vm-0-snap",
+                    "-s",
+                    "-L", self.install_info.disk_size,
+                    "-n", "vm-0-snap",
                     f"{self.lvm_volume_group}/vm-0"
                 ],
                 check=True
             )
-        except subprocess.CalledProcessError:
-            raise RuntimeError("Failed to create a snapshot of vm-0")
+        except subprocess.CalledProcessError as ext:
+            if b"already exists in volume group" not in ext.output():
+                raise RuntimeError("Failed to create a snapshot of vm-0")
 
         raise NotImplementedError
 
@@ -386,7 +389,75 @@ class LvmStorageBackend(StorageBackendBase):
 
     def rollback_vm_storage(self, vm_id: int):
         """ Rolls back changes and prepares fresh storage for new run of this VM """
-        raise NotImplementedError
+        vm_id_vol_snap = os.path.join("/dev", f"{self.lvm_volume_group}", f"vm-{vm_id}-snap")
+
+        # Checking if snapshot exists as that is the last step
+        # which will imply that the disk already exists
+        # if rollback required
+        if not os.path.exists(vm_id_vol_snap):
+            try:
+                logging.info(f"Creating vm-{vm_id}")
+                subprocess.run(
+                    ' '.join(
+                        [
+                            "lvcreate",
+                            "-L", self.install_info.disk_size,
+                            "-n", f"vm-{vm_id}",
+                            self.lvm_volume_group
+                        ]
+                    ),
+                    shell=True,
+                    check=True
+                )
+
+                logging.info(f"Cloning data to vm-{vm_id} from vm-0 snap")
+                subprocess.run(
+                    ' '.join(
+                        [
+                            "dd",
+                            f"if=/dev/{self.lvm_volume_group}/vm-0-snap",
+                            f"of=/dev/{self.lvm_volume_group}/vm-{vm_id}"
+                        ]
+                    ),
+                    shell=True,
+                    check=True
+                )
+
+                logging.info(f"Creating snapshot of vm-{vm_id} for later rollbacks")
+                subprocess.run(
+                    ' '.join(
+                        [
+                            "lvcreate",
+                            "-s",  # snapshot flag
+                            "-L", self.install_info.disk_size,
+                            "-n", f"vm-{vm_id}-snap",
+                            f"{self.lvm_volume_group}/vm-{vm_id}"
+                        ]
+                    ),
+                    shell=True,
+                    check=True
+                )
+
+            except subprocess.CalledProcessError as ext:
+                logging.debug(ext.output)
+                raise Exception("Some error occurred in performing rollback")
+        else:
+            # Should I add background flag in this?
+            subprocess.run("lvconvert --merge {vm_id_vol_snap}", shell=True, check=True)
+            # Note that the snapshot will be deleted after this. Do we want it? or should the snapshot be recreated?
+            # subprocess.run(
+            #       ' '.join(
+            #           [
+            #               "lvcreate",
+            #               "-s",  # snapshot flag
+            #               "-L", self.install_info.disk_size,
+            #               "-n", f"vm-{vm_id}-snap",
+            #               f"{self.lvm_volume_group}/vm-{vm_id}"
+            #           ]
+            #       ),
+            #       shell=True,
+            #       check=True
+            #   )
 
     def get_vm0_snapshot_time(self):
         """ Get UNIX timestamp of when vm-0 snapshot was last modified """
@@ -395,9 +466,20 @@ class LvmStorageBackend(StorageBackendBase):
         proc = subprocess.run(f"ls {dir_path} -t | grep {self.lvm_volume_group} | head -n 1", shell=True, stdout=subprocess.PIPE)
         file_name = proc.stdout.decode().strip()
 
-        # Should I use this or os.path.getmtime(file_path)?
+        # Ugly code, any better alternatives?
         with open(os.path.join(dir_path, file_name), 'r') as f:
-            timestamp = re.search(r'creation_time = (\d*)', f.read()).group(1)
+            lines = f.readlines()
+            flag = False
+            for i in lines:
+                if 'vm-0-snap {' in i:
+                    flag = True
+                if flag:
+                    try:
+                        timestamp = re.search(r'creation_time = (\d*)', f.read()).group(1)
+                    except Exception:
+                        pass
+                    else:
+                        break
 
         return timestamp
 
@@ -409,13 +491,29 @@ class LvmStorageBackend(StorageBackendBase):
         """
         raise NotImplementedError
 
-    def export_vm0(self, file):
+    def export_vm0(self, path: str):
         """ Export vm-0 disk into a file (symmetric to import_vm0) """
-        raise NotImplementedError
+        # Should this be exported from snapshot or real disk
+        subprocess.run(
+            [
+                "dd",
+                f"if=/dev/{self.lvm_volume_group}/vm-0-snap",
+                f"of={path}"
+            ],
+            check=True
+        )
 
-    def import_vm0(self, file):
+    def import_vm0(self, path: str):
         """ Import vm-0 disk from a file (symmetric to export_vm0) """
-        raise NotImplementedError
+        # Should this be restored to snapshot or the original disk?
+        subprocess.run(
+            [
+                "dd",
+                f"of=/dev/{self.lvm_volume_group}/vm-0-snap",
+                f"if={path}"
+            ],
+            check=True
+        )
 
 
 REGISTERED_BACKENDS = {
