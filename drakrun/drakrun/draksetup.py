@@ -123,6 +123,8 @@ def cleanup():
     if install_info.zfs_tank_name is not None:
         backend.delete_zfs_tank()
 
+    safe_delete(os.path.join(VOLUME_DIR, 'snapshot.sav'))
+
     InstallInfo.delete()
 
 
