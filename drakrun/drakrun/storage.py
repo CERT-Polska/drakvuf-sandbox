@@ -417,6 +417,8 @@ class LvmStorageBackend(StorageBackendBase):
                 )
 
                 logging.info(f"Cloning data to vm-{vm_id} from vm-0 snap")
+
+                # couldn't find anything like zfs clone, any better ideas for performance improvements?
                 subprocess.check_output(
                     ' '.join(
                         [
@@ -451,18 +453,18 @@ class LvmStorageBackend(StorageBackendBase):
             subprocess.run("lvconvert --merge {vm_id_vol_snap}", shell=True, check=True)
             # Create the snapshot again for next rollback
             subprocess.run(
-                  ' '.join(
-                      [
-                          "lvcreate",
-                          "-s",  # snapshot flag
-                          "-L", self.install_info.disk_size,
-                          "-n", f"vm-{vm_id}-snap",
-                          f"{self.lvm_volume_group}/vm-{vm_id}"
-                      ]
-                  ),
-                  shell=True,
-                  check=True
-              )
+                ' '.join(
+                    [
+                        "lvcreate",
+                        "-s",  # snapshot flag
+                        "-L", self.install_info.disk_size,
+                        "-n", f"vm-{vm_id}-snap",
+                        f"{self.lvm_volume_group}/vm-{vm_id}"
+                    ]
+                ),
+                shell=True,
+                check=True
+            )
 
     def get_vm0_snapshot_time(self):
         """ Get UNIX timestamp of when vm-0 snapshot was last modified """
@@ -491,7 +493,7 @@ class LvmStorageBackend(StorageBackendBase):
     @contextlib.contextmanager
     def vm0_root_as_block(self) -> Generator[str, None, None]:
         """ Mounts vm-0 root partition as block device"""
-        out=subprocess.check_output(
+        out = subprocess.check_output(
             ' '.join(
                 [
                     "losetup",
@@ -504,7 +506,7 @@ class LvmStorageBackend(StorageBackendBase):
         ).decode('ascii').strip('\n').strip()
 
         # return the second partition
-        volume_path = out+'p2'
+        volume_path = out + 'p2'
 
         for _ in range(60):
             if os.path.exists(volume_path):
@@ -515,8 +517,8 @@ class LvmStorageBackend(StorageBackendBase):
 
         yield volume_path
 
-        subprocess.run(f'umount {out}',shell=True)
-        subprocess.run(f'losetup -d {out}',shell=True)
+        subprocess.run(f'umount {out}', shell=True)
+        subprocess.run(f'losetup -d {out}', shell=True)
 
     def export_vm0(self, path: str):
         """ Export vm-0 disk into a file (symmetric to import_vm0) """
@@ -525,7 +527,8 @@ class LvmStorageBackend(StorageBackendBase):
             [
                 "dd",
                 f"if=/dev/{self.lvm_volume_group}/vm-0-snap",
-                f"of={path}"
+                f"of={path}",
+                "status=progress"
             ],
             check=True
         )
@@ -537,7 +540,8 @@ class LvmStorageBackend(StorageBackendBase):
             [
                 "dd",
                 f"of=/dev/{self.lvm_volume_group}/vm-0-snap",
-                f"if={path}"
+                f"if={path}",
+                "status=progress"
             ],
             check=True
         )
