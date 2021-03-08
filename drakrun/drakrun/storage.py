@@ -316,6 +316,7 @@ class LvmStorageBackend(StorageBackendBase):
     def __init__(self, install_info: InstallInfo):
         super().__init__(install_info)
         self.lvm_volume_group = install_info.lvm_volume_group
+        self.install_info = install_info
         self.check_tools()
 
     def check_tools(self):
@@ -389,8 +390,6 @@ class LvmStorageBackend(StorageBackendBase):
             if b"already exists in volume group" not in exc.output:
                 raise RuntimeError("Failed to create a snapshot of vm-0")
 
-        raise NotImplementedError
-
     def get_vm_disk_path(self, vm_id: int) -> str:
         """ Returns disk path for given VM as defined by XL configuration """
         return f"phy:/dev/{self.lvm_volume_group}/vm-{vm_id},hda,w"
@@ -423,7 +422,8 @@ class LvmStorageBackend(StorageBackendBase):
                         [
                             "dd",
                             f"if=/dev/{self.lvm_volume_group}/vm-0-snap",
-                            f"of=/dev/{self.lvm_volume_group}/vm-{vm_id}"
+                            f"of=/dev/{self.lvm_volume_group}/vm-{vm_id}",
+                            "status=progress"
                         ]
                     ),
                     shell=True,
@@ -449,20 +449,20 @@ class LvmStorageBackend(StorageBackendBase):
         else:
             # Should I add background flag in this?
             subprocess.run("lvconvert --merge {vm_id_vol_snap}", shell=True, check=True)
-            # Note that the snapshot will be deleted after this. Do we want it? or should the snapshot be recreated?
-            # subprocess.run(
-            #       ' '.join(
-            #           [
-            #               "lvcreate",
-            #               "-s",  # snapshot flag
-            #               "-L", self.install_info.disk_size,
-            #               "-n", f"vm-{vm_id}-snap",
-            #               f"{self.lvm_volume_group}/vm-{vm_id}"
-            #           ]
-            #       ),
-            #       shell=True,
-            #       check=True
-            #   )
+            # Create the snapshot again for next rollback
+            subprocess.run(
+                  ' '.join(
+                      [
+                          "lvcreate",
+                          "-s",  # snapshot flag
+                          "-L", self.install_info.disk_size,
+                          "-n", f"vm-{vm_id}-snap",
+                          f"{self.lvm_volume_group}/vm-{vm_id}"
+                      ]
+                  ),
+                  shell=True,
+                  check=True
+              )
 
     def get_vm0_snapshot_time(self):
         """ Get UNIX timestamp of when vm-0 snapshot was last modified """
@@ -501,11 +501,21 @@ class LvmStorageBackend(StorageBackendBase):
                 ]
             ),
             shell=True,
-        ).decode('ascii')
+        ).decode('ascii').strip('\n').strip()
 
         # return the second partition
-        yield out+'p2'
+        volume_path = out+'p2'
 
+        for _ in range(60):
+            if os.path.exists(volume_path):
+                break
+            time.sleep(1.0)
+        else:
+            raise RuntimeError(f"LVM volume not available at {volume_path}")
+
+        yield volume_path
+
+        subprocess.run(f'umount {out}',shell=True)
         subprocess.run(f'losetup -d {out}',shell=True)
 
     def export_vm0(self, path: str):
