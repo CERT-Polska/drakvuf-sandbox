@@ -334,17 +334,25 @@ class LvmStorageBackend(StorageBackendBase):
         try:
             logging.info("Deleting existing logical volume and snapshot")
             subprocess.run(
-                [
+                ' '.join([
                     "lvremove",
+                    "-v",
+                    "-y",
+                    # "--noudevsync",
                     f"{self.lvm_volume_group}/vm-0-snap"
-                ],
+                ]),
+                shell=True
             )
-            subprocess.run(
-                [
+            subprocess.check_output(
+                ' '.join([
                     "lvremove",
+                    "-v",
+                    "-y",
+                    # "--noudevsync",
                     f"{self.lvm_volume_group}/vm-0"
-                ],
-                check=True
+                ]),
+                shell=True,
+                stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as exc:
             if b"Failed to find logical volume" not in exc.output:
@@ -367,7 +375,7 @@ class LvmStorageBackend(StorageBackendBase):
         """ Saves or snapshots base vm-0 volume for later use by other VMs """
         try:
             logging.info("Creating snapshot of vm-0")
-            subprocess.run(
+            subprocess.check_output(
                 [
                     "lvcreate",
                     "-s",
@@ -375,10 +383,10 @@ class LvmStorageBackend(StorageBackendBase):
                     "-n", "vm-0-snap",
                     f"{self.lvm_volume_group}/vm-0"
                 ],
-                check=True
+                stderr=subprocess.STDOUT,
             )
-        except subprocess.CalledProcessError as ext:
-            if b"already exists in volume group" not in ext.output():
+        except subprocess.CalledProcessError as exc:
+            if b"already exists in volume group" not in exc.output:
                 raise RuntimeError("Failed to create a snapshot of vm-0")
 
         raise NotImplementedError
@@ -397,7 +405,7 @@ class LvmStorageBackend(StorageBackendBase):
         if not os.path.exists(vm_id_vol_snap):
             try:
                 logging.info(f"Creating vm-{vm_id}")
-                subprocess.run(
+                subprocess.check_output(
                     ' '.join(
                         [
                             "lvcreate",
@@ -407,11 +415,10 @@ class LvmStorageBackend(StorageBackendBase):
                         ]
                     ),
                     shell=True,
-                    check=True
                 )
 
                 logging.info(f"Cloning data to vm-{vm_id} from vm-0 snap")
-                subprocess.run(
+                subprocess.check_output(
                     ' '.join(
                         [
                             "dd",
@@ -420,11 +427,10 @@ class LvmStorageBackend(StorageBackendBase):
                         ]
                     ),
                     shell=True,
-                    check=True
                 )
 
                 logging.info(f"Creating snapshot of vm-{vm_id} for later rollbacks")
-                subprocess.run(
+                subprocess.check_output(
                     ' '.join(
                         [
                             "lvcreate",
@@ -435,7 +441,6 @@ class LvmStorageBackend(StorageBackendBase):
                         ]
                     ),
                     shell=True,
-                    check=True
                 )
 
             except subprocess.CalledProcessError as ext:
@@ -483,13 +488,25 @@ class LvmStorageBackend(StorageBackendBase):
 
         return timestamp
 
+    @contextlib.contextmanager
     def vm0_root_as_block(self) -> Generator[str, None, None]:
-        """ Mounts vm-0 root partition as block device
+        """ Mounts vm-0 root partition as block device"""
+        out=subprocess.check_output(
+            ' '.join(
+                [
+                    "losetup",
+                    "-f", "--partscan",
+                    "--show", "--read-only",
+                    f"/dev/{self.lvm_volume_group}/vm-0-snap",
+                ]
+            ),
+            shell=True,
+        ).decode('ascii')
 
-        Mounts second partition (C:) on the volume as block device.
-        This assumes that first partition is used for booting.
-        """
-        raise NotImplementedError
+        # return the second partition
+        yield out+'p2'
+
+        subprocess.run(f'losetup -d {out}',shell=True)
 
     def export_vm0(self, path: str):
         """ Export vm-0 disk into a file (symmetric to import_vm0) """

@@ -203,6 +203,11 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
     if not check_root():
         return
 
+    if storage_backend == "lvm" and lvm_volume_group is None:
+        raise Exception("lvm storage backend requires --lvm-volume-group")
+    if storage_backend == "zfs" and zfs_tank_name is None:
+        raise Exception("zfs storage backend requires --zfs-tank-name")
+
     if not sanity_check():
         logging.error("Sanity check failed.")
         return
