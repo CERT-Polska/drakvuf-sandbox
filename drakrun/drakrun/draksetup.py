@@ -482,19 +482,6 @@ def postinstall(report, generate_usermode):
     install_info = InstallInfo.load()
 
     logging.info("Cleaning up leftovers(if any)")
-    if install_info.zfs_tank_name:
-        volume_path = os.path.join("/", "dev", "zvol", install_info.zfs_tank_name, "tmp-part2")
-        try:
-            subprocess.check_output(f'umount {volume_path}', shell=True)
-            logging.info("Unmounted disk")
-        except subprocess.CalledProcessError as ext:
-            logging.exception(ext.stdout)
-
-        tmp_snap = shlex.quote(os.path.join(install_info.zfs_tank_name, "tmp"))
-        try:
-            subprocess.check_output(f"zfs destroy {tmp_snap}", shell=True)
-        except subprocess.CalledProcessError:
-            pass
 
     for _ in os.listdir(PROFILE_DIR):
         safe_delete(os.path.join(PROFILE_DIR, _))

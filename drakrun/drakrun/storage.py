@@ -180,6 +180,7 @@ class ZfsStorageBackend(StorageBackendBase):
 
         yield volume_path
 
+        subprocess.run(f"umount {volume_path}", shell=True)
         subprocess.check_output(f"zfs destroy {tmp_snap}", shell=True)
 
     def export_vm0(self, file):
@@ -320,6 +321,7 @@ class Qcow2StorageBackend(StorageBackendBase):
 
         yield dev
 
+        subprocess.check_output(f"umount {dev}", shell=True)
         subprocess.check_output("qemu-nbd --disconnect /dev/nbd0", shell=True)
 
     def export_vm0(self, path: str):
