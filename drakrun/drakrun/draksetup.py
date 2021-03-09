@@ -84,6 +84,14 @@ def check_root():
         return True
 
 
+def stop_all_drakruns():
+    logging.info("Ensuring that drakrun@* services are stopped...")
+    try:
+        subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError:
+        raise Exception("Drakrun services not stopped")
+
+
 @click.command(help='Cleanup the changes made by draksetup')
 def cleanup():
     if not check_root():
@@ -95,22 +103,18 @@ def cleanup():
         logging.error("The cleanup has been performed")
         return
 
-    logging.info("Ensuring that drakrun@* services are stopped...")
-    try:
-        subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError:
-        raise Exception("Drakrun services not stopped")
+    stop_all_drakruns()
 
     backend = get_storage_backend(install_info)
     vm_ids = get_all_vm_conf()
 
+    net_enable = int(conf['drakrun'].get('net_enable', '0'))
+    out_interface = conf['drakrun'].get('out_interface', '')
+    dns_server = conf['drakrun'].get('dns_server', '')
+
     for vm_id in vm_ids:
         vm = VirtualMachine(backend, vm_id)
         vm.destroy()
-
-        net_enable = int(conf['drakrun'].get('net_enable', '0'))
-        out_interface = conf['drakrun'].get('out_interface', '')
-        dns_server = conf['drakrun'].get('dns_server', '')
 
         delete_vm_network(vm_id=vm_id, net_enable=net_enable, out_interface=out_interface, dns_server=dns_server)
         if net_enable:
@@ -119,9 +123,6 @@ def cleanup():
         backend.delete_vm_volume(vm_id)
 
         delete_vm_conf(vm_id)
-
-    if install_info.zfs_tank_name is not None:
-        backend.delete_zfs_tank()
 
     safe_delete(os.path.join(VOLUME_DIR, 'snapshot.sav'))
 
@@ -241,8 +242,7 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
         logging.error("Sanity check failed.")
         return
 
-    logging.info("Ensuring that drakrun@* services are stopped...")
-    subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+    stop_all_drakruns()
 
     logging.info("Performing installation...")
 
