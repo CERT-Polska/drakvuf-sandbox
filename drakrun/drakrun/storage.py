@@ -318,6 +318,7 @@ class LvmStorageBackend(StorageBackendBase):
         self.lvm_volume_group = install_info.lvm_volume_group
         self.install_info = install_info
         self.check_tools()
+        self.snapshot_disksize = "1G"
 
     def check_tools(self):
         """ Verify existence of lvm command utility """
@@ -334,25 +335,14 @@ class LvmStorageBackend(StorageBackendBase):
         """
         try:
             logging.info("Deleting existing logical volume and snapshot")
-            subprocess.run(
-                ' '.join([
-                    "lvremove",
-                    "-v",
-                    "-y",
-                    # "--noudevsync",
-                    f"{self.lvm_volume_group}/vm-0-snap"
-                ]),
-                shell=True
-            )
             subprocess.check_output(
-                ' '.join([
+                [
                     "lvremove",
                     "-v",
                     "-y",
                     # "--noudevsync",
                     f"{self.lvm_volume_group}/vm-0"
-                ]),
-                shell=True,
+                ],
                 stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as exc:
@@ -374,21 +364,22 @@ class LvmStorageBackend(StorageBackendBase):
 
     def snapshot_vm0_volume(self):
         """ Saves or snapshots base vm-0 volume for later use by other VMs """
+        # vm-0 is the original disk being treated as a snapshot
+        # vm-0-snap is being created just for the access time of the change in vm snapshot
         try:
-            logging.info("Creating snapshot of vm-0")
             subprocess.check_output(
                 [
                     "lvcreate",
                     "-s",
-                    "-L", self.install_info.disk_size,
-                    "-n", "vm-0-snap",
-                    f"{self.lvm_volume_group}/vm-0"
+                    "-L", self.snapshot_disksize,
+                    "-n", f"vm-{vm_id}",
+                    f"{self.lvm_volume_group}/vm-0-snap"
                 ],
-                stderr=subprocess.STDOUT,
+                stderr=subprocess.STDOUT
             )
         except subprocess.CalledProcessError as exc:
-            if b"already exists in volume group" not in exc.output:
-                raise RuntimeError("Failed to create a snapshot of vm-0")
+            logging.debug(exc.output)
+            raise RuntimeError("Couldn't create snapshot")
 
     def get_vm_disk_path(self, vm_id: int) -> str:
         """ Returns disk path for given VM as defined by XL configuration """
@@ -396,75 +387,41 @@ class LvmStorageBackend(StorageBackendBase):
 
     def rollback_vm_storage(self, vm_id: int):
         """ Rolls back changes and prepares fresh storage for new run of this VM """
-        vm_id_vol_snap = os.path.join("/dev", f"{self.lvm_volume_group}", f"vm-{vm_id}-snap")
+        vm_id_vol = os.path.join("/dev", f"{self.lvm_volume_group}", f"vm-{vm_id}")
 
-        # Checking if snapshot exists as that is the last step
-        # which will imply that the disk already exists
-        # if rollback required
-        if not os.path.exists(vm_id_vol_snap):
+        if vm_id == 0:
+            raise Exception("vm-0 should not be rollbacked")
+
+        logging.info(f"Rolling back changes to vm-{vm_id} disk")
+        if os.path.exists(vm_id_vol):
             try:
-                logging.info(f"Creating vm-{vm_id}")
                 subprocess.check_output(
-                    ' '.join(
-                        [
-                            "lvcreate",
-                            "-L", self.install_info.disk_size,
-                            "-n", f"vm-{vm_id}",
-                            self.lvm_volume_group
-                        ]
-                    ),
-                    shell=True,
-                )
-
-                logging.info(f"Cloning data to vm-{vm_id} from vm-0 snap")
-
-                # couldn't find anything like zfs clone, any better ideas for performance improvements?
-                subprocess.check_output(
-                    ' '.join(
-                        [
-                            "dd",
-                            f"if=/dev/{self.lvm_volume_group}/vm-0-snap",
-                            f"of=/dev/{self.lvm_volume_group}/vm-{vm_id}",
-                            "status=progress"
-                        ]
-                    ),
-                    shell=True,
-                )
-
-                logging.info(f"Creating snapshot of vm-{vm_id} for later rollbacks")
-                subprocess.check_output(
-                    ' '.join(
-                        [
-                            "lvcreate",
-                            "-s",  # snapshot flag
-                            "-L", self.install_info.disk_size,
-                            "-n", f"vm-{vm_id}-snap",
-                            f"{self.lvm_volume_group}/vm-{vm_id}"
-                        ]
-                    ),
-                    shell=True,
-                )
-
-            except subprocess.CalledProcessError as ext:
-                logging.debug(ext.output)
-                raise Exception("Some error occurred in performing rollback")
-        else:
-            # Should I add background flag in this?
-            subprocess.run("lvconvert --merge {vm_id_vol_snap}", shell=True, check=True)
-            # Create the snapshot again for next rollback
-            subprocess.run(
-                ' '.join(
                     [
-                        "lvcreate",
-                        "-s",  # snapshot flag
-                        "-L", self.install_info.disk_size,
-                        "-n", f"vm-{vm_id}-snap",
+                        "lvremove",
+                        "-v",
+                        "-y",
+                        # "--noudevsync",
                         f"{self.lvm_volume_group}/vm-{vm_id}"
-                    ]
-                ),
-                shell=True,
-                check=True
+                    ],
+                    stderr=subprocess.STDOUT,
+                )
+            except subprocess.CalledProcessError as exc:
+                raise RuntimeError(f"Failed to discard previous logical volume {self.lvm_volume_group}/vm-{vm_id}")
+
+        try:
+            subprocess.check_output(
+                [
+                    "lvcreate",
+                    "-s",
+                    "-L", self.snapshot_disksize,
+                    "-n", f"vm-{vm_id}",
+                    f"{self.lvm_volume_group}/vm-0"
+                ],
+                stderr=subprocess.STDOUT
             )
+        except subprocess.CalledProcessError as exc:
+            logging.debug(exc.output)
+            raise RuntimeError("Couldn't rollback disk")
 
     def get_vm0_snapshot_time(self):
         """ Get UNIX timestamp of when vm-0 snapshot was last modified """
@@ -499,7 +456,7 @@ class LvmStorageBackend(StorageBackendBase):
                     "losetup",
                     "-f", "--partscan",
                     "--show", "--read-only",
-                    f"/dev/{self.lvm_volume_group}/vm-0-snap",
+                    f"/dev/{self.lvm_volume_group}/vm-0",
                 ]
             ),
             shell=True,
@@ -522,11 +479,10 @@ class LvmStorageBackend(StorageBackendBase):
 
     def export_vm0(self, path: str):
         """ Export vm-0 disk into a file (symmetric to import_vm0) """
-        # Should this be exported from snapshot or real disk
         subprocess.run(
             [
                 "dd",
-                f"if=/dev/{self.lvm_volume_group}/vm-0-snap",
+                f"if=/dev/{self.lvm_volume_group}/vm-0",
                 f"of={path}",
                 "status=progress"
             ],
@@ -535,11 +491,10 @@ class LvmStorageBackend(StorageBackendBase):
 
     def import_vm0(self, path: str):
         """ Import vm-0 disk from a file (symmetric to export_vm0) """
-        # Should this be restored to snapshot or the original disk?
         subprocess.run(
             [
                 "dd",
-                f"of=/dev/{self.lvm_volume_group}/vm-0-snap",
+                f"of=/dev/{self.lvm_volume_group}/vm-0",
                 f"if={path}",
                 "status=progress"
             ],
