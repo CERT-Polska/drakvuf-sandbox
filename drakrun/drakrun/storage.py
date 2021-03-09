@@ -372,8 +372,8 @@ class LvmStorageBackend(StorageBackendBase):
                     "lvcreate",
                     "-s",
                     "-L", self.snapshot_disksize,
-                    "-n", f"vm-{vm_id}",
-                    f"{self.lvm_volume_group}/vm-0-snap"
+                    "-n", "vm-0-snap",
+                    f"{self.lvm_volume_group}/vm-0"
                 ],
                 stderr=subprocess.STDOUT
             )
@@ -406,6 +406,7 @@ class LvmStorageBackend(StorageBackendBase):
                     stderr=subprocess.STDOUT,
                 )
             except subprocess.CalledProcessError as exc:
+                logging.debug(exc.output)
                 raise RuntimeError(f"Failed to discard previous logical volume {self.lvm_volume_group}/vm-{vm_id}")
 
         try:
