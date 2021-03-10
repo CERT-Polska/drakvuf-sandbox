@@ -15,7 +15,7 @@ import subprocess
 def tool_exists(tool):
     try:
         subprocess.check_output(f'which {tool}', shell=True)
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         return False
     else:
         return True
