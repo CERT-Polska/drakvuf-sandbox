@@ -113,7 +113,7 @@ def stop_dnsmasq(vm_id: int):
 
 def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server: str):
     try:
-        subprocess.run(f'brctl addbr drak{vm_id}', stderr=subprocess.STDOUT, shell=True, check=True)
+        subprocess.check_output(f'brctl addbr drak{vm_id}', stderr=subprocess.STDOUT, shell=True)
         logging.info(f"Created bridge drak{vm_id}")
     except subprocess.CalledProcessError as e:
         if b'already exists' in e.output:
@@ -144,10 +144,10 @@ def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server
 
 def delete_vm_network(vm_id, net_enable, out_interface, dns_server):
     try:
-        subprocess.run(f'ip link set dev drak{vm_id} down', shell=True, stderr=subprocess.PIPE, check=True)
+        subprocess.check_output(f'ip link set dev drak{vm_id} down', shell=True, stderr=subprocess.PIPE)
         logging.info(f"Bridge drak{vm_id} is down")
     except subprocess.CalledProcessError as e:
-        if b"Cannot find device" in e.stderr:
+        if b"Cannot find device" in e.output:
             log.info(f"Already deleted drak{vm_id} bridge")
         else:
             log.exception(f"Couldn't delete drak{vm_id}")
