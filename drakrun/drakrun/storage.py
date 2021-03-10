@@ -333,7 +333,7 @@ class Qcow2StorageBackend(StorageBackendBase):
     def delete_vm_volume(self, vm_id: str):
         # unmount can be done here
         disk_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
-        if safe_delete(disk_path) is False:
+        if not safe_delete(disk_path):
             raise Exception(f"Couldn't delete vm-{vm_id}.img")
 
 
