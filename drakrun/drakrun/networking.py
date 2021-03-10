@@ -17,9 +17,9 @@ def iptable_rule_exists(rule):
         if e.returncode == 1:
             # rule doesn't exist
             return False
-    else:
-        # some other error
-        raise RuntimeError(f'Failed to check for iptables rule: {rule}')
+        else:
+            # some other error
+            raise RuntimeError(f'Failed to check for iptables rule: {rule}')
 
 
 def add_iptable_rule(rule):
