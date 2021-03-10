@@ -13,12 +13,7 @@ import subprocess
 
 
 def tool_exists(tool):
-    try:
-        subprocess.check_output(f'which {tool}', shell=True)
-    except subprocess.CalledProcessError:
-        return False
-    else:
-        return True
+    return subprocess.run(["which", tool]).returncode == 0
 
 
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
