@@ -483,8 +483,8 @@ def postinstall(report, generate_usermode):
 
     logging.info("Cleaning up leftovers(if any)")
 
-    for _ in os.listdir(PROFILE_DIR):
-        safe_delete(os.path.join(PROFILE_DIR, _))
+    for profile in os.listdir(PROFILE_DIR):
+        safe_delete(os.path.join(PROFILE_DIR, profile))
 
     logging.info("Ejecting installation CDs")
     eject_cd("vm-0", FIRST_CDROM_DRIVE)
