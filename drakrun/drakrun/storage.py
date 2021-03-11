@@ -250,7 +250,6 @@ class Qcow2StorageBackend(StorageBackendBase):
         except FileNotFoundError:
             pass
 
-        # dummy commit
         subprocess.run(
             [
                 "qemu-img-xen",
