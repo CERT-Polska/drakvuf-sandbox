@@ -28,7 +28,6 @@ def add_iptable_rule(rule):
 
 
 def del_iptable_rule(rule):
-
     # For deleting multiple copies of the same rule
     all_cleared = False
 
@@ -164,7 +163,6 @@ def delete_vm_network(vm_id, net_enable, out_interface, dns_server):
     del_iptable_rule(f"INPUT -i drak{vm_id} -d 0.0.0.0/0 -j DROP")
 
     if net_enable:
-
         del_iptable_rule(f"POSTROUTING -t nat -s 10.13.{vm_id}.0/24 -o {out_interface} -j MASQUERADE")
         del_iptable_rule(f"FORWARD -i drak{vm_id} -o {out_interface} -j ACCEPT")
         del_iptable_rule(f"FORWARD -i {out_interface} -o drak{vm_id} -j ACCEPT")

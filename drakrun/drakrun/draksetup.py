@@ -92,6 +92,11 @@ def stop_all_drakruns():
         raise Exception("Drakrun services not stopped")
 
 
+def cleanup_postinstall_files():
+    for profile in os.listdir(PROFILE_DIR):
+        safe_delete(os.path.join(PROFILE_DIR, profile))
+
+
 @click.command(help='Cleanup the changes made by draksetup')
 def cleanup():
     if not check_root():
@@ -125,6 +130,7 @@ def cleanup():
         delete_vm_conf(vm_id)
 
     safe_delete(os.path.join(VOLUME_DIR, 'snapshot.sav'))
+    cleanup_postinstall_files()
 
     InstallInfo.delete()
 
@@ -482,9 +488,7 @@ def postinstall(report, generate_usermode):
     install_info = InstallInfo.load()
 
     logging.info("Cleaning up leftovers(if any)")
-
-    for profile in os.listdir(PROFILE_DIR):
-        safe_delete(os.path.join(PROFILE_DIR, profile))
+    cleanup_postinstall_files()
 
     logging.info("Ejecting installation CDs")
     eject_cd("vm-0", FIRST_CDROM_DRIVE)

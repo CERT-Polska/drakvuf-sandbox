@@ -17,7 +17,6 @@ from drakrun.storage import get_storage_backend
 from drakrun.util import RuntimeInfo, graceful_exit
 from drakrun.injector import Injector
 from drakrun.draksetup import find_default_interface
-import sys
 
 
 class DrakmonShell:

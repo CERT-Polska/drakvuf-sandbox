@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Optional
 from dataclasses_json import DataClassJsonMixin
 from drakrun.util import safe_delete
-import logging
 
 ETC_DIR = os.getenv("DRAKRUN_ETC_DIR") or "/etc/drakrun"
 VM_CONFIG_DIR = os.path.join(ETC_DIR, "configs")
