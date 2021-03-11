@@ -210,9 +210,9 @@ class Qcow2StorageBackend(StorageBackendBase):
 
     @staticmethod
     def check_tools():
-        """ Verify existence of qemu-img """
+        """ Verify existence of qemu-img-xen """
         try:
-            subprocess.check_output("qemu-img --version", shell=True)
+            subprocess.check_output("qemu-img-xen --version", shell=True)
         except subprocess.CalledProcessError:
             raise RuntimeError("Failed to determine qemu-img version. "
                                "Make sure you have qemu-utils installed.")
@@ -222,7 +222,7 @@ class Qcow2StorageBackend(StorageBackendBase):
             subprocess.check_output(
                 " ".join(
                     [
-                        "qemu-img",
+                        "qemu-img-xen",
                         "create",
                         "-f",
                         "qcow2",
@@ -253,14 +253,12 @@ class Qcow2StorageBackend(StorageBackendBase):
 
         subprocess.run(
             [
-                "qemu-img",
+                "qemu-img-xen",
                 "create",
                 "-f",
                 "qcow2",
-                "-F",
-                "qcow2",
-                "-o",
-                f"backing_file={vm0_path}",
+                "-b",
+                vm0_path,
                 volume_path
             ],
             check=True,
@@ -280,7 +278,7 @@ class Qcow2StorageBackend(StorageBackendBase):
             # TODO: this assumes /dev/nbd0 is free
             volume = os.path.join(VOLUME_DIR, 'vm-0.img')
             subprocess.check_output(
-                f"qemu-nbd -c /dev/nbd0 --read-only {volume}",
+                f"qemu-nbd-xen -c /dev/nbd0 --read-only {volume}",
                 shell=True,
             )
         except subprocess.CalledProcessError:
@@ -299,7 +297,7 @@ class Qcow2StorageBackend(StorageBackendBase):
 
         yield dev
 
-        subprocess.check_output("qemu-nbd --disconnect /dev/nbd0", shell=True)
+        subprocess.check_output("qemu-nbd-xen --disconnect /dev/nbd0", shell=True)
 
     def export_vm0(self, path: str):
         shutil.copy(os.path.join(VOLUME_DIR, 'vm-0.img'), path)
