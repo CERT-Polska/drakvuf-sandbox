@@ -23,6 +23,7 @@ class InstallInfo(DataClassJsonMixin):
     vcpus: int = 2
     memory: int = 3072
     zfs_tank_name: Optional[str] = None
+    lvm_volume_group: Optional[str] = None
     iso_sha256: Optional[str] = None
 
     _INSTALL_FILENAME = "install.json"

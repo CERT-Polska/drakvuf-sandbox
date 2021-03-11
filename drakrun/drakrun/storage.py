@@ -7,6 +7,10 @@ import subprocess
 import time
 import shlex
 import shutil
+import logging
+import re
+import json
+import datetime
 
 from typing import Generator, Tuple
 from drakrun.config import InstallInfo, VOLUME_DIR
@@ -308,9 +312,197 @@ class Qcow2StorageBackend(StorageBackendBase):
         shutil.copy(path, os.path.join(VOLUME_DIR, 'vm-0.img'))
 
 
+class LvmStorageBackend(StorageBackendBase):
+    """Implements storage backend based on lvm storage"""
+
+    def __init__(self, install_info: InstallInfo):
+        super().__init__(install_info)
+        self.lvm_volume_group = install_info.lvm_volume_group
+        self.install_info = install_info
+        self.check_tools()
+        self.snapshot_disksize = "1G"
+
+    def check_tools(self):
+        """ Verify existence of lvm command utility """
+        try:
+            subprocess.run(["vgs", self.lvm_volume_group], check=True, stdout=subprocess.DEVNULL)
+        except subprocess.CalledProcessError:
+            raise RuntimeError("Failed to execute vgs command"
+                               f"Make sure you have LVM support installed with {self.lvm_volume_group} as a volume group")
+
+    def initialize_vm0_volume(self, disk_size: str):
+        """Create base volume for vm-0 with given size
+
+        disk_size - string representing volume size with M/G/T suffix, eg. 100G
+        """
+        try:
+            logging.info("Deleting existing logical volume and snapshot")
+            subprocess.check_output(
+                [
+                    "lvremove",
+                    "-v",
+                    "-y",
+                    # "--noudevsync",
+                    f"{self.lvm_volume_group}/vm-0"
+                ],
+                stderr=subprocess.STDOUT,
+            )
+        except subprocess.CalledProcessError as exc:
+            if b"Failed to find logical volume" not in exc.output:
+                raise RuntimeError(f"Failed to destroy logical volume {self.lvm_volume_group}/vm-0")
+        try:
+            logging.info("Creating new volume vm-0")
+            subprocess.run(
+                [
+                    "lvcreate",
+                    "-L", disk_size,
+                    "-n", "vm-0",
+                    self.lvm_volume_group
+                ],
+                check=True
+            )
+        except subprocess.CalledProcessError:
+            raise RuntimeError("Failed to create a new volume using lvcreate.")
+
+    def snapshot_vm0_volume(self):
+        """ Saves or snapshots base vm-0 volume for later use by other VMs """
+        # vm-0 is the original disk being treated as a snapshot
+        # vm-0-snap is being created just for the access time of the change in vm snapshot
+        try:
+            subprocess.check_output(
+                [
+                    "lvcreate",
+                    "-s",
+                    "-L", self.snapshot_disksize,
+                    "-n", "vm-0-snap",
+                    f"{self.lvm_volume_group}/vm-0"
+                ],
+                stderr=subprocess.STDOUT
+            )
+        except subprocess.CalledProcessError as exc:
+            logging.debug(exc.output)
+            raise RuntimeError("Couldn't create snapshot")
+
+    def get_vm_disk_path(self, vm_id: int) -> str:
+        """ Returns disk path for given VM as defined by XL configuration """
+        return f"phy:/dev/{self.lvm_volume_group}/vm-{vm_id},hda,w"
+
+    def rollback_vm_storage(self, vm_id: int):
+        """ Rolls back changes and prepares fresh storage for new run of this VM """
+        vm_id_vol = os.path.join("/dev", f"{self.lvm_volume_group}", f"vm-{vm_id}")
+
+        if vm_id == 0:
+            raise Exception("vm-0 should not be rollbacked")
+
+        logging.info(f"Rolling back changes to vm-{vm_id} disk")
+        if os.path.exists(vm_id_vol):
+            try:
+                subprocess.check_output(
+                    [
+                        "lvremove",
+                        "-v",
+                        "-y",
+                        # "--noudevsync",
+                        f"{self.lvm_volume_group}/vm-{vm_id}"
+                    ],
+                    stderr=subprocess.STDOUT,
+                )
+            except subprocess.CalledProcessError as exc:
+                logging.debug(exc.output)
+                raise RuntimeError(f"Failed to discard previous logical volume {self.lvm_volume_group}/vm-{vm_id}")
+
+        try:
+            subprocess.check_output(
+                [
+                    "lvcreate",
+                    "-s",
+                    "-L", self.snapshot_disksize,
+                    "-n", f"vm-{vm_id}",
+                    f"{self.lvm_volume_group}/vm-0"
+                ],
+                stderr=subprocess.STDOUT
+            )
+        except subprocess.CalledProcessError as exc:
+            logging.debug(exc.output)
+            raise RuntimeError("Couldn't rollback disk")
+
+    def get_vm0_snapshot_time(self):
+        """ Get UNIX timestamp of when vm-0 snapshot was last modified """
+
+        p = subprocess.run(["lvs", "-o", "lv_name,lv_time", "--reportformat", "json"],
+                           capture_output=True, check=True)
+
+        lvs = json.loads(p.stdout.decode('utf-8'))['report'][0]['lv']
+        target_lvs = list(filter(lambda x: x['lv_name'] == 'vm-0-snap', lvs))
+
+        if len(target_lvs) > 1:
+            raise RuntimeError('Found multiple lvs named vm-0-snap!')
+
+        if len(target_lvs) == 0:
+            raise RuntimeError('Failed to find LV vm-0-snap!')
+
+        dt = datetime.datetime.strptime(target_lvs[0]['lv_time'], "%Y-%m-%d %H:%M:%S %z")
+        return int(dt.timestamp())
+
+    @contextlib.contextmanager
+    def vm0_root_as_block(self) -> Generator[str, None, None]:
+        """ Mounts vm-0 root partition as block device"""
+        out = subprocess.check_output(
+            ' '.join(
+                [
+                    "losetup",
+                    "-f", "--partscan",
+                    "--show", "--read-only",
+                    f"/dev/{self.lvm_volume_group}/vm-0",
+                ]
+            ),
+            shell=True,
+        ).decode('ascii').strip('\n').strip()
+
+        # return the second partition
+        volume_path = out + 'p2'
+
+        for _ in range(60):
+            if os.path.exists(volume_path):
+                break
+            time.sleep(1.0)
+        else:
+            raise RuntimeError(f"LVM volume not available at {volume_path}")
+
+        yield volume_path
+
+        subprocess.run(f'umount {out}', shell=True)
+        subprocess.run(f'losetup -d {out}', shell=True)
+
+    def export_vm0(self, path: str):
+        """ Export vm-0 disk into a file (symmetric to import_vm0) """
+        subprocess.run(
+            [
+                "dd",
+                f"if=/dev/{self.lvm_volume_group}/vm-0",
+                f"of={path}",
+                "status=progress"
+            ],
+            check=True
+        )
+
+    def import_vm0(self, path: str):
+        """ Import vm-0 disk from a file (symmetric to export_vm0) """
+        subprocess.run(
+            [
+                "dd",
+                f"of=/dev/{self.lvm_volume_group}/vm-0",
+                f"if={path}",
+                "status=progress"
+            ],
+            check=True
+        )
+
+
 REGISTERED_BACKENDS = {
     "qcow2": Qcow2StorageBackend,
     "zfs": ZfsStorageBackend,
+    "lvm": LvmStorageBackend,
 }
 
 REGISTERED_BACKEND_NAMES: Tuple[str] = tuple(REGISTERED_BACKENDS.keys())

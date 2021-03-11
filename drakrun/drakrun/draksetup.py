@@ -76,6 +76,12 @@ def ensure_zfs(ctx, param, value):
     return value
 
 
+def ensure_lvm(ctx, param, value):
+    if value is not None and ctx.params['storage_backend'] != "lvm":
+        raise click.BadParameter("This parameter is valid only with LVM backend")
+    return value
+
+
 def check_root():
     if os.getuid() != 0:
         logging.error("Please run the command as root")
@@ -186,12 +192,21 @@ def test():
 @click.option('--zfs-tank-name', 'zfs_tank_name',
               callback=ensure_zfs,
               help='Tank name (only for ZFS storage backend)')
+@click.option('--lvm-volume-group', 'lvm_volume_group',
+              callback=ensure_lvm,
+              help='Volume Group (only for lvm storage backend)'
+              )
 @click.option('--unattended-xml', 'unattended_xml',
               type=click.Path(exists=True),
               help='Path to autounattend.xml for automated Windows install')
-def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, unattended_xml):
+def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, lvm_volume_group, unattended_xml):
     if not check_root():
         return
+
+    if storage_backend == "lvm" and lvm_volume_group is None:
+        raise Exception("lvm storage backend requires --lvm-volume-group")
+    if storage_backend == "zfs" and zfs_tank_name is None:
+        raise Exception("zfs storage backend requires --zfs-tank-name")
 
     if not sanity_check():
         logging.error("Sanity check failed.")
@@ -247,6 +262,7 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
         disk_size=disk_size,
         iso_path=os.path.abspath(iso_path),
         zfs_tank_name=zfs_tank_name,
+        lvm_volume_group=lvm_volume_group,
         enable_unattended=unattended_xml is not None,
         iso_sha256=iso_sha256
     )
