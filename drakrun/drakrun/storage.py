@@ -5,7 +5,6 @@ import subprocess
 import time
 import shlex
 import shutil
-import logging
 import re
 import json
 import datetime
