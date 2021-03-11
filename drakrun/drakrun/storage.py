@@ -212,10 +212,9 @@ class Qcow2StorageBackend(StorageBackendBase):
     def check_tools():
         """ Verify existence of qemu-img-xen """
         try:
-            subprocess.check_output("qemu-img-xen --version", shell=True)
+            subprocess.check_output("which qemu-img-xen", shell=True)
         except subprocess.CalledProcessError:
-            raise RuntimeError("Failed to determine qemu-img version. "
-                               "Make sure you have qemu-utils installed.")
+            raise RuntimeError("Make sure you have xen properly installed with drakvuf-bundle")
 
     def initialize_vm0_volume(self, disk_size: str):
         try:
