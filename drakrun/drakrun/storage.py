@@ -427,27 +427,20 @@ class LvmStorageBackend(StorageBackendBase):
     def get_vm0_snapshot_time(self):
         """ Get UNIX timestamp of when vm-0 snapshot was last modified """
 
-        dir_path = '/etc/lvm/archive'
-        required_file_names = filter(lambda f: self.lvm_volume_group in f, os.listdir(dir_path))
-        file_name = sorted(required_file_names, key=lambda f: os.stat(os.path.join(dir_path, f)).st_mtime)[-1]  # last updated file
+        p = subprocess.run(["lvs", "-o", "lv_name,lv_time", "--reportformat", "json"],
+                           capture_output=True, check=True)
 
-        # Ugly code, any better alternatives?
-        with open(os.path.join(dir_path, file_name), 'r') as f:
-            lines = f.readlines()
-            flag = [False, False]
-            for i in lines:
-                i = i.strip()
-                if 'logical_volumes {' == i:
-                    flag[0] = True
-                if 'vm-0-snap {' == i:
-                    flag[1] = True
-                if flag[0] and flag[1]:
-                    try:
-                        return re.search(r'^creation_time = (\d*)$', i).group(1)
-                    except Exception as e:
-                        raise Exception("Creation time could not be found") from e
-                    else:
-                        break
+        lvs = json.loads(p.stdout.decode('utf-8'))['report'][0]['lv']
+        target_lvs = list(filter(lambda x: x['lv_name'] == 'vm-0-snap', lvs))
+
+        if len(target_lvs) > 1:
+            raise RuntimeError('Found multiple lvs named vm-0-snap!')
+
+        if len(target_lvs) == 0:
+            raise RuntimeError('Failed to find LV vm-0-snap!')
+
+        dt = datetime.datetime.strptime(target_lvs[0]['lv_time'], "%Y-%m-%d %H:%M:%S %z")
+        return int(dt.timestamp())
 
     @contextlib.contextmanager
     def vm0_root_as_block(self) -> Generator[str, None, None]:
