@@ -1,4 +1,5 @@
 import argparse
+import logging
 import tempfile
 import subprocess
 from pathlib import Path, PureWindowsPath as WinPath
@@ -7,6 +8,8 @@ from IPython import embed
 from drakrun.networking import (
     setup_vm_network,
     start_dnsmasq,
+    delete_vm_network,
+    stop_dnsmasq,
 )
 from drakrun.vm import generate_vm_conf, VirtualMachine
 from drakrun.config import InstallInfo, PROFILE_DIR, ETC_DIR
@@ -18,11 +21,15 @@ from drakrun.draksetup import find_default_interface
 
 class DrakmonShell:
     def __init__(self, vm_id: int, dns: str):
+
+        self.cleanup(vm_id)
+
         install_info = InstallInfo.load()
         backend = get_storage_backend(install_info)
 
         generate_vm_conf(install_info, vm_id)
         self.vm = VirtualMachine(backend, vm_id)
+        self._dns = dns
 
         with open(Path(PROFILE_DIR) / "runtime.json", 'r') as f:
             self.runtime_info = RuntimeInfo.load(f)
@@ -35,6 +42,14 @@ class DrakmonShell:
             self.kernel_profile,
         )
         setup_vm_network(vm_id, True, find_default_interface(), dns)
+
+    def cleanup(self, vm_id: int):
+
+        logging.info(f"Ensuring that drakrun@{vm_id} service is stopped...")
+        try:
+            subprocess.run('systemctl', 'stop', f'drakrun@{vm_id}', shell=True, stderr=subprocess.STDOUT, check=True)
+        except subprocess.CalledProcessError:
+            raise Exception(f"drakrun@{vm_id} not stopped")
 
     def drakvuf(self, plugins, timeout=60):
         d = tempfile.TemporaryDirectory(prefix="drakvuf_")
@@ -85,6 +100,7 @@ class DrakmonShell:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.vm.destroy()
+        delete_vm_network(self.vm.vm_id, True, find_default_interface(), self._dns)
 
 
 def main():
@@ -94,8 +110,14 @@ def main():
 
     args = parser.parse_args()
 
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='[%(asctime)s][%(levelname)s] %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
+
     with graceful_exit(start_dnsmasq(args.vm_id, args.dns)), \
-         DrakmonShell(args.vm_id, args.dns) as shell:
+            DrakmonShell(args.vm_id, args.dns) as shell:
         helpers = {
             'copy': shell.copy,
             'drakvuf': shell.drakvuf,

@@ -1,6 +1,4 @@
-"""
-TODO: Add logging
-"""
+import logging
 import contextlib
 import os
 import subprocess
@@ -14,6 +12,7 @@ import datetime
 
 from typing import Generator, Tuple
 from drakrun.config import InstallInfo, VOLUME_DIR
+from drakrun.util import safe_delete
 
 
 class StorageBackendBase:
@@ -70,6 +69,10 @@ class StorageBackendBase:
 
     def import_vm0(self, file):
         """ Import vm-0 disk from a file (symmetric to export_vm0) """
+        raise NotImplementedError
+
+    def delete_vm_volume(self, vm_id: int):
+        """ Delete vm_id disk volume """
         raise NotImplementedError
 
 
@@ -181,6 +184,7 @@ class ZfsStorageBackend(StorageBackendBase):
 
         yield volume_path
 
+        subprocess.run(f"umount {volume_path}", shell=True)
         subprocess.check_output(f"zfs destroy {tmp_snap}", shell=True)
 
     def export_vm0(self, file):
@@ -192,17 +196,35 @@ class ZfsStorageBackend(StorageBackendBase):
             )
 
     def import_vm0(self, file):
-        # Clean ZFS dataset
-        subprocess.run(
-            ["zfs", "destroy", "-r", "self.zfs_tank_name"],
-            check=True
-        )
+        self.delete_zfs_tank()
         with open(file, "rb") as snapshot_file:
             subprocess.run(
                 ["zfs", "recv", f"{self.zfs_tank_name}/vm-0@booted"],
                 check=True,
                 stdout=snapshot_file
             )
+
+    def delete_vm_volume(self, vm_id: int):
+        vm_id_vol = os.path.join(self.zfs_tank_name, f"vm-{vm_id}")
+        try:
+            logging.info(f"Deleting zfs volume {vm_id_vol}")
+            subprocess.check_output(
+                ["zfs", "destroy", "-Rfr", vm_id_vol], stderr=subprocess.STDOUT
+            )
+        except subprocess.CalledProcessError as exc:
+            logging.error(exc.stdout)
+            raise Exception(f"Couldn't delete {vm_id_vol}")
+
+    def delete_zfs_tank(self):
+        try:
+            logging.info("Deleting zfs tank")
+            subprocess.run(
+                ["zfs", "destroy", "-r", f"{self.zfs_tank_name}"],
+                check=True
+            )
+        except subprocess.CalledProcessError as exc:
+            logging.error(exc.stdout)
+            raise Exception(f"Couldn't delete {self.zfs_tank_name}")
 
 
 class Qcow2StorageBackend(StorageBackendBase):
@@ -303,6 +325,7 @@ class Qcow2StorageBackend(StorageBackendBase):
 
         yield dev
 
+        subprocess.check_output(f"umount {dev}", shell=True)
         subprocess.check_output("qemu-nbd --disconnect /dev/nbd0", shell=True)
 
     def export_vm0(self, path: str):
@@ -310,6 +333,12 @@ class Qcow2StorageBackend(StorageBackendBase):
 
     def import_vm0(self, path: str):
         shutil.copy(path, os.path.join(VOLUME_DIR, 'vm-0.img'))
+
+    def delete_vm_volume(self, vm_id: str):
+        # unmount can be done here
+        disk_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
+        if not safe_delete(disk_path):
+            raise Exception(f"Couldn't delete vm-{vm_id}.img")
 
 
 class LvmStorageBackend(StorageBackendBase):

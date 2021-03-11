@@ -120,6 +120,19 @@ def get_xen_commandline(parsed_xl_info):
     return cfg
 
 
+def safe_delete(file_path) -> bool:
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logging.info(f"Deleted {file_path}")
+        else:
+            logging.info(f"Already deleted {file_path}")
+        return True
+    except OSError as e:
+        logging.warning(f"{e.filename}: {e.strerror}")
+        return False
+
+
 @contextlib.contextmanager
 def graceful_exit(proc: subprocess.Popen):
     try:

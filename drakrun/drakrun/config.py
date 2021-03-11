@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from typing import Optional
 from dataclasses_json import DataClassJsonMixin
+from drakrun.util import safe_delete
 
 ETC_DIR = os.getenv("DRAKRUN_ETC_DIR") or "/etc/drakrun"
 VM_CONFIG_DIR = os.path.join(ETC_DIR, "configs")
@@ -27,11 +28,12 @@ class InstallInfo(DataClassJsonMixin):
     iso_sha256: Optional[str] = None
 
     _INSTALL_FILENAME = "install.json"
+    _INSTALL_FILE_PATH = os.path.join(ETC_DIR, _INSTALL_FILENAME)
 
     @staticmethod
     def load() -> 'InstallInfo':
         """ Reads and parses install.json file """
-        with open(os.path.join(ETC_DIR, InstallInfo._INSTALL_FILENAME), "r") as f:
+        with open(InstallInfo._INSTALL_FILE_PATH, "r") as f:
             return InstallInfo.from_json(f.read())
 
     @staticmethod
@@ -42,9 +44,14 @@ class InstallInfo(DataClassJsonMixin):
         except FileNotFoundError:
             return None
 
+    @staticmethod
+    def delete():
+        if not safe_delete(InstallInfo._INSTALL_FILE_PATH):
+            raise Exception("install.json not deleted")
+
     def save(self):
         """ Serializes self and writes to install.json """
-        with open(os.path.join(ETC_DIR, InstallInfo._INSTALL_FILENAME), "w") as f:
+        with open(InstallInfo._INSTALL_FILE_PATH, "w") as f:
             f.write(json.dumps(self.to_dict(), indent=4))
 
 

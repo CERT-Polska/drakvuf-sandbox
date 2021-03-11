@@ -22,10 +22,10 @@ from minio import Minio
 from minio.error import NoSuchKey
 from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from drakrun.config import InstallInfo, LIB_DIR, VOLUME_DIR, PROFILE_DIR, ETC_DIR, VM_CONFIG_DIR
-from drakrun.networking import setup_vm_network, start_dnsmasq
+from drakrun.networking import setup_vm_network, start_dnsmasq, delete_vm_network, stop_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
-from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE
-from drakrun.util import RuntimeInfo, VmiOffsets
+from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE, get_all_vm_conf, delete_vm_conf, VirtualMachine
+from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
 from tqdm import tqdm
 
 
@@ -88,6 +88,57 @@ def check_root():
         return False
     else:
         return True
+
+
+def stop_all_drakruns():
+    logging.info("Ensuring that drakrun@* services are stopped...")
+    try:
+        subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError:
+        raise Exception("Drakrun services not stopped")
+
+
+def cleanup_postinstall_files():
+    for profile in os.listdir(PROFILE_DIR):
+        safe_delete(os.path.join(PROFILE_DIR, profile))
+
+
+@click.command(help='Cleanup the changes made by draksetup')
+def cleanup():
+    if not check_root():
+        return
+
+    install_info = InstallInfo.try_load()
+
+    if install_info is None:
+        logging.error("The cleanup has been performed")
+        return
+
+    stop_all_drakruns()
+
+    backend = get_storage_backend(install_info)
+    vm_ids = get_all_vm_conf()
+
+    net_enable = int(conf['drakrun'].get('net_enable', '0'))
+    out_interface = conf['drakrun'].get('out_interface', '')
+    dns_server = conf['drakrun'].get('dns_server', '')
+
+    for vm_id in vm_ids:
+        vm = VirtualMachine(backend, vm_id)
+        vm.destroy()
+
+        delete_vm_network(vm_id=vm_id, net_enable=net_enable, out_interface=out_interface, dns_server=dns_server)
+        if net_enable:
+            stop_dnsmasq(vm_id=vm_id)
+
+        backend.delete_vm_volume(vm_id)
+
+        delete_vm_conf(vm_id)
+
+    safe_delete(os.path.join(VOLUME_DIR, 'snapshot.sav'))
+    cleanup_postinstall_files()
+
+    InstallInfo.delete()
 
 
 def sanity_check():
@@ -212,8 +263,7 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
         logging.error("Sanity check failed.")
         return
 
-    logging.info("Ensuring that drakrun@* services are stopped...")
-    subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
+    stop_all_drakruns()
 
     logging.info("Performing installation...")
 
@@ -287,7 +337,7 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
         logging.exception("Failed to execute brctl show. Make sure you have bridge-utils installed.")
         return
 
-    net_enable = int(conf['drakrun'].get('net_enable', '0'))
+    net_enable = conf['drakrun'].getboolean('net_enable', fallback=False)
     out_interface = conf['drakrun'].get('out_interface', '')
     dns_server = conf['drakrun'].get('dns_server', '')
 
@@ -452,6 +502,9 @@ def postinstall(report, generate_usermode):
         report = False
 
     install_info = InstallInfo.load()
+
+    logging.info("Cleaning up leftovers(if any)")
+    cleanup_postinstall_files()
 
     logging.info("Ejecting installation CDs")
     eject_cd("vm-0", FIRST_CDROM_DRIVE)
@@ -822,6 +875,7 @@ main.add_command(postupgrade)
 main.add_command(mount)
 main.add_command(scale)
 main.add_command(snapshot)
+main.add_command(cleanup)
 
 
 if __name__ == "__main__":

@@ -12,6 +12,7 @@ from drakrun.config import (
     LIB_DIR,
     InstallInfo
 )
+from drakrun.util import safe_delete
 
 log = logging.getLogger("drakrun")
 
@@ -55,6 +56,23 @@ def generate_vm_conf(install_info: InstallInfo, vm_id: int):
     log.info("Generated VM configuration for vm-{vm_id}".format(vm_id=vm_id))
 
 
+def get_all_vm_conf() -> list:
+    regex = re.compile(r'vm-(\d+)\.cfg')
+    vm_ids = []
+
+    for f in os.listdir(VM_CONFIG_DIR):
+        reg = regex.search(f)
+
+        if reg is not None:
+            vm_ids.append(int(reg.group(1)))
+
+    return vm_ids
+
+
+def delete_vm_conf(vm_id: int) -> bool:
+    return safe_delete(os.path.join(VM_CONFIG_DIR, f"vm-{vm_id}.cfg"))
+
+
 class VirtualMachine:
     def __init__(self, backend: StorageBackendBase, vm_id: int) -> None:
         self.backend = backend
@@ -94,4 +112,5 @@ class VirtualMachine:
         :raises: subprocess.CalledProcessError
         """
         if self.is_running:
+            logging.info(f"Destroying {self.vm_name}")
             subprocess.run(["xl", "destroy", self.vm_name], check=True)
