@@ -428,25 +428,26 @@ class LvmStorageBackend(StorageBackendBase):
         """ Get UNIX timestamp of when vm-0 snapshot was last modified """
 
         dir_path = '/etc/lvm/archive'
-        proc = subprocess.run(f"ls {dir_path} -t | grep {self.lvm_volume_group} | head -n 1", shell=True, stdout=subprocess.PIPE)
-        file_name = proc.stdout.decode().strip()
+        required_file_names = filter(lambda f: self.lvm_volume_group in f, os.listdir(dir_path))
+        file_name = sorted(required_file_names, key=lambda f: os.stat(os.path.join(dir_path, f)).st_mtime)[-1]  # last updated file
 
         # Ugly code, any better alternatives?
         with open(os.path.join(dir_path, file_name), 'r') as f:
             lines = f.readlines()
-            flag = False
+            flag = [False, False]
             for i in lines:
-                if 'vm-0-snap {' in i:
-                    flag = True
-                if flag:
+                i = i.strip()
+                if 'logical_volumes {' == i:
+                    flag[0] = True
+                if 'vm-0-snap {' == i:
+                    flag[1] = True
+                if flag[0] and flag[1]:
                     try:
-                        timestamp = re.search(r'creation_time = (\d*)', f.read()).group(1)
-                    except Exception:
-                        pass
+                        return re.search(r'^creation_time = (\d*)$', i).group(1)
+                    except Exception as e:
+                        raise Exception("Creation time could not be found") from e
                     else:
                         break
-
-        return timestamp
 
     @contextlib.contextmanager
     def vm0_root_as_block(self) -> Generator[str, None, None]:
