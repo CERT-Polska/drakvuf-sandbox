@@ -3,7 +3,7 @@
     {
       "type": "qemu",
       "iso_urls": [
-        "https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-10.7.0-amd64-netinst.iso"
+        "https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-10.8.0-amd64-netinst.iso"
       ],
       "boot_command": [
         "<esc><wait>",
