@@ -8,6 +8,8 @@ import logging
 import parted
 
 # best way would be to use a new lvm volume group for testing
+
+
 def backup(install_info):
     # removing old backups, might be risky if the restore hasn't worked due to some issue
     subprocess.run(['lvremove', '-y', f'{install_info.lvm_volume_group}/vm-0-bak'])
@@ -178,6 +180,7 @@ def test_import_export(backend):
     # backend.export_vm0(filename)
     #
     # backend.import_vm0(filename)
+
 
 def test_delete_volume(backend):
     logging.info("Testing deleting volumes")
