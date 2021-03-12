@@ -170,7 +170,7 @@ def create_partitions(mount_vm0):
 
 
 def test_mount_without_paritions(backend):
-    logging.info("Testing mounting 2nd partition")
+    logging.info("Testing mounting 2nd parition without partitions")
 
     loop_dev = subprocess.run(['losetup', '-f'], capture_output=True).stdout.decode('utf-8')
 
