@@ -504,8 +504,7 @@ class LvmStorageBackend(StorageBackendBase):
             time.sleep(1.0)
         else:
             # some better idea to reduce redundancy in this?
-            if os.path.exists(out):
-                subprocess.run(f'losetup -d {out}', shell=True)
+            subprocess.run(f'losetup -d {out}', shell=True)
             raise RuntimeError(f"LVM volume not available at {volume_path}")
 
         yield volume_path
