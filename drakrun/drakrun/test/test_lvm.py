@@ -6,6 +6,7 @@ import subprocess
 import os
 import logging
 import parted
+import time
 
 # best way would be to use a new lvm volume group for testing
 
@@ -63,8 +64,22 @@ def test_initialize_vm0(backend):
     assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-0"]).returncode == 0
 
 
+def test_disk_path(backend):
+    """
+    A very straight forward test but, if a path will change it future, this test will fail
+    telling about changed paths
+
+    """
+    install_info = InstallInfo.load()
+    for vm_id in range(5):
+        assert backend.get_vm_disk_path(vm_id) == f"phy:/dev/{install_info.lvm_volume_group}/vm-{vm_id},hda,w"
+
+
 def test_snapshot_lvm(backend):
     install_info = InstallInfo.load()
+
+    with pytest.raises(Exception):
+        backend.get_vm0_snapshot_time()
 
     logging.info("Snapshot volume")
     backend.snapshot_vm0_volume()
@@ -167,6 +182,8 @@ def test_mount(backend, create_partitions):
         # /dev/loopXp2 should be visible
         assert os.path.exists(block_device) is True
 
+    # give some-time for yield to run
+    time.sleep(1)
     # /dev/loopX should not exist after this block
     assert subprocess.run(f"losetup {block_device_path[:-2]}", shell=True).returncode != 0
 
@@ -182,12 +199,26 @@ def test_import_export(backend):
     # backend.import_vm0(filename)
 
 
+# the vm0 drive is mounted
+def test_exception_raises(backend, mount_vm0):
+    install_info = InstallInfo.load()
+    with pytest.raises(Exception):
+        backend.initialize_vm0_volume(install_info.disk_size)
+
+    with pytest.raises(Exception):
+        backend.delete_vm_volume(0)
+
+
 def test_delete_volume(backend):
     logging.info("Testing deleting volumes")
     install_info = InstallInfo.load()
 
     backend.delete_vm_volume(1)
     assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-1"]).returncode != 0
+
+    # try deleting a deleted volume
+    with pytest.raises(Exception):
+        backend.delete_vm_volume(1)
 
     backend.delete_vm_volume(0)
     assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-0"]).returncode != 0
