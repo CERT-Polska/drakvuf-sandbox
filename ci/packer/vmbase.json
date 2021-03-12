@@ -15,7 +15,7 @@
         "url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg <wait>",
         "<enter><wait>"
       ],
-      "iso_checksum": "sha256:b317d87b0a3d5b568f48a92dcabfc4bc51fe58d9f67ca13b013f1b8329d1306d",
+      "iso_checksum": "sha256:396553f005ad9f86a51e246b1540c60cef676f9c71b95e22b753faef59f89bee",
       "output_directory": "debian_base",
       "http_directory": ".",
       "shutdown_command": "shutdown -P now",
