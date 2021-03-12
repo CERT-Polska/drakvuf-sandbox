@@ -165,7 +165,7 @@ def sanity_check():
 
 r = redis.Redis(host='localhost',port= )
 
-def redis.check(r):
+def look_for_redis(r):
     try:
         r.ping()
         print("Successfully connected to redis")
@@ -174,8 +174,8 @@ def redis.check(r):
         return False
     return True
 
-if is_redis_available(r):
-    print("Yay!")
+if look_for_redis(r):
+    print("Redis is working just fine")
 
 def perform_xtf():
     logging.info('Testing your Xen installation...')
