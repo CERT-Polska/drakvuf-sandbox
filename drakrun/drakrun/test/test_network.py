@@ -10,10 +10,7 @@ from drakrun.networking import (
 from drakrun.draksetup import find_default_interface
 import os
 import subprocess
-
-
-def tool_exists(tool):
-    return subprocess.run(["which", tool]).returncode == 0
+from common_utils import tool_exists
 
 
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
