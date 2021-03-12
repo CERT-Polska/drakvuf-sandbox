@@ -36,6 +36,7 @@ def count_num_rules(rule):
     return count
 
 
+@pytest.mark.skipif(not tool_exists('iptables'), reason="iptables does not exist")
 def test_iptables():
     rule = "INPUT -i draktest0 -d 239.255.255.0/24 -j DROP"
 
