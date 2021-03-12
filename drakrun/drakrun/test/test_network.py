@@ -26,20 +26,14 @@ def test_network_setup():
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
 def test_dnsmasq_start():
     start_dnsmasq(1, '8.8.8.8', True)
-    try:
-        subprocess.check_output('pgrep dnsmasq', shell=True)
-    except subprocess.CalledProcessError as e:
-        assert e.returncode == 0
+    assert subprocess.run(['pgrep', 'dnsmasq']).returncode == 0
 
 
 @pytest.mark.skipif(not tool_exists('dnsmasq'), reason="dnsmasq does not exist")
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
 def test_dnsmasq_stop():
     stop_dnsmasq(1)
-    try:
-        subprocess.check_output('pgrep dnsmasq', shell=True)
-    except subprocess.CalledProcessError as e:
-        assert e.returncode == 1
+    assert subprocess.run(['pgrep', 'dnsmasq']).returncode == 1
 
 
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
