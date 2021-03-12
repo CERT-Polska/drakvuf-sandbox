@@ -169,6 +169,19 @@ def create_partitions(mount_vm0):
     disk.commit()
 
 
+def test_mount_without_paritions(backend):
+    logging.info("Testing mounting 2nd partition")
+
+    loop_dev = subprocess.run(['losetup', '-f'], capture_output=True).stdout.decode('utf-8')
+
+    with pytest.raises(Exception):
+        with backend.vm0_root_as_block():
+            pass
+
+    # /dev/loopX should not exist after this block
+    assert subprocess.run(f"losetup {loop_dev}", shell=True).returncode != 0
+
+
 def test_mount(backend, create_partitions):
     del create_partitions
     logging.info("Testing mounting 2nd partition")
