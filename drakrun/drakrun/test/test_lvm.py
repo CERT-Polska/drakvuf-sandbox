@@ -176,3 +176,12 @@ def test_import_export(backend):
     # backend.export_vm0(filename)
     #
     # backend.import_vm0(filename)
+
+def test_delete_volume(backend):
+    install_info = InstallInfo.load()
+
+    backend.delete_vm_volume(1)
+    assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-1"]).returncode != 0
+
+    backend.delete_vm_volume(0)
+    assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-0"]).returncode != 0
