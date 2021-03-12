@@ -119,6 +119,7 @@ def mount_vm0():
 @pytest.fixture
 def create_partitions(mount_vm0):
 
+    logging.info("Creating partitions")
     # creating partitions in new disk to test mount
     vm0 = parted.getDevice(mount_vm0)
     vm0.clobber()
@@ -153,6 +154,7 @@ def create_partitions(mount_vm0):
 
 def test_mount(backend, create_partitions):
     del create_partitions
+    logging.info("Testing mounting 2nd partition")
     block_device_path = ''
     with backend.vm0_root_as_block() as block_device:
         block_device_path = block_device
@@ -178,6 +180,7 @@ def test_import_export(backend):
     # backend.import_vm0(filename)
 
 def test_delete_volume(backend):
+    logging.info("Testing deleting volumes")
     install_info = InstallInfo.load()
 
     backend.delete_vm_volume(1)
