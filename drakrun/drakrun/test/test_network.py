@@ -1,16 +1,63 @@
 import pytest
+
+# flake8 flags if using
+# from drakrun.networking import *
+
 from drakrun.networking import (
     setup_vm_network,
     delete_vm_network,
     iptable_rule_exists,
     start_dnsmasq,
-    stop_dnsmasq
+    stop_dnsmasq,
+    add_iptable_rule,
+    del_iptable_rule,
 )
 
 from drakrun.draksetup import find_default_interface
 import os
 import subprocess
 from common_utils import tool_exists
+
+
+def count_num_rules(rule):
+    lines = subprocess.run(['iptables', '-S'], capture_output=True).stdout.decode().split('\n')
+    terms_to_search = rule.split('-')
+    count = 0
+    for i in lines:
+
+        flag = True
+        for term in terms_to_search:
+            if term not in i:
+                flag = False
+
+        if flag is True:
+            count += 1
+
+    return count
+
+
+def test_iptables():
+    rule = "INPUT -i draktest0 -d 239.255.255.0/24 -j DROP"
+
+    # deleting stale such rule if any
+    del_iptable_rule(rule)
+    assert iptable_rule_exists(rule) is False
+
+    add_iptable_rule(rule)
+    assert iptable_rule_exists(rule) is True
+
+    # adding second time also
+    add_iptable_rule(rule)
+
+    # it should not be added second time
+    assert count_num_rules(rule) == 1
+
+    # if somehow added
+    subprocess.check_output(f"iptables -A {rule}", shell=True)
+
+    # the clear should delete all the same rules
+    del_iptable_rule(rule)
+    assert iptable_rule_exists(rule) is False
 
 
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
