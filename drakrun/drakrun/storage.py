@@ -74,6 +74,10 @@ class StorageBackendBase:
         """ Delete vm_id disk volume """
         raise NotImplementedError
 
+    def exists_vm(self, vm_id: int):
+        """ Checks if vm_id disk volume exists """
+        raise NotImplementedError
+
 
 class ZfsStorageBackend(StorageBackendBase):
     """Implements storage backend based on ZFS zvols"""
@@ -225,6 +229,10 @@ class ZfsStorageBackend(StorageBackendBase):
             logging.error(exc.stdout)
             raise Exception(f"Couldn't delete {self.zfs_tank_name}")
 
+    def exists_vm(self, vm_id: int) -> bool:
+        """ Checks if vm_id disk volume exists """
+        return os.path.exists(f'/dev/zvol/{self.zfs_tank_name}/vm-{vm_id}')
+
 
 class Qcow2StorageBackend(StorageBackendBase):
     """ Implements storage backend based on QEMU QCOW2 image format """
@@ -338,6 +346,11 @@ class Qcow2StorageBackend(StorageBackendBase):
         disk_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
         if not safe_delete(disk_path):
             raise Exception(f"Couldn't delete vm-{vm_id}.img")
+
+    def exists_vm(self, vm_id: int) -> bool:
+        """ Checks if vm_id disk volume exists """
+        disk_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
+        return os.path.exists(disk_path)
 
 
 class LvmStorageBackend(StorageBackendBase):
@@ -525,6 +538,10 @@ class LvmStorageBackend(StorageBackendBase):
             ],
             check=True
         )
+
+    def exists_vm(self, vm_id: int):
+        """ Checks if vm_id disk volume exists """
+        return os.path.exists(f'/dev/{self.lvm_volume_group}/vm-{vm_id}')
 
 
 REGISTERED_BACKENDS = {

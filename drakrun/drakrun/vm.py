@@ -91,10 +91,13 @@ class VirtualMachine:
         )
         return res.returncode == 0
 
+    # network setup is also a part of VM only, shouldn't we handle things automatically when restoring VM
     def restore(self) -> None:
         """ Restore virtual machine from snapshot.
         :raises: subprocess.CalledProcessError
         """
+        # if the vm is running
+        # shouldn't we raise exceptions? and then handle it?
         if self.is_running:
             self.destroy()
         cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg"
