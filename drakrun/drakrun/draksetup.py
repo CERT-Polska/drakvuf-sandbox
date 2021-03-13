@@ -558,6 +558,8 @@ def postinstall(report, generate_usermode):
             logging.warning("Generating usermode profiles failed")
             logging.exception(e)
 
+    subprocess.check_output('xl destroy vm-0', shell=True)
+
     if report:
         send_usage_report({
             "kernel": {
