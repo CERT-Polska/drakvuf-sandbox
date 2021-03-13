@@ -154,7 +154,13 @@ def sanity_check():
     try:
         subprocess.run('xl info', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
     except subprocess.CalledProcessError:
-        logging.exception("Failed to test xl command.")
+        logging.exception("Failed to test xl info command. There might be some dependency problem (please execute 'xl info' manually to find out).")
+        return False
+
+    try:
+        subprocess.run('xl list', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True, timeout=10)
+    except subprocess.SubprocessError:
+        logging.exception("Failed to test xl list command. There might be a problem with xen services (check 'systemctl status xenstored', 'systemctl status xenconsoled').")
         return False
 
     if not perform_xtf():
