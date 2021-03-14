@@ -80,7 +80,7 @@ def test_dnsmasq_start():
         subprocess.run(['pkill', '-F', str(pid)])
 
     start_dnsmasq(1, '8.8.8.8', True)
-    assert subprocess.run(['pgrep', 'dnsmasq']).returncode == 0
+    assert subprocess.run(['pgrep', '-F', '/var/run/dnsmasq-vm1.pid']).returncode == 0
 
     # starting already stopped dnsmasq
     # what should be the expected behavior?
