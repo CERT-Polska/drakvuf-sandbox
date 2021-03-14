@@ -391,7 +391,7 @@ def send_usage_report(report):
         logging.exception("Failed to send usage report. This is not a serious problem.")
 
 
-def create_rekall_profiles(install_info: InstallInfo, runtime_info: RuntimeInfo, kernel_profile: json):
+def create_rekall_profiles(install_info: InstallInfo, runtime_info: RuntimeInfo, kernel_profile: str):
     injector = Injector('vm-0', runtime_info, kernel_profile)
 
     for file in dll_file_list:
@@ -402,7 +402,7 @@ def create_rekall_profiles(install_info: InstallInfo, runtime_info: RuntimeInfo,
             # will injector handle '/' and '\' path problems automatically?
             guest_dll_path = os.path.join("C:", file.path)
 
-            injector.readfile(guest_dll_path, local_dll_path)
+            injector.read_file(guest_dll_path, local_dll_path)
             guid = pdb_guid(local_dll_path)
             tmp = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
 
@@ -553,7 +553,7 @@ def postinstall(report, generate_usermode):
 
     if generate_usermode:
         try:
-            create_rekall_profiles(install_info, runtime_info, profile)
+            create_rekall_profiles(install_info, runtime_info, kernel_profile)
         except RuntimeError as e:
             logging.warning("Generating usermode profiles failed")
             logging.exception(e)
