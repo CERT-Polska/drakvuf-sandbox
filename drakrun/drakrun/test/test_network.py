@@ -66,12 +66,22 @@ def test_network_setup():
     setup_vm_network(1, True, find_default_interface(), '8.8.8.8')
     assert iptable_rule_exists("INPUT -i drak1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT") is True
 
+    # setting up network again should not run
+    setup_vm_network(1, True, find_default_interface(), '8.8.8.8')
+
 
 @pytest.mark.skipif(not tool_exists('dnsmasq'), reason="dnsmasq does not exist")
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
 def test_dnsmasq_start():
+    # stale dnsmasq will create issues with the stopping test
+    subprocess.run(['pkill', 'dnsmasq'], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+
     start_dnsmasq(1, '8.8.8.8', True)
     assert subprocess.run(['pgrep', 'dnsmasq']).returncode == 0
+
+    # starting already stopped dnsmasq
+    # what should be the expected behavior?
+    start_dnsmasq(1, '8.8.8.8', True)
 
 
 @pytest.mark.skipif(not tool_exists('dnsmasq'), reason="dnsmasq does not exist")
@@ -80,8 +90,17 @@ def test_dnsmasq_stop():
     stop_dnsmasq(1)
     assert subprocess.run(['pgrep', 'dnsmasq']).returncode == 1
 
+    # stopping already stopped dnsmasq
+    stop_dnsmasq(1)
+
+    # stopping a non started dnsmasq
+    stop_dnsmasq(5)
+
 
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
 def test_network_delete():
     delete_vm_network(1, True, find_default_interface(), '8.8.8.8')
     assert iptable_rule_exists("INPUT -i drak1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT") is False
+
+    # deleting non existant network should not raise errors but log outputs
+    delete_vm_network(1, True, find_default_interface(), '8.8.8.8')
