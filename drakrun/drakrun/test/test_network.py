@@ -16,6 +16,7 @@ from drakrun.networking import (
 from drakrun.draksetup import find_default_interface
 import os
 import subprocess
+from pathlib import Path
 from common_utils import tool_exists
 
 
@@ -74,7 +75,9 @@ def test_network_setup():
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
 def test_dnsmasq_start():
     # stale dnsmasq will create issues with the stopping test
-    subprocess.run(['pkill', 'dnsmasq'], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+    dnsmasq_pids = Path('/var/run/').glob("dnsmasq-vm*.pid")
+    for pid in dnsmasq_pids:
+        subprocess.run(['pkill', '-F', str(pid)])
 
     start_dnsmasq(1, '8.8.8.8', True)
     assert subprocess.run(['pgrep', 'dnsmasq']).returncode == 0
@@ -88,7 +91,7 @@ def test_dnsmasq_start():
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
 def test_dnsmasq_stop():
     stop_dnsmasq(1)
-    assert subprocess.run(['pgrep', 'dnsmasq']).returncode == 1
+    assert subprocess.run(['pgrep', '-F', '/var/run/dnsmasq-vm1.pid']).returncode == 1
 
     # stopping already stopped dnsmasq
     stop_dnsmasq(1)
