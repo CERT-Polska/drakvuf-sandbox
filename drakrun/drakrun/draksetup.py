@@ -28,6 +28,7 @@ from drakrun.injector import Injector
 from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE, get_all_vm_conf, delete_vm_conf, VirtualMachine
 from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
 from tqdm import tqdm
+import traceback
 
 
 conf = configparser.ConfigParser()
@@ -399,7 +400,6 @@ def create_rekall_profiles(install_info: InstallInfo, runtime_info: RuntimeInfo,
             logging.info(f"Fetching rekall profile for {file.path}")
 
             local_dll_path = os.path.join(PROFILE_DIR, file.dest)
-            # will injector handle '/' and '\' path problems automatically?
             guest_dll_path = os.path.join("C:", file.path)
 
             injector.read_file(guest_dll_path, local_dll_path)
@@ -414,13 +414,15 @@ def create_rekall_profiles(install_info: InstallInfo, runtime_info: RuntimeInfo,
             logging.warning(f"Failed to copy file {file.path}, skipping...")
         except RuntimeError:
             logging.warning(f"Failed to fetch profile for {file.path}, skipping...")
-        except Exception as e:
-            logging.debug(e)
+        except Exception:
+            # Can help in debugging
+            traceback.print_exc()
             logging.warning(f"Unexpected exception while creating rekall profile for {file.path}, skipping...")
         finally:
             if os.path.exists(local_dll_path):
                 os.remove(local_dll_path)
-            if os.path.exists(os.path.join(PROFILE_DIR, tmp)):
+            # was crashing here if the first file reached some exception
+            if 'tmp' in locals() and os.path.exists(os.path.join(PROFILE_DIR, tmp)):
                 os.remove(os.path.join(PROFILE_DIR, tmp))
 
 
@@ -502,6 +504,13 @@ def postinstall(report, generate_usermode):
         report = False
 
     install_info = InstallInfo.load()
+    storage_backend = get_storage_backend(install_info)
+
+    vm = VirtualMachine(storage_backend, 0)
+
+    if vm.is_running is False:
+        logging.exception("vm-0 is not running")
+        return
 
     logging.info("Cleaning up leftovers(if any)")
     cleanup_postinstall_files()
@@ -547,7 +556,6 @@ def postinstall(report, generate_usermode):
     logging.info("Saving VM snapshot...")
     subprocess.check_output('xl save -c vm-0 ' + os.path.join(VOLUME_DIR, "snapshot.sav"), shell=True)
 
-    storage_backend = get_storage_backend(install_info)
     storage_backend.snapshot_vm0_volume()
     logging.info("Snapshot was saved succesfully.")
 
