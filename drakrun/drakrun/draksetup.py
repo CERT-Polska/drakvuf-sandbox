@@ -416,8 +416,8 @@ def create_rekall_profiles(install_info: InstallInfo, runtime_info: RuntimeInfo,
             logging.warning(f"Failed to fetch profile for {file.path}, skipping...")
         except Exception:
             # Can help in debugging
-            traceback.print_exc()
             logging.warning(f"Unexpected exception while creating rekall profile for {file.path}, skipping...")
+            logging.debug(traceback.format_exc())
         finally:
             if os.path.exists(local_dll_path):
                 os.remove(local_dll_path)
