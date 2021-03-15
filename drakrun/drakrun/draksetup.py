@@ -395,6 +395,7 @@ def send_usage_report(report):
 
 def create_rekall_profiles(install_info: InstallInfo, runtime_info: RuntimeInfo, kernel_profile: str):
     injector = Injector('vm-0', runtime_info, kernel_profile)
+    tmp = None
 
     for file in dll_file_list:
         try:
@@ -420,11 +421,10 @@ def create_rekall_profiles(install_info: InstallInfo, runtime_info: RuntimeInfo,
             logging.warning(f"Unexpected exception while creating rekall profile for {file.path}, skipping...")
             logging.debug(traceback.format_exc())
         finally:
-            if os.path.exists(local_dll_path):
-                os.remove(local_dll_path)
+            safe_delete(local_dll_path)
             # was crashing here if the first file reached some exception
-            if 'tmp' in locals() and os.path.exists(os.path.join(PROFILE_DIR, tmp)):
-                os.remove(os.path.join(PROFILE_DIR, tmp))
+            if tmp is not None:
+                safe_delete(os.path.join(PROFILE_DIR, tmp))
 
 
 def extract_explorer_pid(
