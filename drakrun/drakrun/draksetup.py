@@ -28,6 +28,7 @@ from drakrun.injector import Injector
 from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE, get_all_vm_conf, delete_vm_conf, VirtualMachine
 from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
 from tqdm import tqdm
+from pathlib import PureWindowsPath
 import traceback
 
 
@@ -400,7 +401,7 @@ def create_rekall_profiles(install_info: InstallInfo, runtime_info: RuntimeInfo,
             logging.info(f"Fetching rekall profile for {file.path}")
 
             local_dll_path = os.path.join(PROFILE_DIR, file.dest)
-            guest_dll_path = os.path.join("C:", file.path)
+            guest_dll_path = str(PureWindowsPath("C:/", file.path))
 
             injector.read_file(guest_dll_path, local_dll_path)
             guid = pdb_guid(local_dll_path)
