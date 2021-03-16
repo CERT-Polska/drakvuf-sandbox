@@ -39,8 +39,6 @@ def count_num_rules(rule):
 def test_iptables():
     rule = "INPUT -i draktest0 -d 239.255.255.0/24 -j DROP"
 
-    # deleting stale such rule if any
-    del_iptable_rule(rule)
     assert iptable_rule_exists(rule) is False
 
     add_iptable_rule(rule)
@@ -52,7 +50,9 @@ def test_iptables():
     # it should not be added second time
     assert count_num_rules(rule) == 1
 
-    # if somehow added
+    # if somehow added due to unknown issues
+
+    # this call is adding the rule again to test if del_iptable_rule does delete multiple similar rules or not
     subprocess.check_output(f"iptables -A {rule}", shell=True)
 
     # the clear should delete all the same rules
