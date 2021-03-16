@@ -393,8 +393,7 @@ def send_usage_report(report):
         logging.exception("Failed to send usage report. This is not a serious problem.")
 
 
-def create_rekall_profiles(install_info: InstallInfo, runtime_info: RuntimeInfo, kernel_profile: str):
-    injector = Injector('vm-0', runtime_info, kernel_profile)
+def create_rekall_profiles(injector: Injector):
     tmp = None
 
     for file in dll_file_list:
@@ -560,9 +559,10 @@ def postinstall(report, generate_usermode):
     storage_backend.snapshot_vm0_volume()
     logging.info("Snapshot was saved succesfully.")
 
+    injector = Injector('vm-0', runtime_info, kernel_profile)
     if generate_usermode:
         try:
-            create_rekall_profiles(install_info, runtime_info, kernel_profile)
+            create_rekall_profiles(injector)
         except RuntimeError as e:
             logging.warning("Generating usermode profiles failed")
             logging.exception(e)
