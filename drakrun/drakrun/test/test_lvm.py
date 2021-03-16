@@ -2,34 +2,52 @@ import pytest
 
 from drakrun.config import InstallInfo
 from drakrun.storage import LvmStorageBackend
+from drakrun.util import safe_delete
 import subprocess
 import os
 import logging
+import tempfile
+import secrets
+import string
 import parted
 import time
 
-# best way would be to use a new lvm volume group for testing
 
+@pytest.fixture(scope="module")
+def setup():
+    temp_file_name = tempfile.NamedTemporaryFile(delete=False).name
+    print(temp_file_name)
+    subprocess.run(['dd', 'if=/dev/zero', f'of={temp_file_name}', 'bs=1M', 'count=100'], stderr=subprocess.STDOUT, check=True)
+    loopback_file = subprocess.check_output(['losetup', '-f', '--show', temp_file_name], stderr=subprocess.STDOUT).decode().strip('\n')
 
-def backup(install_info):
-    # removing old backups, might be risky if the restore hasn't worked due to some issue
-    subprocess.run(['lvremove', '-y', f'{install_info.lvm_volume_group}/vm-0-bak'])
-    subprocess.run(['lvremove', '-y', f'{install_info.lvm_volume_group}/vm-0-snap-bak'])
+    # v is being added in start to ensure the lvm volume group starts with a letter
+    # don't know if it is required or not
+    volume_group = 'v' + ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(5))
 
-    # changing to backup
-    subprocess.run(['lvrename', f'{install_info.lvm_volume_group}', 'vm-0', 'vm-0-bak'])
-    subprocess.run(['lvrename', f'{install_info.lvm_volume_group}', 'vm-0-snap', 'vm-0-snap-bak'])
+    # pvcreate is automatically used by this internally
+    subprocess.check_output(['vgcreate', volume_group, loopback_file], stderr=subprocess.STDOUT)
 
+    def install_patch():
+        return InstallInfo(
+            vcpus=1,
+            memory=512,
+            storage_backend='lvm',
+            disk_size='25M',
+            iso_path=None,  # not being required
+            zfs_tank_name=None,
+            lvm_volume_group=volume_group,
+            enable_unattended=None,
+            iso_sha256=None
+        )
+    InstallInfo.load = install_patch
+    InstallInfo.try_load = install_patch
 
-def restore(install_info):
-    subprocess.run(['lvremove', '-y', f'{install_info.lvm_volume_group}/vm-0'])
+    yield
 
-    # just to be safe as if it is not deleted, the restore will fail
-    # it should automatically be deleted in the vm-0 deletion only
-    subprocess.run(['lvremove', '-y', f'{install_info.lvm_volume_group}/vm-0-snap'])
-
-    subprocess.run(['lvrename', f'{install_info.lvm_volume_group}', 'vm-0-bak', 'vm-0'])
-    subprocess.run(['lvrename', f'{install_info.lvm_volume_group}', 'vm-0-snap-bak', 'vm-0-snap'])
+    subprocess.run(['vgchange', '-an', volume_group], stderr=subprocess.STDOUT)
+    subprocess.run(['vgremove', '-y', volume_group], stderr=subprocess.STDOUT)
+    subprocess.run(['losetup', '-d', loopback_file], stderr=subprocess.STDOUT)
+    safe_delete(temp_file_name)
 
 
 @pytest.fixture(autouse=True)
@@ -42,18 +60,8 @@ def enable_logging():
 
 
 @pytest.fixture(scope="module")
-def backend():
-    install_info = InstallInfo.try_load()
-    if install_info is None:
-        pytest.skip("no install info")
-    if install_info.storage_backend != 'lvm':
-        pytest.skip("lvm backend not found")
-
-    backup(install_info)
-
-    yield LvmStorageBackend(install_info)
-
-    restore(install_info)
+def backend(setup):
+    yield LvmStorageBackend(InstallInfo.load())
 
 
 def test_initialize_vm0(backend):
@@ -89,7 +97,7 @@ def test_snapshot_lvm(backend):
 def test_time(backend):
     # Should not raise any exceptions
     logging.info("Get snapshot time")
-    backend.get_vm0_snapshot_time()
+    assert type(backend.get_vm0_snapshot_time()) == int
 
 
 def test_vm0_rollback(backend):
@@ -131,74 +139,6 @@ def mount_vm0():
     yield device
 
     subprocess.run(f'losetup -d {device}', shell=True)
-
-
-@pytest.fixture
-def create_partitions(mount_vm0):
-
-    logging.info("Creating partitions")
-    # creating partitions in new disk to test mount
-    vm0 = parted.getDevice(mount_vm0)
-    vm0.clobber()
-    disk = parted.freshDisk(vm0, 'msdos')
-
-    # boot partition
-    geometry1 = parted.Geometry(start=0,
-                                length=parted.sizeToSectors(512, 'MiB', vm0.sectorSize),
-                                device=vm0)
-    filesystem1 = parted.FileSystem(type='fat32', geometry=geometry1)
-    partition1 = parted.Partition(disk=disk,
-                                  type=parted.PARTITION_NORMAL,
-                                  fs=filesystem1,
-                                  geometry=geometry1)
-    partition1.setFlag(parted.PARTITION_BOOT)
-    disk.addPartition(partition1, constraint=vm0.optimalAlignedConstraint)
-
-    # C partition
-    geometry2 = parted.Geometry(start=partition1.geometry.end,
-                                length=vm0.getLength() - 1,
-                                device=vm0)
-    filesystem2 = parted.FileSystem(type='ntfs', geometry=geometry2)
-    partition2 = parted.Partition(disk=disk,
-                                  type=parted.PARTITION_NORMAL,
-                                  fs=filesystem2,
-                                  geometry=geometry2)
-    disk.addPartition(partition2, constraint=vm0.optimalAlignedConstraint)
-
-    # write to disk
-    disk.commit()
-
-
-def test_mount_without_paritions(backend):
-    logging.info("Testing mounting 2nd parition without partitions")
-
-    loop_dev = subprocess.run(['losetup', '-f'], capture_output=True).stdout.decode('utf-8')
-
-    with pytest.raises(Exception):
-        with backend.vm0_root_as_block():
-            pass
-
-    # /dev/loopX should not exist after this block
-    assert subprocess.run(f"losetup {loop_dev}", shell=True).returncode != 0
-
-
-def test_mount(backend, create_partitions):
-    del create_partitions
-    logging.info("Testing mounting 2nd partition")
-    block_device_path = ''
-    with backend.vm0_root_as_block() as block_device:
-        block_device_path = block_device
-
-        # /dev/loopX should be mounted
-        assert subprocess.run(f"losetup {block_device_path[:-2]}", shell=True).returncode == 0
-
-        # /dev/loopXp2 should be visible
-        assert os.path.exists(block_device) is True
-
-    # give some-time for yield to run
-    time.sleep(1)
-    # /dev/loopX should not exist after this block
-    assert subprocess.run(f"losetup {block_device_path[:-2]}", shell=True).returncode != 0
 
 
 def test_import_export(backend):
