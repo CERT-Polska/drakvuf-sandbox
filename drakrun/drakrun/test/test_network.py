@@ -15,7 +15,7 @@ from drakrun.draksetup import find_default_interface
 import os
 import subprocess
 from pathlib import Path
-from .common_utils import tool_exists
+from drakrun.test.common_utils import tool_exists
 
 
 def count_num_rules(rule):
