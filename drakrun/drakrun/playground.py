@@ -47,7 +47,7 @@ class DrakmonShell:
 
         logging.info(f"Ensuring that drakrun@{vm_id} service is stopped...")
         try:
-            subprocess.run('systemctl', 'stop', f'drakrun@{vm_id}', shell=True, stderr=subprocess.STDOUT, check=True)
+            subprocess.run(['systemctl', 'stop', f'drakrun@{vm_id}'], stderr=subprocess.STDOUT, check=True)
         except subprocess.CalledProcessError:
             raise Exception(f"drakrun@{vm_id} not stopped")
 
