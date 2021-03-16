@@ -1,8 +1,5 @@
 import pytest
 
-# flake8 flags if using
-# from drakrun.networking import *
-
 from drakrun.networking import (
     setup_vm_network,
     delete_vm_network,
@@ -11,13 +8,14 @@ from drakrun.networking import (
     stop_dnsmasq,
     add_iptable_rule,
     del_iptable_rule,
+    start_tcpdump_collector
 )
 
 from drakrun.draksetup import find_default_interface
 import os
 import subprocess
 from pathlib import Path
-from common_utils import tool_exists
+from .common_utils import tool_exists
 
 
 def count_num_rules(rule):
@@ -98,6 +96,12 @@ def test_dnsmasq_stop():
 
     # stopping a non started dnsmasq
     stop_dnsmasq(5)
+
+
+@pytest.mark.skipif(not tool_exists('tcpdump'), reason="tcpdump does not exist")
+def test_tcpdump_collector():
+    # Does this require any tests?
+    pytest.skip("Not implemented")
 
 
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
