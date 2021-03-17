@@ -59,7 +59,7 @@ class Injector:
     ) -> subprocess.CompletedProcess:
         """ Copy VM file to local """
         injector_cmd = self._get_cmdline_readfile(remote_path, local_path)
-        return subprocess.run(injector_cmd, stdout=subprocess.PIPE, timeout=timeout, check=True)
+        return subprocess.run(injector_cmd, timeout=timeout, capture_output=True)
 
     def create_process(
             self,

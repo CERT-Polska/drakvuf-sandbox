@@ -403,7 +403,16 @@ def create_rekall_profiles(injector: Injector):
             local_dll_path = os.path.join(PROFILE_DIR, file.dest)
             guest_dll_path = str(PureWindowsPath("C:/", file.path))
 
-            injector.read_file(guest_dll_path, local_dll_path)
+            cmd = injector.read_file(guest_dll_path, local_dll_path)
+            out = json.loads(cmd.stdout.decode())
+            if out["Status"] == "Error" and out["Error"] == "ERROR_FILE_NOT_FOUND":
+                raise FileNotFoundError
+            if out["Status"] != "Success":
+                logging.debug("stderr: " + cmd.stderr.decode())
+                logging.debug(out)
+                # Take care if the error message is changed
+                raise Exception("Some error occurred in injector")
+
             guid = pdb_guid(local_dll_path)
             tmp = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
 
@@ -411,14 +420,23 @@ def create_rekall_profiles(injector: Injector):
             profile = make_pdb_profile(tmp)
             with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), 'w') as f:
                 f.write(profile)
-        except subprocess.CalledProcessError:
+        except json.JSONDecodeError:
+            logging.debug(traceback.format_exc())
+            raise Exception(f"Failed to parse json response on {file.path}")
+        except FileNotFoundError:
             logging.warning(f"Failed to copy file {file.path}, skipping...")
         except RuntimeError:
             logging.warning(f"Failed to fetch profile for {file.path}, skipping...")
-        except Exception:
-            # Can help in debugging
-            logging.warning(f"Unexpected exception while creating rekall profile for {file.path}, skipping...")
-            logging.debug(traceback.format_exc())
+        except Exception as e:
+            # Take care if the error message is changed
+            if str(e) == "Some error occurred in injector":
+                raise
+            else:
+                logging.warning(f"Unexpected exception while creating rekall profile for {file.path}, skipping...")
+                # Can help in debugging
+                logging.debug("stderr: " + cmd.stderr.decode())
+                logging.debug(out)
+                logging.debug(traceback.format_exc())
         finally:
             safe_delete(local_dll_path)
             # was crashing here if the first file reached some exception
