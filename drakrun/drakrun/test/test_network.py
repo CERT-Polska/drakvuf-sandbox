@@ -1,5 +1,4 @@
 import pytest
-
 from drakrun.networking import (
     setup_vm_network,
     delete_vm_network,
@@ -18,17 +17,24 @@ from pathlib import Path
 from drakrun.test.common_utils import tool_exists
 
 
-def count_num_rules(rule):
-    lines = subprocess.run(['iptables', '-S'], capture_output=True).stdout.decode().split('\n')
-    terms_to_search = rule.split('-')
-    count = 0
-    for i in lines:
+def count_num_rules(rule_to_check):
+    rules = subprocess.run(['iptables', '-S'], capture_output=True).stdout.decode().split('\n')
 
+    # Arguments used in iptables -A are being split
+    # as the arguments order doesn't remain the same in iptables -S and iptables -A
+    arguments_to_search = rule_to_check.split('-')
+    count = 0
+    for rule in rules:
+
+        # Assume all the terms are present
         flag = True
-        for term in terms_to_search:
-            if term not in i:
+
+        for argument in arguments_to_search:
+            if argument not in rule:
+                # if one of the argument is not found, the rule must be different
                 flag = False
 
+        # if all arguments there, add it in similar rule
         if flag is True:
             count += 1
 
@@ -78,7 +84,8 @@ def test_dnsmasq_start():
         subprocess.run(['pkill', '-F', str(pid)])
 
     start_dnsmasq(1, '8.8.8.8', True)
-    assert subprocess.run(['pgrep', '-F', '/var/run/dnsmasq-vm1.pid']).returncode == 0
+    cmd = subprocess.run(['pgrep', '-F', '/var/run/dnsmasq-vm1.pid'])
+    assert cmd.returncode == 0
 
     # starting already stopped dnsmasq
     # what should be the expected behavior?
@@ -100,8 +107,7 @@ def test_dnsmasq_stop():
 
 @pytest.mark.skipif(not tool_exists('tcpdump'), reason="tcpdump does not exist")
 def test_tcpdump_collector():
-    # Does this require any tests?
-    pytest.skip("Not implemented")
+    pytest.skip("No specific tests required at this stage")
 
 
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
