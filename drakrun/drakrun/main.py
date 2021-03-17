@@ -338,7 +338,7 @@ class DrakrunKarton(Karton):
                     # If it's not a test run, put them into drakrun bucket
                     resource = LocalResource(name=res_name, bucket='drakrun', path=file_path)
                     resource._uid = object_name
-                yield self.upload_artifact(res_name, file_path)
+                yield resource
             elif os.path.isdir(file_path):
                 yield from self.upload_artifacts(analysis_uid, outdir, os.path.join(subdir, fn))
 
