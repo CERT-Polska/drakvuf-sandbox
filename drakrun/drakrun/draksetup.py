@@ -405,7 +405,7 @@ def create_rekall_profiles(injector: Injector):
 
             cmd = injector.read_file(guest_dll_path, local_dll_path)
             out = json.loads(cmd.stdout.decode())
-            if out["Status"] == "Error" and out["Error"] == "ERROR_FILE_NOT_FOUND":
+            if out["Status"] == "Error" and out["Error"] in ["ERROR_FILE_NOT_FOUND", "ERROR_PATH_NOT_FOUND"]:
                 raise FileNotFoundError
             if out["Status"] != "Success":
                 logging.debug("stderr: " + cmd.stderr.decode())
