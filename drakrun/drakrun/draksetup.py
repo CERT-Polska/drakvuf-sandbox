@@ -572,10 +572,16 @@ def postinstall(report, generate_usermode):
         f.write(runtime_info.to_json(indent=4))
 
     logging.info("Saving VM snapshot...")
-    subprocess.check_output('xl save -c vm-0 ' + os.path.join(VOLUME_DIR, "snapshot.sav"), shell=True)
 
-    storage_backend.snapshot_vm0_volume()
+    # snapshot domain but don't destroy it, leave it in paused state
+    subprocess.check_output('xl save -p vm-0 ' + os.path.join(VOLUME_DIR, "snapshot.sav"), shell=True)
     logging.info("Snapshot was saved succesfully.")
+
+    logging.info("Snapshotting persistent memory...")
+    storage_backend.snapshot_vm0_volume()
+
+    logging.info("Unpausing VM")
+    subprocess.check_output('xl unpause vm-0', shell=True)
 
     injector = Injector('vm-0', runtime_info, kernel_profile)
     if generate_usermode:
