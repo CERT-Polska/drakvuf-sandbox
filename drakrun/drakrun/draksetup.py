@@ -421,6 +421,8 @@ def create_rekall_profiles(injector: Injector):
             with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), 'w') as f:
                 f.write(profile)
         except json.JSONDecodeError:
+            logging.debug(f"stdout: {cmd.stdout}")
+            logging.debug(f"stderr: {cmd.stderr}")
             logging.debug(traceback.format_exc())
             raise Exception(f"Failed to parse json response on {file.path}")
         except FileNotFoundError:
