@@ -19,6 +19,7 @@ from typing import List, Dict
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 from configparser import NoOptionError
 from itertools import chain
+import traceback
 
 import pefile
 import magic
@@ -120,7 +121,7 @@ class DrakrunKarton(Karton):
         logger = logging.getLogger("drakrun")
         for handler in self.log.handlers:
             logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.DEBUG)
 
         self.instance_id = instance_id
         self.install_info = InstallInfo.load()
@@ -336,12 +337,14 @@ class DrakrunKarton(Karton):
 
         try:
             vm.restore()
+            self.log.info("VM restored")
         except subprocess.CalledProcessError:
-            self.log.exception(f"Failed to restore VM {self.vm_name}")
             with open(f"/var/log/xen/qemu-dm-{self.vm_name}.log", "rb") as f:
-                logging.error(f.read())
+                self.log.debug("Qemu logs")
+                self.log.debug(f.read())
 
-        self.log.info("VM restored")
+        if vm.is_running is False:
+            raise Exception(f"Failed to restore VM {self.vm_name}")
 
         try:
             yield vm
@@ -419,9 +422,9 @@ class DrakrunKarton(Karton):
         drakmon_log_fp = os.path.join(outdir, "drakmon.log")
 
         with self.run_vm() as vm, \
-             graceful_exit(start_dnsmasq(self.instance_id, dns_server)), \
-             graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), \
-             open(drakmon_log_fp, "wb") as drakmon_log:
+                graceful_exit(start_dnsmasq(self.instance_id, dns_server)), \
+                graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), \
+                open(drakmon_log_fp, "wb") as drakmon_log:
 
             analysis_info['snapshot_version'] = vm.backend.get_vm0_snapshot_time()
 
@@ -457,14 +460,20 @@ class DrakrunKarton(Karton):
             )
 
             try:
+                self.log.info("Running drakvuf command")
                 subprocess.run(
                     drakvuf_cmd,
                     stdout=drakmon_log,
+                    stderr=subprocess.PIPE,
                     check=True,
                     timeout=timeout + 60
                 )
             except subprocess.TimeoutExpired:
                 self.log.exception("DRAKVUF timeout expired")
+            except subprocess.CalledProcessError as e:
+                self.log.debug(f"stderr: {e.stderr}")
+                self.log.debug(f"rc: {e.returncode}")
+                raise Exception("Drakvuf command Failed")
 
         return analysis_info
 

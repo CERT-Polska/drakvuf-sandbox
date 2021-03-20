@@ -1,4 +1,5 @@
 import subprocess
+import logging
 from typing import List
 from drakrun.util import RuntimeInfo
 
@@ -43,7 +44,14 @@ class Injector:
             timeout: int = 60) -> subprocess.CompletedProcess:
         """ Copy local file to the VM """
         injector_cmd = self._get_cmdline_writefile(local_path, remote_path)
-        return subprocess.run(injector_cmd, stdout=subprocess.PIPE, timeout=timeout, check=True)
+        cmd = subprocess.run(injector_cmd, timeout=timeout, capture_output=True)
+        if cmd.returncode == 0:
+            return cmd
+        else:
+            logging.debug(f"stderr: {cmd.stderr}")
+            logging.debug(f"stdout: {cmd.stdout}")
+            logging.debug(f"rc: {cmd.returncode}")
+            raise Exception("Injector Write File Failed")
 
     def create_process(
             self,
