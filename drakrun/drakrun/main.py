@@ -449,6 +449,11 @@ class DrakrunKarton(Karton):
         if self.config.config['drakrun'].getboolean('enable_ipt', fallback=False):
             drakvuf_cmd.extend(["--ipt-dir", ipt_dir])
 
+        anti_hammering_threshold = self.config.config['drakrun'].getint('anti_hammering_threshold', fallback=None)
+
+        if anti_hammering_threshold:
+            drakvuf_cmd.extend(["--traps-ttl", anti_hammering_threshold])
+
         drakvuf_cmd.extend(self.get_profile_list())
 
         syscall_filter = self.config.config['drakrun'].get('syscall_filter', None)
