@@ -24,9 +24,12 @@ from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
 from drakrun.config import InstallInfo, LIB_DIR, VOLUME_DIR, PROFILE_DIR, ETC_DIR, VM_CONFIG_DIR
 from drakrun.networking import setup_vm_network, start_dnsmasq, delete_vm_network, stop_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
+from drakrun.injector import Injector
 from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE, get_all_vm_conf, delete_vm_conf, VirtualMachine
 from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
 from tqdm import tqdm
+from pathlib import PureWindowsPath
+import traceback
 
 
 conf = configparser.ConfigParser()
@@ -390,44 +393,57 @@ def send_usage_report(report):
         logging.exception("Failed to send usage report. This is not a serious problem.")
 
 
-def create_rekall_profiles(install_info: InstallInfo):
-    storage_backend = get_storage_backend(install_info)
-    with storage_backend.vm0_root_as_block() as block_device, \
-            tempfile.TemporaryDirectory() as mount_path:
-        mnt_path_quoted = shlex.quote(mount_path)
-        blk_quoted = shlex.quote(block_device)
+def create_rekall_profiles(injector: Injector):
+    tmp = None
+
+    for file in dll_file_list:
         try:
-            subprocess.check_output(f"mount -t ntfs -o ro {blk_quoted} {mnt_path_quoted}", shell=True)
-        except subprocess.CalledProcessError:
-            raise RuntimeError(f"Failed to mount {block_device} as NTFS.")
+            logging.info(f"Fetching rekall profile for {file.path}")
 
-        for file in dll_file_list:
-            try:
-                logging.info(f"Fetching rekall profile for {file.path}")
-                local_dll_path = os.path.join(PROFILE_DIR, file.dest)
+            local_dll_path = os.path.join(PROFILE_DIR, file.dest)
+            guest_dll_path = str(PureWindowsPath("C:/", file.path))
 
-                copyfile(os.path.join(mount_path, file.path), local_dll_path)
-                guid = pdb_guid(local_dll_path)
-                tmp = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
+            cmd = injector.read_file(guest_dll_path, local_dll_path)
+            out = json.loads(cmd.stdout.decode())
+            if out["Status"] == "Error" and out["Error"] in ["ERROR_FILE_NOT_FOUND", "ERROR_PATH_NOT_FOUND"]:
+                raise FileNotFoundError
+            if out["Status"] != "Success":
+                logging.debug("stderr: " + cmd.stderr.decode())
+                logging.debug(out)
+                # Take care if the error message is changed
+                raise Exception("Some error occurred in injector")
 
-                logging.debug("Parsing PDB into JSON profile...")
-                profile = make_pdb_profile(tmp)
-                with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), 'w') as f:
-                    f.write(profile)
-            except FileNotFoundError:
-                logging.warning(f"Failed to copy file {file.path}, skipping...")
-            except RuntimeError:
-                logging.warning(f"Failed to fetch profile for {file.path}, skipping...")
-            except Exception:
+            guid = pdb_guid(local_dll_path)
+            tmp = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
+
+            logging.debug("Parsing PDB into JSON profile...")
+            profile = make_pdb_profile(tmp)
+            with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), 'w') as f:
+                f.write(profile)
+        except json.JSONDecodeError:
+            logging.debug(f"stdout: {cmd.stdout}")
+            logging.debug(f"stderr: {cmd.stderr}")
+            logging.debug(traceback.format_exc())
+            raise Exception(f"Failed to parse json response on {file.path}")
+        except FileNotFoundError:
+            logging.warning(f"Failed to copy file {file.path}, skipping...")
+        except RuntimeError:
+            logging.warning(f"Failed to fetch profile for {file.path}, skipping...")
+        except Exception as e:
+            # Take care if the error message is changed
+            if str(e) == "Some error occurred in injector":
+                raise
+            else:
                 logging.warning(f"Unexpected exception while creating rekall profile for {file.path}, skipping...")
-            finally:
-                if os.path.exists(local_dll_path):
-                    os.remove(local_dll_path)
-                if os.path.exists(os.path.join(PROFILE_DIR, tmp)):
-                    os.remove(os.path.join(PROFILE_DIR, tmp))
-
-        # cleanup
-        subprocess.check_output(f'umount {mnt_path_quoted}', shell=True)
+                # Can help in debugging
+                logging.debug("stderr: " + cmd.stderr.decode())
+                logging.debug(out)
+                logging.debug(traceback.format_exc())
+        finally:
+            safe_delete(local_dll_path)
+            # was crashing here if the first file reached some exception
+            if tmp is not None:
+                safe_delete(os.path.join(PROFILE_DIR, tmp))
 
 
 def extract_explorer_pid(
@@ -508,6 +524,13 @@ def postinstall(report, generate_usermode):
         report = False
 
     install_info = InstallInfo.load()
+    storage_backend = get_storage_backend(install_info)
+
+    vm = VirtualMachine(storage_backend, 0)
+
+    if vm.is_running is False:
+        logging.exception("vm-0 is not running")
+        return
 
     logging.info("Cleaning up leftovers(if any)")
     cleanup_postinstall_files()
@@ -551,18 +574,26 @@ def postinstall(report, generate_usermode):
         f.write(runtime_info.to_json(indent=4))
 
     logging.info("Saving VM snapshot...")
-    subprocess.check_output('xl save vm-0 ' + os.path.join(VOLUME_DIR, "snapshot.sav"), shell=True)
 
-    storage_backend = get_storage_backend(install_info)
-    storage_backend.snapshot_vm0_volume()
+    # snapshot domain but don't destroy it, leave it in paused state
+    subprocess.check_output('xl save -p vm-0 ' + os.path.join(VOLUME_DIR, "snapshot.sav"), shell=True)
     logging.info("Snapshot was saved succesfully.")
 
+    logging.info("Snapshotting persistent memory...")
+    storage_backend.snapshot_vm0_volume()
+
+    logging.info("Unpausing VM")
+    subprocess.check_output('xl unpause vm-0', shell=True)
+
+    injector = Injector('vm-0', runtime_info, kernel_profile)
     if generate_usermode:
         try:
-            create_rekall_profiles(install_info)
+            create_rekall_profiles(injector)
         except RuntimeError as e:
             logging.warning("Generating usermode profiles failed")
             logging.exception(e)
+
+    subprocess.check_output('xl destroy vm-0', shell=True)
 
     if report:
         send_usage_report({
