@@ -54,14 +54,6 @@ class StorageBackendBase:
         """ Get UNIX timestamp of when vm-0 snapshot was last modified """
         raise NotImplementedError
 
-    def vm0_root_as_block(self) -> Generator[str, None, None]:
-        """ Mounts vm-0 root partition as block device
-
-        Mounts second partition (C:) on the volume as block device.
-        This assumes that first partition is used for booting.
-        """
-        raise NotImplementedError
-
     def export_vm0(self, file):
         """ Export vm-0 disk into a file (symmetric to import_vm0) """
         raise NotImplementedError
@@ -165,30 +157,6 @@ class ZfsStorageBackend(StorageBackendBase):
         out = subprocess.check_output(f"zfs get -H -p -o value creation {base_snap}", shell=True)
         ts = int(out.decode('ascii').strip())
         return ts
-
-    @contextlib.contextmanager
-    def vm0_root_as_block(self) -> Generator[str, None, None]:
-        # workaround for not being able to mount a snapshot
-        base_snap = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0@booted"))
-        tmp_snap = shlex.quote(os.path.join(self.zfs_tank_name, "tmp"))
-        try:
-            subprocess.check_output(f"zfs clone {base_snap} {tmp_snap}", shell=True)
-        except subprocess.CalledProcessError:
-            raise RuntimeError("Failed to clone temporary zfs snapshot")
-
-        volume_path = os.path.join("/", "dev", "zvol", self.zfs_tank_name, "tmp-part2")
-        # Wait for 60s for the volume to appear in /dev/zvol/...
-        for _ in range(60):
-            if os.path.exists(volume_path):
-                break
-            time.sleep(1.0)
-        else:
-            raise RuntimeError(f"ZFS volume not available at {volume_path}")
-
-        yield volume_path
-
-        subprocess.run(f"umount {volume_path}", shell=True)
-        subprocess.check_output(f"zfs destroy {tmp_snap}", shell=True)
 
     def export_vm0(self, file):
         with open(file, "wb") as snapshot_file:
@@ -301,39 +269,6 @@ class Qcow2StorageBackend(StorageBackendBase):
 
     def get_vm0_snapshot_time(self):
         return int(os.path.getmtime(os.path.join(VOLUME_DIR, 'vm-0.img')))
-
-    @contextlib.contextmanager
-    def vm0_root_as_block(self) -> Generator[str, None, None]:
-        try:
-            subprocess.check_output("modprobe nbd", shell=True)
-        except subprocess.CalledProcessError:
-            raise RuntimeError("Failed to load nbd kernel module")
-
-        try:
-            # TODO: this assumes /dev/nbd0 is free
-            volume = os.path.join(VOLUME_DIR, 'vm-0.img')
-            subprocess.check_output(
-                f"qemu-nbd -c /dev/nbd0 --read-only {volume}",
-                shell=True,
-            )
-        except subprocess.CalledProcessError:
-            raise RuntimeError("Failed to connect QCOW2 file to /dev/nbd0")
-
-        # we mount 2nd partition, as 1st partition is windows boot related and 2nd partition is C:\\
-        dev = "/dev/nbd0p2"
-
-        # wait for the device to appear
-        for _ in range(60):
-            if os.path.exists(dev):
-                break
-            time.sleep(1.0)
-        else:
-            raise RuntimeError(f"NBD volume not available at {dev}")
-
-        yield dev
-
-        subprocess.check_output(f"umount {dev}", shell=True)
-        subprocess.check_output("qemu-nbd --disconnect /dev/nbd0", shell=True)
 
     def export_vm0(self, path: str):
         shutil.copy(os.path.join(VOLUME_DIR, 'vm-0.img'), path)
@@ -484,36 +419,6 @@ class LvmStorageBackend(StorageBackendBase):
 
         dt = datetime.datetime.strptime(target_lvs[0]['lv_time'], "%Y-%m-%d %H:%M:%S %z")
         return int(dt.timestamp())
-
-    @contextlib.contextmanager
-    def vm0_root_as_block(self) -> Generator[str, None, None]:
-        """ Mounts vm-0 root partition as block device"""
-        out = subprocess.check_output(
-            ' '.join(
-                [
-                    "losetup",
-                    "-f", "--partscan",
-                    "--show", "--read-only",
-                    f"/dev/{self.lvm_volume_group}/vm-0",
-                ]
-            ),
-            shell=True,
-        ).decode('ascii').strip('\n').strip()
-
-        # return the second partition
-        volume_path = out + 'p2'
-
-        for _ in range(60):
-            if os.path.exists(volume_path):
-                break
-            time.sleep(1.0)
-        else:
-            raise RuntimeError(f"LVM volume not available at {volume_path}")
-
-        yield volume_path
-
-        subprocess.run(f'umount {out}', shell=True)
-        subprocess.run(f'losetup -d {out}', shell=True)
 
     def export_vm0(self, path: str):
         """ Export vm-0 disk into a file (symmetric to import_vm0) """

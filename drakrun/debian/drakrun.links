@@ -2,3 +2,4 @@ opt/venvs/drakrun/bin/draksetup usr/bin/draksetup
 opt/venvs/drakrun/bin/drakrun usr/bin/drakrun
 opt/venvs/drakrun/bin/drakpush usr/bin/drakpush
 opt/venvs/drakrun/bin/drakpdb usr/bin/drakpdb
+opt/venvs/drakrun/bin/drakplayground usr/bin/drakplayground
