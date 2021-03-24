@@ -8,6 +8,8 @@ from drakrun.vm import (
     delete_vm_conf
 )
 from drakrun.storage import get_storage_backend
+from drakrun.draksetup import find_default_interface
+from drakrun.networking import setup_vm_network, delete_vm_network
 from common_utils import remove_files
 import drakrun
 import subprocess
@@ -61,6 +63,9 @@ class TestVM:
     def test_vm_restore(self, backend):
         self.vm = VirtualMachine(backend, 0)
 
+        # I think this part should be abstracted and automatically handled when creating or destroying VMs
+        setup_vm_network(0, True, find_default_interface(), '8.8.8.8')
+
         # if snapshot doesn't exist
         with remove_files([os.path.join(VOLUME_DIR, 'snapshot.sav')]):
             with pytest.raises(Exception):
@@ -86,6 +91,8 @@ class TestVM:
         # restoring a restored VM
         # what should be the expected behavior?
         # self.vm.restore()
+
+        delete_vm_network(0, True, find_default_interface(), '8.8.8.8')
 
     def test_vm_destroy(self):
         self.vm = VirtualMachine(backend, 0)

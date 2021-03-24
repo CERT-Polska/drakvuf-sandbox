@@ -91,7 +91,25 @@ class VirtualMachine:
         )
         return res.returncode == 0
 
-    # network setup is also a part of VM only, shouldn't we handle things automatically when restoring VM
+    """
+    I have a few suggestions that can help remove the raw xl commands from draksetup
+    Here is the abstract, should i pursue with the idea?
+    """
+    # def uptime(self):
+    #   xl uptime command
+
+    # def create(self):
+    #   xl create command
+
+    # def pause(self):
+    #   xl pause command
+
+    # def unpause(self):
+    #   xl unpause command
+
+    # def save(self, pause=False):
+    #   xl save command
+
     def restore(self) -> None:
         """ Restore virtual machine from snapshot.
         :raises: subprocess.CalledProcessError
