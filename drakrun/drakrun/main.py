@@ -114,6 +114,22 @@ class DrakrunKarton(Karton):
         "kind": "drakrun",
     }
 
+    # Filters and headers used for testing sample analysis
+    DEFAULT_TEST_FILTERS = [
+        {
+            "type": "sample-test",
+            "platform": "win32",
+        },
+        {
+            "type": "sample-test",
+            "platform": "win64",
+        },
+    ]
+    DEFAULT_TEST_HEADERS = {
+        "type": "analysis-test",
+        "kind": "drakrun",
+    }
+
     def __init__(self, config: Config, instance_id: int):
         super().__init__(config)
 
@@ -161,6 +177,12 @@ class DrakrunKarton(Karton):
         cls.identity = config.get('identity', cls.DEFAULT_IDENTITY)
         cls.filters = load_json(config, 'filters') or cls.DEFAULT_FILTERS
         cls.headers = load_json(config, 'headers') or cls.DEFAULT_HEADERS
+        cls.test_headers = load_json(config, 'test_headers') or cls.DEFAULT_TEST_HEADERS
+
+        # If testing is enabled, add additional test filters from the configuration
+        # or fall back to hardcoded
+        if config.getboolean("sample_testing", fallback=False):
+            cls.filters.extend(load_json(config, 'test_filters') or cls.DEFAULT_TEST_FILTERS)
 
     @property
     def net_enable(self) -> bool:
@@ -170,6 +192,19 @@ class DrakrunKarton(Karton):
     def enable_ipt(self) -> bool:
         # TODO: Inconsistent naming - net_enable vs enable_ipt
         return self.config.config['drakrun'].getboolean('enable_ipt', fallback=False)
+
+    @property
+    def test_run(self) -> bool:
+        # If testing is disabled, it's not a test run
+        if not self.config.config['drakrun'].getboolean('sample_testing', fallback=False):
+            return False
+
+        # Check if task matches any test filter
+        for filtr in self.test_filters:
+            if self.current_task.matches_filters(filtr):
+                return True
+
+        return False
 
     @property
     def vm_name(self) -> str:
@@ -296,8 +331,14 @@ class DrakrunKarton(Karton):
             if os.path.isfile(file_path):
                 object_name = os.path.join(analysis_uid, subdir, fn)
                 res_name = os.path.join(subdir, fn)
-                resource = LocalResource(name=res_name, bucket='drakrun', path=file_path)
-                resource._uid = object_name
+                if self.test_run:
+                    # If it's a test run upload artifacts to karton-managed bucket
+                    # They'll be cleaned up by karton-system
+                    resource = LocalResource(name=res_name, path=file_path)
+                else:
+                    # If it's not a test run, put them into drakrun bucket
+                    resource = LocalResource(name=res_name, bucket='drakrun', path=file_path)
+                    resource._uid = object_name
                 yield resource
             elif os.path.isdir(file_path):
                 yield from self.upload_artifacts(analysis_uid, outdir, os.path.join(subdir, fn))
@@ -306,7 +347,11 @@ class DrakrunKarton(Karton):
         payload = {"analysis_uid": self.analysis_uid}
         payload.update(metadata)
 
-        headers = dict(self.headers)
+        if self.test_run:
+            headers = dict(self.test_headers)
+        else:
+            headers = dict(self.headers)
+
         headers["quality"] = quality
 
         task = Task(headers, payload=payload)
