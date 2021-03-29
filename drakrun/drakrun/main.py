@@ -177,11 +177,12 @@ class DrakrunKarton(Karton):
         cls.filters = load_json(config, 'filters') or cls.DEFAULT_FILTERS
         cls.headers = load_json(config, 'headers') or cls.DEFAULT_HEADERS
         cls.test_headers = load_json(config, 'test_headers') or cls.DEFAULT_TEST_HEADERS
+        cls.test_filters = load_json(config, 'test_filters') or cls.DEFAULT_TEST_FILTERS
 
         # If testing is enabled, add additional test filters from the configuration
         # or fall back to hardcoded
         if config.getboolean("sample_testing", fallback=False):
-            cls.filters.extend(load_json(config, 'test_filters') or cls.DEFAULT_TEST_FILTERS)
+            cls.filters.extend(cls.test_filters)
 
     @property
     def net_enable(self) -> bool:
@@ -198,12 +199,7 @@ class DrakrunKarton(Karton):
         if not self.config.config['drakrun'].getboolean('sample_testing', fallback=False):
             return False
 
-        # Check if task matches any test filter
-        for filtr in self.test_filters:
-            if self.current_task.matches_filters(filtr):
-                return True
-
-        return False
+        return self.current_task.matches_filters(self.test_filters)
 
     @property
     def vm_name(self) -> str:
