@@ -199,11 +199,7 @@ class DrakrunKarton(Karton):
         if not self.config.config['drakrun'].getboolean('sample_testing', fallback=False):
             return False
 
-        # Check if task matches any test filter
-        if self.current_task.matches_filters(self.test_filters):
-            return True
-
-        return False
+        return self.current_task.matches_filters(self.test_filters)
 
     @property
     def vm_name(self) -> str:
