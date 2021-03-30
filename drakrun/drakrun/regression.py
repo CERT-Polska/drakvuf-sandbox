@@ -4,6 +4,7 @@ import json
 import os
 import threading
 import tempfile
+import logging
 from dataclasses import dataclass
 from typing import Optional, List
 from pathlib import Path
@@ -12,7 +13,15 @@ from karton.core import Karton, Task, Producer, Resource, Config
 from malduck.extractor import ExtractManager, ExtractorModules
 from mwdblib import MWDB
 from drakrun.version import __version__ as DRAKRUN_VERSION
+from contextlib import contextmanager
 
+
+@contextmanager
+def changedLogLevel(logger, level):
+    old_level = logger.level
+    logger.setLevel(level)
+    yield
+    logger.setLevel(old_level)
 
 @dataclass
 class TestCase:
@@ -69,8 +78,9 @@ class RegressionTester(Karton):
             va = int(metadata["DumpAddress"], 16)
             name = dumps / metadata["DataFileName"]
 
-            res = manager.push_file(name, base=va)
-            family = family or res
+            with changedLogLevel(logging.getLogger(), logging.ERROR):
+                res = manager.push_file(name, base=va)
+                family = family or res
         return family
 
     def process(self, task: Task):
