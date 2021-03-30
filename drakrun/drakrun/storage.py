@@ -415,7 +415,6 @@ class LvmStorageBackend(StorageBackendBase):
         dt = datetime.datetime.strptime(target_lvs[0]['lv_time'], "%Y-%m-%d %H:%M:%S %z")
         return int(dt.timestamp())
 
-
     def export_vm0(self, path: str):
         """ Export vm-0 disk into a file (symmetric to import_vm0) """
         # As dd copies empty spaces also
