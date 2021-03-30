@@ -5,7 +5,6 @@ import pytest
 def pytest_runtest_makereport(item, call):
     if "incremental" in item.keywords:
         if call.excinfo is not None:
-            print(item.parent)
             parent = item.parent
             parent._previousfailed = item
 
