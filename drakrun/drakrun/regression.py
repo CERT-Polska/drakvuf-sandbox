@@ -23,6 +23,7 @@ def changedLogLevel(logger, level):
     yield
     logger.setLevel(old_level)
 
+
 @dataclass
 class TestCase:
     sha256: str
