@@ -25,17 +25,7 @@ def count_num_rules(rule_to_check):
     arguments_to_search = rule_to_check.split('-')
     count = 0
     for rule in rules:
-
-        # Assume all the terms are present
-        flag = True
-
-        for argument in arguments_to_search:
-            if argument not in rule:
-                # if one of the argument is not found, the rule must be different
-                flag = False
-
-        # if all arguments there, add it in similar rule
-        if flag is True:
+        if all([argument in rule for argument in arguments_to_search]):
             count += 1
 
     return count
@@ -45,7 +35,7 @@ def count_num_rules(rule_to_check):
 def test_iptables():
     rule = "INPUT -i draktest0 -d 239.255.255.0/24 -j DROP"
 
-    assert iptable_rule_exists(rule) is False
+    assert not iptable_rule_exists(rule)
 
     add_iptable_rule(rule)
     assert iptable_rule_exists(rule) is True
@@ -63,7 +53,7 @@ def test_iptables():
 
     # the clear should delete all the same rules
     del_iptable_rule(rule)
-    assert iptable_rule_exists(rule) is False
+    assert not iptable_rule_exists(rule)
 
 
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
@@ -113,7 +103,7 @@ def test_tcpdump_collector():
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
 def test_network_delete():
     delete_vm_network(1, True, find_default_interface(), '8.8.8.8')
-    assert iptable_rule_exists("INPUT -i drak1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT") is False
+    assert not iptable_rule_exists("INPUT -i drak1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
 
     # deleting non existant network should not raise errors but log outputs
     delete_vm_network(1, True, find_default_interface(), '8.8.8.8')
