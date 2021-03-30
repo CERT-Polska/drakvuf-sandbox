@@ -11,7 +11,6 @@ import logging
 import tempfile
 import secrets
 import string
-import parted
 import time
 
 
