@@ -1,8 +1,10 @@
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
 
 from drakrun.config import InstallInfo
 from drakrun.storage import LvmStorageBackend
 from drakrun.util import safe_delete
+from common_utils import tool_exists
 import subprocess
 import os
 import logging
@@ -13,10 +15,19 @@ import parted
 import time
 
 
+@pytest.fixture(scope="session")
+def monkeysession(request):
+    mp = MonkeyPatch()
+    yield mp
+    mp.undo()
+
+
 @pytest.fixture(scope="module")
-def setup():
+def setup(monkeysession):
+    if not tool_exists('lvs'):
+        pytest.skip("LVM is not found")
+
     temp_file_name = tempfile.NamedTemporaryFile(delete=False).name
-    print(temp_file_name)
     subprocess.run(['dd', 'if=/dev/zero', f'of={temp_file_name}', 'bs=1M', 'count=100'], stderr=subprocess.STDOUT, check=True)
     loopback_file = subprocess.check_output(['losetup', '-f', '--show', temp_file_name], stderr=subprocess.STDOUT).decode().strip('\n')
 
@@ -39,8 +50,8 @@ def setup():
             enable_unattended=None,
             iso_sha256=None
         )
-    InstallInfo.load = install_patch
-    InstallInfo.try_load = install_patch
+    monkeysession.setattr(InstallInfo, "load", install_patch)
+    monkeysession.setattr(InstallInfo, "try_load", install_patch)
 
     yield
 
@@ -50,82 +61,14 @@ def setup():
     safe_delete(temp_file_name)
 
 
-@pytest.fixture(autouse=True)
-def enable_logging():
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='[%(asctime)s][%(levelname)s] %(message)s',
-        handlers=[logging.StreamHandler()]
-    )
-
-
 @pytest.fixture(scope="module")
 def backend(setup):
     yield LvmStorageBackend(InstallInfo.load())
 
 
-def test_initialize_vm0(backend):
-    install_info = InstallInfo.load()
-
-    logging.info("Creating volume")
-    backend.initialize_vm0_volume(install_info.disk_size)
-    assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-0"]).returncode == 0
-
-
-def test_disk_path(backend):
-    """
-    A very straight forward test but, if a path will change it future, this test will fail
-    telling about changed paths
-
-    """
-    install_info = InstallInfo.load()
-    for vm_id in range(5):
-        assert backend.get_vm_disk_path(vm_id) == f"phy:/dev/{install_info.lvm_volume_group}/vm-{vm_id},hda,w"
-
-
-def test_snapshot_lvm(backend):
-    install_info = InstallInfo.load()
-
-    with pytest.raises(Exception):
-        backend.get_vm0_snapshot_time()
-
-    logging.info("Snapshot volume")
-    backend.snapshot_vm0_volume()
-    assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-0-snap"]).returncode == 0
-
-
-def test_time(backend):
-    # Should not raise any exceptions
-    logging.info("Get snapshot time")
-    assert type(backend.get_vm0_snapshot_time()) == int
-
-
-def test_vm0_rollback(backend):
-    logging.info("Rolling back vm0")
-    with pytest.raises(Exception):
-        backend.rollback_vm_storage(0)
-
-
-def test_rollback_vm1_pass1(backend):
-    install_info = InstallInfo.load()
-
-    logging.info("Pass 1: rollback vm-1")
-    backend.rollback_vm_storage(1)
-    assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-1"]).returncode == 0
-
-
-def test_rollback_vm1_pass2(backend):
-    install_info = InstallInfo.load()
-
-    logging.info("Pass 2: rollback vm-1")
-    # rolling back next time should not raise issues
-    backend.rollback_vm_storage(1)
-    assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-1"]).returncode == 0
-
-
-# a mount fixture to unmount incase any error occurs
 @pytest.fixture
 def mount_vm0():
+    # a mount fixture to unmount incase any error occurs
     install_info = InstallInfo.load()
     device = subprocess.check_output(
         [
@@ -141,37 +84,89 @@ def mount_vm0():
     subprocess.run(f'losetup -d {device}', shell=True)
 
 
-def test_import_export(backend):
-    pytest.skip('not implemented')
-    """
-    Any solid testing assertions for export and import?
-    """
-    # filename = '/tmp/this_file_name_should_not_exists.img'
-    # backend.export_vm0(filename)
-    #
-    # backend.import_vm0(filename)
+@pytest.mark.incremental
+class TestLVM:
+    def test_initialize_vm0(self, backend):
+        install_info = InstallInfo.load()
 
-
-# the vm0 drive is mounted
-def test_exception_raises(backend, mount_vm0):
-    install_info = InstallInfo.load()
-    with pytest.raises(Exception):
+        logging.info("Creating volume")
         backend.initialize_vm0_volume(install_info.disk_size)
+        assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-0"]).returncode == 0
 
-    with pytest.raises(Exception):
-        backend.delete_vm_volume(0)
+    def test_disk_path(self, backend):
+        """
+        A very straight forward test but, if a path will change it future, this test will fail
+        telling about changed paths
 
+        """
+        install_info = InstallInfo.load()
+        for vm_id in range(5):
+            assert backend.get_vm_disk_path(vm_id) == f"phy:/dev/{install_info.lvm_volume_group}/vm-{vm_id},hda,w"
 
-def test_delete_volume(backend):
-    logging.info("Testing deleting volumes")
-    install_info = InstallInfo.load()
+    def test_snapshot_lvm(self, backend):
+        install_info = InstallInfo.load()
 
-    backend.delete_vm_volume(1)
-    assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-1"]).returncode != 0
+        with pytest.raises(Exception):
+            backend.get_vm0_snapshot_time()
 
-    # try deleting a deleted volume
-    with pytest.raises(Exception):
+        logging.info("Snapshot volume")
+        backend.snapshot_vm0_volume()
+        assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-0-snap"]).returncode == 0
+
+    def test_time(self, backend):
+        # Should not raise any exceptions
+        logging.info("Get snapshot time")
+        assert type(backend.get_vm0_snapshot_time()) == int
+
+    def test_vm0_rollback(self, backend):
+        logging.info("Rolling back vm0")
+        with pytest.raises(Exception):
+            backend.rollback_vm_storage(0)
+
+    def test_rollback_vm1_pass1(self, backend):
+        install_info = InstallInfo.load()
+
+        logging.info("Pass 1: rollback vm-1")
+        backend.rollback_vm_storage(1)
+        assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-1"]).returncode == 0
+
+    def test_rollback_vm1_pass2(self, backend):
+        install_info = InstallInfo.load()
+
+        logging.info("Pass 2: rollback vm-1")
+        # rolling back next time should not raise issues
+        backend.rollback_vm_storage(1)
+        assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-1"]).returncode == 0
+
+    def test_import_export(self, backend):
+        """
+        Any solid testing assertions for export and import?
+        """
+        # skipping this test causes xfail on the next tests
+        # filename = '/tmp/this_file_name_should_not_exists.img'
+        # backend.export_vm0(filename)
+        #
+        # backend.import_vm0(filename)
+
+    # the vm0 drive is mounted
+    def test_exception_raises(self, backend, mount_vm0):
+        install_info = InstallInfo.load()
+        with pytest.raises(Exception):
+            backend.initialize_vm0_volume(install_info.disk_size)
+
+        with pytest.raises(Exception):
+            backend.delete_vm_volume(0)
+
+    def test_delete_volume(self, backend):
+        logging.info("Testing deleting volumes")
+        install_info = InstallInfo.load()
+
         backend.delete_vm_volume(1)
+        assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-1"]).returncode != 0
 
-    backend.delete_vm_volume(0)
-    assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-0"]).returncode != 0
+        # try deleting a deleted volume
+        with pytest.raises(Exception):
+            backend.delete_vm_volume(1)
+
+        backend.delete_vm_volume(0)
+        assert subprocess.run(['lvs', f"{install_info.lvm_volume_group}/vm-0"]).returncode != 0
