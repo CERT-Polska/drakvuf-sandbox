@@ -35,8 +35,7 @@ steps:
 - name: run drakrun tests
   image: python:3.8-buster
   commands:
-    - apt-get update && apt-get install -y python3-parted libparted-dev
-    - pip3 install pytest pyparted
+    - pip3 install pytest
     - pip3 install ./drakrun
     - pytest drakrun/drakrun/test/
 node:
