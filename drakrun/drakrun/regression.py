@@ -38,7 +38,7 @@ class TestCase:
 
             h = hashlib.sha256()
             h.update(data)
-            if h.hexdigest() != self.sha256:
+            if h.hexdigest() != self.sha256.lower():
                 raise RuntimeError(f"Expected {self.sha256}, got {h.hexdigest()}")
             return data
 
