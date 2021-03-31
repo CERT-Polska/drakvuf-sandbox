@@ -10,6 +10,7 @@ from drakrun.networking import (
     start_tcpdump_collector
 )
 
+from pytest_steps import depends_on, test_steps
 from drakrun.draksetup import find_default_interface
 import os
 import subprocess
@@ -32,7 +33,7 @@ def count_num_rules(rule_to_check):
 
 
 @pytest.mark.skipif(not tool_exists('iptables'), reason="iptables does not exist")
-def test_iptables():
+def iptables_test():
     rule = "INPUT -i draktest0 -d 239.255.255.0/24 -j DROP"
 
     assert not iptable_rule_exists(rule)
@@ -57,7 +58,8 @@ def test_iptables():
 
 
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
-def test_network_setup():
+@depends_on(iptables_test)
+def network_setup_test():
     setup_vm_network(1, True, find_default_interface(), '8.8.8.8')
     assert iptable_rule_exists("INPUT -i drak1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT") is True
 
@@ -67,7 +69,8 @@ def test_network_setup():
 
 @pytest.mark.skipif(not tool_exists('dnsmasq'), reason="dnsmasq does not exist")
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
-def test_dnsmasq_start():
+@depends_on(network_setup_test)
+def dnsmasq_start_test():
     # stale dnsmasq will create issues with the stopping test
     dnsmasq_pids = Path('/var/run/').glob("dnsmasq-vm*.pid")
     for pid in dnsmasq_pids:
@@ -84,7 +87,8 @@ def test_dnsmasq_start():
 
 @pytest.mark.skipif(not tool_exists('dnsmasq'), reason="dnsmasq does not exist")
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
-def test_dnsmasq_stop():
+@depends_on(dnsmasq_start_test)
+def dnsmasq_stop_test():
     stop_dnsmasq(1)
     assert subprocess.run(['pgrep', '-F', '/var/run/dnsmasq-vm1.pid']).returncode == 1
 
@@ -96,14 +100,21 @@ def test_dnsmasq_stop():
 
 
 @pytest.mark.skipif(not tool_exists('tcpdump'), reason="tcpdump does not exist")
-def test_tcpdump_collector():
+@depends_on(network_setup_test)
+def tcpdump_collector_test():
     pytest.skip("No specific tests required at this stage")
 
 
 @pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
-def test_network_delete():
+@depends_on(network_setup_test)
+def network_delete_test():
     delete_vm_network(1, True, find_default_interface(), '8.8.8.8')
     assert not iptable_rule_exists("INPUT -i drak1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
 
     # deleting non existant network should not raise errors but log outputs
     delete_vm_network(1, True, find_default_interface(), '8.8.8.8')
+
+
+@test_steps(iptables_test, network_setup_test, dnsmasq_start_test, dnsmasq_stop_test, tcpdump_collector_test, network_delete_test)
+def test_suite_1(test_step):
+    test_step()
