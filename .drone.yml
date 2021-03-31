@@ -35,7 +35,7 @@ steps:
 - name: run drakrun tests
   image: python:3.8-buster
   commands:
-    - pip3 install -r drakrun/drakrun/requirements.txt
+    - pip3 install -r drakrun/drakrun/test/requirements.txt
     - pip3 install ./drakrun
     - pytest drakrun/drakrun/test/
 node:
