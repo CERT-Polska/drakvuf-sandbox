@@ -32,8 +32,10 @@ def count_num_rules(rule_to_check):
     return count
 
 
-@pytest.mark.skipif(not tool_exists('iptables'), reason="iptables does not exist")
 def iptables_test():
+    if not tool_exists('iptables'):
+        pytest.skip("iptables does not exist")
+
     rule = "INPUT -i draktest0 -d 239.255.255.0/24 -j DROP"
 
     assert not iptable_rule_exists(rule)
@@ -57,9 +59,11 @@ def iptables_test():
     assert not iptable_rule_exists(rule)
 
 
-@pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
 @depends_on(iptables_test)
 def network_setup_test():
+    if not tool_exists('brctl'):
+        pytest.skip("brctl does not exist")
+
     setup_vm_network(1, True, find_default_interface(), '8.8.8.8')
     assert iptable_rule_exists("INPUT -i drak1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT") is True
 
@@ -67,10 +71,11 @@ def network_setup_test():
     setup_vm_network(1, True, find_default_interface(), '8.8.8.8')
 
 
-@pytest.mark.skipif(not tool_exists('dnsmasq'), reason="dnsmasq does not exist")
-@pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
 @depends_on(network_setup_test)
 def dnsmasq_start_test():
+    if not tool_exists('dnsmasq'):
+        pytest.skip("dnsmasq does not exist")
+
     # stale dnsmasq will create issues with the stopping test
     dnsmasq_pids = Path('/var/run/').glob("dnsmasq-vm*.pid")
     for pid in dnsmasq_pids:
@@ -85,8 +90,6 @@ def dnsmasq_start_test():
     start_dnsmasq(1, '8.8.8.8', True)
 
 
-@pytest.mark.skipif(not tool_exists('dnsmasq'), reason="dnsmasq does not exist")
-@pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
 @depends_on(dnsmasq_start_test)
 def dnsmasq_stop_test():
     stop_dnsmasq(1)
@@ -102,10 +105,12 @@ def dnsmasq_stop_test():
 @pytest.mark.skipif(not tool_exists('tcpdump'), reason="tcpdump does not exist")
 @depends_on(network_setup_test)
 def tcpdump_collector_test():
+    if not tool_exists('tcpdump'):
+        pytest.skip("tcpdump does not exist")
+
     pytest.skip("No specific tests required at this stage")
 
 
-@pytest.mark.skipif(not tool_exists('brctl'), reason="brctl does not exist")
 @depends_on(network_setup_test)
 def network_delete_test():
     delete_vm_network(1, True, find_default_interface(), '8.8.8.8')
