@@ -166,7 +166,7 @@ class RegressionTester(Karton):
 
         for test in testcases:
             sample = test.get_sample()
-            print(f"Submitting {test.sha256}")
+            sys.stderr.write(f"Submitting {test.sha256}\n")
 
             t = Task(headers=dict(type="sample-test", platform="win64"))
             t.add_payload("sample", Resource("malwar", sample))
