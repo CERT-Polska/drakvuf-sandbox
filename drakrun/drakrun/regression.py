@@ -1,19 +1,24 @@
 import argparse
 import hashlib
 import json
+import time
 import os
 import threading
 import tempfile
 import logging
 from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 from typing import Optional, List
 from pathlib import Path
 
-from karton.core import Karton, Task, Producer, Resource, Config
+from karton.core import Karton, Task, Producer, Resource, Config, LocalResource
 from malduck.extractor import ExtractManager, ExtractorModules
 from mwdblib import MWDB
 from drakrun.version import __version__ as DRAKRUN_VERSION
+from drakrun.config import ETC_DIR
+from drakrun.util import patch_config
 from contextlib import contextmanager
+from tqdm import tqdm
 
 
 @contextmanager
@@ -24,6 +29,7 @@ def changedLogLevel(logger, level):
     logger.setLevel(old_level)
 
 
+@dataclass_json
 @dataclass
 class TestCase:
     sha256: str
@@ -61,16 +67,11 @@ class RegressionTester(Karton):
         },
     ]
 
-    def __init__(self, config: Config, modules: str, testcases: List[TestCase]):
+    def __init__(self, config: Config):
         super().__init__(config)
-        self.modules = modules
-        self.rip_map = {}
-
-        for test in testcases:
-            self.rip_map[test.sha256] = test.ripped
 
     def analyze_dumps(self, sample, dump_dir):
-        manager = ExtractManager(ExtractorModules(self.modules))
+        manager = ExtractManager(ExtractorModules(self.config.config['draktestd']['modules']))
         dumps = Path(dump_dir) / "dumps"
         family = None
         for f in dumps.glob("*.metadata"):
@@ -90,38 +91,78 @@ class RegressionTester(Karton):
         with dumps.extract_temporary() as temp:
             family = self.analyze_dumps(sample, temp)
 
-            expected_family = self.rip_map.get(sample.sha256)
+            testcase = TestCase.from_json(task.payload["testcase"])
+            expected_family = testcase.ripped
+
             if family is None or expected_family != family:
                 self.log.error(f"Failed to rip {sample.sha256}. Expected {expected_family}, ripped {family}")
+                result = 'FAIL'
             else:
                 self.log.info(f"Ripping {sample.sha256} OK: {family}")
+                result = 'OK'
+
+            out_res = json.dumps({"sample": sample.sha256, "family": {"expected": expected_family, "ripped": family}, "result": result})
+
+            task = Task({"type": "analysis-test-result", "kind": "drakrun"})
+            res = LocalResource(name=self.current_task.root_uid, bucket='draktestd', content=out_res)
+            res._uid = res.name
+            task.add_payload("result", res)
+            self.send_task(task)
 
     @classmethod
     def args_parser(cls):
         parser = super().args_parser()
-        parser.add_argument(
-            "modules",
-            help="Malduck extractor modules directory",
-        )
         parser.add_argument("tests")
         parser.add_argument("--timeout", type=int)
         return parser
 
     @classmethod
     def main(cls):
+        conf_path = os.path.join(ETC_DIR, "config.ini")
+        config = patch_config(Config(conf_path))
+
+        consumer = RegressionTester(config)
+
+        if not consumer.backend.minio.bucket_exists('draktestd'):
+            consumer.backend.minio.make_bucket(bucket_name='draktestd')
+
+        consumer.loop()
+
+    @classmethod
+    def get_finished_tasks(cls, rs, root_uids):
+        running = {}
+
+        for root_uid in root_uids:
+            running[root_uid] = 0
+
+        for task in rs.keys('karton.task:*'):
+            obj_s = rs.get(task)
+
+            if not obj_s:
+                continue
+
+            obj = json.loads(obj_s)
+
+            if obj['root_uid'] not in running:
+                continue
+
+            if obj['status'] not in ['Finished', 'Crashed']:
+                running[obj['root_uid']] = running[obj['root_uid']] + 1
+
+        return [root_uid for root_uid, cnt in running.items() if cnt == 0]
+
+    @classmethod
+    def submit_main(cls):
         parser = cls.args_parser()
         args = parser.parse_args()
 
-        config = Config(args.config_file)
+        conf_path = os.path.join(ETC_DIR, "config.ini")
+        config = patch_config(Config(conf_path))
 
         with open(args.tests) as tests:
             testcases = [TestCase(**case) for case in json.load(tests)]
 
-        consumer = RegressionTester(config, args.modules, testcases)
-        consumer_thread = threading.Thread(
-            target=lambda c: c.loop(), args=(consumer,)
-        )
-        consumer_thread.start()
+        root_uids = []
 
         for test in testcases:
             sample = test.get_sample()
@@ -129,11 +170,34 @@ class RegressionTester(Karton):
 
             t = Task(headers=dict(type="sample-test", platform="win64"))
             t.add_payload("sample", Resource("malwar", sample))
+            t.add_payload("testcase", test.to_json())
+
             if args.timeout:
                 t.add_payload("timeout", args.timeout)
 
             p = Producer(config)
             p.send_task(t)
+            root_uids.append(t.root_uid)
+
+        consumer = RegressionTester(config)
+        results = {}
+        seen = set()
+
+        with tqdm(total=len(root_uids)) as pbar:
+            while True:
+                for root_uid in cls.get_finished_tasks(consumer.backend.redis, root_uids):
+                    if root_uid not in results:
+                        res = json.load(consumer.backend.minio.get_object('draktestd', root_uid))
+                        results[root_uid] = res
+                        print(json.dumps(results[root_uid]))
+                        pbar.update(1)
+
+                if len(results) == len(root_uids):
+                    break
+
+                time.sleep(1)
+
+        print(json.dumps(list(results.values())))
 
 
 if __name__ == "__main__":
