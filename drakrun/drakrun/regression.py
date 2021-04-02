@@ -182,7 +182,6 @@ class RegressionTester(Karton):
 
         consumer = RegressionTester(config)
         results = {}
-        seen = set()
 
         with tqdm(total=len(root_uids)) as pbar:
             while True:
