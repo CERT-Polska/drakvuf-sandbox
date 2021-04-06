@@ -23,6 +23,8 @@ setup(
         'drakrun/py-scripts/drakpush',
         'drakrun/py-scripts/drakpdb',
         'drakrun/py-scripts/drakplayground',
+        'drakrun/py-scripts/draktestd',
+        'drakrun/py-scripts/draktest',
     ],
     classifiers=[
         "Programming Language :: Python",

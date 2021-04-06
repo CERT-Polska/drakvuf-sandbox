@@ -12,3 +12,4 @@ click==7.1.2
 oletools==0.55.1
 regex==2020.7.14
 ipython==7.9.0
+malduck==4.1.0

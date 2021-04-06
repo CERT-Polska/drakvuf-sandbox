@@ -352,6 +352,9 @@ class DrakrunKarton(Karton):
         task = Task(headers, payload=payload)
         task.add_payload('sample', sample)
 
+        if self.test_run:
+            task.add_payload('testcase', self.current_task.payload['testcase'])
+
         self.log.info("Uploading artifacts...")
         for resource in self.upload_artifacts(self.analysis_uid, outdir):
             task.add_payload(resource.name, resource)
