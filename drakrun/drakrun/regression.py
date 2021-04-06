@@ -13,6 +13,7 @@ from typing import Optional, List
 from pathlib import Path
 
 from karton.core import Karton, Task, Producer, Resource, Config, LocalResource
+from karton.core.task import TaskState
 from malduck.extractor import ExtractManager, ExtractorModules
 from mwdblib import MWDB
 from drakrun.version import __version__ as DRAKRUN_VERSION
