@@ -184,9 +184,6 @@ class RegressionTester(Karton):
                         print(json.dumps(results[root_uid]))
                         pbar.update(1)
 
-                if len(results) == len(root_uids):
-                    break
-
                 time.sleep(1)
 
         print(json.dumps(list(results.values())))
