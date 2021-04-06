@@ -130,27 +130,18 @@ class RegressionTester(Karton):
         consumer.loop()
 
     @classmethod
-    def get_finished_tasks(cls, rs, root_uids):
-        running = {}
+    def get_finished_tasks(cls, backend, root_uids):
+        root_uids = set(root_uids)
+        running = set()
 
-        for root_uid in root_uids:
-            running[root_uid] = 0
-
-        for task in rs.keys('karton.task:*'):
-            obj_s = rs.get(task)
-
-            if not obj_s:
+        for task in backend.get_all_tasks():
+            if task.root_uid not in root_uids or task.root_uid in running:
                 continue
 
-            obj = json.loads(obj_s)
+            if task.status not in [TaskState.FINISHED, TaskState.CRASHED]:
+                running.add(task.root_uid)
 
-            if obj['root_uid'] not in running:
-                continue
-
-            if obj['status'] not in ['Finished', 'Crashed']:
-                running[obj['root_uid']] = running[obj['root_uid']] + 1
-
-        return [root_uid for root_uid, cnt in running.items() if cnt == 0]
+        return root_uids - running
 
     @classmethod
     def submit_main(cls):
@@ -184,8 +175,8 @@ class RegressionTester(Karton):
         results = {}
 
         with tqdm(total=len(root_uids)) as pbar:
-            while True:
-                for root_uid in cls.get_finished_tasks(consumer.backend.redis, root_uids):
+            while len(results) != len(root_uids):
+                for root_uid in cls.get_finished_tasks(consumer.backend, root_uids):
                     if root_uid not in results:
                         res = json.load(consumer.backend.minio.get_object('draktestd', root_uid))
                         results[root_uid] = res
