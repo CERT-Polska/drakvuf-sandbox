@@ -157,7 +157,6 @@ def delete_vm_network(vm_id, net_enable, out_interface, dns_server):
         subprocess.run(f'brctl delbr drak{vm_id}', stderr=subprocess.STDOUT, shell=True)
         logging.info(f"Deleted drak{vm_id} bridge")
 
-    # shouldn't this whole block be in else?
     del_iptable_rule(f"INPUT -i drak{vm_id} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
     if dns_server == "use-gateway-address":
         del_iptable_rule(f"INPUT -i drak{vm_id} -p udp --dport 53 -j ACCEPT")
