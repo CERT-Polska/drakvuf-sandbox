@@ -338,6 +338,17 @@ class DrakrunKarton(Karton):
             elif os.path.isdir(file_path):
                 yield from self.upload_artifacts(analysis_uid, outdir, os.path.join(subdir, fn))
 
+    def build_profile_payload(self) -> Dict[str, LocalResource]:
+        profiles = {}
+
+        for profile in dll_file_list:
+            fpath = os.path.join(PROFILE_DIR, f"{profile.dest}.json")
+            if not os.path.exists(fpath):
+                continue
+            profiles[profile.path] = LocalResource(name=profile.path, path=fpath)
+
+        return profiles
+
     def send_analysis(self, sample, outdir, metadata, quality):
         payload = {"analysis_uid": self.analysis_uid}
         payload.update(metadata)
@@ -354,6 +365,9 @@ class DrakrunKarton(Karton):
 
         if self.test_run:
             task.add_payload('testcase', self.current_task.payload['testcase'])
+
+        self.log.info("Uploading profiles...")
+        task.add_payload("profiles", self.build_profile_payload())
 
         self.log.info("Uploading artifacts...")
         for resource in self.upload_artifacts(self.analysis_uid, outdir):
