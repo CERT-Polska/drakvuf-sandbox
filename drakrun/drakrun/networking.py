@@ -123,7 +123,6 @@ def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server
     else:
         subprocess.run(f'ip addr add 10.13.{vm_id}.1/24 dev drak{vm_id}', shell=True, check=True)
 
-    # shouldn't this whole block be in else?
     subprocess.run(f'ip link set dev drak{vm_id} up', shell=True, check=True)
     logging.info(f"Bridge drak{vm_id} is up")
 
