@@ -13,15 +13,15 @@ from requests import HTTPError
 from tqdm import tqdm
 from typing import NamedTuple, Optional, List
 
-
-
 DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 
-def dll_pair(name: str, extension: str ="dll") -> List[DLL]:
+
+def dll_pair(name: str, extension: str = "dll") -> List[DLL]:
     return [
         DLL("Windows/System32/{name}.{extension}", f"{name}_profile", None),
         DLL("Windows/SysWOW64/{name}.{extension}", f"wow_{name}_profile", None),
     ]
+
 
 # profile file list, without 'C:\' and with '/' instead of '\'
 dll_file_list = [
