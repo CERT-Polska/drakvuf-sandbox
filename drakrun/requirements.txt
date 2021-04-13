@@ -13,3 +13,4 @@ oletools==0.55.1
 regex==2020.7.14
 ipython==7.9.0
 malduck==4.1.0
+mwdblib==3.4.0

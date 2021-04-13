@@ -63,6 +63,15 @@ First, configure the extractor module path in ``/etc/drakrun/config.ini``
     ; path to the extraction modules for
     ; https://github.com/CERT-Polska/malduck
     modules=/opt/extractor-modules/
+    
+Next, uncomment ``sample_testing`` line and enable it
+
+.. code-block:: ini
+
+    [drakrun]
+    ; (advanced) Enable testing codepaths. Test sample artifacts will not be uploaded
+    ; to persistent storage. Their lifetime will be bound to karton tasks produced by drakrun
+    sample_testing=1
 
 Then, execute
 
