@@ -54,6 +54,18 @@ You can also reach us on IRC - [#drakvuf-sandbox@irc.freenode.net](https://webch
 
 If you have any questions about [DRAKVUF](https://drakvuf.com/) engine itself, contact tamas@tklengyel.com
 
-## CEF Notice
+## Acknowledgements
 
-![Co-financed by the Connecting Europe Facility by of the European Union](https://www.cert.pl/wp-content/uploads/2019/02/en_horizontal_cef_logo-1.png)
+This project was created and/or upgraded thanks to the following organizations and initiatives:
+
+### Connecting Europe Facility of the European Union
+
+<a href="https://ec.europa.eu/inea/en/connecting-europe-facility"> <img style="border: 0.2px solid black" src=".github/screenshots/cef.png" alt="Co-financed by the Connecting Europe Facility of the European Union"> </a>
+
+### The Honeynet Project
+
+<a href="https://honeynet.org"> <img style="border: 0.2px solid black" src=".github/screenshots/honeynet.png" alt="Contributed by The Honeynet Project"> </a>
+
+### CERT Polska
+
+<a href="https://cert.pl"> <img style="border: 0.2px solid black" src=".github/screenshots/cert.png" alt="Maintained by CERT Polska"> </a>
