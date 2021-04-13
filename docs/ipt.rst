@@ -2,21 +2,6 @@
 Using Intel Processor Trace Features (Experimental)
 ===================================================
 
-Prerequisites
--------------
-
-In order to use IPT features, you need a special version of ``drakvuf-bundle`` that could be fetched from `icedevml/drakvuf-bundle-ipt releases <https://github.com/icedevml/drakvuf-bundle-ipt/releases>`_.
-
-This special bundle version contains the following modification with respect to normal setup:
-
-* `Xen with custom patches <https://github.com/icedevml/xen/tree/ipt-patch-v7s>`_
-* DRAKVUF built with ``--enable-ipt``
-
-After you install the special version of ``drakvuf-bundle``, please go to ``/etc/drakrun/config.ini``, set ``enable_ipt = 1`` and restart drakrun services.
-
-Your analyses should now contain additional artifacts called ``execframe.log``, ``pagefault.log`` and ``ipt.zip``. This data can be further processed by the analyst.
-
-
 Install required extra dependencies
 -----------------------------------
 
