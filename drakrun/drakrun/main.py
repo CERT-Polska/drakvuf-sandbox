@@ -178,11 +178,12 @@ class DrakrunKarton(Karton):
         cls.filters = load_json(config, 'filters') or cls.DEFAULT_FILTERS
         cls.headers = load_json(config, 'headers') or cls.DEFAULT_HEADERS
         cls.test_headers = load_json(config, 'test_headers') or cls.DEFAULT_TEST_HEADERS
+        cls.test_filters = load_json(config, 'test_filters') or cls.DEFAULT_TEST_FILTERS
 
         # If testing is enabled, add additional test filters from the configuration
         # or fall back to hardcoded
         if config.getboolean("sample_testing", fallback=False):
-            cls.filters.extend(load_json(config, 'test_filters') or cls.DEFAULT_TEST_FILTERS)
+            cls.filters.extend(cls.test_filters)
 
     @property
     def net_enable(self) -> bool:
@@ -199,12 +200,7 @@ class DrakrunKarton(Karton):
         if not self.config.config['drakrun'].getboolean('sample_testing', fallback=False):
             return False
 
-        # Check if task matches any test filter
-        for filtr in self.test_filters:
-            if self.current_task.matches_filters(filtr):
-                return True
-
-        return False
+        return self.current_task.matches_filters(self.test_filters)
 
     @property
     def vm_name(self) -> str:
@@ -357,6 +353,9 @@ class DrakrunKarton(Karton):
         task = Task(headers, payload=payload)
         task.add_payload('sample', sample)
 
+        if self.test_run:
+            task.add_payload('testcase', self.current_task.payload['testcase'])
+
         self.log.info("Uploading artifacts...")
         for resource in self.upload_artifacts(self.analysis_uid, outdir):
             task.add_payload(resource.name, resource)
@@ -451,6 +450,11 @@ class DrakrunKarton(Karton):
                        "-c", cwd]
         if self.config.config['drakrun'].getboolean('enable_ipt', fallback=False):
             drakvuf_cmd.extend(["--ipt-dir", ipt_dir])
+
+        anti_hammering_threshold = self.config.config['drakrun'].getint('anti_hammering_threshold', fallback=None)
+
+        if anti_hammering_threshold:
+            drakvuf_cmd.extend(["--traps-ttl", anti_hammering_threshold])
 
         drakvuf_cmd.extend(self.get_profile_list())
 

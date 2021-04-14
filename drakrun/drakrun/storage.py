@@ -318,6 +318,7 @@ class LvmStorageBackend(StorageBackendBase):
             subprocess.run(
                 [
                     "lvcreate",
+                    "-y",
                     "-L", disk_size,
                     "-n", "vm-0",
                     self.lvm_volume_group
@@ -331,6 +332,13 @@ class LvmStorageBackend(StorageBackendBase):
         """ Saves or snapshots base vm-0 volume for later use by other VMs """
         # vm-0 is the original disk being treated as a snapshot
         # vm-0-snap is being created just for the access time of the change in vm snapshot
+        subprocess.run(
+            [
+                "lvremove",
+                f"{self.lvm_volume_group}/vm-0-snap"
+            ],
+            stderr=subprocess.DEVNULL
+        )
         try:
             subprocess.check_output(
                 [
@@ -409,11 +417,14 @@ class LvmStorageBackend(StorageBackendBase):
 
     def export_vm0(self, path: str):
         """ Export vm-0 disk into a file (symmetric to import_vm0) """
+        # As dd copies empty spaces also
+        # Should we use compressions in this? Will it have any issues while importing?
         subprocess.run(
             [
                 "dd",
                 f"if=/dev/{self.lvm_volume_group}/vm-0",
                 f"of={path}",
+                "bs=4k",
                 "status=progress"
             ],
             check=True
@@ -426,10 +437,27 @@ class LvmStorageBackend(StorageBackendBase):
                 "dd",
                 f"of=/dev/{self.lvm_volume_group}/vm-0",
                 f"if={path}",
+                "bs=4k",
                 "status=progress"
             ],
             check=True
         )
+
+    def delete_vm_volume(self, vm_id: str):
+        try:
+            subprocess.check_output(
+                [
+                    "lvremove",
+                    "-v",
+                    "-y",
+                    # "--noudevsync",
+                    f"{self.lvm_volume_group}/vm-{vm_id}"
+                ],
+                stderr=subprocess.STDOUT,
+            )
+        except subprocess.CalledProcessError as e:
+            logging.debug(e.output)
+            raise Exception("Could not delete volume")
 
 
 REGISTERED_BACKENDS = {
