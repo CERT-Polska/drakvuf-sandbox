@@ -144,7 +144,7 @@ def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server
 
 def delete_vm_network(vm_id, net_enable, out_interface, dns_server):
     try:
-        subprocess.check_output(f'ip link set dev drak{vm_id} down', shell=True, stderr=subprocess.PIPE)
+        subprocess.check_output(f'ip link set dev drak{vm_id} down', shell=True, stderr=subprocess.STDOUT)
         logging.info(f"Bridge drak{vm_id} is down")
     except subprocess.CalledProcessError as e:
         if b"Cannot find device" in e.output:

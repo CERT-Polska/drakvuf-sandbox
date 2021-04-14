@@ -1,6 +1,11 @@
 import shutil
 import os
 import contextlib
+import subprocess
+
+
+def tool_exists(tool):
+    return subprocess.run(["which", tool]).returncode == 0
 
 
 @contextlib.contextmanager

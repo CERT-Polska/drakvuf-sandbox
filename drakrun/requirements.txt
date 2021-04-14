@@ -1,4 +1,4 @@
-karton-core==4.1.0
+karton-core==4.2.0
 minio==5.0.7
 redis==3.5.3
 pefile==2019.4.18
@@ -12,3 +12,5 @@ click==7.1.2
 oletools==0.55.1
 regex==2020.7.14
 ipython==7.9.0
+malduck==4.1.0
+mwdblib==3.4.0

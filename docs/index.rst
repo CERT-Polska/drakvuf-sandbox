@@ -26,6 +26,7 @@ Because it is usually pretty hard to set up a malware sandbox, this project also
    :caption: Developer guide
 
    sandbox_development
+   regression_testing
    building_packages
 
 .. toctree::
