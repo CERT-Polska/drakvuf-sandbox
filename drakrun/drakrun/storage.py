@@ -455,6 +455,7 @@ class LvmStorageBackend(StorageBackendBase):
             ],
             check=True
         )
+
     def delete_vm_volume(self, vm_id: str):
         try:
             subprocess.check_output(
