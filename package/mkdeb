@@ -72,7 +72,7 @@ cp package/postrm deb/DEBIAN/postrm
 chown -R root:root deb
 dpkg-deb --build -z0 deb "xen-hypervisor-$xenversion-$distro-amd64.deb"
 mv *.deb /out
-rm -rf deb
+# rm -rf deb
 
 ## DRAKVUF, LibVMI & tools
 
@@ -84,7 +84,8 @@ Source: drakvuf-bundle
 Version: $version
 Architecture: $arch
 Maintainer: Unmaintained snapshot
-Depends: libglib2.0-dev, libjson-c3 | libjson-c4
+Depends: libglib2.0-dev, libjson-c3 | libjson-c4, libpixman-1-0, libpng16-16, libnettle6 | libnettle7, libgnutls30, libfdt1, libyajl2, libaio1
+Conflicts: xen-hypervisor-4.6-amd64, xen-hypervisor-4.7-amd64, xen-hypervisor-4.8-amd64, xen-hypervisor-4.9-amd64, xen-hypervisor-4.10-amd64, xen-hypervisor-4.11-amd64, xen-hypervisor-4.12-amd64
 Section: admin
 Priority: optional
 Installed-Size: $(du -ks deb | cut -f1)
