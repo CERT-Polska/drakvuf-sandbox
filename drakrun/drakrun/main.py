@@ -482,7 +482,13 @@ class DrakrunKarton(Karton):
                 sample_path,
                 f"%USERPROFILE%\\Desktop\\{os.path.basename(sample_path)}"
             )
-            injected_fn = json.loads(result.stdout)['ProcessName']
+
+            try:
+                injected_fn = json.loads(result.stdout)['ProcessName']
+            except ValueError as e:
+                self.log.error("JSON decode error occurred when tried to parse injector's logs.")
+                self.log.error(f"Raw log line: {result.stdout}")
+                raise e
 
             if "%f" not in start_command:
                 self.log.warning("No file name in start command")
@@ -512,8 +518,14 @@ class DrakrunKarton(Karton):
                     check=True,
                     timeout=timeout + 60
                 )
-            except subprocess.TimeoutExpired:
+            except subprocess.CalledProcessError as e:
+                if e.returncode == 4:
+                    self.log.error("Injection succeeded but the sample didn't execute properly. Check drakmon.log for details.")
+                else:
+                    raise e
+            except subprocess.TimeoutExpired as e:
                 self.log.exception("DRAKVUF timeout expired")
+                raise e
 
         return analysis_info
 
