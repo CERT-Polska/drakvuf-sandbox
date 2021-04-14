@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Set REACT_APP_API_SERVER env to override default API server URL
-axios.defaults.baseURL = process.env.REACT_APP_API_SERVER || 'http://localhost:5000';
+axios.defaults.baseURL = process.env.REACT_APP_API_SERVER;
 
 export default {
   async getList() {
