@@ -12,7 +12,7 @@ from drakrun.config import (
     LIB_DIR,
     InstallInfo
 )
-from drakrun.util import safe_delete
+from drakrun.util import safe_delete, try_subprocess
 
 log = logging.getLogger("drakrun")
 
@@ -91,24 +91,33 @@ class VirtualMachine:
         )
         return res.returncode == 0
 
-    """
-    I have a few suggestions that can help remove the raw xl commands from draksetup
-    Here is the abstract, should i pursue with the idea?
-    """
-    # def uptime(self):
-    #   xl uptime command
+    def create(self, cfg_path, pause=False):
+        args = ['xl', 'create']
+        if pause:
+            args += ['-p']
+        args += [cfg_path]
+        try_subprocess(args, "Failed to launch VM vm-0")
 
-    # def create(self):
-    #   xl create command
+    def pause(self):
+        try_subprocess(['xl', 'pause', self.vm_name], f"Failed to pause VM {self.vm_name}")
 
-    # def pause(self):
-    #   xl pause command
+    def unpause(self):
+        try_subprocess(['xl', 'unpause', self.vm_name], f"Failed to unpause VM {self.vm_name}")
 
-    # def unpause(self):
-    #   xl unpause command
+    def save(self, filename, **kwargs):
+        args = ['xl', 'save']
 
-    # def save(self, pause=False):
-    #   xl save command
+        # no such kwargs will shutdown the VM after saving
+        # pause=True
+        if kwargs['pause'] is True:
+            args += ['-p']
+        # cont=True
+        elif kwargs['cont'] is True:
+            args += ['-c']
+
+        args += [self.vm_name, filename]
+
+        try_subprocess(args, f"Failed to save VM {self.vm_name}")
 
     def restore(self) -> None:
         """ Restore virtual machine from snapshot.
@@ -126,7 +135,7 @@ class VirtualMachine:
         if self.vm_id != 0:
             self.backend.rollback_vm_storage(self.vm_id)
 
-        subprocess.run(["xl", "restore", cfg_path, snapshot_path], check=True)
+        try_subprocess(["xl", "restore", cfg_path, snapshot_path])
 
     def destroy(self):
         """ Destroy a running virtual machine.
@@ -134,4 +143,4 @@ class VirtualMachine:
         """
         if self.is_running:
             logging.info(f"Destroying {self.vm_name}")
-            subprocess.run(["xl", "destroy", self.vm_name], check=True)
+            try_subprocess(["xl", "destroy", self.vm_name])

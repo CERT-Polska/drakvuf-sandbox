@@ -133,6 +133,25 @@ def safe_delete(file_path) -> bool:
         return False
 
 
+def try_subprocess(list_args, msg, debug=True, **kwargs):
+    try:
+        sub = subprocess.check_output(list_args, **kwargs)
+    except FileNotFoundError:
+        if debug:
+            logging.debug("arguments to subprocess")
+            logging.debug(list_args)
+            logging.debug(msg)
+        raise Exception("Command not found") from None
+    except subprocess.CalledProcessError as e:
+        if debug:
+            logging.debug("stdout: {}".format(e.stdout))
+            logging.debug("stderr: {}".format(e.stderr))
+            logging.debug("returncode: {}".format(e.returncode))
+            logging.exception(e)
+        raise Exception(msg) from None
+    return sub
+
+
 @contextlib.contextmanager
 def graceful_exit(proc: subprocess.Popen):
     try:

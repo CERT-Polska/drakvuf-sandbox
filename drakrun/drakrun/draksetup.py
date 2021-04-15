@@ -327,17 +327,13 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
     )
     install_info.save()
 
-    try:
-        subprocess.check_output('xl uptime vm-0', shell=True, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError:
-        pass
-    else:
-        logging.info('Detected that vm-0 is already running, stopping it.')
-        subprocess.run('xl destroy vm-0', shell=True, check=True)
+    backend = get_storage_backend(install_info)
+
+    vm0 = VirtualMachine(backend, 0)
+    vm0.destroy()
 
     generate_vm_conf(install_info, 0)
 
-    backend = get_storage_backend(install_info)
     backend.initialize_vm0_volume(disk_size)
 
     try:
@@ -357,11 +353,7 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
 
     cfg_path = os.path.join(VM_CONFIG_DIR, "vm-0.cfg")
 
-    try:
-        subprocess.run('xl create {}'.format(shlex.quote(cfg_path)), shell=True, check=True)
-    except subprocess.CalledProcessError:
-        logging.exception("Failed to launch VM vm-0")
-        return
+    vm0.create(cfg_path)
 
     logging.info("-" * 80)
     logging.info("Initial VM setup is complete and the vm-0 was launched.")
@@ -526,9 +518,9 @@ def postinstall(report, generate_usermode):
     install_info = InstallInfo.load()
     storage_backend = get_storage_backend(install_info)
 
-    vm = VirtualMachine(storage_backend, 0)
+    vm0 = VirtualMachine(storage_backend, 0)
 
-    if vm.is_running is False:
+    if vm0.is_running is False:
         logging.exception("vm-0 is not running")
         return
 
@@ -576,14 +568,14 @@ def postinstall(report, generate_usermode):
     logging.info("Saving VM snapshot...")
 
     # snapshot domain but don't destroy it, leave it in paused state
-    subprocess.check_output('xl save -p vm-0 ' + os.path.join(VOLUME_DIR, "snapshot.sav"), shell=True)
+    vm0.save(os.path.join(VOLUME_DIR, "snapshot.sav"), pause=True)
     logging.info("Snapshot was saved succesfully.")
 
     logging.info("Snapshotting persistent memory...")
     storage_backend.snapshot_vm0_volume()
 
     logging.info("Unpausing VM")
-    subprocess.check_output('xl unpause vm-0', shell=True)
+    vm0.unpause()
 
     injector = Injector('vm-0', runtime_info, kernel_profile)
     if generate_usermode:
@@ -593,7 +585,7 @@ def postinstall(report, generate_usermode):
             logging.warning("Generating usermode profiles failed")
             logging.exception(e)
 
-    subprocess.check_output('xl destroy vm-0', shell=True)
+    vm0.destroy()
 
     if report:
         send_usage_report({
