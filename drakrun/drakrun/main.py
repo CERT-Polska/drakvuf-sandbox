@@ -19,7 +19,6 @@ from typing import List, Dict
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 from configparser import NoOptionError
 from itertools import chain
-import traceback
 
 import pefile
 import magic
