@@ -446,7 +446,7 @@ class DrakrunKarton(Karton):
                        "--ipt-dir", ipt_dir,
                        "--codemon-dump-dir", ipt_dir,
                        "--codemon-log-everything",
-                       "--codemon-analyse-system-dll-vad"
+                       "--codemon-analyse-system-dll-vad",
                        "-r", kernel_profile,
                        "-e", full_cmd,
                        "-c", cwd]
