@@ -612,6 +612,8 @@ class DrakrunKarton(Karton):
 
         # Make sure dumps have a reasonable size
         self.crop_dumps(os.path.join(outdir, 'dumps'), os.path.join(outdir, 'dumps.zip'))
+
+        # Compress IPT traces, they're quite large however they compress well
         self.compress_ipt(os.path.join(outdir, 'ipt'), os.path.join(outdir, 'ipt.zip'))
 
         metadata['time_finished'] = int(time.time())
