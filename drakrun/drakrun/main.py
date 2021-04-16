@@ -435,7 +435,7 @@ class DrakrunKarton(Karton):
                       ["-o", "json",
                        # be aware of https://github.com/tklengyel/drakvuf/pull/951
                        "-F",  # enable fast singlestep
-                       "-j", "5",
+                       "-j", "60",
                        "-t", str(timeout),
                        "-i", str(self.runtime_info.inject_pid),
                        "-k", hex(self.runtime_info.vmi_offsets.kpgd),
