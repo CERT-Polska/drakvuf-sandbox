@@ -135,7 +135,7 @@ class VirtualMachine:
         if self.vm_id != 0:
             self.backend.rollback_vm_storage(self.vm_id)
 
-        try_subprocess(["xl", "restore", cfg_path, snapshot_path])
+        try_subprocess(["xl", "restore", cfg_path, snapshot_path], f"Failed to restore VM {self.vm_name}")
 
     def destroy(self):
         """ Destroy a running virtual machine.
@@ -143,4 +143,4 @@ class VirtualMachine:
         """
         if self.is_running:
             logging.info(f"Destroying {self.vm_name}")
-            try_subprocess(["xl", "destroy", self.vm_name])
+            try_subprocess(["xl", "destroy", self.vm_name], f"Failed to destroy VM {self.vm_name}")

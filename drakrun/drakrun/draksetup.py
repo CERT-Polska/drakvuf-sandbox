@@ -186,6 +186,7 @@ def perform_xtf():
         tmpf.write(test_cfg)
         tmpf.flush()
 
+        # remove raw xl commands from here
         logging.info('Checking if the test domain already exists...')
         subprocess.run('xl destroy test-hvm64-example', shell=True)
 
