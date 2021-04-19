@@ -119,8 +119,6 @@ def get_ptxed_cmdline(analysis_dir, cr3_value, vcpu):
     ptxed_cmdline = [
         "/opt/libipt/bin/ptxed",
         "--block-decoder",
-        "--pt",
-        "<FILTERED_PT_FILE>",
         *pages
     ]
 
@@ -146,7 +144,7 @@ def cmdline_main():
     ptxed_cmdline = get_ptxed_cmdline(analysis_dir, cr3_value, args.vcpu)
 
     if args.dry_run:
-        print(subprocess.list2cmdline(ptxed_cmdline))
+        print(subprocess.list2cmdline(ptxed_cmdline + ["--pt", "<FILTERED_PT_FILE>"]))
         sys.exit(0)
 
     with tempfile.NamedTemporaryFile() as f:
@@ -161,5 +159,5 @@ def cmdline_main():
         subprocess.run(' | '.join(filter_cmdline), shell=True)
 
         logging.info("Generating trace disassembly")
-        ptxed_cmdline = [x if x != "<FILTERED_PT_FILE>" else f.name for x in ptxed_cmdline]
+        ptxed_cmdline = ptxed_cmdline + ["--pt", f.name]
         subprocess.run(ptxed_cmdline)
