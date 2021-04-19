@@ -2,40 +2,59 @@
 Using Intel Processor Trace Features (Experimental)
 ===================================================
 
+Enable IPT plugin in drakrun
+----------------------------
+
+1. In ``/etc/drakrun/config.ini``, add ``ipt`` plugin under ``[drakvuf_plugins]`` section ``__all__`` in order to enable IPT tracing.
+2. In ``/etc/drakrun/scripts/cfg.template`` add a new entry: ``vmtrace_buf_kb = 8192``
+3. Execute ``systemctl restart drakrun@1`` (repeat for each drakrun instance if you have scaled them up).
+
+
 Install required extra dependencies
 -----------------------------------
 
-In order to analyze IPT data streams, you need to install ``libipt``, ``xed``, ``ptdump`` (modified) and ``ptxed``.
+In order to analyze IPT data streams, you need to install ``libipt``, ``xed``, ``ptdump`` (modified), ``ptxed`` and ``drak-ipt-blocks`` tools.
 
 .. code-block :: console
 
-  $ rm -rf /tmp/iptbuild
-  $ mkdir /tmp/iptbuild
-  $ cd /tmp/iptbuild
+  rm -rf /tmp/iptbuild
+  mkdir /tmp/iptbuild
+  cd /tmp/iptbuild
 
-  $ git clone https://github.com/icedevml/libipt.git
-  $ git clone https://github.com/intelxed/xed.git
-  $ git clone https://github.com/intelxed/mbuild.git
+  git clone https://github.com/icedevml/libipt.git
+  git clone https://github.com/intelxed/xed.git
+  git clone https://github.com/intelxed/mbuild.git
+  git clone https://github.com/gabime/spdlog.git
+  git clone https://github.com/CERT-Polska/drakvuf-sandbox.git
 
-  $ cd xed
-  $ ./mfile.py --share
-  $ ./mfile.py --prefix=/usr/local install
-  $ ldconfig
+  cd xed
+  ./mfile.py --share
+  ./mfile.py --prefix=/usr/local install
+  ldconfig
 
-  $ cd ../libipt
-  $ git checkout
-  $ cmake -D PTDUMP=On -D PTXED=On .
-  $ make install
+  cd ../libipt
+  git checkout
+  cmake -D PTDUMP=On -D PTXED=On .
+  make install
+  
+  cd ../spdlog
+  cmake .
+  make -j$(nproc) install
+
+  cd ../drakvuf-sandbox/drakcore/drakcore/tools/ipt
+  cmake .
+  make install
 
 
 Generate trace disassembly
 --------------------------
 
-1. Download the completed analysis from MinIO to your local hard drive
-2. Find CR3 of the target process you want to disassemble (hint: `syscall.log` will contain CR3 values)
-3. Execute ``drak-ipt-disasm --analysis . --cr3 <target_process_cr3> --vcpu 0``
-4. After few minutes it should start printing full trace disassembly of the targeted process
-5. You can also try `--blocks` switch for `drak-ipt-disasm` to get a list of executed basic blocks for this process
+1. Perform an analysis with IPT plugin enabled
+2. Download the completed analysis from MinIO to your local hard drive
+3. Find CR3 of the target process you want to disassemble (hint: `syscall.log` will contain CR3 values)
+4. Execute ``drak-ipt-disasm --analysis . --cr3 <target_process_cr3> --vcpu 0``
+5. After few minutes it should start printing full trace disassembly of the targeted process
+6. You can also try `--blocks` switch for `drak-ipt-disasm` to get a list of executed basic blocks for this process
 
 **Example (executed basic blocks):**
 
