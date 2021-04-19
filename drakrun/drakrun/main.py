@@ -366,8 +366,9 @@ class DrakrunKarton(Karton):
         if self.test_run:
             task.add_payload('testcase', self.current_task.payload['testcase'])
 
-        self.log.info("Uploading profiles...")
-        task.add_payload("profiles", self.build_profile_payload())
+        if self.config.config.getboolean("drakrun", "attach_profiles", fallback=False):
+            self.log.info("Uploading profiles...")
+            task.add_payload("profiles", self.build_profile_payload())
 
         self.log.info("Uploading artifacts...")
         for resource in self.upload_artifacts(self.analysis_uid, outdir):
