@@ -663,8 +663,8 @@ def postupgrade():
     detect_defaults()
 
     install_info = InstallInfo.try_load()
-    # DRAKVUF Sandbox not installed. Nothing more to do
     if not install_info:
+        logging.info("Postupgrade done. DRAKVUF Sandbox not installed.")
         return
 
     # Prepare injector
