@@ -444,6 +444,7 @@ class DrakrunKarton(Karton):
                        "--dll-hooks-list", hooks_list,
                        "--memdump-dir", dump_dir,
                        "--ipt-dir", ipt_dir,
+                       "--ipt-trace-user",
                        "--codemon-dump-dir", ipt_dir,
                        "--codemon-log-everything",
                        "--codemon-analyse-system-dll-vad",
