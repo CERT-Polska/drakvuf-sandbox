@@ -86,7 +86,7 @@ def match_frames(page_faults, frames, foreign_frames):
     return results
 
 
-def main(analysis_dir, cr3_value, vcpu):
+def get_ptxed_cmdline(analysis_dir, cr3_value, vcpu):
     log.debug("Analysis directory: %s", analysis_dir)
     log.debug("CR3: %#x", cr3_value)
 
@@ -120,44 +120,12 @@ def main(analysis_dir, cr3_value, vcpu):
         "/opt/libipt/bin/ptxed",
         "--block-decoder",
         "--pt",
-        os.path.join(analysis_dir, "ipt", f"ipt_stream_vcpu{vcpu}"),
+        "<FILTERED_PT_FILE>",
         *pages
     ]
 
     log.info("IPT: Succesfully generated ptxed command line")
     return ptxed_cmdline
-
-
-def generate_ipt_disasm(task: Task, resources: Dict[str, RemoteResource], minio):
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
-        resources["inject.log"].download_to_file(str(tmpdir / "inject.log"))
-
-        with open(str(tmpdir / "inject.log"), "r") as f:
-            inject_log = json.loads(f.read().split('\n')[0].strip())
-
-        injected_pid = inject_log["InjectedPid"]
-        resources["execframe.log"].download_to_file(str(tmpdir / "execframe.log"))
-
-        with open(str(tmpdir / "execframe.log"), "r") as f:
-            for line in f:
-                obj = json.loads(line)
-
-                if obj.get("PID") == injected_pid:
-                    injected_cr3 = hexint(obj["CR3"])
-                    break
-            else:
-                log.error("Failed to find injected process' CR3, not doing IPT disasm")
-                return
-
-        resources["pagefault.log"].download_to_file(str(tmpdir / "pagefault.log"))
-        resources["execframe.log"].download_to_file(str(tmpdir / "execframe.log"))
-
-        with resources["ipt.zip"].download_temporary_file() as ipt_zip_tmp:
-            with ZipFile(ipt_zip_tmp) as ipt_zip:
-                ipt_zip.extractall(tmpdir)
-
-        main(tmpdir, injected_cr3)
 
 
 def cmdline_main():
@@ -175,7 +143,7 @@ def cmdline_main():
     analysis_dir = Path(args.analysis)
     cr3_value = args.cr3
 
-    ptxed_cmdline = main(analysis_dir, cr3_value, args.vcpu)
+    ptxed_cmdline = get_ptxed_cmdline(analysis_dir, cr3_value, args.vcpu)
 
     if args.dry_run:
         print(subprocess.list2cmdline(ptxed_cmdline))
@@ -193,4 +161,5 @@ def cmdline_main():
         subprocess.run(' | '.join(filter_cmdline), shell=True)
 
         logging.info("Generating trace disassembly")
+        ptxed_cmdline = [x if x != "<FILTERED_PT_FILE>" else f.name for x in ptxed_cmdline]
         subprocess.run(ptxed_cmdline)
