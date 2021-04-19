@@ -160,13 +160,14 @@ def drakmon_vm():
         apt_install(c, ["redis-server"])
         apt_install(c, DRAKMON_DEPS)
 
-        for d in debs:
-            dpkg_install(c, d.name)
-
         # add ISO image to make xen happy
         c.run(
             "genisoimage -o /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO /dev/null"
         )
+
+        for d in debs:
+            dpkg_install(c, d.name)
+
 
         # add xen bridge
         c.run("brctl addbr drak0")
