@@ -215,8 +215,15 @@ class UploadSample extends Component {
   }
 
   displayPluginImplications(enabledPlugins) {
-    if (enabledPlugins.indexOf("ipt") !== -1 && enabledPlugins.indexOf("codemon") == -1) {
-      return <p class="text-muted">Using <code>ipt</code> plugin implies using <code>codemon</code>.</p>;
+    if (
+      enabledPlugins.indexOf("ipt") !== -1 &&
+      enabledPlugins.indexOf("codemon") == -1
+    ) {
+      return (
+        <p class="text-muted">
+          Using <code>ipt</code> plugin implies using <code>codemon</code>.
+        </p>
+      );
     }
 
     return <span />;
@@ -290,7 +297,7 @@ class UploadSample extends Component {
               onSelect={this.handlePluginsChange}
               onRemove={this.handlePluginsChange}
             />
-	    {this.displayPluginImplications(this.state.enabledPlugins)}
+            {this.displayPluginImplications(this.state.enabledPlugins)}
           </div>
           <div className="collapse" id="customOptions">
             <OptionalField
