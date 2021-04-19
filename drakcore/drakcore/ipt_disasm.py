@@ -113,7 +113,7 @@ def get_ptxed_cmdline(analysis_dir, cr3_value, vcpu, use_blocks=False):
     pages = []
     for addr, fname in mappings:
         name = Path(fname).name
-        fpath = analysis_dir / "ipt" / "frames" / name
+        fpath = analysis_dir / "ipt" / "dumps" / name
         if fpath.stat().st_size == 0x1000:
             pages.append("--raw")
             pages.append(f"{fpath}:0x{addr:x}")
