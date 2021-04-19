@@ -162,6 +162,11 @@ class DrakrunKarton(Karton):
             plugin_list = self.active_plugins[quality]
 
         plugin_list = list(set(plugin_list) & set(enabled_plugins))
+
+        if "ipt" in plugin_list and "codemon" not in plugin_list:
+            self.log.info("Using ipt plugin implies using codemon")
+            plugin_list.append("codemon")
+
         return list(chain.from_iterable([["-a", plugin] for plugin in plugin_list]))
 
     @classmethod
@@ -187,11 +192,6 @@ class DrakrunKarton(Karton):
     @property
     def net_enable(self) -> bool:
         return self.config.config['drakrun'].getboolean('net_enable', fallback=False)
-
-    @property
-    def enable_ipt(self) -> bool:
-        # TODO: Inconsistent naming - net_enable vs enable_ipt
-        return self.config.config['drakrun'].getboolean('enable_ipt', fallback=False)
 
     @property
     def test_run(self) -> bool:
@@ -431,6 +431,7 @@ class DrakrunKarton(Karton):
 
         task_quality = self.current_task.headers.get("quality", "high")
         requested_plugins = self.current_task.payload.get("plugins", self.active_plugins['_all_'])
+
         drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality, requested_plugins) + \
                       ["-o", "json",
                        # be aware of https://github.com/tklengyel/drakvuf/pull/951
@@ -442,11 +443,13 @@ class DrakrunKarton(Karton):
                        "-d", self.vm_name,
                        "--dll-hooks-list", hooks_list,
                        "--memdump-dir", dump_dir,
+                       "--ipt-dir", ipt_dir,
+                       "--codemon-dump-dir", ipt_dir,
+                       "--codemon-log-everything",
+                       "--codemon-analyse-system-dll-vad",
                        "-r", kernel_profile,
                        "-e", full_cmd,
                        "-c", cwd]
-        if self.config.config['drakrun'].getboolean('enable_ipt', fallback=False):
-            drakvuf_cmd.extend(["--ipt-dir", ipt_dir])
 
         anti_hammering_threshold = self.config.config['drakrun'].getint('anti_hammering_threshold', fallback=None)
 
@@ -625,8 +628,7 @@ class DrakrunKarton(Karton):
         self.crop_dumps(os.path.join(outdir, 'dumps'), os.path.join(outdir, 'dumps.zip'))
 
         # Compress IPT traces, they're quite large however they compress well
-        if self.enable_ipt:
-            self.compress_ipt(os.path.join(outdir, 'ipt'), os.path.join(outdir, 'ipt.zip'))
+        self.compress_ipt(os.path.join(outdir, 'ipt'), os.path.join(outdir, 'ipt.zip'))
 
         metadata['time_finished'] = int(time.time())
 
