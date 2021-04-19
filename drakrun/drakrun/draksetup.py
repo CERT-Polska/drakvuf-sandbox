@@ -676,6 +676,8 @@ def postupgrade():
     stop_all_drakruns()
 
     # Use vm-1 for generating profiles
+    out_interface = conf['drakrun'].get('out_interface', '')
+    setup_vm_network(vm_id=1, net_enable=False, out_interface=out_interface)
     backend = get_storage_backend(install_info)
     vm = VirtualMachine(backend, 1)
     vm.restore()
@@ -683,6 +685,7 @@ def postupgrade():
     create_missing_profiles(injector)
 
     vm.destroy()
+    delete_vm_network(vm_id=1, net_enable=False, out_interface=out_interface)
     start_enabled_drakruns()
 
 
