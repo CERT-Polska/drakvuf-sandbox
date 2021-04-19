@@ -18,8 +18,8 @@ DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 
 def dll_pair(name: str, extension: str = "dll") -> List[DLL]:
     return [
-        DLL("Windows/System32/{name}.{extension}", f"{name}_profile", None),
-        DLL("Windows/SysWOW64/{name}.{extension}", f"wow_{name}_profile", None),
+        DLL(f"Windows/System32/{name}.{extension}", f"{name}_profile", None),
+        DLL(f"Windows/SysWOW64/{name}.{extension}", f"wow_{name}_profile", None),
     ]
 
 
