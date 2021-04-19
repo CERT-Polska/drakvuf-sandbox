@@ -90,3 +90,4 @@ Generate trace disassembly
   000007feff754505  mov rax, qword ptr [rbx]
   000007feff754508  test rax, rax
   000007feff75450b  jz 0x7feff75450f
+  ...
