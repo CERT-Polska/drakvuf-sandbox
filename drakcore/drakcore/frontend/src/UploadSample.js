@@ -217,7 +217,7 @@ class UploadSample extends Component {
   displayPluginImplications(enabledPlugins) {
     if (
       enabledPlugins.indexOf("ipt") !== -1 &&
-      enabledPlugins.indexOf("codemon") == -1
+      enabledPlugins.indexOf("codemon") === -1
     ) {
       return (
         <p class="text-muted">
