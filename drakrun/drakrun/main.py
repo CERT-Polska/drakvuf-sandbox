@@ -14,16 +14,18 @@ import zipfile
 import json
 import re
 import functools
+import tempfile
 from io import StringIO
 from typing import List, Dict
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 from configparser import NoOptionError
 from itertools import chain
+from pathlib import Path
 
 import pefile
 import magic
 import ntpath
-from karton.core import Karton, Config, Task, LocalResource
+from karton.core import Karton, Config, Task, LocalResource, Resource
 
 import drakrun.office as d_office
 from drakrun.version import __version__ as DRAKRUN_VERSION
@@ -339,15 +341,14 @@ class DrakrunKarton(Karton):
                 yield from self.upload_artifacts(analysis_uid, outdir, os.path.join(subdir, fn))
 
     def build_profile_payload(self) -> Dict[str, LocalResource]:
-        profiles = {}
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            for profile in dll_file_list:
+                fpath = Path(PROFILE_DIR) / f"{profile.dest}.json"
+                if not fpath.is_file():
+                    continue
+                shutil.copy(fpath, tmp_dir / fpath.name)
 
-        for profile in dll_file_list:
-            fpath = os.path.join(PROFILE_DIR, f"{profile.dest}.json")
-            if not os.path.exists(fpath):
-                continue
-            profiles[profile.path] = LocalResource(name=profile.path, path=fpath)
-
-        return profiles
+            return Resource.from_directory(tmp_dir.name)
 
     def send_analysis(self, sample, outdir, metadata, quality):
         payload = {"analysis_uid": self.analysis_uid}
