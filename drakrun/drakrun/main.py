@@ -346,7 +346,7 @@ class DrakrunKarton(Karton):
                 fpath = Path(PROFILE_DIR) / f"{profile.dest}.json"
                 if not fpath.is_file():
                     continue
-                shutil.copy(fpath, tmp_dir / fpath.name)
+                shutil.copy(fpath, Path(tmp_dir) / fpath.name)
 
             return Resource.from_directory(tmp_dir.name)
 
