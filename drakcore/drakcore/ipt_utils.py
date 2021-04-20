@@ -66,7 +66,7 @@ def get_trap_pa(execframe):
 
 
 def get_frame_va(execframe):
-    return hexint(execframe['FrameVA'])
+    return hexint(execframe['PageVA'])
 
 
 def page_align(addr):
