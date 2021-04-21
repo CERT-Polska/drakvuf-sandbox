@@ -431,7 +431,7 @@ def create_rekall_profile(injector: Injector, file: DLL):
         tmp = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
 
         logging.debug("Parsing PDB into JSON profile...")
-        profile = make_pdb_profile(tmp)
+        profile = make_pdb_profile(tmp, dll_origin_path=guest_dll_path)
         with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), 'w') as f:
             f.write(profile)
     except json.JSONDecodeError:

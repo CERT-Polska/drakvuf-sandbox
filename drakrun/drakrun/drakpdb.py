@@ -297,7 +297,7 @@ def process_struct(struct_info):
     return [struct_info.size, field_info]
 
 
-def make_pdb_profile(filepath):
+def make_pdb_profile(filepath, dll_origin_path=None):
     pdb = pdbparse.parse(filepath)
 
     try:
@@ -370,6 +370,10 @@ def make_pdb_profile(filepath):
         "Type": "Profile",
         "Version": pdb.STREAM_PDB.Version
     }
+
+    if dll_origin_path:
+        profile["$METADATA"]["DLLPath"] = str(dll_origin_path)
+
     return json.dumps(profile, indent=4, sort_keys=True)
 
 
