@@ -65,8 +65,11 @@ TYPE_ENUM_TO_VTYPE = {
     "T_32PUSHORT": ["Pointer", dict(target="unsigned short")],
     "T_32PVOID": ["Pointer", dict(target="Void")],
     "T_32PWCHAR": ["Pointer", dict(target="UnicodeString")],
+    "T_32PHRESULT": ["Pointer", dict(target="long")],
+    "T_64PINT4": ["Pointer", dict(target="long")],
     "T_64PLONG": ["Pointer", dict(target="long")],
     "T_64PQUAD": ["Pointer", dict(target="long long")],
+    "T_64PSHORT": ["Pointer", dict(target="short")],
     "T_64PRCHAR": ["Pointer", dict(target="unsigned char")],
     "T_64PUCHAR": ["Pointer", dict(target="unsigned char")],
     "T_64PWCHAR": ["Pointer", dict(target="String")],
@@ -74,6 +77,10 @@ TYPE_ENUM_TO_VTYPE = {
     "T_64PUQUAD": ["Pointer", dict(target="unsigned long long")],
     "T_64PUSHORT": ["Pointer", dict(target="unsigned short")],
     "T_64PVOID": ["Pointer", dict(target="Void")],
+    "T_64PREAL32": ["Pointer", dict(target="float")],
+    "T_64PREAL64": ["Pointer", dict(target="double")],
+    "T_64PUINT4": ["Pointer", dict(target="unsigned int")],
+    "T_64PHRESULT": ["Pointer", dict(target="long")],
     "T_BOOL08": ["unsigned char", {}],
     "T_CHAR": ["char", {}],
     "T_INT4": ["long", {}],
@@ -87,6 +94,7 @@ TYPE_ENUM_TO_VTYPE = {
     "T_SHORT": ["short", {}],
     "T_UCHAR": ["unsigned char", {}],
     "T_UINT4": ["unsigned long", {}],
+    "T_UINT8": ["unsigned long long", {}],
     "T_ULONG": ["unsigned long", {}],
     "T_UQUAD": ["unsigned long long", {}],
     "T_USHORT": ["unsigned short", {}],
@@ -228,6 +236,9 @@ def process_struct(struct_info):
 
     try:
         for struct in struct_info.fieldlist.substructs:
+            # try to access struct.offset and trigger
+            # an AttributeError if it's missing
+            _ = struct.offset
             ss[struct.name] = struct
     except AttributeError:
         pass
