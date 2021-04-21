@@ -565,6 +565,8 @@ def postinstall(report, generate_usermode):
     with open(kernel_profile, 'w') as f:
         f.write(profile)
 
+    safe_delete(dest)
+
     vmi_offsets = extract_vmi_offsets('vm-0', kernel_profile)
     explorer_pid = extract_explorer_pid('vm-0', kernel_profile, vmi_offsets)
     runtime_info = RuntimeInfo(vmi_offsets=vmi_offsets, inject_pid=explorer_pid)
