@@ -37,8 +37,10 @@ dll_file_list = [
     DLL("Windows/System32/mpr.dll", "mpr_profile", "--json-mpr"),
     DLL("Windows/SysWOW64/mpr.dll", "wow_mpr_profile", None),
     DLL("Windows/System32/ntdll.dll", "ntdll_profile", "--json-ntdll"),
-    DLL("Windows/System32/ole32.dll", "ole32_profile", "--json-ole32"),
-    DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile", "--json-wow-ole32"),
+    # Don't use DRAKVUF arguments, they're used by wmimon which is compiled out
+    # DLL("Windows/System32/ole32.dll", "ole32_profile", "--json-ole32"),
+    # DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile", "--json-wow-ole32"),
+    *dll_pair("ole32"),
     DLL("Windows/System32/combase.dll", "combase_profile", "--json-combase"),
     DLL("Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll", "clr_profile", "--json-clr"),
     DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile", "--json-mscorwks"),
