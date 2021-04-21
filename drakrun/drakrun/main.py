@@ -341,14 +341,15 @@ class DrakrunKarton(Karton):
                 yield from self.upload_artifacts(analysis_uid, outdir, os.path.join(subdir, fn))
 
     def build_profile_payload(self) -> Dict[str, LocalResource]:
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        with tempfile.TemporaryDirectory() as tmp_path:
+            tmp_dir = Path(tmp_path)
+
             for profile in dll_file_list:
                 fpath = Path(PROFILE_DIR) / f"{profile.dest}.json"
-                if not fpath.is_file():
-                    continue
-                shutil.copy(fpath, Path(tmp_dir) / fpath.name)
+                if fpath.is_file():
+                    shutil.copy(fpath, tmp_dir / fpath.name)
 
-            return Resource.from_directory(tmp_dir.name)
+            return Resource.from_directory(name="profiles", directory_path=tmp_dir)
 
     def send_analysis(self, sample, outdir, metadata, quality):
         payload = {"analysis_uid": self.analysis_uid}
@@ -384,6 +385,8 @@ class DrakrunKarton(Karton):
         out = []
 
         for profile in dll_file_list:
+            if profile.arg is None:
+                continue
             if f"{profile.dest}.json" in files:
                 out.extend([profile.arg, os.path.join(PROFILE_DIR, f"{profile.dest}.json")])
 

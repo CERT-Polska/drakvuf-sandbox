@@ -52,7 +52,6 @@ dll_file_list = [
     *dll_pair("msacm32"),
     *dll_pair("msvcrt"),
     *dll_pair("netapi32"),
-    *dll_pair("ole32"),
     *dll_pair("oleaut32"),
     *dll_pair("powrprof"),
     *dll_pair("psapi"),
@@ -283,8 +282,16 @@ def process_struct(struct_info):
     except AttributeError:
         pass
 
-    fields = [struct.name for struct in ss.values()]
-    field_info = {ss[field].name: [ss[field].offset, get_field_type_info(ss[field])] for field in fields}
+    field_info = {}
+    for name, field in ss.items():
+        try:
+            offset = field.offset
+        except AttributeError:
+            print(struct_info)
+            import sys
+            sys.exit(1)
+        typ = get_field_type_info(field)
+        field_info[name] = (offset, typ)
     return [struct_info.size, field_info]
 
 

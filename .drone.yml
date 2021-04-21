@@ -35,6 +35,8 @@ steps:
 - name: run drakrun tests
   image: python:3.8-buster
   commands:
+    - pip3 install -U pip
+    - pip3 install -U setuptools
     - pip3 install -r drakrun/drakrun/test/requirements.txt
     - pip3 install ./drakrun
     - pytest -v drakrun/drakrun/test/
@@ -225,7 +227,9 @@ steps:
   # Clean debian image
   # VM_SNAPSHOT_BASE = "snap1585837798"
   # Debian with preconfigured Windows in /var/lib/drakrun and /etc/drakrun
-    VM_SNAPSHOT_BASE: snap1587390752
+  #  VM_SNAPSHOT_BASE: snap1587390752
+  # Debian snap1587390752 + more usermode profiles
+    VM_SNAPSHOT_BASE: snap1618916923
     VM_RUNNER_HOST: "192.168.21.1:5000"
     VM_HOST: "192.168.21.129"
     MINIO_HOST: "192.168.21.131:9000"
