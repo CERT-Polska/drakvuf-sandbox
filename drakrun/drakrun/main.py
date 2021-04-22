@@ -167,7 +167,7 @@ class DrakrunKarton(Karton):
             self.log.info("Using ipt plugin implies using codemon")
             plugin_list.append("codemon")
 
-        return list(chain.from_iterable([["-a", plugin] for plugin in plugin_list]))
+        return list(chain.from_iterable([["-a", plugin] for plugin in sorted(plugin_list)]))
 
     @classmethod
     def reconfigure(cls, config: Dict[str, str]):
