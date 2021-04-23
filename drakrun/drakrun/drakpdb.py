@@ -287,7 +287,7 @@ def process_struct(struct_info):
     field_info = {}
     for name, field in ss.items():
         typ = get_field_type_info(field)
-        field_info[name] = (offset, typ)
+        field_info[name] = (field.offset, typ)
 
     return [struct_info.size, field_info]
 
