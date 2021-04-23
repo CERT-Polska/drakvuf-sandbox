@@ -168,7 +168,6 @@ def drakmon_vm():
         for d in debs:
             dpkg_install(c, d.name)
 
-
         # add xen bridge
         c.run("brctl addbr drak0")
         c.run("systemctl enable drakrun@1")
