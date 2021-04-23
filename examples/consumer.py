@@ -4,8 +4,7 @@ import os
 import argparse
 import tempfile
 
-from karton.core import Karton, Config, Task, DirectoryResource
-
+from karton.core import Karton, Config
 
 class DrakrunAnalysisConsumer(Karton):
     identity = "karton.drakrun.archiver"
