@@ -102,7 +102,7 @@ def stop_all_drakruns():
 
 
 def start_enabled_drakruns():
-    logging.info("Starting previously stopped drakrun")
+    logging.info("Starting previously stopped drakruns")
     enabled_services = set(list(get_enabled_drakruns()))
     wait_processes(
         "start services",
