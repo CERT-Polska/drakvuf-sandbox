@@ -29,4 +29,5 @@ cpuid="host,htt=0"
 vga="stdvga"
 vif = [ 'type=ioemu,model=e1000,bridge=drak{{ VM_ID }}' ]
 disk = [ {{ DISKS }} ]
-vmtrace_buf_kb = 8192
+# uncomment when using IPT
+# vmtrace_buf_kb = 8192

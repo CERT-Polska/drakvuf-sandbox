@@ -162,7 +162,12 @@ class DrakrunKarton(Karton):
             plugin_list = self.active_plugins[quality]
 
         plugin_list = list(set(plugin_list) & set(enabled_plugins))
-        return list(chain.from_iterable([["-a", plugin] for plugin in plugin_list]))
+
+        if "ipt" in plugin_list and "codemon" not in plugin_list:
+            self.log.info("Using ipt plugin implies using codemon")
+            plugin_list.append("codemon")
+
+        return list(chain.from_iterable(["-a", plugin] for plugin in sorted(plugin_list)))
 
     @classmethod
     def reconfigure(cls, config: Dict[str, str]):
@@ -187,11 +192,6 @@ class DrakrunKarton(Karton):
     @property
     def net_enable(self) -> bool:
         return self.config.config['drakrun'].getboolean('net_enable', fallback=False)
-
-    @property
-    def enable_ipt(self) -> bool:
-        # TODO: Inconsistent naming - net_enable vs enable_ipt
-        return self.config.config['drakrun'].getboolean('enable_ipt', fallback=False)
 
     @property
     def test_run(self) -> bool:
@@ -452,22 +452,26 @@ class DrakrunKarton(Karton):
 
         task_quality = self.current_task.headers.get("quality", "high")
         requested_plugins = self.current_task.payload.get("plugins", self.active_plugins['_all_'])
+
         drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality, requested_plugins) + \
                       ["-o", "json",
                        # be aware of https://github.com/tklengyel/drakvuf/pull/951
                        "-F",  # enable fast singlestep
-                       "-j", "5",
+                       "-j", "60",
                        "-t", str(timeout),
                        "-i", str(self.runtime_info.inject_pid),
                        "-k", hex(self.runtime_info.vmi_offsets.kpgd),
                        "-d", self.vm_name,
                        "--dll-hooks-list", hooks_list,
                        "--memdump-dir", dump_dir,
+                       "--ipt-dir", ipt_dir,
+                       "--ipt-trace-user",
+                       "--codemon-dump-dir", ipt_dir,
+                       "--codemon-log-everything",
+                       "--codemon-analyse-system-dll-vad",
                        "-r", kernel_profile,
                        "-e", full_cmd,
                        "-c", cwd]
-        if self.config.config['drakrun'].getboolean('enable_ipt', fallback=False):
-            drakvuf_cmd.extend(["--ipt-dir", ipt_dir])
 
         anti_hammering_threshold = self.config.config['drakrun'].getint('anti_hammering_threshold', fallback=None)
 
@@ -503,7 +507,13 @@ class DrakrunKarton(Karton):
                 sample_path,
                 f"%USERPROFILE%\\Desktop\\{os.path.basename(sample_path)}"
             )
-            injected_fn = json.loads(result.stdout)['ProcessName']
+
+            try:
+                injected_fn = json.loads(result.stdout)['ProcessName']
+            except ValueError as e:
+                self.log.error("JSON decode error occurred when tried to parse injector's logs.")
+                self.log.error(f"Raw log line: {result.stdout}")
+                raise e
 
             if "%f" not in start_command:
                 self.log.warning("No file name in start command")
@@ -533,8 +543,14 @@ class DrakrunKarton(Karton):
                     check=True,
                     timeout=timeout + 60
                 )
-            except subprocess.TimeoutExpired:
+            except subprocess.CalledProcessError as e:
+                if e.returncode == 4:
+                    self.log.error("Injection succeeded but the sample didn't execute properly. Check drakmon.log for details.")
+                else:
+                    raise e
+            except subprocess.TimeoutExpired as e:
                 self.log.exception("DRAKVUF timeout expired")
+                raise e
 
         return analysis_info
 
@@ -635,8 +651,7 @@ class DrakrunKarton(Karton):
         dumps_metadata = self.crop_dumps(os.path.join(outdir, 'dumps'), os.path.join(outdir, 'dumps.zip'))
 
         # Compress IPT traces, they're quite large however they compress well
-        if self.enable_ipt:
-            self.compress_ipt(os.path.join(outdir, 'ipt'), os.path.join(outdir, 'ipt.zip'))
+        self.compress_ipt(os.path.join(outdir, 'ipt'), os.path.join(outdir, 'ipt.zip'))
 
         metadata['time_finished'] = int(time.time())
 

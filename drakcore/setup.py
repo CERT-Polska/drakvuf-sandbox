@@ -23,7 +23,7 @@ setup(
              'drakcore/bin/drak-healthcheck',
              'drakcore/bin/drak-vncpasswd',
              'drakcore/bin/drak-upgrade-db',
-             'drakcore/bin/drak-gen-ptxed',
+             'drakcore/bin/drak-ipt-disasm',
              'drakcore/bin/drak-ipt-filter'],
     classifiers=[
         "Programming Language :: Python",
