@@ -64,7 +64,7 @@ def with_logs(object_name):
 class AnalysisProcessor(Karton):
     version = DRAKCORE_VERSION
     identity = "karton.drakrun.processor"
-    filters = [{"type": "analysis", "kind": "drakrun"}]
+    filters = [{"type": "analysis-raw", "kind": "drakrun-internal"}]
 
     def __init__(self, config, enabled_plugins):
         super().__init__(config)
@@ -102,8 +102,11 @@ class AnalysisProcessor(Karton):
 
         task = Task({
             "type": "analysis",
-            "kind": "drakrun-processed",
+            "kind": "drakrun",
         })
+
+        # Add metadata information about dumps within dumps.zip
+        task.add_payload("dumps_metadata", self.current_task.get_payload("dumps_metadata"))
 
         for (name, resource) in task_resources.items():
             task.add_payload(name, resource)

@@ -109,8 +109,8 @@ class DrakrunKarton(Karton):
         }
     ]
     DEFAULT_HEADERS = {
-        "type": "analysis",
-        "kind": "drakrun",
+        "type": "analysis-raw",
+        "kind": "drakrun-internal",
     }
 
     # Filters and headers used for testing sample analysis
@@ -354,7 +354,11 @@ class DrakrunKarton(Karton):
             elif os.path.isdir(file_path):
                 yield from self.upload_artifacts(analysis_uid, outdir, os.path.join(subdir, fn))
 
-    def send_analysis(self, sample, outdir, metadata, dumps_metadata, quality):
+    def send_raw_analysis(self, sample, outdir, metadata, dumps_metadata, quality):
+        """
+        Offload drakrun-prod by sending raw analysis output to be processed by
+        drakrun.processor.
+        """
         payload = {"analysis_uid": self.analysis_uid}
         payload.update(metadata)
 
@@ -640,7 +644,7 @@ class DrakrunKarton(Karton):
             f.write(json.dumps(metadata))
 
         quality = task.headers.get("quality", "high")
-        self.send_analysis(sample, outdir, metadata, dumps_metadata, quality)
+        self.send_raw_analysis(sample, outdir, metadata, dumps_metadata, quality)
 
 
 def validate_xen_commandline():
