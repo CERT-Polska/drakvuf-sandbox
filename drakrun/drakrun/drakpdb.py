@@ -44,6 +44,8 @@ dll_file_list = [
     DLL("Windows/System32/combase.dll", "combase_profile", "--json-combase"),
     DLL("Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll", "clr_profile", "--json-clr"),
     DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile", "--json-mscorwks"),
+    DLL("Windows/winsxs/x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll", "gdiplus_profile", None),
+    DLL("Windows/winsxs/amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll", "wow_gdiplus_profile", None),
     *dll_pair("Wldap32"),
     *dll_pair("comctl32"),
     *dll_pair("crypt32"),
