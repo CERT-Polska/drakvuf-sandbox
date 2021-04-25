@@ -5,4 +5,4 @@ redis==3.5.3
 uwsgi==2.0.17.1
 minio==5.0.7
 colorama==0.4.3
-msql==1.2.1
+msql==1.2.2
