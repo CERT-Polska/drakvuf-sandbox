@@ -294,7 +294,7 @@ def process_struct(struct_info):
     return [struct_info.size, field_info]
 
 
-def make_pdb_profile(filepath, dll_origin_path=None):
+def make_pdb_profile(filepath, dll_origin_path=None, dll_path=None):
     pdb = pdbparse.parse(filepath)
 
     try:
@@ -368,8 +368,19 @@ def make_pdb_profile(filepath, dll_origin_path=None):
         "Version": pdb.STREAM_PDB.Version
     }
 
+    # Additional metadata requested by the ApiVectors developers
+    profile["$EXTRAS"] = {}
     if dll_origin_path:
-        profile["$METADATA"]["DLLPath"] = str(dll_origin_path)
+        profile["$EXTRAS"]["DLLPath"] = str(dll_origin_path)
+
+    if dll_path:
+        try:
+            pe = PE(dll_path, fast_load=True)
+            profile["$EXTRAS"]["ImageBase"] = hex(pe.OPTIONAL_HEADER.ImageBase)
+        except AttributeError:
+            # I think that DLLs have some sanity and the optional header is
+            # always present. Ignore this error if it happens
+            pass
 
     return json.dumps(profile, indent=4, sort_keys=True)
 
