@@ -294,7 +294,7 @@ class DrakrunKarton(Karton):
             if current_size <= max_total_size:
                 # Store files under dumps/
                 file_basename = os.path.basename(path)
-                if re.match(r"^[a-f0-9]{4,16}_[a-f0-9]{16}$", file_basename):
+                if re.fullmatch(r"[a-f0-9]{4,16}_[a-f0-9]{16}", file_basename):
                     # If file is memory dump then append metadata that can be
                     # later attached as payload when creating an `analysis` task.
                     dump_base = self._get_base_from_drakrun_dump(file_basename)
