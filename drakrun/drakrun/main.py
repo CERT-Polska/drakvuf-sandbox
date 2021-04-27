@@ -128,7 +128,7 @@ class DrakrunKarton(Karton):
     ]
     DEFAULT_TEST_HEADERS = {
         "type": "analysis-test",
-        "kind": "drakrun",
+        "kind": "drakrun-internal",
     }
 
     def __init__(self, config: Config, instance_id: int):
