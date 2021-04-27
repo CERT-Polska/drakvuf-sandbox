@@ -14,16 +14,18 @@ import zipfile
 import json
 import re
 import functools
+import tempfile
 from io import StringIO
 from typing import List, Dict
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 from configparser import NoOptionError
 from itertools import chain
+from pathlib import Path
 
 import pefile
 import magic
 import ntpath
-from karton.core import Karton, Config, Task, LocalResource
+from karton.core import Karton, Config, Task, LocalResource, Resource
 
 import drakrun.office as d_office
 from drakrun.version import __version__ as DRAKRUN_VERSION
@@ -354,6 +356,19 @@ class DrakrunKarton(Karton):
             elif os.path.isdir(file_path):
                 yield from self.upload_artifacts(analysis_uid, outdir, os.path.join(subdir, fn))
 
+
+    def build_profile_payload(self) -> Dict[str, LocalResource]:
+        with tempfile.TemporaryDirectory() as tmp_path:
+            tmp_dir = Path(tmp_path)
+
+            for profile in dll_file_list:
+                fpath = Path(PROFILE_DIR) / f"{profile.dest}.json"
+                if fpath.is_file():
+                    shutil.copy(fpath, tmp_dir / fpath.name)
+
+            return Resource.from_directory(name="profiles", directory_path=tmp_dir)
+
+
     def send_raw_analysis(self, sample, outdir, metadata, dumps_metadata, quality):
         """
         Offload drakrun-prod by sending raw analysis output to be processed by
@@ -376,6 +391,10 @@ class DrakrunKarton(Karton):
         if self.test_run:
             task.add_payload('testcase', self.current_task.payload['testcase'])
 
+        if self.config.config.getboolean("drakrun", "attach_profiles", fallback=False):
+            self.log.info("Uploading profiles...")
+            task.add_payload("profiles", self.build_profile_payload())
+
         self.log.info("Uploading artifacts...")
         for resource in self.upload_artifacts(self.analysis_uid, outdir):
             task.add_payload(resource.name, resource)
@@ -389,6 +408,8 @@ class DrakrunKarton(Karton):
         out = []
 
         for profile in dll_file_list:
+            if profile.arg is None:
+                continue
             if f"{profile.dest}.json" in files:
                 out.extend([profile.arg, os.path.join(PROFILE_DIR, f"{profile.dest}.json")])
 
