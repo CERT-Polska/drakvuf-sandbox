@@ -356,7 +356,6 @@ class DrakrunKarton(Karton):
             elif os.path.isdir(file_path):
                 yield from self.upload_artifacts(analysis_uid, outdir, os.path.join(subdir, fn))
 
-
     def build_profile_payload(self) -> Dict[str, LocalResource]:
         with tempfile.TemporaryDirectory() as tmp_path:
             tmp_dir = Path(tmp_path)
@@ -367,7 +366,6 @@ class DrakrunKarton(Karton):
                     shutil.copy(fpath, tmp_dir / fpath.name)
 
             return Resource.from_directory(name="profiles", directory_path=tmp_dir)
-
 
     def send_raw_analysis(self, sample, outdir, metadata, dumps_metadata, quality):
         """
