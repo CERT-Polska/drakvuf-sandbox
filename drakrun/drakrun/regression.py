@@ -77,7 +77,7 @@ class RegressionTester(Karton):
         family = None
         for dump_metadata in dumps_metadata:
             dump_path = os.path.join(dump_dir, dump_metadata["filename"])
-            va = dump_metadata["base_address"]
+            va = int(dump_metadata["base_address"], 16)
 
             with changedLogLevel(logging.getLogger(), logging.ERROR):
                 res = manager.push_file(dump_path, base=va)

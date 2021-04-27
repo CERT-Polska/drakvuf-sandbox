@@ -316,7 +316,7 @@ class DrakrunKarton(Karton):
         that can be read as a dump from address 0x405000 with a content hash
         equal to 688f58c58d798ecb.
         """
-        return int(dump_name.split("_")[0], 16)
+        return hex(int(dump_name.split("_")[0], 16))
 
     def update_vnc_info(self):
         """
