@@ -28,4 +28,4 @@ def generate_graphs(task: Task, resources: Dict[str, RemoteResource], minio):
             except subprocess.CalledProcessError:
                 logging.exception("Failed to generate graph using procdot")
 
-        minio.fput_object("drakrun", f"{analysis_uid}/graph.dot", os.path.join(output_dir, 'graph.dot'))
+            minio.fput_object("drakrun", f"{analysis_uid}/graph.dot", os.path.join(output_dir, 'graph.dot'))
