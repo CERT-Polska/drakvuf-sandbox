@@ -111,8 +111,8 @@ class DrakrunKarton(Karton):
         }
     ]
     DEFAULT_HEADERS = {
-        "type": "analysis",
-        "kind": "drakrun",
+        "type": "analysis-raw",
+        "kind": "drakrun-internal",
     }
 
     # Filters and headers used for testing sample analysis
@@ -128,7 +128,7 @@ class DrakrunKarton(Karton):
     ]
     DEFAULT_TEST_HEADERS = {
         "type": "analysis-test",
-        "kind": "drakrun",
+        "kind": "drakrun-internal",
     }
 
     def __init__(self, config: Config, instance_id: int):
@@ -287,12 +287,19 @@ class DrakrunKarton(Karton):
         max_total_size = 300 * 1024 * 1024  # 300 MB
         current_size = 0
 
+        dumps_metadata = []
         for _, path, size in sorted(entries):
             current_size += size
 
             if current_size <= max_total_size:
                 # Store files under dumps/
-                zipf.write(path, os.path.join("dumps", os.path.basename(path)))
+                file_basename = os.path.basename(path)
+                if re.fullmatch(r"[a-f0-9]{4,16}_[a-f0-9]{16}", file_basename):
+                    # If file is memory dump then append metadata that can be
+                    # later attached as payload when creating an `analysis` task.
+                    dump_base = self._get_base_from_drakrun_dump(file_basename)
+                    dumps_metadata.append({"filename": os.path.join("dumps", file_basename), "base_address": dump_base})
+                zipf.write(path, os.path.join("dumps", file_basename))
             os.unlink(path)
 
         # No dumps, force empty directory
@@ -301,6 +308,15 @@ class DrakrunKarton(Karton):
 
         if current_size > max_total_size:
             self.log.error('Some dumps were deleted, because the configured size threshold was exceeded.')
+        return dumps_metadata
+
+    def _get_base_from_drakrun_dump(self, dump_name):
+        """
+        Drakrun dumps come in form: <base>_<hash> e.g. 405000_688f58c58d798ecb,
+        that can be read as a dump from address 0x405000 with a content hash
+        equal to 688f58c58d798ecb.
+        """
+        return hex(int(dump_name.split("_")[0], 16))
 
     def update_vnc_info(self):
         """
@@ -351,7 +367,11 @@ class DrakrunKarton(Karton):
 
             return Resource.from_directory(name="profiles", directory_path=tmp_dir)
 
-    def send_analysis(self, sample, outdir, metadata, quality):
+    def send_raw_analysis(self, sample, outdir, metadata, dumps_metadata, quality):
+        """
+        Offload drakrun-prod by sending raw analysis output to be processed by
+        drakrun.processor.
+        """
         payload = {"analysis_uid": self.analysis_uid}
         payload.update(metadata)
 
@@ -364,6 +384,7 @@ class DrakrunKarton(Karton):
 
         task = Task(headers, payload=payload)
         task.add_payload('sample', sample)
+        task.add_payload('dumps_metadata', dumps_metadata)
 
         if self.test_run:
             task.add_payload('testcase', self.current_task.payload['testcase'])
@@ -644,8 +665,9 @@ class DrakrunKarton(Karton):
 
         self.log.info("Analysis done. Collecting artifacts...")
 
-        # Make sure dumps have a reasonable size
-        self.crop_dumps(os.path.join(outdir, 'dumps'), os.path.join(outdir, 'dumps.zip'))
+        # Make sure dumps have a reasonable size.
+        # Calculate dumps_metadata as it's required by the `analysis` task format.
+        dumps_metadata = self.crop_dumps(os.path.join(outdir, 'dumps'), os.path.join(outdir, 'dumps.zip'))
 
         # Compress IPT traces, they're quite large however they compress well
         self.compress_ipt(os.path.join(outdir, 'ipt'), os.path.join(outdir, 'ipt.zip'))
@@ -656,7 +678,7 @@ class DrakrunKarton(Karton):
             f.write(json.dumps(metadata))
 
         quality = task.headers.get("quality", "high")
-        self.send_analysis(sample, outdir, metadata, quality)
+        self.send_raw_analysis(sample, outdir, metadata, dumps_metadata, quality)
 
 
 def validate_xen_commandline():
