@@ -89,7 +89,7 @@ class TestVM:
         # which dummy vm to create, we have the configs for hvm64
         # we can try with that or create a new one
         pass
-        
+
     def test_vm_save(self):
         pass
 
@@ -104,7 +104,7 @@ class TestVM:
 
     def test_vm_restore(self, changevmname):
         backend = get_storage_backend(InstallInfo.load())
-        vm = VirtualMachine(backend,0)
+        vm = VirtualMachine(backend, 0)
 
         # I think this part should be abstracted and automatically handled when creating or destroying VMs
         setup_vm_network(0, True, find_default_interface(), '8.8.8.8')
@@ -112,24 +112,24 @@ class TestVM:
         # if snapshot doesn't exist
         with remove_files([os.path.join(VOLUME_DIR, 'snapshot.sav')]):
             with pytest.raises(Exception):
-                self.vm.restore()
-                assert self.vm.is_running is False
+                vm.restore()
+                assert vm.is_running is False
 
         # if configuration file doesn't exist
         with remove_files([os.path.join(VM_CONFIG_DIR, 'vm-0.cfg')]):
             with pytest.raises(Exception):
-                self.vm.restore()
-                assert self.vm.is_running is False
+                vm.restore()
+                assert vm.is_running is False
 
         # monkeypatch will be required to hide the storage backend
         if backend.exists_vm(0) is False:
             with pytest.raises(Exception):
-                self.vm.restore()
-                assert self.vm.is_running is False
+                vm.restore()
+                assert vm.is_running is False
 
         # should not raise any exceptions if everything is fine
-        self.vm.restore()
-        assert self.vm.is_running is True
+        vm.restore()
+        assert vm.is_running is True
 
         # restoring a restored VM
         # what should be the expected behavior?
