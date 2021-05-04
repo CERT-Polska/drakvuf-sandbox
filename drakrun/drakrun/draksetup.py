@@ -22,7 +22,7 @@ from minio import Minio
 from minio.error import NoSuchKey
 from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid, DLL
 from drakrun.config import InstallInfo, LIB_DIR, VOLUME_DIR, PROFILE_DIR, ETC_DIR, VM_CONFIG_DIR
-from drakrun.networking import setup_vm_network, start_dnsmasq, delete_vm_network, stop_dnsmasq
+from drakrun.networking import setup_vm_network, start_dnsmasq, delete_vm_network, stop_dnsmasq, VMNetwork, find_default_interface
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
 from drakrun.injector import Injector
 from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE, get_all_vm_conf, delete_vm_conf, VirtualMachine
@@ -34,19 +34,6 @@ import traceback
 
 conf = configparser.ConfigParser()
 conf.read(os.path.join(ETC_DIR, "config.ini"))
-
-
-def find_default_interface():
-    routes = subprocess.check_output('ip route show default', shell=True, stderr=subprocess.STDOUT) \
-        .decode('ascii').strip().split('\n')
-
-    for route in routes:
-        m = re.search(r'dev ([^ ]+)', route.strip())
-
-        if m:
-            return m.group(1)
-
-    return None
 
 
 def ensure_dirs():

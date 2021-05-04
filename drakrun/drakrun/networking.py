@@ -5,6 +5,7 @@ import logging
 from typing import Optional
 from drakrun.util import get_domid_from_instance_id, safe_kill_proc
 import signal
+import re
 
 log = logging.getLogger("drakrun")
 
@@ -38,12 +39,27 @@ def del_iptable_rule(rule):
             all_cleared = True
 
 
+def find_default_interface():
+    routes = subprocess.check_output('ip route show default', shell=True, stderr=subprocess.STDOUT) \
+        .decode('ascii').strip().split('\n')
+
+    for route in routes:
+        m = re.search(r'dev ([^ ]+)', route.strip())
+
+        if m:
+            return m.group(1)
+
+    return None
+
+
 class VMNetwork():
     def __init__(self, vm_id: int, net_enable: int, out_interface: str, dns_server: str, **kwargs):
         self.vm_id = vm_id
         self.net_enable = net_enable
         self.out_interface = out_interface
         self.dns_server = dns_server
+        self.dns_args = {}
+        self.tcpdump_args = {}
 
         self.dns = False
         self.tcpdump = False
@@ -65,22 +81,23 @@ class VMNetwork():
             elif key == 'config_tcpdump':
                 self.tcpdump_args = value
 
-        self.setup_vm_network(self.vm_id, self.net_enable, self.out_interface, self.dns_server)
+    def start(self):
+        self.setup_vm_network()
 
         if self.dns:
             self.dns_proc = self.start_dnsmasq(vm_id=self.vm_id, dns_server=self.dns_server, **self.dns_args)
         if self.tcpdump:
-            self.tcpdump_proc = self.start_tcpdump_collector(vm_id, **self.tcpdump_args)
+            self.tcpdump_proc = self.start_tcpdump_collector(self.vm_id, **self.tcpdump_args)
 
-    def __del__(self):
+    def stop(self):
         if self.dns:
             self.stop_dnsmasq(self.vm_id)
         if self.tcpdump:
             safe_kill_proc(self.tcpdump_proc)
 
-        self.delete_vm_network(self.vm_id, self.net_enable, self.out_interface, self.dns_server)
+        self.delete_vm_network()
 
-    def start_tcpdump_collector(instance_id: int, outdir: str) -> subprocess.Popen:
+    def start_tcpdump_collector(self, instance_id: int, outdir: str) -> subprocess.Popen:
         domid = get_domid_from_instance_id(instance_id)
 
         try:
@@ -96,7 +113,7 @@ class VMNetwork():
             f"{outdir}/dump.pcap"
         ])
 
-    def start_dnsmasq(vm_id: int, dns_server: str, background=False) -> Optional[subprocess.Popen]:
+    def start_dnsmasq(self, vm_id: int, dns_server: str, background=False) -> Optional[subprocess.Popen]:
         try:
             subprocess.check_output("dnsmasq --version", shell=True)
         except subprocess.CalledProcessError:
@@ -136,7 +153,7 @@ class VMNetwork():
             f"--dhcp-option=option:dns-server,{dns_server}"
         ])
 
-    def stop_dnsmasq(vm_id: int):
+    def stop_dnsmasq(self, vm_id: int):
         dnsmasq_pidfile = f"/var/run/dnsmasq-vm{vm_id}.pid"
 
         if os.path.exists(dnsmasq_pidfile):
@@ -149,58 +166,58 @@ class VMNetwork():
             except OSError:
                 log.info("dnsmasq-vm{vm_id} is already stopped")
 
-    def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server: str):
+    def setup_vm_network(self):
         try:
-            subprocess.check_output(f'brctl addbr drak{vm_id}', stderr=subprocess.STDOUT, shell=True)
-            logging.info(f"Created bridge drak{vm_id}")
+            subprocess.check_output(f'brctl addbr drak{self.vm_id}', stderr=subprocess.STDOUT, shell=True)
+            logging.info(f"Created bridge drak{self.vm_id}")
         except subprocess.CalledProcessError as e:
             if b'already exists' in e.output:
-                log.info(f"Bridge drak{vm_id} already exists.")
+                log.info(f"Bridge drak{self.vm_id} already exists.")
             else:
                 logging.debug(e.output)
-                raise Exception(f"Failed to create bridge drak{vm_id}.")
+                raise Exception(f"Failed to create bridge drak{self.vm_id}.")
         else:
-            subprocess.run(f'ip addr add 10.13.{vm_id}.1/24 dev drak{vm_id}', shell=True, check=True)
+            subprocess.run(f'ip addr add 10.13.{self.vm_id}.1/24 dev drak{self.vm_id}', shell=True, check=True)
 
-        subprocess.run(f'ip link set dev drak{vm_id} up', shell=True, check=True)
-        logging.info(f"Bridge drak{vm_id} is up")
+        subprocess.run(f'ip link set dev drak{self.vm_id} up', shell=True, check=True)
+        logging.info(f"Bridge drak{self.vm_id} is up")
 
-        add_iptable_rule(f"INPUT -i drak{vm_id} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
+        add_iptable_rule(f"INPUT -i drak{self.vm_id} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
 
-        if dns_server == "use-gateway-address":
-            add_iptable_rule(f"INPUT -i drak{vm_id} -p udp --dport 53 -j ACCEPT")
+        if self.dns_server == "use-gateway-address":
+            add_iptable_rule(f"INPUT -i drak{self.vm_id} -p udp --dport 53 -j ACCEPT")
 
-        add_iptable_rule(f"INPUT -i drak{vm_id} -d 0.0.0.0/0 -j DROP")
+        add_iptable_rule(f"INPUT -i drak{self.vm_id} -d 0.0.0.0/0 -j DROP")
 
-        if net_enable:
+        if self.net_enable:
             with open('/proc/sys/net/ipv4/ip_forward', 'w') as f:
                 f.write('1\n')
 
-            add_iptable_rule(f"POSTROUTING -t nat -s 10.13.{vm_id}.0/24 -o {out_interface} -j MASQUERADE")
-            add_iptable_rule(f"FORWARD -i drak{vm_id} -o {out_interface} -j ACCEPT")
-            add_iptable_rule(f"FORWARD -i {out_interface} -o drak{vm_id} -j ACCEPT")
+            add_iptable_rule(f"POSTROUTING -t nat -s 10.13.{self.vm_id}.0/24 -o {self.out_interface} -j MASQUERADE")
+            add_iptable_rule(f"FORWARD -i drak{self.vm_id} -o {self.out_interface} -j ACCEPT")
+            add_iptable_rule(f"FORWARD -i {self.out_interface} -o drak{self.vm_id} -j ACCEPT")
 
-    def delete_vm_network(vm_id, net_enable, out_interface, dns_server):
+    def delete_vm_network(self):
         try:
-            subprocess.check_output(f'ip link set dev drak{vm_id} down', shell=True, stderr=subprocess.STDOUT)
-            logging.info(f"Bridge drak{vm_id} is down")
+            subprocess.check_output(f'ip link set dev drak{self.vm_id} down', shell=True, stderr=subprocess.STDOUT)
+            logging.info(f"Bridge drak{self.vm_id} is down")
         except subprocess.CalledProcessError as e:
             if b"Cannot find device" in e.output:
-                log.info(f"Already deleted drak{vm_id} bridge")
+                log.info(f"Already deleted drak{self.vm_id} bridge")
             else:
                 logging.debug(e.output)
-                raise Exception(f"Couldn't deactivate drak{vm_id} bridge")
+                raise Exception(f"Couldn't deactivate drak{self.vm_id} bridge")
         else:
-            subprocess.run(f'brctl delbr drak{vm_id}', stderr=subprocess.STDOUT, shell=True)
-            logging.info(f"Deleted drak{vm_id} bridge")
+            subprocess.run(f'brctl delbr drak{self.vm_id}', stderr=subprocess.STDOUT, shell=True)
+            logging.info(f"Deleted drak{self.vm_id} bridge")
 
-        del_iptable_rule(f"INPUT -i drak{vm_id} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
-        if dns_server == "use-gateway-address":
-            del_iptable_rule(f"INPUT -i drak{vm_id} -p udp --dport 53 -j ACCEPT")
+        del_iptable_rule(f"INPUT -i drak{self.vm_id} -p udp --dport 67:68 --sport 67:68 -j ACCEPT")
+        if self.dns_server == "use-gateway-address":
+            del_iptable_rule(f"INPUT -i drak{self.vm_id} -p udp --dport 53 -j ACCEPT")
 
-        del_iptable_rule(f"INPUT -i drak{vm_id} -d 0.0.0.0/0 -j DROP")
+        del_iptable_rule(f"INPUT -i drak{self.vm_id} -d 0.0.0.0/0 -j DROP")
 
-        if net_enable:
-            del_iptable_rule(f"POSTROUTING -t nat -s 10.13.{vm_id}.0/24 -o {out_interface} -j MASQUERADE")
-            del_iptable_rule(f"FORWARD -i drak{vm_id} -o {out_interface} -j ACCEPT")
-            del_iptable_rule(f"FORWARD -i {out_interface} -o drak{vm_id} -j ACCEPT")
+        if self.net_enable:
+            del_iptable_rule(f"POSTROUTING -t nat -s 10.13.{self.vm_id}.0/24 -o {self.out_interface} -j MASQUERADE")
+            del_iptable_rule(f"FORWARD -i drak{self.vm_id} -o {self.out_interface} -j ACCEPT")
+            del_iptable_rule(f"FORWARD -i {self.out_interface} -o drak{self.vm_id} -j ACCEPT")

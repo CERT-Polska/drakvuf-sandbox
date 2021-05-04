@@ -13,6 +13,7 @@ from drakrun.config import (
     InstallInfo
 )
 from drakrun.util import safe_delete
+from drakrun.networking import VMNetwork
 
 log = logging.getLogger("drakrun")
 
@@ -74,9 +75,10 @@ def delete_vm_conf(vm_id: int) -> bool:
 
 
 class VirtualMachine:
-    def __init__(self, backend: StorageBackendBase, vm_id: int) -> None:
+    def __init__(self, backend: StorageBackendBase, network: VMNetwork, vm_id: int) -> None:
         self.backend = backend
         self.vm_id = vm_id
+        self.network = network
 
     @property
     def vm_name(self) -> str:
@@ -100,6 +102,8 @@ class VirtualMachine:
         cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg"
         snapshot_path = Path(VOLUME_DIR) / "snapshot.sav"
 
+        self.network.start()
+
         # No need to rollback vm-0. Since the state of vm-0
         # is correct by definition.
         if self.vm_id != 0:
@@ -114,3 +118,5 @@ class VirtualMachine:
         if self.is_running:
             logging.info(f"Destroying {self.vm_name}")
             subprocess.run(["xl", "destroy", self.vm_name], check=True)
+
+        self.network.stop()

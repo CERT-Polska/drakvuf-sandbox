@@ -5,18 +5,12 @@ import subprocess
 from pathlib import Path, PureWindowsPath as WinPath
 from IPython import embed
 
-from drakrun.networking import (
-    setup_vm_network,
-    start_dnsmasq,
-    delete_vm_network,
-    stop_dnsmasq,
-)
+from drakrun.networking import VMNetwork, find_default_interface
 from drakrun.vm import generate_vm_conf, VirtualMachine
 from drakrun.config import InstallInfo, PROFILE_DIR, ETC_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.util import RuntimeInfo, graceful_exit
 from drakrun.injector import Injector
-from drakrun.draksetup import find_default_interface
 
 
 class DrakmonShell:
@@ -28,7 +22,8 @@ class DrakmonShell:
         backend = get_storage_backend(install_info)
 
         generate_vm_conf(install_info, vm_id)
-        self.vm = VirtualMachine(backend, vm_id)
+        self.network = VMNetwork(vm_id, True, find_default_interface(), dns, dns=True)
+        self.vm = VirtualMachine(backend, self.network, vm_id)
         self._dns = dns
 
         with open(Path(PROFILE_DIR) / "runtime.json", 'r') as f:
@@ -41,7 +36,6 @@ class DrakmonShell:
             self.runtime_info,
             self.kernel_profile,
         )
-        setup_vm_network(vm_id, True, find_default_interface(), dns)
 
     def cleanup(self, vm_id: int):
 
@@ -100,7 +94,6 @@ class DrakmonShell:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.vm.destroy()
-        delete_vm_network(self.vm.vm_id, True, find_default_interface(), self._dns)
 
 
 def main():
@@ -116,8 +109,7 @@ def main():
         handlers=[logging.StreamHandler()]
     )
 
-    with graceful_exit(start_dnsmasq(args.vm_id, args.dns)), \
-            DrakmonShell(args.vm_id, args.dns) as shell:
+    with DrakmonShell(args.vm_id, args.dns) as shell:
         helpers = {
             'copy': shell.copy,
             'drakvuf': shell.drakvuf,
