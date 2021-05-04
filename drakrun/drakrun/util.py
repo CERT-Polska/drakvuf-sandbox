@@ -133,16 +133,20 @@ def safe_delete(file_path) -> bool:
         return False
 
 
+def safe_kill_proc(proc: subprocess.Popen):
+    proc.terminate()
+    try:
+        proc.wait(5)
+    except subprocess.TimeoutExpired as err:
+        log.error("Process %s doesn't exit after timeout.", err.cmd)
+        proc.kill()
+        proc.wait()
+        log.error("Process was forceully killed")
+
+
 @contextlib.contextmanager
 def graceful_exit(proc: subprocess.Popen):
     try:
         yield proc
     finally:
-        proc.terminate()
-        try:
-            proc.wait(5)
-        except subprocess.TimeoutExpired as err:
-            log.error("Process %s doesn't exit after timeout.", err.cmd)
-            proc.kill()
-            proc.wait()
-            log.error("Process was forceully killed")
+        safe_kill_proc(proc)
