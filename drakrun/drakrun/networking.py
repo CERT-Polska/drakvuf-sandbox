@@ -85,20 +85,23 @@ class VMNetwork():
         self.setup_vm_network()
 
         if self.dns:
-            self.dns_proc = self.start_dnsmasq(vm_id=self.vm_id, dns_server=self.dns_server, **self.dns_args)
+            self.dns_proc = self.start_dnsmasq(**self.dns_args)
         if self.tcpdump:
-            self.tcpdump_proc = self.start_tcpdump_collector(self.vm_id, **self.tcpdump_args)
+            self.tcpdump_proc = self.start_tcpdump_collector(**self.tcpdump_args)
 
     def stop(self):
         if self.dns:
-            self.stop_dnsmasq(self.vm_id)
+            self.stop_dnsmasq()
         if self.tcpdump:
             safe_kill_proc(self.tcpdump_proc)
 
         self.delete_vm_network()
 
-    def start_tcpdump_collector(self, instance_id: int, outdir: str) -> subprocess.Popen:
-        domid = get_domid_from_instance_id(instance_id)
+    def __del__(self):
+        self.stop()
+
+    def start_tcpdump_collector(self, outdir: str) -> subprocess.Popen:
+        domid = get_domid_from_instance_id(self.vm_id)
 
         try:
             subprocess.check_output("tcpdump --version", shell=True)
@@ -113,17 +116,17 @@ class VMNetwork():
             f"{outdir}/dump.pcap"
         ])
 
-    def start_dnsmasq(self, vm_id: int, dns_server: str, background=False) -> Optional[subprocess.Popen]:
+    def start_dnsmasq(self, background=False) -> Optional[subprocess.Popen]:
         try:
             subprocess.check_output("dnsmasq --version", shell=True)
         except subprocess.CalledProcessError:
             raise RuntimeError("Failed to start dnsmasq")
 
-        if dns_server == "use-gateway-address":
-            dns_server = f"10.13.{vm_id}.1"
+        if self.dns_server == "use-gateway-address":
+            self.dns_server = f"10.13.{self.vm_id}.1"
 
         if background:
-            dnsmasq_pidfile = f"/var/run/dnsmasq-vm{vm_id}.pid"
+            dnsmasq_pidfile = f"/var/run/dnsmasq-vm{self.vm_id}.pid"
 
             if os.path.exists(dnsmasq_pidfile):
                 with open(dnsmasq_pidfile, "r") as f:
@@ -142,19 +145,19 @@ class VMNetwork():
             "--no-daemon" if not background else "",
             "--conf-file=/dev/null",
             "--bind-interfaces",
-            f"--interface=drak{vm_id}",
+            f"--interface=drak{self.vm_id}",
             "--port=0",
             "--no-hosts",
             "--no-resolv",
             "--no-poll",
             "--leasefile-ro",
-            f"--pid-file=/var/run/dnsmasq-vm{vm_id}.pid",
-            f"--dhcp-range=10.13.{vm_id}.100,10.13.{vm_id}.200,255.255.255.0,12h",
-            f"--dhcp-option=option:dns-server,{dns_server}"
+            f"--pid-file=/var/run/dnsmasq-vm{self.vm_id}.pid",
+            f"--dhcp-range=10.13.{self.vm_id}.100,10.13.{self.vm_id}.200,255.255.255.0,12h",
+            f"--dhcp-option=option:dns-server,{self.dns_server}"
         ])
 
-    def stop_dnsmasq(self, vm_id: int):
-        dnsmasq_pidfile = f"/var/run/dnsmasq-vm{vm_id}.pid"
+    def stop_dnsmasq(self):
+        dnsmasq_pidfile = f"/var/run/dnsmasq-vm{self.vm_id}.pid"
 
         if os.path.exists(dnsmasq_pidfile):
             with open(dnsmasq_pidfile, "r") as f:
@@ -162,9 +165,9 @@ class VMNetwork():
 
             try:
                 os.kill(dnsmasq_pid, signal.SIGTERM)
-                log.info(f"Stopped dnsmasq of vm-{vm_id}")
+                log.info(f"Stopped dnsmasq of vm-{self.vm_id}")
             except OSError:
-                log.info("dnsmasq-vm{vm_id} is already stopped")
+                log.info("dnsmasq-vm{self.vm_id} is already stopped")
 
     def setup_vm_network(self):
         try:
