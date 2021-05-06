@@ -64,13 +64,13 @@ class VMNetwork():
         self.dns = False
         self.tcpdump = False
 
+        if net_enable:
+            self.dns = True
+
         for key, value in kwargs.items():
             # specify a dictionary with arguments to the following functions
 
-            # VMNetwork(... , dns=True, config_dns={background: bool})
-            if key == 'dns':
-                self.dns = value
-
+            # VMNetwork(... , net_enable=True, config_dns={background: bool})
             if key == 'config_dns':
                 self.dns_args = value
 
