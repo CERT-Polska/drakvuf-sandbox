@@ -41,7 +41,7 @@ dll_file_list = [
     # DLL("Windows/System32/ole32.dll", "ole32_profile", "--json-ole32"),
     # DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile", "--json-wow-ole32"),
     *dll_pair("ole32"),
-    DLL("Windows/System32/combase.dll", "combase_profile", "--json-combase"),
+    DLL("Windows/System32/combase.dll", "combase_profile", None),
     DLL("Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll", "clr_profile", "--json-clr"),
     DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile", "--json-mscorwks"),
     DLL("Windows/winsxs/x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll", "gdiplus_profile", None),
