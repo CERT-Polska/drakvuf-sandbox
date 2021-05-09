@@ -77,6 +77,7 @@ class UploadSample extends Component {
       customStartCmd: "",
       timeout: 10 * 60,
       enabledPlugins: ["apimon", "syscalls", "procmon", "tlsmon", "memdump"],
+      readOnlyUI: true,
 
       error: null,
       uploadInProgress: false,
@@ -120,6 +121,8 @@ class UploadSample extends Component {
     this.handlePluginsChange = this.handlePluginsChange.bind(this);
     this.formValid = this.formValid.bind(this);
     this.setError = this.setError.bind(this);
+
+    
   }
 
   setError(newError) {
@@ -129,6 +132,7 @@ class UploadSample extends Component {
   formValid() {
     let errMsg = null;
 
+   
     if (this.state.file === null) {
       errMsg = "Choose a file";
     }
@@ -230,14 +234,24 @@ class UploadSample extends Component {
   }
 
   render() {
-    let error;
+    let msg;
+
     if (this.state.error !== null) {
-      error = (
+      msg = (
         <div className="alert alert-danger" role="alert">
           <strong>Error</strong> - {this.state.error}
         </div>
       );
     }
+
+    if (this.state.readOnlyUI === true) {
+      msg = (
+        <div className="alert alert-warning" role="alert">
+          <strong>Warning</strong> - READONLY UI - redis not configured probably
+        </div>
+      );
+    }
+
 
     const uploadSpinner = (
       <span
@@ -253,7 +267,7 @@ class UploadSample extends Component {
           <h4 className="page-title">Upload sample</h4>
         </div>
 
-        {error}
+        {msg}
 
         <form onSubmit={this.handleSubmit}>
           <div className="form-group">
@@ -267,6 +281,7 @@ class UploadSample extends Component {
                 name="file"
                 id="sampleFile"
                 className="custom-file-input"
+                disabled={this.state.readOnlyUI}
                 onChange={this.handleInput}
                 required
               />
@@ -319,7 +334,7 @@ class UploadSample extends Component {
               type="submit"
               className="btn btn-primary mr-2"
               value="Upload"
-              disabled={this.state.uploadInProgress}
+              disabled={this.state.uploadInProgress || this.state.readOnlyUI}
             >
               {this.state.uploadInProgress ? uploadSpinner : ""}
               Upload
