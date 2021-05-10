@@ -512,9 +512,9 @@ class DrakrunKarton(Karton):
         drakmon_log_fp = os.path.join(outdir, "drakmon.log")
 
         with self.run_vm() as vm, \
-             graceful_exit(start_dnsmasq(self.instance_id, dns_server)), \
-             graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), \
-             open(drakmon_log_fp, "wb") as drakmon_log:
+                graceful_exit(start_dnsmasq(self.instance_id, dns_server)), \
+                graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), \
+                open(drakmon_log_fp, "wb") as drakmon_log:
 
             analysis_info['snapshot_version'] = vm.backend.get_vm0_snapshot_time()
 
@@ -597,7 +597,11 @@ class DrakrunKarton(Karton):
         self.update_vnc_info()
 
         # Get sample extension. If none set, fall back to exe/dll
-        extension = task.headers.get("extension", "exe").lower()
+        extension = task.headers.get("extension", "exe")
+        if extension is None:
+            self.log.warning("No extension type, falling back to exe")
+        extension = extension.lower()
+
         if '(DLL)' in magic_output:
             extension = 'dll'
         self.log.info("Running file as %s", extension)
