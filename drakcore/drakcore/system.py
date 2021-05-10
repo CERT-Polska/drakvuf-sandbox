@@ -4,23 +4,11 @@ import urllib3
 from minio import Minio
 from karton.core import Config
 from karton.system import SystemService
-from drakcore.util import get_config
-
-
-def get_minio_helper(config: Config):
-    # Default HTTP client configuration waits 120s for the next retry.
-    # This causes unnecessary delays during startup, because Minio server returns error 503
-    return Minio(
-        config.minio_config["address"],
-        config.minio_config["access_key"],
-        config.minio_config["secret_key"],
-        secure=bool(int(config.minio_config.get("secure", True))),
-        http_client=urllib3.PoolManager(retries=urllib3.Retry(total=3)),
-    )
-
+from drakcore.util import get_config, redis_working, get_minio_helper
 
 def main():
     config = get_config()
+
     service = SystemService(config)
 
     system_disable = config.config["drakmon"].get("system_disable", "1")
@@ -38,7 +26,6 @@ def main():
         minio.make_bucket(bucket_name)
 
     service.loop()
-
 
 if __name__ == "__main__":
     main()

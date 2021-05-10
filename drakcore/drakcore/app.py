@@ -7,7 +7,6 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 import requests
 import logging
-from redis import StrictRedis
 
 from flask import Flask, jsonify, request, send_file, redirect, send_from_directory, Response, abort
 from karton.core import Config, Producer, Task, Resource
@@ -15,15 +14,20 @@ from karton.core.task import TaskState
 from minio.error import NoSuchKey
 
 from drakcore.system import SystemService
-from drakcore.util import get_config
+from drakcore.util import get_config, redis_working
 from drakcore.analysis import AnalysisProxy
 from drakcore.database import Database
 
 app = Flask(__name__, static_folder='frontend/build/static')
 conf = get_config()
 
-backend = SystemService(conf).backend
-minio = backend.minio
+if redis_working():
+    backend = SystemService(conf).backend
+    minio = backend.minio
+else:
+    backend = None
+    minio = get_minio_helper(conf)
+
 db = Database(conf.config["drakmon"].get("database", "sqlite:///var/lib/drakcore/drakcore.db"),
               pathlib.Path(__file__).parent / "migrations")
 
@@ -53,20 +57,8 @@ def add_header(response):
 
 @app.route("/redis_state", methods=['GET'])
 def get_redis_state():
-    res = {"status": False}
-
-    # configuration used in Karton
-    redis = StrictRedis(
-            host=config["redis"]["host"],
-            port=int(config["redis"].get("port", 6379)),
-            decode_responses=True,
-    )
-
-    try:
-        res = {"status": redis.ping()}
-    except redis.exceptions.ConnectionError, ConnectionError:
-        pass
-
+    res = {"status": redis_working()}
+    
     return jsonify(res)
 
 @app.route("/upload", methods=['POST'])

@@ -2,9 +2,10 @@ import base64
 import os
 import sys
 import secrets
+import logging
 
 from karton.core import Config
-
+from redis import StrictRedis
 
 def find_config():
     local_path = os.path.join(os.path.dirname(__file__), "config.ini")
@@ -17,6 +18,16 @@ def find_config():
     else:
         raise RuntimeError("Configuration file was not found neither in {} nor {}".format(local_path, etc_path))
 
+def get_minio_helper(config: Config):
+    # Default HTTP client configuration waits 120s for the next retry.
+    # This causes unnecessary delays during startup, because Minio server returns error 503
+    return Minio(
+        config.minio_config["address"],
+        config.minio_config["access_key"],
+        config.minio_config["secret_key"],
+        secure=bool(int(config.minio_config.get("secure", True))),
+        http_client=urllib3.PoolManager(retries=urllib3.Retry(total=3)),
+    )
 
 def get_config():
     cfg = Config(find_config())
@@ -43,6 +54,23 @@ def get_config():
             sys.stderr.write('WARNING! Misconfiguration: minio.env doesn\'t contain MINIO_ACCESS_KEY or MINIO_SECRET_KEY.\n')
 
     return cfg
+
+def redis_working():
+    config = get_config()
+
+    # configuration used in Karton
+    redis = StrictRedis(
+            host=config["redis"]["host"],
+            port=int(config["redis"].get("port", 6379)),
+            decode_responses=True,
+    )
+
+    try:
+        return redis.ping()
+    except Exception as e:
+        logging.warning("Redis not working")
+
+    return False
 
 
 def setup_config():
