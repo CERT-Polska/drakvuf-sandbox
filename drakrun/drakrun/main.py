@@ -605,7 +605,7 @@ class DrakrunKarton(Karton):
         self.update_vnc_info()
 
         # Get sample extension. If none set, fall back to exe/dll
-        extension = self._karton_safe_get_headers(task, "extension", "exe")
+        extension = self._karton_safe_get_headers(task, "extension", "exe").lower()
 
         if '(DLL)' in magic_output:
             extension = 'dll'
