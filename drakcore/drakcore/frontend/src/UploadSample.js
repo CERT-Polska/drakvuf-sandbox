@@ -77,7 +77,7 @@ class UploadSample extends Component {
       customStartCmd: "",
       timeout: 10 * 60,
       enabledPlugins: ["apimon", "syscalls", "procmon", "tlsmon", "memdump"],
-      readOnlyUI: true,
+      readOnlyUI: false,
 
       error: null,
       uploadInProgress: false,
@@ -121,6 +121,12 @@ class UploadSample extends Component {
     this.handlePluginsChange = this.handlePluginsChange.bind(this);
     this.formValid = this.formValid.bind(this);
     this.setError = this.setError.bind(this);
+  }
+
+  async componentDidMount() {
+    const response = await api.getRedisState();
+    if (response.data)
+      this.setState({ readOnlyUI: response.data.status === false });
   }
 
   setError(newError) {
