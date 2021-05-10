@@ -275,6 +275,14 @@ class DrakrunKarton(Karton):
             start_command = None
         return start_command
 
+    def _karton_safe_get_headers(self, task, key, fallback):
+        ret = task.headers.get(key, fallback)
+        if ret is None:
+            self.log.warning(f"Could not get {key}, falling back to {fallback}")
+            ret = fallback
+
+        return ret
+
     def crop_dumps(self, dirpath, target_zip):
         zipf = zipfile.ZipFile(target_zip, 'w', zipfile.ZIP_DEFLATED)
 
@@ -469,7 +477,7 @@ class DrakrunKarton(Karton):
         hooks_list = os.path.join(workdir, "hooks.txt")
         kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
 
-        task_quality = self.current_task.headers.get("quality", "high")
+        task_quality = self._karton_safe_get_headers(self.current_task, "quality", "high")
         requested_plugins = self.current_task.payload.get("plugins", self.active_plugins['_all_'])
 
         drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality, requested_plugins) + \
@@ -597,10 +605,7 @@ class DrakrunKarton(Karton):
         self.update_vnc_info()
 
         # Get sample extension. If none set, fall back to exe/dll
-        extension = task.headers.get("extension", "exe")
-        if extension is None:
-            self.log.warning("No extension type, falling back to exe")
-        extension = extension.lower()
+        extension = self._karton_safe_get_headers(task, "extension", "exe")
 
         if '(DLL)' in magic_output:
             extension = 'dll'
@@ -681,7 +686,7 @@ class DrakrunKarton(Karton):
         with open(os.path.join(outdir, 'metadata.json'), 'w') as f:
             f.write(json.dumps(metadata))
 
-        quality = task.headers.get("quality", "high")
+        quality = self._karton_safe_get_headers(task, "quality", "high")
         self.send_raw_analysis(sample, outdir, metadata, dumps_metadata, quality)
 
 
