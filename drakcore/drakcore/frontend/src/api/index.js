@@ -7,6 +7,9 @@ export default {
   async getList() {
     return axios.get("/list");
   },
+  async getRedisState() {
+    return axios.get("/redis_state");
+  },
   async getLog(analysis, type) {
     return axios.get(`/logs/${analysis}/${type}`);
   },

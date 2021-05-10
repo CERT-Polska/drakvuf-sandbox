@@ -7,6 +7,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 import requests
 import logging
+from redis import StrictRedis
 
 from flask import Flask, jsonify, request, send_file, redirect, send_from_directory, Response, abort
 from karton.core import Config, Producer, Task, Resource
@@ -17,7 +18,6 @@ from drakcore.system import SystemService
 from drakcore.util import get_config
 from drakcore.analysis import AnalysisProxy
 from drakcore.database import Database
-
 
 app = Flask(__name__, static_folder='frontend/build/static')
 conf = get_config()
@@ -50,6 +50,24 @@ def add_header(response):
     response.headers['Access-Control-Allow-Headers'] = 'Range'
     return response
 
+
+@app.route("/redis_state", methods=['GET'])
+def get_redis_state():
+    res = {"status": False}
+
+    # configuration used in Karton
+    redis = StrictRedis(
+            host=config["redis"]["host"],
+            port=int(config["redis"].get("port", 6379)),
+            decode_responses=True,
+    )
+
+    try:
+        res = {"status": redis.ping()}
+    except redis.exceptions.ConnectionError, ConnectionError:
+        pass
+
+    return jsonify(res)
 
 @app.route("/upload", methods=['POST'])
 def upload():
