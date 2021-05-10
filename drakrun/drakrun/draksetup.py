@@ -26,7 +26,7 @@ from drakrun.networking import setup_vm_network, start_dnsmasq, delete_vm_networ
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
 from drakrun.injector import Injector
 from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE, get_all_vm_conf, delete_vm_conf, VirtualMachine
-from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
+from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete, redis_working
 from tqdm import tqdm
 from pathlib import Path, PureWindowsPath
 import traceback
@@ -185,6 +185,10 @@ def sanity_check():
     if not perform_xtf():
         logging.error("Your Xen installation doesn\'t pass the necessary tests.")
         return False
+
+    # redis sanity check
+    logging.info("Checking redis")
+    redis_working(conf)
 
     return True
 

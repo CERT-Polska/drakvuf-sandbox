@@ -6,6 +6,8 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from typing import IO, AnyStr
+import traceback
+from redis import StrictRedis
 
 from dataclasses_json import config, dataclass_json
 
@@ -56,6 +58,26 @@ class RuntimeInfo:
 
     def load(file_obj: IO[AnyStr]) -> 'RuntimeInfo':
         return RuntimeInfo.from_json(file_obj.read())
+
+
+def redis_working(config):
+
+    # configuration used in Karton
+    redis = StrictRedis(
+        host=config["redis"]["host"],
+        port=int(config["redis"].get("port", 6379)),
+        decode_responses=True,
+    )
+
+    try:
+        ret = redis.ping()
+        logging.info("Redis installed properly")
+    except Exception:
+        ret = False
+        logging.warning("Redis not working")
+        logging.debug(traceback.format_exc())
+
+    return ret
 
 
 def patch_config(cfg):
