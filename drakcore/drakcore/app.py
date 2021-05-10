@@ -14,7 +14,7 @@ from karton.core.task import TaskState
 from minio.error import NoSuchKey
 
 from drakcore.system import SystemService
-from drakcore.util import get_config, redis_working
+from drakcore.util import get_config, redis_working, get_minio_helper
 from drakcore.analysis import AnalysisProxy
 from drakcore.database import Database
 
@@ -58,8 +58,9 @@ def add_header(response):
 @app.route("/redis_state", methods=['GET'])
 def get_redis_state():
     res = {"status": redis_working()}
-    
+
     return jsonify(res)
+
 
 @app.route("/upload", methods=['POST'])
 def upload():

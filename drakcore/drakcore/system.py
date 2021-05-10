@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-import urllib3
-from minio import Minio
 from karton.core import Config
 from karton.system import SystemService
 from drakcore.util import get_config, redis_working, get_minio_helper
+
 
 def main():
     config = get_config()
@@ -26,6 +25,7 @@ def main():
         minio.make_bucket(bucket_name)
 
     service.loop()
+
 
 if __name__ == "__main__":
     main()

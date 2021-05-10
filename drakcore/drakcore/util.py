@@ -4,8 +4,12 @@ import sys
 import secrets
 import logging
 
+import urllib3
+from minio import Minio
 from karton.core import Config
 from redis import StrictRedis
+import traceback
+
 
 def find_config():
     local_path = os.path.join(os.path.dirname(__file__), "config.ini")
@@ -18,6 +22,7 @@ def find_config():
     else:
         raise RuntimeError("Configuration file was not found neither in {} nor {}".format(local_path, etc_path))
 
+
 def get_minio_helper(config: Config):
     # Default HTTP client configuration waits 120s for the next retry.
     # This causes unnecessary delays during startup, because Minio server returns error 503
@@ -28,6 +33,7 @@ def get_minio_helper(config: Config):
         secure=bool(int(config.minio_config.get("secure", True))),
         http_client=urllib3.PoolManager(retries=urllib3.Retry(total=3)),
     )
+
 
 def get_config():
     cfg = Config(find_config())
@@ -55,20 +61,22 @@ def get_config():
 
     return cfg
 
+
 def redis_working():
     config = get_config()
 
     # configuration used in Karton
     redis = StrictRedis(
-            host=config["redis"]["host"],
-            port=int(config["redis"].get("port", 6379)),
-            decode_responses=True,
+        host=config["redis"]["host"],
+        port=int(config["redis"].get("port", 6379)),
+        decode_responses=True,
     )
 
     try:
         return redis.ping()
-    except Exception as e:
+    except Exception:
         logging.warning("Redis not working")
+        logging.debug(traceback.format_exc())
 
     return False
 

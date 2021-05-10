@@ -121,8 +121,6 @@ class UploadSample extends Component {
     this.handlePluginsChange = this.handlePluginsChange.bind(this);
     this.formValid = this.formValid.bind(this);
     this.setError = this.setError.bind(this);
-
-    
   }
 
   setError(newError) {
@@ -132,7 +130,6 @@ class UploadSample extends Component {
   formValid() {
     let errMsg = null;
 
-   
     if (this.state.file === null) {
       errMsg = "Choose a file";
     }
@@ -251,7 +248,6 @@ class UploadSample extends Component {
         </div>
       );
     }
-
 
     const uploadSpinner = (
       <span
