@@ -53,7 +53,11 @@ def with_logs(object_name):
                                         bucket="drakrun")
                     task_uid = self.current_task.payload.get('analysis_uid') or self.current_task.uid
                     res._uid = f"{task_uid}/{res.name}"
-                    res.upload(self.backend)
+
+                    # Karton rejects empty resources
+                    # Ensure that we upload it only when some data was actually generated
+                    if buffer.len > 0:
+                        res.upload(self.backend)
                 except Exception:
                     self.log.exception("Failed to upload analysis logs")
         return wrapper
