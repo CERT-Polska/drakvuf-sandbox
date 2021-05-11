@@ -689,10 +689,11 @@ def validate_xen_commandline():
     required_cmdline = {
         "sched": "credit",
         "force-ept": "1",
-        "ept": "pml=0",
+        "ept": "ad=0",
         "hap_1gb": "0",
         "hap_2mb": "0",
-        "altp2m": "1"
+        "altp2m": "1",
+        "hpet": "legacy-replacement",
     }
 
     parsed_xl_info = get_xl_info()
