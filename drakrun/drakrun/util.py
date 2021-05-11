@@ -133,7 +133,7 @@ def safe_delete(file_path) -> bool:
         return False
 
 
-def try_subprocess(list_args: list, msg: str, debug=True, **kwargs) -> subprocess.CompletedProcess:
+def try_subprocess(list_args: list, msg: str, debug=True, reraise=True, **kwargs) -> subprocess.CompletedProcess:
 
     # setup default parameters to be passed, can be overrided by supplying kwargs
     if kwargs.get('stdout') is None:
@@ -156,8 +156,8 @@ def try_subprocess(list_args: list, msg: str, debug=True, **kwargs) -> subproces
             logging.debug("stdout: {}".format(e.stdout))
             logging.debug("stderr: {}".format(e.stderr))
             logging.debug("returncode: {}".format(e.returncode))
-        logging.exception(e)
-        raise Exception(msg) from None
+        if reraise:
+            raise e
     return sub
 
 

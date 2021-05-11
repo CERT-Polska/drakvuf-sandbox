@@ -123,6 +123,7 @@ class VirtualMachine:
         cfg_path=None,
         snapshot_path=None,
         pause=False,
+        **kwargs
     ) -> None:
         """ Restore virtual machine from snapshot.
         :raises: subprocess.CalledProcessError
@@ -148,12 +149,12 @@ class VirtualMachine:
             self.backend.rollback_vm_storage(self.vm_id)
 
         args += [cfg_path, snapshot_path]
-        try_subprocess(args, f"Failed to restore VM {self.vm_name}")
+        try_subprocess(args, f"Failed to restore VM {self.vm_name}", **kwargs)
 
-    def destroy(self):
+    def destroy(self, **kwargs):
         """ Destroy a running virtual machine.
         :raises: subprocess.CalledProcessError
         """
         if self.is_running:
             logging.info(f"Destroying {self.vm_name}")
-            try_subprocess(["xl", "destroy", self.vm_name], f"Failed to destroy VM {self.vm_name}")
+            try_subprocess(["xl", "destroy", self.vm_name], f"Failed to destroy VM {self.vm_name}", **kwargs)
