@@ -133,9 +133,18 @@ def safe_delete(file_path) -> bool:
         return False
 
 
-def try_subprocess(list_args, msg, debug=True, **kwargs):
+def try_subprocess(list_args: list, msg: str, debug=True, **kwargs) -> subprocess.CompletedProcess:
+
+    # setup default parameters to be passed, can be overrided by supplying kwargs
+    if kwargs.get('stdout') is None:
+        kwargs['stdout'] = subprocess.PIPE
+    if kwargs.get('stderr') is None:
+        kwargs['stderr'] = subprocess.PIPE
+    if kwargs.get('check') is None:
+        kwargs['check'] = True
+
     try:
-        sub = subprocess.check_output(list_args, **kwargs)
+        sub = subprocess.run(list_args, **kwargs)
     except FileNotFoundError:
         if debug:
             logging.debug("arguments to subprocess")
@@ -147,7 +156,7 @@ def try_subprocess(list_args, msg, debug=True, **kwargs):
             logging.debug("stdout: {}".format(e.stdout))
             logging.debug("stderr: {}".format(e.stderr))
             logging.debug("returncode: {}".format(e.returncode))
-            logging.exception(e)
+        logging.exception(e)
         raise Exception(msg) from None
     return sub
 

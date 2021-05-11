@@ -202,12 +202,12 @@ def perform_xtf():
         tmpf.write(test_cfg)
         tmpf.flush()
 
-        # remove raw xl commands from here
+        test_hvm64 = VirtualMachine(None, None, "test-hvm64-example")
         logging.info('Checking if the test domain already exists...')
-        subprocess.run('xl destroy test-hvm64-example', shell=True)
+        test_hvm64.destroy()
 
         logging.info('Creating new test domain...')
-        subprocess.run(f'xl create -p {tmpf.name}', shell=True, stderr=subprocess.STDOUT, timeout=30, check=True)
+        test_hvm64.create(tmpf.name, pause=True, timeout=30)
 
         module_dir = os.path.dirname(os.path.realpath(__file__))
         test_altp2m_tool = os.path.join(module_dir, "tools", "test-altp2m")
@@ -218,12 +218,12 @@ def perform_xtf():
         except subprocess.CalledProcessError as e:
             output = e.output.decode('utf-8', 'replace')
             logging.error(f'Failed to enable altp2m on domain. Your hardware might not support Extended Page Tables. Logs:\n{output}')
-            subprocess.run('xl destroy test-hvm64-example', shell=True)
+            test_hvm64.destroy()
             return False
 
         logging.info('Performing simple XTF test...')
         p = subprocess.Popen(['xl', 'console', 'test-hvm64-example'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        subprocess.run('xl unpause test-hvm64-example', shell=True, stderr=subprocess.STDOUT, timeout=30, check=True)
+        test_hvm64.unpause(timeout=30)
         stdout_b, _ = p.communicate(timeout=10)
 
         stdout_text = stdout_b.decode('utf-8')

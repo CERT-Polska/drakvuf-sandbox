@@ -74,13 +74,14 @@ def delete_vm_conf(vm_id: int) -> bool:
 
 
 class VirtualMachine:
-    def __init__(self, backend: StorageBackendBase, vm_id: int) -> None:
+    def __init__(self, backend: StorageBackendBase, vm_id: int, fmt: str = None) -> None:
         self.backend = backend
         self.vm_id = vm_id
+        self._format = f"vm-{self.vm_id}" if fmt is None else fmt
 
     @property
     def vm_name(self) -> str:
-        return f"vm-{self.vm_id}"
+        return self._format
 
     @property
     def is_running(self) -> bool:
@@ -91,35 +92,38 @@ class VirtualMachine:
         )
         return res.returncode == 0
 
-    def create(self, cfg_path, pause=False):
+    def create(self, cfg_path, pause=False, **kwargs):
         args = ['xl', 'create']
         if pause:
             args += ['-p']
         args += [cfg_path]
-        try_subprocess(args, "Failed to launch VM vm-0")
+        try_subprocess(args, f"Failed to launch VM {self.vm_name}", **kwargs)
 
-    def pause(self):
-        try_subprocess(['xl', 'pause', self.vm_name], f"Failed to pause VM {self.vm_name}")
+    def pause(self, **kwargs):
+        try_subprocess(['xl', 'pause', self.vm_name], f"Failed to pause VM {self.vm_name}", **kwargs)
 
-    def unpause(self):
-        try_subprocess(['xl', 'unpause', self.vm_name], f"Failed to unpause VM {self.vm_name}")
+    def unpause(self, **kwargs):
+        try_subprocess(['xl', 'unpause', self.vm_name], f"Failed to unpause VM {self.vm_name}", **kwargs)
 
-    def save(self, filename, **kwargs):
+    def save(self, filename, pause=False, cont=False, **kwargs):
         args = ['xl', 'save']
 
         # no such kwargs will shutdown the VM after saving
-        # pause=True
-        if kwargs['pause'] is True:
+        if pause is True:
             args += ['-p']
-        # cont=True
-        elif kwargs['cont'] is True:
+        elif cont is True:
             args += ['-c']
 
         args += [self.vm_name, filename]
 
-        try_subprocess(args, f"Failed to save VM {self.vm_name}")
+        try_subprocess(args, f"Failed to save VM {self.vm_name}", **kwargs)
 
-    def restore(self) -> None:
+    def restore(
+        self,
+        cfg_path=None,
+        snapshot_path=None,
+        pause=False,
+    ) -> None:
         """ Restore virtual machine from snapshot.
         :raises: subprocess.CalledProcessError
         """
@@ -127,15 +131,24 @@ class VirtualMachine:
         # shouldn't we raise exceptions? and then handle it?
         if self.is_running:
             self.destroy()
-        cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg"
-        snapshot_path = Path(VOLUME_DIR) / "snapshot.sav"
+
+        args = ['xl', 'restore']
+
+        if cfg_path is None:
+            cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg",
+        if snapshot_path is None:
+            snapshot_path = Path(VOLUME_DIR) / "snapshot.sav",
+
+        if pause is True:
+            args += ['-p']
 
         # No need to rollback vm-0. Since the state of vm-0
         # is correct by definition.
-        if self.vm_id != 0:
+        if self.vm_id != 0 and self.backend is not None and self.vm_id is not None:
             self.backend.rollback_vm_storage(self.vm_id)
 
-        try_subprocess(["xl", "restore", cfg_path, snapshot_path], f"Failed to restore VM {self.vm_name}")
+        args += [cfg_path, snapshot_path]
+        try_subprocess(args, f"Failed to restore VM {self.vm_name}")
 
     def destroy(self):
         """ Destroy a running virtual machine.
