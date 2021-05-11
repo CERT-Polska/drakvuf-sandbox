@@ -1,0 +1,10 @@
+{
+    "files": {
+        "drakcore/drakcore/frontend/package.json": "\"version\": \"$VERSION\"",
+        "drakcore/drakcore/frontend/package-lock.json": "\"version\": \"$VERSION\"",
+        "drakcore/drakcore/version.py": "__version__ = \"$VERSION\"",
+        "drakrun/drakrun/version.py": "__version__ = \"$VERSION\"",
+        "docs/conf.py": "release = 'v$VERSION'"
+    },
+    "regex": "(\\d+\\.\\d+\\.\\d+(?:-(post|dev|alpha|beta|rc)[0-9])?)"
+}

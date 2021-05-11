@@ -2,7 +2,9 @@ karton-core==4.2.0
 minio==5.0.7
 redis==3.5.3
 pefile==2019.4.18
-pdbparse==1.4
+# Use pdbparse from master branch
+# current release - 1.5 has troubles parsing some of the PDBs
+pdbparse @ git+https://github.com/moyix/pdbparse.git@b5b61793e4a457c43a5aef7a0499b959826b2c04
 construct==2.9.45
 requests==2.25.1
 tqdm==4.43.0

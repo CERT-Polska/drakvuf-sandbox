@@ -6,7 +6,6 @@ from drakcore.postprocess.generate_graphs import generate_graphs
 from drakcore.postprocess.log_index import generate_log_index
 from drakcore.postprocess.pstree import build_process_tree
 from drakcore.postprocess.slice_logs import slice_drakmon_logs
-from drakcore.postprocess.ipt_disasm import generate_ipt_disasm
 from drakcore.postprocess.wireshark_key_file_gen import generate_wireshark_key_file
 
 PostprocessPlugin = namedtuple("PostprocessPlugin", ('handler', 'required'))
@@ -25,8 +24,6 @@ REGISTERED_PLUGINS = [
     PostprocessPlugin(build_process_tree, required=['procmon.log']),
     # yields wireshark_key_file.txt
     PostprocessPlugin(generate_wireshark_key_file, required=['tlsmon.log']),
-
-    PostprocessPlugin(generate_ipt_disasm, required=['execframe.log', 'pagefault.log', 'ipt.zip']),
 
     # yields index/{name}
     PostprocessPlugin(generate_log_index, required=[]),

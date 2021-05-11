@@ -32,7 +32,7 @@ def test_services_running(drakmon_vm):
         raise Exception("Services down")
 
 
-def test_web_ui_reachable(drakmon_vm):
+def test_web_ui_reachable(drakcore):
     response = requests.get(f"http://{VM_HOST}:6300/")
     response.raise_for_status()
 

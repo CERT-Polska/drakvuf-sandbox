@@ -104,6 +104,8 @@ class UploadSample extends Component {
       "tlsmon",
       "windowmon",
       "wmimon",
+      "ipt",
+      "codemon",
     ];
 
     this.multiselectStyle = {
@@ -212,6 +214,21 @@ class UploadSample extends Component {
     this.setState({ enabledPlugins: enabledPlugins });
   }
 
+  displayPluginImplications(enabledPlugins) {
+    if (
+      enabledPlugins.indexOf("ipt") !== -1 &&
+      enabledPlugins.indexOf("codemon") === -1
+    ) {
+      return (
+        <p class="text-muted">
+          Using <code>ipt</code> plugin implies using <code>codemon</code>.
+        </p>
+      );
+    }
+
+    return <span />;
+  }
+
   render() {
     let error;
     if (this.state.error !== null) {
@@ -280,6 +297,7 @@ class UploadSample extends Component {
               onSelect={this.handlePluginsChange}
               onRemove={this.handlePluginsChange}
             />
+            {this.displayPluginImplications(this.state.enabledPlugins)}
           </div>
           <div className="collapse" id="customOptions">
             <OptionalField

@@ -20,7 +20,7 @@ import requests
 from requests import RequestException
 from minio import Minio
 from minio.error import NoSuchKey
-from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid
+from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid, DLL
 from drakrun.config import InstallInfo, LIB_DIR, VOLUME_DIR, PROFILE_DIR, ETC_DIR, VM_CONFIG_DIR
 from drakrun.networking import setup_vm_network, start_dnsmasq, delete_vm_network, stop_dnsmasq
 from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
@@ -28,7 +28,7 @@ from drakrun.injector import Injector
 from drakrun.vm import generate_vm_conf, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE, get_all_vm_conf, delete_vm_conf, VirtualMachine
 from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
 from tqdm import tqdm
-from pathlib import PureWindowsPath
+from pathlib import Path, PureWindowsPath
 import traceback
 
 
@@ -99,6 +99,22 @@ def stop_all_drakruns():
         subprocess.check_output('systemctl stop \'drakrun@*\'', shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError:
         raise Exception("Drakrun services not stopped")
+
+
+def start_enabled_drakruns():
+    logging.info("Starting previously stopped drakruns")
+    enabled_services = set(list(get_enabled_drakruns()))
+    wait_processes(
+        "start services",
+        [
+            subprocess.Popen(
+                ["systemctl", "start", service],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            for service in enabled_services
+        ],
+    )
 
 
 def cleanup_postinstall_files():
@@ -386,57 +402,59 @@ def send_usage_report(report):
         logging.exception("Failed to send usage report. This is not a serious problem.")
 
 
-def create_rekall_profiles(injector: Injector):
+def create_rekall_profile(injector: Injector, file: DLL):
     tmp = None
+    try:
+        logging.info(f"Fetching rekall profile for {file.path}")
 
-    for file in dll_file_list:
-        try:
-            logging.info(f"Fetching rekall profile for {file.path}")
+        local_dll_path = os.path.join(PROFILE_DIR, file.dest)
+        guest_dll_path = str(PureWindowsPath("C:/", file.path))
 
-            local_dll_path = os.path.join(PROFILE_DIR, file.dest)
-            guest_dll_path = str(PureWindowsPath("C:/", file.path))
-
-            cmd = injector.read_file(guest_dll_path, local_dll_path)
-            out = json.loads(cmd.stdout.decode())
-            if out["Status"] == "Error" and out["Error"] in ["ERROR_FILE_NOT_FOUND", "ERROR_PATH_NOT_FOUND"]:
-                raise FileNotFoundError
-            if out["Status"] != "Success":
-                logging.debug("stderr: " + cmd.stderr.decode())
-                logging.debug(out)
-                # Take care if the error message is changed
-                raise Exception("Some error occurred in injector")
-
-            guid = pdb_guid(local_dll_path)
-            tmp = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
-
-            logging.debug("Parsing PDB into JSON profile...")
-            profile = make_pdb_profile(tmp)
-            with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), 'w') as f:
-                f.write(profile)
-        except json.JSONDecodeError:
-            logging.debug(f"stdout: {cmd.stdout}")
-            logging.debug(f"stderr: {cmd.stderr}")
-            logging.debug(traceback.format_exc())
-            raise Exception(f"Failed to parse json response on {file.path}")
-        except FileNotFoundError:
-            logging.warning(f"Failed to copy file {file.path}, skipping...")
-        except RuntimeError:
-            logging.warning(f"Failed to fetch profile for {file.path}, skipping...")
-        except Exception as e:
+        cmd = injector.read_file(guest_dll_path, local_dll_path)
+        out = json.loads(cmd.stdout.decode())
+        if out["Status"] == "Error" and out["Error"] in ["ERROR_FILE_NOT_FOUND", "ERROR_PATH_NOT_FOUND"]:
+            raise FileNotFoundError
+        if out["Status"] != "Success":
+            logging.debug("stderr: " + cmd.stderr.decode())
+            logging.debug(out)
             # Take care if the error message is changed
-            if str(e) == "Some error occurred in injector":
-                raise
-            else:
-                logging.warning(f"Unexpected exception while creating rekall profile for {file.path}, skipping...")
-                # Can help in debugging
-                logging.debug("stderr: " + cmd.stderr.decode())
-                logging.debug(out)
-                logging.debug(traceback.format_exc())
-        finally:
-            safe_delete(local_dll_path)
-            # was crashing here if the first file reached some exception
-            if tmp is not None:
-                safe_delete(os.path.join(PROFILE_DIR, tmp))
+            raise Exception("Some error occurred in injector")
+
+        guid = pdb_guid(local_dll_path)
+        tmp = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
+
+        logging.debug("Parsing PDB into JSON profile...")
+        profile = make_pdb_profile(
+            tmp,
+            dll_origin_path=guest_dll_path,
+            dll_path=local_dll_path
+        )
+        with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), 'w') as f:
+            f.write(profile)
+    except json.JSONDecodeError:
+        logging.debug(f"stdout: {cmd.stdout}")
+        logging.debug(f"stderr: {cmd.stderr}")
+        logging.debug(traceback.format_exc())
+        raise Exception(f"Failed to parse json response on {file.path}")
+    except FileNotFoundError:
+        logging.warning(f"Failed to copy file {file.path}, skipping...")
+    except RuntimeError:
+        logging.warning(f"Failed to fetch profile for {file.path}, skipping...")
+    except Exception as e:
+        # Take care if the error message is changed
+        if str(e) == "Some error occurred in injector":
+            raise
+        else:
+            logging.warning(f"Unexpected exception while creating rekall profile for {file.path}, skipping...")
+            # Can help in debugging
+            logging.debug("stderr: " + cmd.stderr.decode())
+            logging.debug(out)
+            logging.debug(traceback.format_exc())
+    finally:
+        safe_delete(local_dll_path)
+        # was crashing here if the first file reached some exception
+        if tmp is not None:
+            safe_delete(os.path.join(PROFILE_DIR, tmp))
 
 
 def extract_explorer_pid(
@@ -558,6 +576,8 @@ def postinstall(report, generate_usermode):
     with open(kernel_profile, 'w') as f:
         f.write(profile)
 
+    safe_delete(dest)
+
     vmi_offsets = extract_vmi_offsets('vm-0', kernel_profile)
     explorer_pid = extract_explorer_pid('vm-0', kernel_profile, vmi_offsets)
     runtime_info = RuntimeInfo(vmi_offsets=vmi_offsets, inject_pid=explorer_pid)
@@ -581,7 +601,8 @@ def postinstall(report, generate_usermode):
     injector = Injector('vm-0', runtime_info, kernel_profile)
     if generate_usermode:
         try:
-            create_rekall_profiles(injector)
+            for file in dll_file_list:
+                create_rekall_profile(injector, file)
         except RuntimeError as e:
             logging.warning("Generating usermode profiles failed")
             logging.exception(e)
@@ -609,8 +630,23 @@ def postinstall(report, generate_usermode):
     logging.info("  # draksetup scale <number of instances>")
 
 
+def profile_exists(profile: DLL) -> bool:
+    return (Path(PROFILE_DIR) / f"{profile.dest}.json").is_file()
+
+
+def create_missing_profiles(injector: Injector):
+    # Ensure that all declared usermode profiles exist
+    # This is important when upgrade defines new entries in dll_file_list
+    for profile in dll_file_list:
+        if not profile_exists(profile):
+            create_rekall_profile(injector, profile)
+
+
 @click.command(help='Perform tasks after drakrun upgrade')
 def postupgrade():
+    if not check_root():
+        return
+
     with open(os.path.join(ETC_DIR, 'scripts/cfg.template'), 'r') as f:
         template = f.read()
 
@@ -622,6 +658,33 @@ def postupgrade():
         f.write(template)
 
     detect_defaults()
+
+    install_info = InstallInfo.try_load()
+    if not install_info:
+        logging.info("Postupgrade done. DRAKVUF Sandbox not installed.")
+        return
+
+    # Prepare injector
+    with open(os.path.join(PROFILE_DIR, "runtime.json"), 'r') as runtime_f:
+        runtime_info = RuntimeInfo.load(runtime_f)
+    kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
+    injector = Injector('vm-1', runtime_info, kernel_profile)
+
+    stop_all_drakruns()
+
+    # Use vm-1 for generating profiles
+    out_interface = conf['drakrun'].get('out_interface', '')
+    dns_server = conf['drakrun'].get('dns_server', '')
+    setup_vm_network(vm_id=1, net_enable=False, out_interface=out_interface, dns_server=dns_server)
+    backend = get_storage_backend(install_info)
+    vm = VirtualMachine(backend, 1)
+    vm.restore()
+
+    create_missing_profiles(injector)
+
+    vm.destroy()
+    delete_vm_network(vm_id=1, net_enable=False, out_interface=out_interface, dns_server=dns_server)
+    start_enabled_drakruns()
 
 
 def get_enabled_drakruns():

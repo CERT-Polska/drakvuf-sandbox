@@ -11,10 +11,17 @@ from pefile import PE, DEBUG_TYPE
 from construct import Struct, Const, Bytes, Int32ul, Int16ul, CString, EnumIntegerString
 from requests import HTTPError
 from tqdm import tqdm
-from typing import NamedTuple
+from typing import NamedTuple, Optional, List
+
+DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 
 
-DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", str)])
+def dll_pair(name: str, extension: str = "dll") -> List[DLL]:
+    return [
+        DLL(f"Windows/System32/{name}.{extension}", f"{name}_profile", None),
+        DLL(f"Windows/SysWOW64/{name}.{extension}", f"wow_{name}_profile", None),
+    ]
+
 
 # profile file list, without 'C:\' and with '/' instead of '\'
 dll_file_list = [
@@ -26,13 +33,49 @@ dll_file_list = [
     DLL("Windows/System32/KernelBase.dll", "kernelbase_profile", "--json-kernelbase"),
     DLL("Windows/SysWOW64/kernel32.dll", "wow_kernel32_profile", "--json-wow-kernel32"),
     DLL("Windows/System32/IPHLPAPI.DLL", "iphlpapi_profile", "--json-iphlpapi"),
+    DLL("Windows/SysWOW64/IPHLPAPI.DLL", "wow_iphlpapi_profile", None),
     DLL("Windows/System32/mpr.dll", "mpr_profile", "--json-mpr"),
+    DLL("Windows/SysWOW64/mpr.dll", "wow_mpr_profile", None),
     DLL("Windows/System32/ntdll.dll", "ntdll_profile", "--json-ntdll"),
-    DLL("Windows/System32/ole32.dll", "ole32_profile", "--json-ole32"),
-    DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile", "--json-wow-ole32"),
-    DLL("Windows/System32/combase.dll", "combase_profile", "--json-combase"),
+    # Don't use DRAKVUF arguments, they're used by wmimon which is compiled out
+    # DLL("Windows/System32/ole32.dll", "ole32_profile", "--json-ole32"),
+    # DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile", "--json-wow-ole32"),
+    *dll_pair("ole32"),
+    DLL("Windows/System32/combase.dll", "combase_profile", None),
     DLL("Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll", "clr_profile", "--json-clr"),
-    DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile", "--json-mscorwks")
+    DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile", "--json-mscorwks"),
+    DLL("Windows/winsxs/x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll", "gdiplus_profile", None),
+    DLL("Windows/winsxs/amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll", "wow_gdiplus_profile", None),
+    *dll_pair("Wldap32"),
+    *dll_pair("comctl32"),
+    *dll_pair("crypt32"),
+    *dll_pair("dnsapi"),
+    *dll_pair("gdi32"),
+    *dll_pair("imagehlp"),
+    *dll_pair("imm32"),
+    *dll_pair("msacm32"),
+    *dll_pair("msvcrt"),
+    *dll_pair("netapi32"),
+    *dll_pair("oleaut32"),
+    *dll_pair("powrprof"),
+    *dll_pair("psapi"),
+    *dll_pair("rpcrt4"),
+    *dll_pair("secur32"),
+    *dll_pair("SensApi"),
+    *dll_pair("shell32"),
+    *dll_pair("shlwapi"),
+    *dll_pair("urlmon"),
+    *dll_pair("user32"),
+    *dll_pair("userenv"),
+    *dll_pair("version"),
+    *dll_pair("winhttp"),
+    *dll_pair("wininet"),
+    *dll_pair("winmm"),
+    *dll_pair("winspool", extension="drv"),
+    *dll_pair("ws2_32"),
+    *dll_pair("wsock32"),
+    *dll_pair("wtsapi32"),
+    # GdiPlus ?
 ]
 
 
@@ -65,8 +108,11 @@ TYPE_ENUM_TO_VTYPE = {
     "T_32PUSHORT": ["Pointer", dict(target="unsigned short")],
     "T_32PVOID": ["Pointer", dict(target="Void")],
     "T_32PWCHAR": ["Pointer", dict(target="UnicodeString")],
+    "T_32PHRESULT": ["Pointer", dict(target="long")],
+    "T_64PINT4": ["Pointer", dict(target="long")],
     "T_64PLONG": ["Pointer", dict(target="long")],
     "T_64PQUAD": ["Pointer", dict(target="long long")],
+    "T_64PSHORT": ["Pointer", dict(target="short")],
     "T_64PRCHAR": ["Pointer", dict(target="unsigned char")],
     "T_64PUCHAR": ["Pointer", dict(target="unsigned char")],
     "T_64PWCHAR": ["Pointer", dict(target="String")],
@@ -74,6 +120,10 @@ TYPE_ENUM_TO_VTYPE = {
     "T_64PUQUAD": ["Pointer", dict(target="unsigned long long")],
     "T_64PUSHORT": ["Pointer", dict(target="unsigned short")],
     "T_64PVOID": ["Pointer", dict(target="Void")],
+    "T_64PREAL32": ["Pointer", dict(target="float")],
+    "T_64PREAL64": ["Pointer", dict(target="double")],
+    "T_64PUINT4": ["Pointer", dict(target="unsigned int")],
+    "T_64PHRESULT": ["Pointer", dict(target="long")],
     "T_BOOL08": ["unsigned char", {}],
     "T_CHAR": ["char", {}],
     "T_INT4": ["long", {}],
@@ -87,6 +137,7 @@ TYPE_ENUM_TO_VTYPE = {
     "T_SHORT": ["short", {}],
     "T_UCHAR": ["unsigned char", {}],
     "T_UINT4": ["unsigned long", {}],
+    "T_UINT8": ["unsigned long long", {}],
     "T_ULONG": ["unsigned long", {}],
     "T_UQUAD": ["unsigned long long", {}],
     "T_USHORT": ["unsigned short", {}],
@@ -228,16 +279,22 @@ def process_struct(struct_info):
 
     try:
         for struct in struct_info.fieldlist.substructs:
+            # try to access struct.offset and trigger
+            # an AttributeError if it's missing
+            _ = struct.offset
             ss[struct.name] = struct
     except AttributeError:
         pass
 
-    fields = [struct.name for struct in ss.values()]
-    field_info = {ss[field].name: [ss[field].offset, get_field_type_info(ss[field])] for field in fields}
+    field_info = {}
+    for name, field in ss.items():
+        typ = get_field_type_info(field)
+        field_info[name] = (field.offset, typ)
+
     return [struct_info.size, field_info]
 
 
-def make_pdb_profile(filepath):
+def make_pdb_profile(filepath, dll_origin_path=None, dll_path=None):
     pdb = pdbparse.parse(filepath)
 
     try:
@@ -310,6 +367,21 @@ def make_pdb_profile(filepath):
         "Type": "Profile",
         "Version": pdb.STREAM_PDB.Version
     }
+
+    # Additional metadata requested by the ApiVectors developers
+    profile["$EXTRAS"] = {}
+    if dll_origin_path:
+        profile["$EXTRAS"]["DLLPath"] = str(dll_origin_path)
+
+    if dll_path:
+        try:
+            pe = PE(dll_path, fast_load=True)
+            profile["$EXTRAS"]["ImageBase"] = hex(pe.OPTIONAL_HEADER.ImageBase)
+        except AttributeError:
+            # I think that DLLs have some sanity and the optional header is
+            # always present. Ignore this error if it happens
+            pass
+
     return json.dumps(profile, indent=4, sort_keys=True)
 
 

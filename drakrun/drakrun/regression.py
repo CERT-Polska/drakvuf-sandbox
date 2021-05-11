@@ -65,33 +65,32 @@ class RegressionTester(Karton):
     filters = [
         {
             "type": "analysis-test",
-            "kind": "drakrun",
+            "kind": "drakrun-internal",
         },
     ]
 
     def __init__(self, config: Config):
         super().__init__(config)
 
-    def analyze_dumps(self, sample, dump_dir):
+    def analyze_dumps(self, sample, dump_dir, dumps_metadata):
         manager = ExtractManager(ExtractorModules(self.config.config['draktestd']['modules']))
-        dumps = Path(dump_dir) / "dumps"
         family = None
-        for f in dumps.glob("*.metadata"):
-            with open(f, "rb") as metafile:
-                metadata = json.load(metafile)
-            va = int(metadata["DumpAddress"], 16)
-            name = dumps / metadata["DataFileName"]
+        for dump_metadata in dumps_metadata:
+            dump_path = os.path.join(dump_dir, dump_metadata["filename"])
+            va = int(dump_metadata["base_address"], 16)
 
             with changedLogLevel(logging.getLogger(), logging.ERROR):
-                res = manager.push_file(name, base=va)
+                res = manager.push_file(dump_path, base=va)
                 family = family or res
         return family
 
     def process(self, task: Task):
         dumps = task.get_resource("dumps.zip")
+        dumps_metadata = task.get_payload("dumps_metadata")
         sample = task.get_resource("sample")
+
         with dumps.extract_temporary() as temp:
-            family = self.analyze_dumps(sample, temp)
+            family = self.analyze_dumps(sample, temp, dumps_metadata)
 
             testcase = TestCase.from_json(task.payload["testcase"])
             expected_family = testcase.ripped

@@ -12,7 +12,7 @@ import sys
 
 from karton.core import Task, RemoteResource
 from typing import Dict
-from drakcore.postprocess.ipt_utils import log, load_drakvuf_output, get_fault_va, get_fault_pa, get_trap_pa, get_frame_va, page_align, is_page_aligned, select_cr3, hexint
+from drakcore.ipt_utils import log, load_drakvuf_output, get_fault_va, get_fault_pa, get_trap_pa, get_frame_va, page_align, is_page_aligned, select_cr3, hexint
 from zipfile import ZipFile
 
 
@@ -76,9 +76,9 @@ def match_frames(page_faults, frames, foreign_frames):
                 unresolved += 1
             else:
                 foreign_resolved += 1
-        log.info("%#016x -> %s", va_page, frame['FrameFile'] if frame else "?")
+        log.info("%#016x -> %s", va_page, frame['DumpFile'] if frame else "?")
         if frame:
-            results.append((va_page, frame['FrameFile']))
+            results.append((va_page, frame['DumpFile']))
 
     log.info("Failed to resolve %d faults. Let's hope they're not related to code", unresolved)
     log.info("Resolved %d from external CR3", foreign_resolved)
@@ -86,7 +86,7 @@ def match_frames(page_faults, frames, foreign_frames):
     return results
 
 
-def main(analysis_dir, cr3_value, vcpu):
+def get_ptxed_cmdline(analysis_dir, cr3_value, vcpu, use_blocks=False):
     log.debug("Analysis directory: %s", analysis_dir)
     log.debug("CR3: %#x", cr3_value)
 
@@ -94,8 +94,9 @@ def main(analysis_dir, cr3_value, vcpu):
         log.critical("CR3 must be aligned to page! Got %#x", cr3_value)
         return
 
-    page_faults = load_drakvuf_output(analysis_dir / "pagefault.log")
-    executed_frames = load_drakvuf_output(analysis_dir / "execframe.log")
+    codemon_out = load_drakvuf_output(analysis_dir / "codemon.log")
+    page_faults = [obj for obj in codemon_out if obj['EventType'] == 'pagefault']
+    executed_frames = [obj for obj in codemon_out if obj['EventType'] == 'execframe']
 
     faults_in_process = list(select_cr3(lambda cr3: cr3 == cr3_value, page_faults))
     frames_in_process = list(select_cr3(lambda cr3: cr3 == cr3_value, executed_frames))
@@ -112,58 +113,26 @@ def main(analysis_dir, cr3_value, vcpu):
     pages = []
     for addr, fname in mappings:
         name = Path(fname).name
-        fpath = analysis_dir / "ipt" / "frames" / name
+        fpath = analysis_dir / "ipt" / "dumps" / name
         if fpath.stat().st_size == 0x1000:
             pages.append("--raw")
             pages.append(f"{fpath}:0x{addr:x}")
-    ptxed_cmdline = [
-        "/opt/libipt/bin/ptxed",
-        "--block-decoder",
-        "--pt",
-        os.path.join(analysis_dir, "ipt", f"ipt_stream_vcpu{vcpu}"),
-        *pages
-    ]
 
+    binary = ["ptxed", "--block-decoder"]
+
+    if use_blocks:
+        binary = ["drak-ipt-blocks", "--cr3", hex(cr3_value)]
+
+    ptxed_cmdline = binary + pages
     log.info("IPT: Succesfully generated ptxed command line")
     return ptxed_cmdline
-
-
-def generate_ipt_disasm(task: Task, resources: Dict[str, RemoteResource], minio):
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
-        resources["inject.log"].download_to_file(str(tmpdir / "inject.log"))
-
-        with open(str(tmpdir / "inject.log"), "r") as f:
-            inject_log = json.loads(f.read().split('\n')[0].strip())
-
-        injected_pid = inject_log["InjectedPid"]
-        resources["execframe.log"].download_to_file(str(tmpdir / "execframe.log"))
-
-        with open(str(tmpdir / "execframe.log"), "r") as f:
-            for line in f:
-                obj = json.loads(line)
-
-                if obj.get("PID") == injected_pid:
-                    injected_cr3 = hexint(obj["CR3"])
-                    break
-            else:
-                log.error("Failed to find injected process' CR3, not doing IPT disasm")
-                return
-
-        resources["pagefault.log"].download_to_file(str(tmpdir / "pagefault.log"))
-        resources["execframe.log"].download_to_file(str(tmpdir / "execframe.log"))
-
-        with resources["ipt.zip"].download_temporary_file() as ipt_zip_tmp:
-            with ZipFile(ipt_zip_tmp) as ipt_zip:
-                ipt_zip.extractall(tmpdir)
-
-        main(tmpdir, injected_cr3)
 
 
 def cmdline_main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", default=False, help="Print generated ptxed command, don't run it")
     parser.add_argument("--verbose", action="store_true", default=False, help="Print additional debug messages")
+    parser.add_argument("--blocks", action="store_true", default=False, help="Use drak-ipt-blocks instead of ptxed")
     parser.add_argument("--analysis", help="Analysis directory (as downloaded from MinIO)")
     parser.add_argument("--cr3", type=hexint, help="CR3 of process of interest")
     parser.add_argument("--vcpu", type=int, help="Number of vCPU to disassemble")
@@ -175,10 +144,10 @@ def cmdline_main():
     analysis_dir = Path(args.analysis)
     cr3_value = args.cr3
 
-    ptxed_cmdline = main(analysis_dir, cr3_value, args.vcpu)
+    ptxed_cmdline = get_ptxed_cmdline(analysis_dir, cr3_value, args.vcpu, args.blocks)
 
     if args.dry_run:
-        print(subprocess.list2cmdline(ptxed_cmdline))
+        print(subprocess.list2cmdline(ptxed_cmdline + ["--pt", "FILTERED_PT_FILE"]))
         sys.exit(0)
 
     with tempfile.NamedTemporaryFile() as f:
@@ -193,4 +162,5 @@ def cmdline_main():
         subprocess.run(' | '.join(filter_cmdline), shell=True)
 
         logging.info("Generating trace disassembly")
+        ptxed_cmdline = ptxed_cmdline + ["--pt", f.name]
         subprocess.run(ptxed_cmdline)
