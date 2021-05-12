@@ -67,6 +67,12 @@ class AnalysisProxy:
             self.bucket, f"{self.uid}/dumps.zip", output_file.name
         )
 
+    def get_ipt(self, output_file):
+        """ Download memory dumps """
+        return self.minio.fget_object(
+            self.bucket, f"{self.uid}/ipt.zip", output_file.name
+        )
+
     def get_graph(self, output_file):
         """ Download ProcDOT graph """
         return self.minio.fget_object(

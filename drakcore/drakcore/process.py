@@ -2,12 +2,18 @@ import os
 import logging
 import json
 import functools
+import contextlib
+import pathlib
+import subprocess
 from io import StringIO
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 from drakcore.version import __version__ as DRAKCORE_VERSION
 from karton.core import Karton, RemoteResource, LocalResource, Task
 from drakcore.postprocess import REGISTERED_PLUGINS
 from drakcore.util import get_config
+from drakcore.analysis import AnalysisProxy
+from drakcore.ipt_disasm import get_executed_blocks
 
 
 class LocalLogBuffer(logging.Handler):
@@ -69,10 +75,32 @@ def with_logs(object_name):
     return decorator
 
 
+def find_pid_cr3(fileobj, pid: int):
+    # Find process CR3
+    for line in fileobj:
+        entry = json.loads(line)
+        if entry["PID"] == pid:
+            return int(entry["CR3"], 16)
+    return None
+
+
+@contextlib.contextmanager
+def open_temporary(*args, **kwargs):
+    file = open(*args, **kwargs)
+    try:
+        yield file
+    finally:
+        file.close()
+        os.remove(file.name)
+
+
 class AnalysisProcessor(Karton):
     version = DRAKCORE_VERSION
     identity = "karton.drakrun.processor"
-    filters = [{"type": "analysis-raw", "kind": "drakrun-internal"}]
+    filters = [
+        {"type": "analysis-raw", "kind": "drakrun-internal"},
+        {"type": "drakcore-request", "kind": "drakrun-internal"},
+    ]
 
     def __init__(self, config, enabled_plugins):
         super().__init__(config)
@@ -81,8 +109,53 @@ class AnalysisProcessor(Karton):
         self.plugins = enabled_plugins
         self.log.setLevel(logging.INFO)
 
+    def process(self, task):
+        if task.headers["type"] == "analysis-raw":
+            self.process_analysis()
+        elif task.headers["type"] == "drakcore-request":
+            self.process_request(task)
+
+    def process_request(self, task):
+        analysis_uid = task.get_payload("analysis_uid")
+        pid = int(task.get_payload("pid"))
+        analysis = AnalysisProxy(self.backend.minio, analysis_uid)
+
+        with NamedTemporaryFile() as ipt_zip, TemporaryDirectory() as analysis_dir, open_temporary(
+            pathlib.Path(analysis_dir) / "codemon.log", "wb"
+        ) as codemon_log:
+            analysis_dir = pathlib.Path(analysis_dir)
+            ipt_dir = analysis_dir / "ipt"
+            # Get IPT artifacts
+            analysis.get_log("codemon", codemon_log)
+
+            with open(codemon_log.name) as f:
+                cr3 = find_pid_cr3(f, pid)
+            if not cr3:
+                return "PID not found", 404
+
+            analysis.get_ipt(ipt_zip)
+            subprocess.run(["unzip", ipt_zip.name, "-d", analysis_dir])
+
+            blocks = set()
+            for cpu in ipt_dir.glob("ipt_stream_*"):
+                for block in get_executed_blocks(
+                    pathlib.Path(analysis_dir), cr3, cpu, use_blocks=False
+                ):
+                    # print(hex(block))
+                    blocks.add(block)
+
+            block_list = list(blocks)
+            block_list.sort()
+            res = list(map(hex, block_list))
+
+            self.backend.redis.set(
+                f"drakipt:{analysis_uid}.{pid}",
+                json.dumps(res),
+                ex=60 * 10
+            )
+
     @with_logs("drak-postprocess.log")
-    def process(self):
+    def process_analysis(self):
         # downloaded resource cache
         task_resources = dict(self.current_task.iterate_resources())
         for plugin in self.plugins:
