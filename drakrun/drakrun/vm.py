@@ -148,8 +148,9 @@ class VirtualMachine:
         if self.vm_id != 0 and self.backend is not None and self.vm_id is not None:
             self.backend.rollback_vm_storage(self.vm_id)
 
-        args += [cfg_path, snapshot_path]
-        try_subprocess(args, f"Failed to restore VM {self.vm_name}", **kwargs)
+        args += cfg_path
+        args += snapshot_path
+        try_subprocess(args, msg=f"Failed to save VM {self.vm_name}", **kwargs)
 
     def destroy(self, **kwargs):
         """ Destroy a running virtual machine.
