@@ -77,11 +77,11 @@ class VirtualMachine:
     def __init__(self, backend: StorageBackendBase, vm_id: int, fmt: str = None) -> None:
         self.backend = backend
         self.vm_id = vm_id
-        self._format = f"vm-{self.vm_id}" if fmt is None else fmt
+        self._format = "vm-{}" if fmt is None else fmt
 
     @property
     def vm_name(self) -> str:
-        return self._format
+        return self._format.format(self.vm_id)
 
     @property
     def is_running(self) -> bool:
@@ -97,18 +97,22 @@ class VirtualMachine:
         if pause:
             args += ['-p']
         args += [cfg_path]
+        logging.info(f"Creating VM {self.vm_name}")
         try_subprocess(args, f"Failed to launch VM {self.vm_name}", **kwargs)
 
     def pause(self, **kwargs):
+        logging.info(f"Pausing VM {self.vm_name}")
         try_subprocess(['xl', 'pause', self.vm_name], f"Failed to pause VM {self.vm_name}", **kwargs)
 
     def unpause(self, **kwargs):
+        logging.info(f"Unpausing VM {self.vm_name}")
         try_subprocess(['xl', 'unpause', self.vm_name], f"Failed to unpause VM {self.vm_name}", **kwargs)
 
     def save(self, filename, pause=False, cont=False, **kwargs):
+        logging.info(f"Saving VM {self.vm_name}")
         args = ['xl', 'save']
 
-        # no such kwargs will shutdown the VM after saving
+        # no such args will shutdown the VM after saving
         if pause is True:
             args += ['-p']
         elif cont is True:
@@ -150,6 +154,7 @@ class VirtualMachine:
 
         args += cfg_path
         args += snapshot_path
+        logging.info(f"Restoring VM {self.vm_name}")
         try_subprocess(args, msg=f"Failed to restore VM {self.vm_name}", **kwargs)
 
     def destroy(self, **kwargs):
