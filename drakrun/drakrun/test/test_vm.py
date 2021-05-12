@@ -19,8 +19,11 @@ import string
 import drakrun
 import subprocess
 import os
+import re
 import shutil
 import logging
+
+logging = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
@@ -50,101 +53,180 @@ def patch(monkeysession):
     monkeysession.setattr(InstallInfo, "load", install_patch)
     monkeysession.setattr(InstallInfo, "try_load", install_patch)
 
-    # being used so the the monkeypatch doesn't start cleanup if returned
+    # being yielded so the the monkeypatch doesn't start cleanup if returned
     yield monkeysession
 
 
 @pytest.fixture(scope="module")
-def changevmname(patch):
+def test_vm(patch):
     monkeysession = patch
 
     @property
     def vm_name(self):
-        return f"test-vm-{self.vm_id}"
+        return "test-hvm64-example"
     monkeysession.setattr(VirtualMachine, "vm_name", vm_name)
-    yield monkeysession
+    test_vm = VirtualMachine(None, 0, "test-hvm64-example")
+
+    yield test_vm
+
+
+@pytest.fixture(scope="module")
+def config():
+    tmpf = tempfile.NamedTemporaryFile(delete=False).name
+    module_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
+    cfg_path = os.path.join(module_dir, "tools", "test-hvm64-example.cfg")
+    firmware_path = os.path.join(module_dir, "tools", "test-hvm64-example")
+
+    with open(cfg_path, 'r') as f:
+        test_cfg = f.read().replace('{{ FIRMWARE_PATH }}', firmware_path).encode('utf-8')
+
+    with open(tmpf, 'wb') as f:
+        f.write(test_cfg)
+
+    yield tmpf
+    safe_delete(tmpf)
+
+
+@pytest.fixture(scope="module")
+def snapshot_file():
+    tmpf = tempfile.NamedTemporaryFile(delete=False).name
+    yield tmpf
+    safe_delete(tmpf)
+
+
+def get_vm_state(vm_name: str) -> str:
+    out_lines = subprocess.check_output("xl list", shell=True).decode().split('\n')
+    # get the line with vm_name
+    out = next((line for line in out_lines if vm_name in line), None)
+    if out is None:
+        raise Exception(f"{vm_name} not found in xl list")
+    else:
+        state = re.sub(r' +', ' ', out).split(' ')[4].strip().strip('-')
+        return state
+
+
+def destroy_vm(vm_name: str) -> str:
+    if subprocess.run(f"xl list {vm_name}", shell=True).returncode == 0:
+        subprocess.run(f"xl destroy {vm_name}", shell=True)
 
 
 @pytest.mark.incremental
 class TestVM:
     def test_vm_name(self, patch):
-        backend = get_storage_backend(InstallInfo.load())
-        vm = VirtualMachine(backend, 0)
+        vm = VirtualMachine(None, 0)
         assert vm.vm_name == 'vm-0'
-
-    def test_monkeypatch_vm_name(self, changevmname):
-        backend = get_storage_backend(InstallInfo.load())
-        vm = VirtualMachine(backend, 0)
+        vm = VirtualMachine(None, 0, "test-vm-{}")
         assert vm.vm_name == 'test-vm-0'
 
-    def test_backend(self, changevmname):
-        # monkeypatching the backend location is required
-        pytest.skip("incomplete")
-        backend = get_storage_backend(InstallInfo.load())
-        assert backend.exists_vm(0) is False
-        backend.initialize_vm0_volume()
-        assert backend.exists_vm(0) is True
+    def test_vm_create_and_is_running(self, config, test_vm):
 
-    def test_vm_create(self, changevmname):
-        # which dummy vm to create, we have the configs for hvm64
-        # we can try with that or create a new one
-        pass
+        # initial cleanup
+        destroy_vm(test_vm.vm_name)
+        assert test_vm.is_running is False
 
-    def test_vm_save(self):
-        pass
+        test_vm.create(config, pause=False)
+        assert get_vm_state(test_vm.vm_name) != 'p'
+        assert test_vm.is_running is True
 
-    def test_vm_pause(self):
-        # either we can parse the xl list test-vm-0 command
-        # to check for VM state ( OR )
-        # either just check if this command throws any exceptions
-        pass
+        # second run
+        destroy_vm(test_vm.vm_name)
 
-    def test_vm_unpause(self):
-        pass
+        test_vm.create(config, pause=True)
+        assert get_vm_state(test_vm.vm_name) == 'p'
 
-    def test_vm_restore(self, changevmname):
-        backend = get_storage_backend(InstallInfo.load())
-        vm = VirtualMachine(backend, 0)
+        # trying with non existing files
+        with pytest.raises(Exception):
+            test_vm.create('/tmp/unexitant-file')
 
-        # I think this part should be abstracted and automatically handled when creating or destroying VMs
-        setup_vm_network(0, True, find_default_interface(), '8.8.8.8')
-
-        # if snapshot doesn't exist
-        with remove_files([os.path.join(VOLUME_DIR, 'snapshot.sav')]):
+        # trying with empty file (no specific to config formats)
+        with tempfile.NamedTemporaryFile() as tempf:
             with pytest.raises(Exception):
-                vm.restore()
-                assert vm.is_running is False
+                test_vm.create(tempf)
+
+        # check if vm is shutdown
+        with pytest.raises(Exception):
+            get_vm_state(test_vm.name)
+
+    def test_vm_unpause(self, config, test_vm):
+        assert get_vm_state(test_vm.vm_name) == 'p'
+
+        test_vm.unpause()
+        assert get_vm_state(test_vm.vm_name) != 'p'
+
+        # it is a short lived VM so we will create a new one whenever we unpause
+        destroy_vm(test_vm.vm_name)
+
+    def test_vm_save(self, config, test_vm, snapshot_file):
+        test_vm.create(config, pause=False)
+        test_vm.save(snapshot_file, cont=True)
+        assert get_vm_state(test_vm.vm_name) != 'p'
+
+        # reset
+        destroy_vm(test_vm.vm_name)
+        test_vm.create(config, pause=False)
+
+        test_vm.save(snapshot_file, pause=True)
+        assert get_vm_state(test_vm.vm_name) == 'p'
+
+        # should destroy the vm
+        test_vm.save(snapshot_file)
+        with pytest.raises(Exception):
+            get_vm_state(test_vm.name)
+
+    def test_vm_pause(self, config, test_vm):
+        # initialize the VM after previous destruction
+        test_vm.create(config)
+
+        assert get_vm_state(test_vm.vm_name) != 'p'
+
+        test_vm.pause()
+        assert get_vm_state(test_vm.vm_name) == 'p'
+
+        destroy_vm(test_vm.vm_name)
+
+    def test_vm_restore(self, snapshot_file, config, test_vm):
+        # if snapshot doesn't exist
+        with remove_files(snapshot_file):
+            with pytest.raises(Exception):
+                test_vm.restore(cfg_path=config, snapshot_path=snapshot_file)
+                assert test_vm.is_running is False
 
         # if configuration file doesn't exist
-        with remove_files([os.path.join(VM_CONFIG_DIR, 'vm-0.cfg')]):
+        with remove_files(config):
             with pytest.raises(Exception):
-                vm.restore()
-                assert vm.is_running is False
+                test_vm.restore(cfg_path=config, snapshot_path=snapshot_file)
+                assert test_vm.is_running is False
 
-        # monkeypatch will be required to hide the storage backend
-        if backend.exists_vm(0) is False:
-            with pytest.raises(Exception):
-                vm.restore()
-                assert vm.is_running is False
+        # although test-hvm64-example doesn't depend on storage backend
+        # some test like this would have been good where storage backend doesn't exist
+        # and it is trying to restore from vm-1 or vm-0
+        # vm-0 should fail but vm-1 should succeed
+        # if backend.exists_vm(0) is False:
+        #     with pytest.raises(Exception):
+        #         test_vm.restore()
+        #         assert test_vm.is_running is False
 
         # should not raise any exceptions if everything is fine
-        vm.restore()
-        assert vm.is_running is True
+        test_vm.restore(cfg_path=config, snapshot_path=snapshot_file)
+        assert get_vm_state(test_vm.vm_name) != 'p'
+
+        destroy_vm(test_vm.vm_name)
+
+        test_vm.restore(cfg_path=config, snapshot_path=snapshot_file, pause=True)
+        assert get_vm_state(test_vm.vm_name) == 'p'
 
         # restoring a restored VM
         # what should be the expected behavior?
-        # self.vm.restore()
+        # test_vm.restore(cfg_path= config, snapshot_path = snapshot_file)
 
-        delete_vm_network(0, True, find_default_interface(), '8.8.8.8')
-
-    def test_vm_destroy(self, backend):
-        self.vm = VirtualMachine(backend, 0)
-
+    def test_vm_destroy(self, config, test_vm):
         # VM should be running from the previous test
+        test_vm.create(config, pause=True)
 
-        self.vm.destroy()
-        assert self.vm.is_running is False
+        test_vm.destroy()
+        with pytest.raises(Exception):
+            get_vm_state(test_vm.name)
 
         # should 2nd time destory raise/log exceptions and then handle it?
-        # vm.destroy()
-        # assert vm.is_running is False
+        # test_vm.destroy()
+        # assert test_vm.is_running is False
