@@ -140,9 +140,9 @@ class VirtualMachine:
         args = ['xl', 'restore']
 
         if cfg_path is None:
-            cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg",
+            cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg"
         if snapshot_path is None:
-            snapshot_path = Path(VOLUME_DIR) / "snapshot.sav",
+            snapshot_path = Path(VOLUME_DIR) / "snapshot.sav"
 
         if pause is True:
             args += ['-p']
@@ -152,8 +152,7 @@ class VirtualMachine:
         if self.vm_id != 0 and self.backend is not None and self.vm_id is not None:
             self.backend.rollback_vm_storage(self.vm_id)
 
-        args += cfg_path
-        args += snapshot_path
+        args += [cfg_path, snapshot_path]
         logging.info(f"Restoring VM {self.vm_name}")
         try_subprocess(args, msg=f"Failed to restore VM {self.vm_name}", **kwargs)
 
