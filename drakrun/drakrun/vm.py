@@ -118,6 +118,10 @@ class VirtualMachine:
         elif cont is True:
             args += ['-c']
 
+        if kwargs.get('stderr') is None:
+            kwargs['stderr'] = kwargs['stdout']= subprocess.STDOUT
+
+
         args += [self.vm_name, filename]
 
         try_subprocess(args, f"Failed to save VM {self.vm_name}", **kwargs)
@@ -146,6 +150,10 @@ class VirtualMachine:
 
         if pause is True:
             args += ['-p']
+
+        if kwargs.get('stderr') is None:
+            kwargs['stderr'] = kwargs['stdout']= subprocess.STDOUT
+
 
         # No need to rollback vm-0. Since the state of vm-0
         # is correct by definition.

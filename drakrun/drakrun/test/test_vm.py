@@ -1,28 +1,15 @@
 import pytest
 
-from drakrun.config import InstallInfo, VM_CONFIG_DIR, VOLUME_DIR
-from drakrun.vm import (
-    VirtualMachine,
-    generate_vm_conf,
-    get_all_vm_conf,
-    delete_vm_conf
-)
+from drakrun.config import InstallInfo
+from drakrun.vm import VirtualMachine
 from drakrun.util import safe_delete
 from _pytest.monkeypatch import MonkeyPatch
-from drakrun.storage import get_storage_backend
-from drakrun.draksetup import find_default_interface
-from drakrun.networking import setup_vm_network, delete_vm_network
 from common_utils import remove_files, tool_exists
 import tempfile
-import secrets
-import string
-import drakrun
 import subprocess
 import os
 import re
-import shutil
 import logging
-import time
 
 
 @pytest.fixture(scope="session")
@@ -105,8 +92,8 @@ def get_vm_state(vm_name: str) -> str:
 
 
 def destroy_vm(vm_name: str) -> str:
-    if subprocess.run(f"xl list {vm_name}", shell=True).returncode == 0:
-        subprocess.run(f"xl destroy {vm_name}", shell=True)
+    if subprocess.run(f"xl list {vm_name}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        subprocess.run(f"xl destroy {vm_name}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         logging.info(f"Destroying {vm_name}")
 
 
@@ -130,6 +117,10 @@ class TestVM:
         test_vm.create(config, pause=False)
         assert get_vm_state(test_vm.vm_name) != 'p'
         assert test_vm.is_running is True
+
+        logging.info("testing vm create for a created VM")
+        with pytest.raises(Exception):
+            test_vm.create(config, pause=True)
 
         # second run
         destroy_vm(test_vm.vm_name)
