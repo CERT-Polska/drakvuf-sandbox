@@ -119,8 +119,7 @@ class VirtualMachine:
             args += ['-c']
 
         if kwargs.get('stderr') is None:
-            kwargs['stderr'] = kwargs['stdout']= subprocess.STDOUT
-
+            kwargs['stderr'] = kwargs['stdout'] = subprocess.STDOUT
 
         args += [self.vm_name, filename]
 
@@ -152,8 +151,7 @@ class VirtualMachine:
             args += ['-p']
 
         if kwargs.get('stderr') is None:
-            kwargs['stderr'] = kwargs['stdout']= subprocess.STDOUT
-
+            kwargs['stderr'] = kwargs['stdout'] = subprocess.STDOUT
 
         # No need to rollback vm-0. Since the state of vm-0
         # is correct by definition.
