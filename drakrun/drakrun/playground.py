@@ -140,7 +140,13 @@ def main():
             'drakvuf': shell.drakvuf,
             'vm': shell.vm
         }
-        embed(banner='Run `help()` to list available commands', user_ns=helpers, colors='neutral')
+        banner = """
+        *** Welcome to drakrun playground ***
+        Your vm is now ready and running with internet connection.
+        You can connect to it using vnc (password can be found in /etc/drakrun/configs/vm-0.cfg)
+        Run help() to list available commands.
+        """
+        embed(banner1=banner, user_ns=helpers, colors='neutral')
 
 
 if __name__ == "__main__":
