@@ -245,7 +245,6 @@ class TestVM:
         destroy_vm(test_vm.vm_name)
 
     def test_vm_destroy(self, config, test_vm):
-        # VM should be running from the previous test
         test_vm.create(config, pause=True)
 
         test_vm.destroy()
