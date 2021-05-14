@@ -4,6 +4,7 @@ import tempfile
 import subprocess
 from pathlib import Path, PureWindowsPath as WinPath
 from IPython import embed
+from textwrap import dedent
 
 from drakrun.networking import (
     setup_vm_network,
@@ -11,12 +12,12 @@ from drakrun.networking import (
     delete_vm_network,
     stop_dnsmasq,
 )
-from drakrun.vm import generate_vm_conf, VirtualMachine
+from drakrun.vm import generate_vm_conf, VirtualMachine, FIRST_CDROM_DRIVE
 from drakrun.config import InstallInfo, PROFILE_DIR, ETC_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.util import RuntimeInfo, graceful_exit
 from drakrun.injector import Injector
-from drakrun.draksetup import find_default_interface
+from drakrun.draksetup import find_default_interface, insert_cd, postinstall
 
 
 class DrakmonShell:
@@ -87,9 +88,24 @@ class DrakmonShell:
 
         return d
 
+    def help(self):
+        usage = dedent("""\
+        Available commands:
+        - copy(file_path)   # copy file onto vm desktop
+        - mount(iso_path)   # mount iso, useful for installing software, e.g. office
+        - drakvuf(plugins)  # start drakvuf with provided set of plugins
+        - run(cmd)          # run command inside vm
+        - exit()            # exit playground
+        """)
+        print(usage)
+
     def copy(self, local):
         local = Path(local)
         self.injector.write_file(local, self.desktop / local.name)
+
+    def mount(self, local_iso_path, drive=FIRST_CDROM_DRIVE):
+        local_iso_path = Path(local_iso_path)
+        insert_cd(self.vm.vm_name, drive, local_iso_path)
 
     def run(self, cmd):
         self.injector.create_process(cmd)
@@ -119,11 +135,19 @@ def main():
     with graceful_exit(start_dnsmasq(args.vm_id, args.dns)), \
             DrakmonShell(args.vm_id, args.dns) as shell:
         helpers = {
+            'help': shell.help,
             'copy': shell.copy,
+            'mount': shell.mount,
             'drakvuf': shell.drakvuf,
             'vm': shell.vm
         }
-        embed(banner='', user_ns=helpers, colors='neutral')
+        banner = dedent("""
+        *** Welcome to drakrun playground ***
+        Your VM is now ready and running with internet connection.
+        You can connect to it using VNC (password can be found in /etc/drakrun/scripts/cfg.template)
+        Run help() to list available commands.
+        """)
+        embed(banner1=banner, user_ns=helpers, colors='neutral')
 
 
 if __name__ == "__main__":
