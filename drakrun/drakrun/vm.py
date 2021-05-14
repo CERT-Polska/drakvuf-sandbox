@@ -74,10 +74,11 @@ def delete_vm_conf(vm_id: int) -> bool:
 
 
 class VirtualMachine:
-    def __init__(self, backend: StorageBackendBase, vm_id: int, fmt: str = "vm-{}") -> None:
+    def __init__(self, backend: StorageBackendBase, vm_id: int, fmt: str = "vm-{}", cfg_path=None) -> None:
         self.backend = backend
         self.vm_id = vm_id
         self._format = fmt
+        self._cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg" if cfg_path is None else cfg_path
 
     @property
     def vm_name(self) -> str:
@@ -92,11 +93,11 @@ class VirtualMachine:
         )
         return res.returncode == 0
 
-    def create(self, cfg_path, pause=False, **kwargs):
+    def create(self, pause=False, **kwargs):
         args = ['xl', 'create']
         if pause:
             args += ['-p']
-        args += [cfg_path]
+        args += [self._cfg_path]
         logging.info(f"Creating VM {self.vm_name}")
         try_run(args, f"Failed to launch VM {self.vm_name}", **kwargs)
 
@@ -127,7 +128,6 @@ class VirtualMachine:
 
     def restore(
         self,
-        cfg_path=None,
         snapshot_path=None,
         pause=False,
         **kwargs
@@ -142,8 +142,6 @@ class VirtualMachine:
 
         args = ['xl', 'restore']
 
-        if cfg_path is None:
-            cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg"
         if snapshot_path is None:
             snapshot_path = Path(VOLUME_DIR) / "snapshot.sav"
 
@@ -158,7 +156,7 @@ class VirtualMachine:
         if self.vm_id != 0 and self.backend is not None and self.vm_id is not None:
             self.backend.rollback_vm_storage(self.vm_id)
 
-        args += [cfg_path, snapshot_path]
+        args += [self._cfg_path, snapshot_path]
         logging.info(f"Restoring VM {self.vm_name}")
         try_run(args, msg=f"Failed to restore VM {self.vm_name}", **kwargs)
 

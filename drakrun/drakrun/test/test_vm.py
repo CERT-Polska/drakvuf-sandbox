@@ -44,14 +44,14 @@ def patch(monkeysession):
 
 
 @pytest.fixture(scope="module")
-def test_vm(patch):
+def test_vm(patch, config):
     monkeysession = patch
 
     @property
     def vm_name(self):
         return "test-hvm64-example"
     monkeysession.setattr(VirtualMachine, "vm_name", vm_name)
-    test_vm = VirtualMachine(None, 0, "test-hvm64-example")
+    test_vm = VirtualMachine(None, 0, "test-hvm64-example", config)
 
     yield test_vm
 
@@ -114,35 +114,40 @@ class TestVM:
         assert test_vm.is_running is False
 
         logging.info("testing vm create with pause=False")
-        test_vm.create(config, pause=False)
+        test_vm.create(pause=False)
         assert get_vm_state(test_vm.vm_name) != 'p'
         assert test_vm.is_running is True
 
         logging.info("testing vm create for a created VM")
         with pytest.raises(Exception):
-            test_vm.create(config, pause=True)
+            test_vm.create(pause=True)
 
         # second run
         destroy_vm(test_vm.vm_name)
 
         logging.info("testing vm create with pause=True")
-        test_vm.create(config, pause=True)
+        test_vm.create(pause=True)
         assert get_vm_state(test_vm.vm_name) == 'p'
+
+        # destroy the vm
+        destroy_vm(test_vm.vm_name)
 
         logging.info("testing vm create with non-existant file")
         with pytest.raises(Exception):
-            test_vm.create('/tmp/unexitant-file')
+            new_vm = VirtualMachine(None, 0, "test-hvm64-example", '/tmp/unexitant-file')
+            new_vm.create()
 
         logging.info("testing vm create with empty file")
         with tempfile.NamedTemporaryFile() as tempf:
             with pytest.raises(Exception):
-                test_vm.create(tempf)
+                new_vm = VirtualMachine(None, 0, "test-hvm64-example", tempf.name)
+                new_vm.create()
 
         # check if vm is shutdown
         with pytest.raises(Exception):
             get_vm_state(test_vm.name)
 
-    def test_vm_unpause(self, config, test_vm):
+    def test_vm_unpause(self, test_vm):
         assert get_vm_state(test_vm.vm_name) == 'p'
 
         logging.info("testing vm unpause")
@@ -158,7 +163,7 @@ class TestVM:
         # it is a short lived VM so we will create a new one whenever we unpause
         destroy_vm(test_vm.vm_name)
 
-    def test_vm_save(self, config, test_vm, snapshot_file):
+    def test_vm_save(self, test_vm, snapshot_file):
         # test-hvm64-example VM can't be snapshotted in unpaused state
         """
         root@debian:/home/user/drakvuf-sandbox/drakrun/drakrun/test# xl create /tmp/tmpjyoganif && xl save -c test-hvm64-example /tmp/test.sav
@@ -167,7 +172,7 @@ class TestVM:
         unable to retrieve domain configuration
         """
 
-        # test_vm.create(config, pause=True)
+        # test_vm.create(pause=True)
         # test_vm.unpause()
         # test_vm.save(snapshot_file, cont=True)
         # assert get_vm_state(test_vm.vm_name) != 'p'
@@ -175,20 +180,22 @@ class TestVM:
         # reset
 
         # destroy_vm(test_vm.vm_name)
-        test_vm.create(config, pause=True)
+        test_vm.create(pause=True)
         assert get_vm_state(test_vm.vm_name) == 'p'
 
+        logging.info("test vm save with pause=True")
         test_vm.save(snapshot_file, pause=True)
         assert get_vm_state(test_vm.vm_name) == 'p'
 
         # should destroy the vm
+        logging.info("test vm save with with no pause/cont args")
         test_vm.save(snapshot_file)
         with pytest.raises(Exception):
             get_vm_state(test_vm.name)
 
-    def test_vm_pause(self, config, test_vm):
+    def test_vm_pause(self, test_vm):
         # initialize the VM after previous destruction
-        test_vm.create(config)
+        test_vm.create()
 
         assert get_vm_state(test_vm.vm_name) != 'p'
 
@@ -207,17 +214,19 @@ class TestVM:
 
         destroy_vm(test_vm.vm_name)
 
-    def test_vm_restore(self, snapshot_file, config, test_vm):
+    def test_vm_restore(self, config, snapshot_file, test_vm):
         # if snapshot doesn't exist
+        logging.info("test vm restore without snapshot file")
         with remove_files([snapshot_file]):
             with pytest.raises(Exception):
-                test_vm.restore(cfg_path=config, snapshot_path=snapshot_file)
+                test_vm.restore(snapshot_path=snapshot_file)
                 assert test_vm.is_running is False
 
         # if configuration file doesn't exist
+        logging.info("test vm restore without config")
         with remove_files([config]):
             with pytest.raises(Exception):
-                test_vm.restore(cfg_path=config, snapshot_path=snapshot_file)
+                test_vm.restore(snapshot_path=snapshot_file)
                 assert test_vm.is_running is False
 
         # although test-hvm64-example doesn't depend on storage backend
@@ -230,12 +239,14 @@ class TestVM:
         #         assert test_vm.is_running is False
 
         # should not raise any exceptions if everything is fine
-        test_vm.restore(cfg_path=config, snapshot_path=snapshot_file)
+        logging.info("test vm with proper args")
+        test_vm.restore(snapshot_path=snapshot_file)
         assert get_vm_state(test_vm.vm_name) != 'p'
 
         destroy_vm(test_vm.vm_name)
 
-        test_vm.restore(cfg_path=config, snapshot_path=snapshot_file, pause=True)
+        logging.info("test vm with proper args and pause=True")
+        test_vm.restore(snapshot_path=snapshot_file, pause=True)
         assert get_vm_state(test_vm.vm_name) == 'p'
 
         # restoring a restored VM
@@ -244,9 +255,10 @@ class TestVM:
 
         destroy_vm(test_vm.vm_name)
 
-    def test_vm_destroy(self, config, test_vm):
-        test_vm.create(config, pause=True)
+    def test_vm_destroy(self, test_vm):
+        test_vm.create(pause=True)
 
+        logging.info("test vm destroy")
         test_vm.destroy()
         with pytest.raises(Exception):
             get_vm_state(test_vm.name)

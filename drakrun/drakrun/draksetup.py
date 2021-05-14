@@ -202,12 +202,12 @@ def perform_xtf():
         tmpf.write(test_cfg)
         tmpf.flush()
 
-        test_hvm64 = VirtualMachine(None, None, "test-hvm64-example")
+        test_hvm64 = VirtualMachine(None, None, "test-hvm64-example", tmpf.name)
         logging.info('Checking if the test domain already exists...')
         test_hvm64.destroy()
 
         logging.info('Creating new test domain...')
-        test_hvm64.create(tmpf.name, pause=True, timeout=30)
+        test_hvm64.create(pause=True, timeout=30)
 
         module_dir = os.path.dirname(os.path.realpath(__file__))
         test_altp2m_tool = os.path.join(module_dir, "tools", "test-altp2m")
@@ -370,7 +370,7 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
 
     cfg_path = os.path.join(VM_CONFIG_DIR, "vm-0.cfg")
 
-    vm0.create(cfg_path)
+    vm0.create()
 
     logging.info("-" * 80)
     logging.info("Initial VM setup is complete and the vm-0 was launched.")
