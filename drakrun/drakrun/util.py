@@ -6,6 +6,7 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 from typing import IO, AnyStr
+import traceback
 
 from dataclasses_json import config, dataclass_json
 
@@ -133,12 +134,38 @@ def safe_delete(file_path) -> bool:
         return False
 
 
-def try_subprocess(list_args: list, msg: str, reraise=True, debug=True, **kwargs) -> subprocess.CompletedProcess:
+def try_run(list_args: list, msg: str, reraise=True, **kwargs) -> subprocess.CompletedProcess:
+    '''
+    Runs subprocess.run in a try except with some default arguments ( which can be overriden by supplying kwargs )
+
+            Parameters:
+                    list_args (list): Subprocess list which will be passed to subprocess.run
+                    msg (str): A meaningful error message to be raised during non-zero exit code
+                    reraise (bool):
+                        True: will raise an Exception with traceback on error
+                        False: will log a warning on error
+                    **kwargs: additional parameters to be passed to subprocess.run
+
+            Defaults:
+                    subprocess.run is called with the following arguments by default
+                    stderr = subprocess.PIPE
+                    stdout = subprocess.PIPE # to print to console, pass kwargs ( stdout = subprocess.STDOUT )
+                    check = True
+
+            Returns:
+                    sub (subprocess.CompletedProcess): Object with the completed process
+                        or
+                    None: if the subprocess failed and reraise=False
+    '''
 
     # setup default parameters to be passed, can be overrided by supplying kwargs
     if kwargs.get('stdout') is None:
         kwargs['stdout'] = subprocess.PIPE
+
+    # since by default, we are using subprocess.PIPE
+    # for displaying the output to terminal, pass try_run(..., stdout = subprocess.STDOUT)
     elif kwargs.get('stdout') == subprocess.STDOUT:
+        # since subprocess implies this by default, we need to delete the stdout argument
         del kwargs['stdout']
 
     if kwargs.get('stderr') is None:
@@ -149,18 +176,20 @@ def try_subprocess(list_args: list, msg: str, reraise=True, debug=True, **kwargs
     try:
         sub = subprocess.run(list_args, **kwargs)
     except (FileNotFoundError, TypeError) as e:
-        if debug:
-            logging.debug("arguments to subprocess")
-            logging.debug(list_args)
-            logging.debug(msg)
+        logging.debug("arguments to subprocess")
+        logging.debug(list_args)
+        logging.debug(msg)
         raise Exception("Command not found") from e
     except subprocess.CalledProcessError as e:
-        if debug:
-            logging.debug("stdout: \n{}".format(e.stdout.decode()))
-            logging.debug("stderr: \n{}".format(e.stderr.decode()))
-            logging.debug("returncode: {}".format(e.returncode))
+        logging.debug("stdout: \n{}".format(e.stdout.decode()))
+        logging.debug("stderr: \n{}".format(e.stderr.decode()))
+        logging.debug("returncode: {}".format(e.returncode))
         if reraise:
             raise Exception(msg) from e
+        else:
+            logging.warning(msg)
+            logging.debug(traceback.format_exc())
+            return None
     return sub
 
 

@@ -12,7 +12,7 @@ from drakrun.config import (
     LIB_DIR,
     InstallInfo
 )
-from drakrun.util import safe_delete, try_subprocess
+from drakrun.util import safe_delete, try_run
 
 log = logging.getLogger("drakrun")
 
@@ -74,10 +74,10 @@ def delete_vm_conf(vm_id: int) -> bool:
 
 
 class VirtualMachine:
-    def __init__(self, backend: StorageBackendBase, vm_id: int, fmt: str = None) -> None:
+    def __init__(self, backend: StorageBackendBase, vm_id: int, fmt: str = "vm-{}") -> None:
         self.backend = backend
         self.vm_id = vm_id
-        self._format = "vm-{}" if fmt is None else fmt
+        self._format = fmt
 
     @property
     def vm_name(self) -> str:
@@ -98,15 +98,15 @@ class VirtualMachine:
             args += ['-p']
         args += [cfg_path]
         logging.info(f"Creating VM {self.vm_name}")
-        try_subprocess(args, f"Failed to launch VM {self.vm_name}", **kwargs)
+        try_run(args, f"Failed to launch VM {self.vm_name}", **kwargs)
 
     def pause(self, **kwargs):
         logging.info(f"Pausing VM {self.vm_name}")
-        try_subprocess(['xl', 'pause', self.vm_name], f"Failed to pause VM {self.vm_name}", **kwargs)
+        try_run(['xl', 'pause', self.vm_name], f"Failed to pause VM {self.vm_name}", **kwargs)
 
     def unpause(self, **kwargs):
         logging.info(f"Unpausing VM {self.vm_name}")
-        try_subprocess(['xl', 'unpause', self.vm_name], f"Failed to unpause VM {self.vm_name}", **kwargs)
+        try_run(['xl', 'unpause', self.vm_name], f"Failed to unpause VM {self.vm_name}", **kwargs)
 
     def save(self, filename, pause=False, cont=False, **kwargs):
         logging.info(f"Saving VM {self.vm_name}")
@@ -123,7 +123,7 @@ class VirtualMachine:
 
         args += [self.vm_name, filename]
 
-        try_subprocess(args, f"Failed to save VM {self.vm_name}", **kwargs)
+        try_run(args, f"Failed to save VM {self.vm_name}", **kwargs)
 
     def restore(
         self,
@@ -160,7 +160,7 @@ class VirtualMachine:
 
         args += [cfg_path, snapshot_path]
         logging.info(f"Restoring VM {self.vm_name}")
-        try_subprocess(args, msg=f"Failed to restore VM {self.vm_name}", **kwargs)
+        try_run(args, msg=f"Failed to restore VM {self.vm_name}", **kwargs)
 
     def destroy(self, **kwargs):
         """ Destroy a running virtual machine.
@@ -168,4 +168,4 @@ class VirtualMachine:
         """
         if self.is_running:
             logging.info(f"Destroying {self.vm_name}")
-            try_subprocess(["xl", "destroy", self.vm_name], f"Failed to destroy VM {self.vm_name}", **kwargs)
+            try_run(["xl", "destroy", self.vm_name], f"Failed to destroy VM {self.vm_name}", **kwargs)
