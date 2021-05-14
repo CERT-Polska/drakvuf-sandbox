@@ -4,6 +4,7 @@ import tempfile
 import subprocess
 from pathlib import Path, PureWindowsPath as WinPath
 from IPython import embed
+from textwrap import dedent
 
 from drakrun.networking import (
     setup_vm_network,
@@ -88,14 +89,14 @@ class DrakmonShell:
         return d
 
     def help(self):
-        usage = """
+        usage = dedent("""\
         Available commands:
         - copy(file_path)   # copy file onto vm desktop
         - mount(iso_path)   # mount iso, useful for installing software, e.g. office
         - drakvuf(plugins)  # start drakvuf with provided set of plugins
         - run(cmd)          # run command inside vm
-        - exit()            # exit playground, remember to run postinstall if you want to save vm state
-        """
+        - exit()            # exit playground
+        """)
         print(usage)
 
     def copy(self, local):
@@ -140,12 +141,12 @@ def main():
             'drakvuf': shell.drakvuf,
             'vm': shell.vm
         }
-        banner = """
+        banner = dedent("""
         *** Welcome to drakrun playground ***
-        Your vm is now ready and running with internet connection.
-        You can connect to it using vnc (password can be found in /etc/drakrun/configs/vm-0.cfg)
+        Your VM is now ready and running with internet connection.
+        You can connect to it using VNC (password can be found in /etc/drakrun/scripts/cfg.template)
         Run help() to list available commands.
-        """
+        """)
         embed(banner1=banner, user_ns=helpers, colors='neutral')
 
 
