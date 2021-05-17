@@ -56,7 +56,7 @@ def with_logs(object_name):
 
                     # Karton rejects empty resources
                     # Ensure that we upload it only when some data was actually generated
-                    if buffer.len > 0:
+                    if buffer.tell() > 0:
                         res.upload(self.backend)
                 except Exception:
                     self.log.exception("Failed to upload analysis logs")
