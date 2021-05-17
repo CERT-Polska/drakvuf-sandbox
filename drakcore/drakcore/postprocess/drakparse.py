@@ -26,7 +26,17 @@ class Base:
             return ""
 
         # "Time of Day","Process Name","PID","Operation","Path","Result","Detail","TID"
-        return f'"{self.timestamp}","{self.proc_name}","{self.pid}","{self.operation}","{self.path}","{self.result}","{self.detail}","{self.tid}"'
+        items = [
+            self.timestamp,
+            self.proc_name,
+            self.pid,
+            self.operation,
+            self.path,
+            self.result,
+            self.detail,
+            self.tid,
+        ]
+        return ",".join(f'"{elem}"' for elem in items)
 
 
 class Regmon(Base):
