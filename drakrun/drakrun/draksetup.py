@@ -12,7 +12,6 @@ import secrets
 import subprocess
 import string
 import tempfile
-from shutil import copyfile
 from typing import Optional
 
 import click

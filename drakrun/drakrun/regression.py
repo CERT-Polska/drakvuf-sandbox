@@ -1,16 +1,12 @@
 import sys
-import argparse
 import hashlib
 import json
 import time
 import os
-import threading
-import tempfile
 import logging
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
-from typing import Optional, List
-from pathlib import Path
+from typing import Optional
 
 from karton.core import Karton, Task, Producer, Resource, Config, LocalResource
 from karton.core.task import TaskState

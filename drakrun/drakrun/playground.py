@@ -10,14 +10,13 @@ from drakrun.networking import (
     setup_vm_network,
     start_dnsmasq,
     delete_vm_network,
-    stop_dnsmasq,
 )
 from drakrun.vm import generate_vm_conf, VirtualMachine, FIRST_CDROM_DRIVE
 from drakrun.config import InstallInfo, PROFILE_DIR, ETC_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.util import RuntimeInfo, graceful_exit
 from drakrun.injector import Injector
-from drakrun.draksetup import find_default_interface, insert_cd, postinstall
+from drakrun.draksetup import find_default_interface, insert_cd
 
 
 class DrakmonShell:
