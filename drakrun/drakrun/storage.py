@@ -1,15 +1,13 @@
 import logging
-import contextlib
 import os
 import subprocess
 import time
 import shlex
 import shutil
-import re
 import json
 import datetime
 
-from typing import Generator, Tuple
+from typing import Tuple
 from drakrun.config import InstallInfo, VOLUME_DIR
 from drakrun.util import safe_delete
 

@@ -2,14 +2,11 @@ import json
 import os
 import re
 import pathlib
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import NamedTemporaryFile
 from zipfile import ZipFile, ZIP_DEFLATED
 
-import requests
-import logging
-
-from flask import Flask, jsonify, request, send_file, redirect, send_from_directory, Response, abort
-from karton.core import Config, Producer, Task, Resource
+from flask import Flask, jsonify, request, send_file, send_from_directory, abort
+from karton.core import Producer, Task, Resource
 from karton.core.task import TaskState
 from minio.error import NoSuchKey
 

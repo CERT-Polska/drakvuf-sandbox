@@ -1,5 +1,4 @@
 import shutil
-import os
 import contextlib
 import subprocess
 

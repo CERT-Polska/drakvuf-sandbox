@@ -30,7 +30,7 @@ from karton.core import Karton, Config, Task, LocalResource, Resource
 import drakrun.office as d_office
 from drakrun.version import __version__ as DRAKRUN_VERSION
 from drakrun.drakpdb import dll_file_list
-from drakrun.config import InstallInfo, ETC_DIR, VM_CONFIG_DIR, VOLUME_DIR, PROFILE_DIR
+from drakrun.config import InstallInfo, ETC_DIR, PROFILE_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
 from drakrun.util import (

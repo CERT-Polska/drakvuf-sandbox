@@ -1,19 +1,12 @@
-import os
 import argparse
-import json
-import pprint
 from pathlib import Path
-from functools import reduce
 from collections import defaultdict
 import subprocess
 import tempfile
 import logging
 import sys
 
-from karton.core import Task, RemoteResource
-from typing import Dict
 from drakcore.ipt_utils import log, load_drakvuf_output, get_fault_va, get_fault_pa, get_trap_pa, get_frame_va, page_align, is_page_aligned, select_cr3, hexint
-from zipfile import ZipFile
 
 
 def debug_faults(page_faults):
