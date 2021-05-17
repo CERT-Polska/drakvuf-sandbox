@@ -149,7 +149,7 @@ def try_run(list_args: list, msg: str, reraise=True, **kwargs) -> subprocess.Com
             Defaults:
                     subprocess.run is called with the following arguments by default
                     stderr = subprocess.PIPE
-                    stdout = subprocess.PIPE # to print to console, pass kwargs ( stdout = subprocess.STDOUT )
+                    stdout = subprocess.PIPE # to print to console, pass kwargs ( stdout = None )
                     check = True
 
             Returns:
@@ -158,15 +158,10 @@ def try_run(list_args: list, msg: str, reraise=True, **kwargs) -> subprocess.Com
                     None: if the subprocess failed and reraise=False
     '''
 
-    # setup default parameters to be passed, can be overrided by supplying kwargs
-    if kwargs.get('stdout') is None:
+    try:
+        kwargs['stdout']
+    except KeyError:
         kwargs['stdout'] = subprocess.PIPE
-
-    # since by default, we are using subprocess.PIPE
-    # for displaying the output to terminal, pass try_run(..., stdout = subprocess.STDOUT)
-    elif kwargs.get('stdout') == subprocess.STDOUT:
-        # since subprocess implies this by default, we need to delete the stdout argument
-        del kwargs['stdout']
 
     if kwargs.get('stderr') is None:
         kwargs['stderr'] = subprocess.PIPE

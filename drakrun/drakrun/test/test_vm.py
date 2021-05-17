@@ -148,6 +148,7 @@ class TestVM:
             get_vm_state(test_vm.name)
 
     def test_vm_unpause(self, test_vm):
+        test_vm.create(pause=True)
         assert get_vm_state(test_vm.vm_name) == 'p'
 
         logging.info("testing vm unpause")
