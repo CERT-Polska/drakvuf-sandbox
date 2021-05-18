@@ -237,7 +237,7 @@ class AnalysisMain extends Component {
   }
 
   render() {
-    let processTree = <AnalysisBehavioralGraph analysisID={this.analysisID} />;
+    let behavioralGraph = <AnalysisBehavioralGraph analysisID={this.analysisID} />;
 
     let simpleProcessTree = (
       <div className="card tilebox-one">
@@ -308,7 +308,7 @@ class AnalysisMain extends Component {
         <div className="card tilebox-one">
           <div className="card-body">
             <h5 className="card-title mb-0">Behavioral graph</h5>
-            {processTree}
+            {behavioralGraph}
           </div>
         </div>
 
