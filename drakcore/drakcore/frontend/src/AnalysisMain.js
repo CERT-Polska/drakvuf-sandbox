@@ -170,8 +170,8 @@ function AnalysisBehavioralGraph(props) {
   if (!graph) {
     return graph === null ? (
       <div>
-        (Behavioral graph was not generated, please check out "ProcDOT integration
-        (optional)" section of README to enable it.)
+        (Behavioral graph was not generated, please check out "ProcDOT
+        integration (optional)" section of README to enable it.)
       </div>
     ) : (
       <div>Loading graph...</div>
@@ -237,23 +237,26 @@ class AnalysisMain extends Component {
   }
 
   render() {
-    let behavioralGraph = <AnalysisBehavioralGraph analysisID={this.analysisID} />;
+    let behavioralGraph = (
+      <AnalysisBehavioralGraph analysisID={this.analysisID} />
+    );
 
     let simpleProcessTree = (
       <div className="card tilebox-one">
         <div className="card-body">
           <h5 className="card-title mb-0">Process tree</h5>
-          { this.state.processTree ?
-          <ProcessTree
-            tree={this.state.processTree}
-            expandPid={this.state.injectedPid}
-            analysisID={this.analysisID}
-          /> : "(Analysis must be run with procmon plugin enabled to generate process tree.)"
-          }
+          {this.state.processTree ? (
+            <ProcessTree
+              tree={this.state.processTree}
+              expandPid={this.state.injectedPid}
+              analysisID={this.analysisID}
+            />
+          ) : (
+            "(Analysis must be run with procmon plugin enabled to generate process tree.)"
+          )}
         </div>
       </div>
     );
-
 
     let metadata;
     if (this.state.metadata) {
