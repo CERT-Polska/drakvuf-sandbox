@@ -45,12 +45,6 @@ def patch(monkeysession):
 
 @pytest.fixture(scope="module")
 def test_vm(patch, config):
-    monkeysession = patch
-
-    @property
-    def vm_name(self):
-        return "test-hvm64-example"
-    monkeysession.setattr(VirtualMachine, "vm_name", vm_name)
     test_vm = VirtualMachine(None, 0, "test-hvm64-example", config)
 
     yield test_vm
@@ -250,9 +244,10 @@ class TestVM:
         test_vm.restore(snapshot_path=snapshot_file, pause=True)
         assert get_vm_state(test_vm.vm_name) == 'p'
 
-        # restoring a restored VM
-        # what should be the expected behavior?
-        # test_vm.restore(cfg_path= config, snapshot_path = snapshot_file)
+        logging.info("restoring a restored VM")
+        test_vm.restore(snapshot_path=snapshot_file)
+        # should get the new state
+        assert get_vm_state(test_vm.vm_name) != 'p'
 
         destroy_vm(test_vm.vm_name)
 
@@ -264,6 +259,7 @@ class TestVM:
         with pytest.raises(Exception):
             get_vm_state(test_vm.name)
 
-        # should 2nd time destory raise/log exceptions and then handle it?
-        # test_vm.destroy()
-        # assert test_vm.is_running is False
+        # should not raise any exception
+        logging.info("test vm destroy on a destroyed VM")
+        test_vm.destroy()
+        assert test_vm.is_running is False

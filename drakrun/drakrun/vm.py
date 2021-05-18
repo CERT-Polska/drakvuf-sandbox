@@ -138,8 +138,6 @@ class VirtualMachine:
         """ Restore virtual machine from snapshot.
         :raises: subprocess.CalledProcessError
         """
-        # if the vm is running
-        # shouldn't we raise exceptions? and then handle it?
         if self.is_running:
             self.destroy()
 
