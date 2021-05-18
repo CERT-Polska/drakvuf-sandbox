@@ -174,6 +174,7 @@ def try_run(list_args: list, msg: str, reraise=True, **kwargs) -> subprocess.Com
         logging.debug("arguments to subprocess")
         logging.debug(list_args)
         logging.debug(msg)
+        logging.debug(kwargs)
         raise Exception("Command not found") from e
     except subprocess.CalledProcessError as e:
         logging.debug("stdout: \n{}".format(e.stdout.decode()))
