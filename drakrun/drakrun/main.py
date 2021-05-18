@@ -168,6 +168,9 @@ class DrakrunKarton(Karton):
             plugin_list = self.active_plugins[quality]
 
         plugin_list = list(set(plugin_list) & set(enabled_plugins))
+        if len(plugin_list) == 0:
+            # Disable all plugins explicitly as all plugins are enabled by default.
+            return list(chain.from_iterable(["-x", plugin] for plugin in sorted(self.active_plugins["_all_"])))
 
         if "ipt" in plugin_list and "codemon" not in plugin_list:
             self.log.info("Using ipt plugin implies using codemon")
