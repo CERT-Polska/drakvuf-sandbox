@@ -558,6 +558,8 @@ def create_rekall_profile(injector: Injector, file: DLL):
         logging.warning(f"Failed to copy file {file.path}, skipping...")
     except RuntimeError:
         logging.warning(f"Failed to fetch profile for {file.path}, skipping...")
+    except subprocess.TimeoutExpired:
+        logging.warning(f"Injection timeout occurred for {file.path}, skipping...")
     except Exception as e:
         # Take care if the error message is changed
         if str(e) == "Some error occurred in injector":
