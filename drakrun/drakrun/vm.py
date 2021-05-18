@@ -78,7 +78,7 @@ class VirtualMachine:
         self.backend = backend
         self.vm_id = vm_id
         self._format = fmt
-        self._cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg" if cfg_path is None else cfg_path
+        self._cfg_path = cfg_path or Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg"
 
     @property
     def vm_name(self) -> str:
