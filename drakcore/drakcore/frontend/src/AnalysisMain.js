@@ -274,9 +274,11 @@ class AnalysisMain extends Component {
               {this.state.metadata.plugins ? (
                 <tr>
                   <td>Plugins</td>
-                  <td>{this.state.metadata.plugins.join(', ')}</td>
+                  <td>{this.state.metadata.plugins.join(", ")}</td>
                 </tr>
-              ): []}
+              ) : (
+                []
+              )}
               <tr>
                 <td>Started at</td>
                 <td>{formatTimestamp(this.state.metadata.time_started)}</td>
