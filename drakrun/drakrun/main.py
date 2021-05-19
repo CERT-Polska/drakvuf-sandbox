@@ -277,6 +277,7 @@ class DrakrunKarton(Karton):
 
     def _karton_safe_get_headers(self, task, key, fallback):
         ret = task.headers.get(key, fallback)
+        # intentional workaround due to a bug in karton
         if ret is None:
             self.log.warning(f"Could not get {key}, falling back to {fallback}")
             ret = fallback
