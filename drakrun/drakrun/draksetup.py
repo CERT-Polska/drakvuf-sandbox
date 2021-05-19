@@ -664,7 +664,7 @@ def create_missing_profiles():
         if not profile_exists(profile):
             try:
                 create_rekall_profile(injector, profile)
-            except Exception as e:
+            except Exception:
                 # silence per-dll errors
                 pass
 
