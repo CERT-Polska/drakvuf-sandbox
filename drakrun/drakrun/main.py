@@ -162,21 +162,28 @@ class DrakrunKarton(Karton):
             plugins = [x for x in list_str.split(',') if x.strip()]
             self.active_plugins[quality] = plugins
 
-    def generate_plugin_cmdline(self, quality, enabled_plugins):
+    def generate_plugin_cmdline(self, plugin_list):
+        if len(plugin_list) == 0:
+            # Disable all plugins explicitly as all plugins are enabled by default.
+            return list(chain.from_iterable(["-x", plugin] for plugin in sorted(self.active_plugins["_all_"])))
+        else:
+            return list(chain.from_iterable(["-a", plugin] for plugin in sorted(plugin_list)))
+
+    def get_plugin_list(self, quality, requested_plugins):
+        """
+        Determine final plugin list that will be used during analysis.
+        """
         plugin_list = self.active_plugins["_all_"]
         if quality in self.active_plugins:
             plugin_list = self.active_plugins[quality]
 
-        plugin_list = list(set(plugin_list) & set(enabled_plugins))
-        if len(plugin_list) == 0:
-            # Disable all plugins explicitly as all plugins are enabled by default.
-            return list(chain.from_iterable(["-x", plugin] for plugin in sorted(self.active_plugins["_all_"])))
+        plugin_list = list(set(plugin_list) & set(requested_plugins))
 
         if "ipt" in plugin_list and "codemon" not in plugin_list:
             self.log.info("Using ipt plugin implies using codemon")
             plugin_list.append("codemon")
+        return plugin_list
 
-        return list(chain.from_iterable(["-a", plugin] for plugin in sorted(plugin_list)))
 
     @classmethod
     def reconfigure(cls, config: Dict[str, str]):
@@ -472,14 +479,11 @@ class DrakrunKarton(Karton):
 
         return (workdir, outdir)
 
-    def build_drakvuf_cmdline(self, timeout, cwd, full_cmd, dump_dir, ipt_dir, workdir):
+    def build_drakvuf_cmdline(self, timeout, cwd, full_cmd, dump_dir, ipt_dir, workdir, enabled_plugins):
         hooks_list = os.path.join(workdir, "hooks.txt")
         kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
 
-        task_quality = self.current_task.headers.get("quality", "high")
-        requested_plugins = self.current_task.payload.get("plugins", self.active_plugins['_all_'])
-
-        drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(task_quality, requested_plugins) + \
+        drakvuf_cmd = ["drakvuf"] + self.generate_plugin_cmdline(enabled_plugins) + \
                       ["-o", "json",
                        # be aware of https://github.com/tklengyel/drakvuf/pull/951
                        "-F",  # enable fast singlestep
@@ -553,6 +557,10 @@ class DrakrunKarton(Karton):
                 self.log.info("Setting up network...")
                 injector.create_process("cmd /C ipconfig /renew >nul", wait=True, timeout=120)
 
+            task_quality = self.current_task.headers.get("quality", "high")
+            requested_plugins = self.current_task.payload.get("plugins", self.active_plugins['_all_'])
+            analysis_info['plugins'] = self.get_plugin_list(task_quality, requested_plugins)
+
             drakvuf_cmd = self.build_drakvuf_cmdline(
                 timeout=timeout,
                 cwd=subprocess.list2cmdline([ntpath.dirname(injected_fn)]),
@@ -560,6 +568,7 @@ class DrakrunKarton(Karton):
                 dump_dir=os.path.join(outdir, "dumps"),
                 ipt_dir=os.path.join(outdir, "ipt"),
                 workdir=workdir,
+                enabled_plugins=analysis_info['plugins'],
             )
 
             try:
