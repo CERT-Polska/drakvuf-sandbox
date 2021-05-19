@@ -271,6 +271,14 @@ class AnalysisMain extends Component {
                 <td>Start command</td>
                 <td>{this.state.metadata.start_command}</td>
               </tr>
+              {this.state.metadata.plugins ? (
+                <tr>
+                  <td>Plugins</td>
+                  <td>{this.state.metadata.plugins.join(", ")}</td>
+                </tr>
+              ) : (
+                []
+              )}
               <tr>
                 <td>Started at</td>
                 <td>{formatTimestamp(this.state.metadata.time_started)}</td>
