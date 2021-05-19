@@ -176,7 +176,6 @@ class DrakrunKarton(Karton):
         plugin_list = self.active_plugins["_all_"]
         if quality in self.active_plugins:
             plugin_list = self.active_plugins[quality]
-flake8 --ignore E402,F401,E501
         plugin_list = list(set(plugin_list) & set(requested_plugins))
 
         if "ipt" in plugin_list and "codemon" not in plugin_list:
