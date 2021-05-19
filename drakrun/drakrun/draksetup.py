@@ -521,6 +521,8 @@ def send_usage_report(report):
 
 def create_rekall_profile(injector: Injector, file: DLL):
     tmp = None
+    cmd = None
+    out = None
     try:
         logging.info(f"Fetching rekall profile for {file.path}")
 
@@ -569,8 +571,11 @@ def create_rekall_profile(injector: Injector, file: DLL):
                 f"Unexpected exception while creating rekall profile for {file.path}, skipping..."
             )
             # Can help in debugging
-            logging.debug("stderr: " + cmd.stderr.decode())
-            logging.debug(out)
+            if cmd:
+                logging.debug("stdout: " + cmd.stdout.decode())
+                logging.debug("stderr: " + cmd.stderr.decode())
+            if out:
+                logging.debug(out)
             logging.debug(traceback.format_exc())
     finally:
         safe_delete(local_dll_path)
