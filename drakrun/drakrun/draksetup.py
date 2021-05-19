@@ -18,7 +18,14 @@ import requests
 from requests import RequestException
 from minio import Minio
 from minio.error import NoSuchKey
-from drakrun.drakpdb import fetch_pdb, make_pdb_profile, dll_file_list, pdb_guid, DLL
+from drakrun.drakpdb import (
+    fetch_pdb,
+    make_pdb_profile,
+    dll_file_list,
+    compulsory_dll_file_list,
+    pdb_guid,
+    DLL,
+)
 from drakrun.config import (
     InstallInfo,
     LIB_DIR,
@@ -519,7 +526,14 @@ def send_usage_report(report):
         logging.exception("Failed to send usage report. This is not a serious problem.")
 
 
-def create_rekall_profile(injector: Injector, file: DLL):
+def raise_if_true(msg: str, should_raise):
+    if should_raise:
+        raise Exception(msg)
+    else:
+        logging.warning(msg + ",skipping ...")
+
+
+def create_rekall_profile(injector: Injector, file: DLL, raise_message=False):
     tmp = None
     cmd = None
     out = None
@@ -557,19 +571,16 @@ def create_rekall_profile(injector: Injector, file: DLL):
         logging.debug(traceback.format_exc())
         raise Exception(f"Failed to parse json response on {file.path}")
     except FileNotFoundError:
-        logging.warning(f"Failed to copy file {file.path}, skipping...")
+        raise_if_true(f"Failed to copy file {file.path}", raise_message)
     except RuntimeError:
-        logging.warning(f"Failed to fetch profile for {file.path}, skipping...")
+        raise_if_true(f"Failed to fetch profile for {file.path}", raise_message)
     except subprocess.TimeoutExpired:
-        logging.warning(f"Injection timeout occurred for {file.path}, skipping...")
+        raise_if_true(f"Injector timed out for {file.path}", raise_message)
     except Exception as e:
         # Take care if the error message is changed
         if str(e) == "Some error occurred in injector":
             raise
         else:
-            logging.warning(
-                f"Unexpected exception while creating rekall profile for {file.path}, skipping..."
-            )
             # Can help in debugging
             if cmd:
                 logging.debug("stdout: " + cmd.stdout.decode())
@@ -577,6 +588,10 @@ def create_rekall_profile(injector: Injector, file: DLL):
             if out:
                 logging.debug(out)
             logging.debug(traceback.format_exc())
+            raise_if_true(
+                f"Unexpected exception while creating rekall profile for {file.path}, skipping...",
+                raise_message,
+            )
     finally:
         safe_delete(local_dll_path)
         # was crashing here if the first file reached some exception
@@ -727,8 +742,11 @@ def postinstall(report, generate_usermode):
     if generate_usermode:
         # Restore a VM and create usermode profiles
         try:
-            create_missing_profiles()
-        except Exception as e:
+            for file in compulsory_dll_file_list:
+                create_rekall_profile(injector, file, True)
+            for file in dll_file_list:
+                create_rekall_profile(injector, file)
+        except RuntimeError as e:
             logging.warning("Generating usermode profiles failed")
             logging.exception(e)
 
@@ -766,8 +784,7 @@ def create_missing_profiles():
     kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
     injector = Injector("vm-1", runtime_info, kernel_profile)
 
-    # Ensure that all declared usermode profiles exist
-    # This is important when upgrade defines new entries in dll_file_list
+    # restore vm-1
     out_interface = conf["drakrun"].get("out_interface", "")
     dns_server = conf["drakrun"].get("dns_server", "")
     backend = get_storage_backend(InstallInfo.load())
@@ -777,6 +794,12 @@ def create_missing_profiles():
     )
     vm = VirtualMachine(backend, 1)
     vm.restore()
+
+    # Ensure that all declared usermode profiles exist
+    # This is important when upgrade defines new entries in dll_file_list and compulsory_dll_file_list
+    for profile in compulsory_dll_file_list:
+        if not profile_exists(profile):
+            create_rekall_profile(injector, profile, True)
 
     for profile in dll_file_list:
         if not profile_exists(profile):
