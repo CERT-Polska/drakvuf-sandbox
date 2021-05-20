@@ -578,8 +578,6 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
             if cmd:
                 logging.debug("stdout: " + cmd.stdout.decode())
                 logging.debug("stderr: " + cmd.stderr.decode())
-            if out:
-                logging.debug(out)
             logging.debug(traceback.format_exc())
             exception_handler(
                 f"Unexpected exception while creating rekall profile for {file.path}",
