@@ -129,6 +129,42 @@ def get_xen_commandline(parsed_xl_info):
     return cfg
 
 
+def exception_handler(
+    msg: str,
+    should_raise: bool,
+    exception: Exception = None,
+    level: int = logging.WARNING,
+    prefix: tuple = None,
+):
+    """
+    An exception handler
+
+        Parameters:
+            msg (str): Message to raise
+            should_raise (bool): Should it raise an exception or log something
+            level (logging.LEVELS): Log level to give to the message (default: logging.warning)
+            prefix (tuple): Some prefix to add so that user can be notified of the severity of the msg
+                prefix[0] (str): when should_raise is True (default: "REQUIRED")
+                prefix[1] (str): when should_raise is False (default: "SKIP")
+            exception (Exception): Exception object which can be used for tracebacks
+
+        Returns:
+            None
+    """
+    prefix = prefix or ("REQUIRED", "SKIP")
+    prefix = prefix[0] if should_raise else prefix[1]
+    if prefix:
+        msg = f"[{prefix}] {msg}"
+
+    if should_raise:
+        if exception is None:
+            logging.debug(traceback.format_exc())
+        raise Exception(msg) from exception
+    else:
+        logging.log(level, msg)
+        logging.debug(traceback.format_exc())
+
+
 def safe_delete(file_path) -> bool:
     try:
         if os.path.exists(file_path):

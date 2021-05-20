@@ -50,7 +50,7 @@ from drakrun.vm import (
     delete_vm_conf,
     VirtualMachine,
 )
-from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
+from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete, exception_handler
 from tqdm import tqdm
 from pathlib import Path, PureWindowsPath
 import traceback
@@ -526,14 +526,7 @@ def send_usage_report(report):
         logging.exception("Failed to send usage report. This is not a serious problem.")
 
 
-def raise_if_true(msg: str, should_raise):
-    if should_raise:
-        raise Exception(msg)
-    else:
-        logging.warning(msg + ",skipping ...")
-
-
-def create_rekall_profile(injector: Injector, file: DLL, raise_message=False):
+def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
     tmp = None
     cmd = None
     out = None
@@ -570,12 +563,12 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_message=False):
         logging.debug(f"stderr: {cmd.stderr}")
         logging.debug(traceback.format_exc())
         raise Exception(f"Failed to parse json response on {file.path}")
-    except FileNotFoundError:
-        raise_if_true(f"Failed to copy file {file.path}", raise_message)
-    except RuntimeError:
-        raise_if_true(f"Failed to fetch profile for {file.path}", raise_message)
-    except subprocess.TimeoutExpired:
-        raise_if_true(f"Injector timed out for {file.path}", raise_message)
+    except FileNotFoundError as e:
+        exception_handler(f"Failed to copy file {file.path}", raise_on_error, e)
+    except RuntimeError as e:
+        exception_handler(f"Failed to fetch profile for {file.path}", raise_on_error, e)
+    except subprocess.TimeoutExpired as e:
+        exception_handler(f"Injector timed out for {file.path}", raise_on_error, e)
     except Exception as e:
         # Take care if the error message is changed
         if str(e) == "Some error occurred in injector":
@@ -588,9 +581,10 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_message=False):
             if out:
                 logging.debug(out)
             logging.debug(traceback.format_exc())
-            raise_if_true(
-                f"Unexpected exception while creating rekall profile for {file.path}, skipping...",
-                raise_message,
+            exception_handler(
+                f"Unexpected exception while creating rekall profile for {file.path}",
+                raise_on_error,
+                e,
             )
     finally:
         safe_delete(local_dll_path)
@@ -741,14 +735,7 @@ def postinstall(report, generate_usermode):
 
     if generate_usermode:
         # Restore a VM and create usermode profiles
-        try:
-            for file in compulsory_dll_file_list:
-                create_rekall_profile(injector, file, True)
-            for file in dll_file_list:
-                create_rekall_profile(injector, file)
-        except RuntimeError as e:
-            logging.warning("Generating usermode profiles failed")
-            logging.exception(e)
+        create_missing_profiles()
 
     if report:
         send_usage_report(

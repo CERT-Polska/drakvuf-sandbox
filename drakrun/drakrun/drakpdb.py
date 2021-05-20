@@ -23,7 +23,7 @@ def dll_pair(name: str, extension: str = "dll") -> List[DLL]:
     ]
 
 
-# drakvuf-sandbox will definitely fail without these DLL profiles
+# something is wrong if these DLLs fail
 compulsory_dll_file_list = [
     DLL("Windows/SysWOW64/ntdll.dll", "wow_ntdll_profile", "--json-wow"),
     DLL("Windows/System32/win32k.sys", "win32k_profile", "--json-win32k"),
