@@ -170,8 +170,8 @@ function AnalysisBehavioralGraph(props) {
   if (!graph) {
     return graph === null ? (
       <div>
-        (Process tree was not generated, please check out "ProcDOT integration
-        (optional)" section of README to enable it.)
+        (Behavioral graph was not generated, please check out "ProcDOT
+        integration (optional)" section of README to enable it.)
       </div>
     ) : (
       <div>Loading graph...</div>
@@ -210,11 +210,15 @@ class AnalysisMain extends Component {
       this.setState({ logs: res_logs.data });
     }
 
-    const process_tree = await api.getProcessTree(this.analysisID);
-    const inject_log = await api.getLog(this.analysisID, "inject");
-    if (process_tree && inject_log) {
-      const injectedPid = inject_log.data["InjectedPid"];
-      this.setState({ processTree: process_tree.data, injectedPid });
+    try {
+      const process_tree = await api.getProcessTree(this.analysisID);
+      const inject_log = await api.getLog(this.analysisID, "inject");
+      if (process_tree && inject_log) {
+        const injectedPid = inject_log.data["InjectedPid"];
+        this.setState({ processTree: process_tree.data, injectedPid });
+      }
+    } catch (error) {
+      console.log(error);
     }
 
     const metadata = await api.getMetadata(this.analysisID);
@@ -233,23 +237,26 @@ class AnalysisMain extends Component {
   }
 
   render() {
-    let processTree = <AnalysisBehavioralGraph analysisID={this.analysisID} />;
+    let behavioralGraph = (
+      <AnalysisBehavioralGraph analysisID={this.analysisID} />
+    );
 
-    let simpleProcessTree;
-    if (this.state.processTree) {
-      simpleProcessTree = (
-        <div className="card tilebox-one">
-          <div className="card-body">
-            <h5 className="card-title mb-0">Process tree</h5>
+    let simpleProcessTree = (
+      <div className="card tilebox-one">
+        <div className="card-body">
+          <h5 className="card-title mb-0">Process tree</h5>
+          {this.state.processTree ? (
             <ProcessTree
               tree={this.state.processTree}
               expandPid={this.state.injectedPid}
               analysisID={this.analysisID}
             />
-          </div>
+          ) : (
+            "(Analysis must be run with procmon plugin enabled to generate process tree.)"
+          )}
         </div>
-      );
-    }
+      </div>
+    );
 
     let metadata;
     if (this.state.metadata) {
@@ -312,7 +319,7 @@ class AnalysisMain extends Component {
         <div className="card tilebox-one">
           <div className="card-body">
             <h5 className="card-title mb-0">Behavioral graph</h5>
-            {processTree}
+            {behavioralGraph}
           </div>
         </div>
 
