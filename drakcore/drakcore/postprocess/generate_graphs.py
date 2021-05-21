@@ -16,16 +16,29 @@ def generate_graphs(task: Task, resources: Dict[str, RemoteResource], minio):
 
     with resources["drakmon.log"].download_temporary_file() as f:
         with tempfile.TemporaryDirectory() as output_dir:
-            with open(os.path.join(output_dir, 'drakmon.csv'), 'w') as o:
+            with open(os.path.join(output_dir, "drakmon.csv"), "w") as o:
                 for csv_line in parse_logs(f):
                     if csv_line.strip():
                         o.write(csv_line.strip() + "\n")
                     else:
-                        logging.warning('generate_graphs: empty line?')
+                        logging.warning("generate_graphs: empty line?")
 
             try:
-                subprocess.run(['/opt/procdot/procmon2dot', os.path.join(output_dir, 'drakmon.csv'), os.path.join(output_dir, 'graph.dot'), 'procdot,forceascii'], cwd=output_dir, check=True)
+                subprocess.run(
+                    [
+                        "/opt/procdot/procmon2dot",
+                        os.path.join(output_dir, "drakmon.csv"),
+                        os.path.join(output_dir, "graph.dot"),
+                        "procdot,forceascii",
+                    ],
+                    cwd=output_dir,
+                    check=True,
+                )
             except subprocess.CalledProcessError:
                 logging.exception("Failed to generate graph using procdot")
 
-            minio.fput_object("drakrun", f"{analysis_uid}/graph.dot", os.path.join(output_dir, 'graph.dot'))
+            minio.fput_object(
+                "drakrun",
+                f"{analysis_uid}/graph.dot",
+                os.path.join(output_dir, "graph.dot"),
+            )

@@ -16,13 +16,15 @@ from drakcore.analysis import AnalysisProxy
 from drakcore.database import Database
 
 
-app = Flask(__name__, static_folder='frontend/build/static')
+app = Flask(__name__, static_folder="frontend/build/static")
 conf = get_config()
 
 backend = SystemService(conf).backend
 minio = backend.minio
-db = Database(conf.config["drakmon"].get("database", "sqlite:///var/lib/drakcore/drakcore.db"),
-              pathlib.Path(__file__).parent / "migrations")
+db = Database(
+    conf.config["drakmon"].get("database", "sqlite:///var/lib/drakcore/drakcore.db"),
+    pathlib.Path(__file__).parent / "migrations",
+)
 
 
 @app.before_first_request
@@ -43,17 +45,17 @@ def resource_not_found(e):
 
 @app.after_request
 def add_header(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = 'Range'
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Range"
     return response
 
 
-@app.route("/upload", methods=['POST'])
+@app.route("/upload", methods=["POST"])
 def upload():
     producer = Producer(conf)
 
     with NamedTemporaryFile() as f:
-        request.files['file'].save(f.name)
+        request.files["file"].save(f.name)
 
         with open(f.name, "rb") as fr:
             sample = Resource("sample", fr.read())
@@ -70,16 +72,19 @@ def upload():
     if request.form.get("file_name"):
         filename = request.form.get("file_name")
     else:
-        filename = request.files['file'].filename
-    if not re.fullmatch(r'^((?![\\/><|:&])[\x20-\xfe])+\.(?:dll|exe|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm)$',
-                        filename, flags=re.IGNORECASE):
+        filename = request.files["file"].filename
+    if not re.fullmatch(
+        r"^((?![\\/><|:&])[\x20-\xfe])+\.(?:dll|exe|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm)$",
+        filename,
+        flags=re.IGNORECASE,
+    ):
         return jsonify({"error": "invalid file_name"}), 400
     task.add_payload("file_name", os.path.splitext(filename)[0])
 
     # Extract and add extension
     extension = os.path.splitext(filename)[1][1:]
     if extension:
-        task.headers['extension'] = extension
+        task.headers["extension"] = extension
 
     # Add startup command to task
     start_command = request.form.get("start_command")
@@ -128,7 +133,7 @@ def processed(task_uid, which):
     analysis = AnalysisProxy(minio, task_uid)
     with NamedTemporaryFile() as f:
         analysis.get_processed(f, which)
-        return send_file(f.name, mimetype='application/json')
+        return send_file(f.name, mimetype="application/json")
 
 
 @app.route("/processed/<task_uid>/apicall/<pid>")
@@ -148,7 +153,7 @@ def logs(task_uid, log_type):
         if "Range" in request.headers:
             headers["Range"] = request.headers["Range"]
         analysis.get_log(log_type, f, headers=headers)
-        return send_file(f.name, mimetype='text/plain')
+        return send_file(f.name, mimetype="text/plain")
 
 
 @app.route("/logindex/<task_uid>/<log_type>")
@@ -168,17 +173,17 @@ def pcap_dump(task_uid):
     analysis = AnalysisProxy(minio, task_uid)
     try:
         with NamedTemporaryFile() as f_pcap, NamedTemporaryFile() as f_keys, NamedTemporaryFile() as f_archive:
-            with ZipFile(f_archive, 'w', ZIP_DEFLATED) as archive:
+            with ZipFile(f_archive, "w", ZIP_DEFLATED) as archive:
                 analysis.get_pcap_dump(f_pcap)
-                archive.write(f_pcap.name, 'dump.pcap')
+                archive.write(f_pcap.name, "dump.pcap")
                 try:
                     analysis.get_wireshark_key_file(f_keys)
-                    archive.write(f_keys.name, 'dump.keys')
+                    archive.write(f_keys.name, "dump.keys")
                 except NoSuchKey:
                     # No dumped keys.
                     pass
             f_archive.seek(0)
-            return send_file(f_archive.name, mimetype='application/zip')
+            return send_file(f_archive.name, mimetype="application/zip")
     except NoSuchKey:
         abort(404, description="No network traffic avaible.")
 
@@ -188,7 +193,7 @@ def dumps(task_uid):
     analysis = AnalysisProxy(minio, task_uid)
     with NamedTemporaryFile() as tmp:
         analysis.get_dumps(tmp)
-        return send_file(tmp.name, mimetype='application/zip')
+        return send_file(tmp.name, mimetype="application/zip")
 
 
 @app.route("/logs/<task_uid>")
@@ -202,7 +207,7 @@ def graph(task_uid):
     analysis = AnalysisProxy(minio, task_uid)
     with NamedTemporaryFile() as tmp:
         analysis.get_graph(tmp)
-        return send_file(tmp.name, mimetype='text/plain')
+        return send_file(tmp.name, mimetype="text/plain")
 
 
 @app.route("/metadata/<task_uid>")
@@ -234,9 +239,9 @@ def robots():
     return send_file("frontend/build/robots.txt")
 
 
-@app.route('/assets/<path:path>')
+@app.route("/assets/<path:path>")
 def send_assets(path):
-    return send_from_directory('frontend/build/assets', path)
+    return send_from_directory("frontend/build/assets", path)
 
 
 @app.route("/<path:path>")

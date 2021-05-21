@@ -9,8 +9,18 @@ void_unknown = True
 
 
 class Base:
-    def __init__(self, obj: Dict, operation: str, path: str, result: str = "SUCCESS", detail: str = "", valid: bool = True):
-        self.timestamp = datetime.utcfromtimestamp(float(obj["TimeStamp"])).strftime("%-I:%-M:%-S.%f %p")
+    def __init__(
+        self,
+        obj: Dict,
+        operation: str,
+        path: str,
+        result: str = "SUCCESS",
+        detail: str = "",
+        valid: bool = True,
+    ):
+        self.timestamp = datetime.utcfromtimestamp(float(obj["TimeStamp"])).strftime(
+            "%-I:%-M:%-S.%f %p"
+        )
         self.proc_name = obj["ProcessName"].split("\\")[-1]
         self.pid = int(obj["PID"])
         self.operation = operation
@@ -54,7 +64,7 @@ class Regmon(Base):
             "NtOpenKeyTransactedEx": "RegOpenKey",
             "NtQueryKey": "RegQueryKey",
             "NtQueryMultipleValueKey": "RegQueryValue",
-            "NtQueryValueKey": "RegQueryValue"
+            "NtQueryValueKey": "RegQueryValue",
         }
 
         method = switcher.get(obj["Method"], "Unknown")
@@ -81,7 +91,12 @@ class Regmon(Base):
 class Procmon(Base):
     def __init__(self, obj: Dict):
         if obj["Method"] == "NtCreateUserProcess":
-            super().__init__(obj, "Process Create", obj["ImagePathName"], detail=f'PID: {obj["NewPid"]}, Command line: {obj["CommandLine"]}')
+            super().__init__(
+                obj,
+                "Process Create",
+                obj["ImagePathName"],
+                detail=f'PID: {obj["NewPid"]}, Command line: {obj["CommandLine"]}',
+            )
 
         # fallback
         if not hasattr(self, "valid") or not self.valid:
@@ -91,11 +106,21 @@ class Procmon(Base):
 class FileTracer(Base):
     def __init__(self, obj: Dict):
         if obj.get("Method") == "NtCreateFile":
-            super().__init__(obj, "CreateFile", obj["FileName"], detail="OpenResult: Created, Non-Directory File")
+            super().__init__(
+                obj,
+                "CreateFile",
+                obj["FileName"],
+                detail="OpenResult: Created, Non-Directory File",
+            )
 
         if obj.get("Method") == "NtSetInformationFile":
             if "SrcFileName" in obj and "DstFileName" in obj:
-                super().__init__(obj, "SetRenameInformationFile", obj["SrcFileName"], detail='FileName: {}'.format(obj["DstFileName"]))
+                super().__init__(
+                    obj,
+                    "SetRenameInformationFile",
+                    obj["SrcFileName"],
+                    detail="FileName: {}".format(obj["DstFileName"]),
+                )
 
         if obj.get("Method") == "NtWriteFile":
             super().__init__(obj, "WriteFile", obj["FileName"])
@@ -130,7 +155,12 @@ class Syscall(Base):
 class Filedelete(Base):
     def __init__(self, obj: Dict):
         if obj["Method"] == "NtClose":
-            super().__init__(obj, "SetDispositionInformationFile", obj["FileName"], detail="Delete: True")
+            super().__init__(
+                obj,
+                "SetDispositionInformationFile",
+                obj["FileName"],
+                detail="Delete: True",
+            )
 
         # fallback
         if not hasattr(self, "valid") or not self.valid:
@@ -152,12 +182,12 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
         "filetracer": FileTracer,
         "syscall": Syscall,
         "filedelete": Filedelete,
-        "procmon": Procmon
+        "procmon": Procmon,
     }
 
     try:
         first_line = json.loads(next(lines))
-        injected_pid = first_line['InjectedPid']
+        injected_pid = first_line["InjectedPid"]
     except Exception:
         logging.exception("Failed to get InjectedPid from first line")
         injected_pid = 0
@@ -166,7 +196,9 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
     yield '"Time of Day","Process Name","PID","Operation","Path","Result","Detail","TID"'
     yield '"","","","","MINIBIS_EXECUTES_SAMPLE_minibis.bat","SUCCESS","",""'
     yield '"","minibis-cpp.exe","*1*","Process Create","","SUCCESS","PID: *2*, Command line: ++++++++",""'
-    yield '"","minibis-cpp.exe","*2*","Process Create","","SUCCESS","PID: {}, Command line: Explorer.EXE",""'.format(injected_pid)
+    yield '"","minibis-cpp.exe","*2*","Process Create","","SUCCESS","PID: {}, Command line: Explorer.EXE",""'.format(
+        injected_pid
+    )
 
     for line in lines:
         try:
@@ -197,7 +229,7 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
 
 if __name__ == "__main__":
     if len(argv) != 3:
-        logging.error('unexpected number of arguments!')
+        logging.error("unexpected number of arguments!")
         exit(1)
 
     with open(argv[1], "rb") as in_f:

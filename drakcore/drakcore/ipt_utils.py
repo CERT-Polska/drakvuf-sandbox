@@ -18,7 +18,7 @@ class CustomFormatter(logging.Formatter):
         logging.INFO: grey + format + reset,
         logging.WARNING: yellow + format + reset,
         logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
+        logging.CRITICAL: bold_red + format + reset,
     }
 
     def format(self, record):
@@ -54,28 +54,28 @@ def hexint(v):
 
 
 def get_fault_va(fault):
-    return hexint(fault['VA'])
+    return hexint(fault["VA"])
 
 
 def get_fault_pa(fault):
-    return hexint(fault['PA'])
+    return hexint(fault["PA"])
 
 
 def get_trap_pa(execframe):
-    return hexint(execframe['TrapPA'])
+    return hexint(execframe["TrapPA"])
 
 
 def get_frame_va(execframe):
-    return hexint(execframe['PageVA'])
+    return hexint(execframe["PageVA"])
 
 
 def page_align(addr):
-    return addr & ~0xfff
+    return addr & ~0xFFF
 
 
 def is_page_aligned(addr):
-    return (addr & 0xfff) == 0
+    return (addr & 0xFFF) == 0
 
 
 def select_cr3(pred, entries):
-    return filter(lambda v: pred(hexint(v['CR3'])), entries)
+    return filter(lambda v: pred(hexint(v["CR3"])), entries)

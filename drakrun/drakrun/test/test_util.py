@@ -43,13 +43,13 @@ def test_missing_info():
 
 def test_tool_output(vmi_offsets):
     assert vmi_offsets.win_ntoskrnl == 0x2618000
-    assert vmi_offsets.win_ntoskrnl_va == 0xfffff80002618000
+    assert vmi_offsets.win_ntoskrnl_va == 0xFFFFF80002618000
     assert vmi_offsets.win_tasks == 0x188
     assert vmi_offsets.win_pdbase == 0x28
     assert vmi_offsets.win_pid == 0x180
-    assert vmi_offsets.win_pname == 0x2e0
+    assert vmi_offsets.win_pname == 0x2E0
     assert vmi_offsets.win_kdvb == 0x0
-    assert vmi_offsets.win_sysproc == 0xfffffa8001821b30
+    assert vmi_offsets.win_sysproc == 0xFFFFFA8001821B30
     assert vmi_offsets.win_kpcr == 0x0
     assert vmi_offsets.win_kdbg == 0x0
     assert vmi_offsets.kpgd == 0x187000

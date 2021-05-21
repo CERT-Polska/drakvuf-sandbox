@@ -15,17 +15,25 @@ class Database(BaseDb):
 
     def insert_metadata(self, analysis_uid: str, metadata: AnalysisMetadata):
         with self.get_cursor() as cursor:
-            cursor.execute("INSERT INTO metadata (uid, value) VALUES (?, ?)",
-                           (analysis_uid, json.dumps(metadata)))
+            cursor.execute(
+                "INSERT INTO metadata (uid, value) VALUES (?, ?)",
+                (analysis_uid, json.dumps(metadata)),
+            )
 
     def get_latest_metadata(self, limit: int = 100, offset: int = 0) -> Dict[str, Any]:
         def into_result(row):
             return dict(id=row["uid"], meta=json.loads(row["value"]))
+
         with self.get_cursor() as cursor:
-            cursor.execute(("SELECT uid, value "
-                            "FROM metadata "
-                            "ORDER BY json_extract(value, '$.time_finished') DESC "
-                            "LIMIT ? "
-                            "OFFSET ?"), (limit, offset))
+            cursor.execute(
+                (
+                    "SELECT uid, value "
+                    "FROM metadata "
+                    "ORDER BY json_extract(value, '$.time_finished') DESC "
+                    "LIMIT ? "
+                    "OFFSET ?"
+                ),
+                (limit, offset),
+            )
             result = cursor.fetchall()
             return map(into_result, result)

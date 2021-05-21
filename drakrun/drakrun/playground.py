@@ -31,7 +31,7 @@ class DrakmonShell:
         self.vm = VirtualMachine(backend, vm_id)
         self._dns = dns
 
-        with open(Path(PROFILE_DIR) / "runtime.json", 'r') as f:
+        with open(Path(PROFILE_DIR) / "runtime.json", "r") as f:
             self.runtime_info = RuntimeInfo.load(f)
         self.desktop = WinPath(r"%USERPROFILE%") / "Desktop"
 
@@ -47,7 +47,11 @@ class DrakmonShell:
 
         logging.info(f"Ensuring that drakrun@{vm_id} service is stopped...")
         try:
-            subprocess.run(['systemctl', 'stop', f'drakrun@{vm_id}'], stderr=subprocess.STDOUT, check=True)
+            subprocess.run(
+                ["systemctl", "stop", f"drakrun@{vm_id}"],
+                stderr=subprocess.STDOUT,
+                check=True,
+            )
         except subprocess.CalledProcessError:
             raise Exception(f"drakrun@{vm_id} not stopped")
 
@@ -58,17 +62,27 @@ class DrakmonShell:
         log = open(workdir / "drakmon.log", "wb")
 
         cmd = ["drakvuf"]
-        cmd.extend([
-            "-o", "json",
-            "F",
-            "-j", "5",
-            "-t", str(timeout),
-            "-i", str(self.runtime_info.inject_pid),
-            "-k", str(self.runtime_info.vmi_offsets.kpgd),
-            "-r", self.kernel_profile,
-            "-d", self.vm.vm_name,
-            "--dll-hooks-list", Path(ETC_DIR) / "hooks.txt",
-        ])
+        cmd.extend(
+            [
+                "-o",
+                "json",
+                "F",
+                "-j",
+                "5",
+                "-t",
+                str(timeout),
+                "-i",
+                str(self.runtime_info.inject_pid),
+                "-k",
+                str(self.runtime_info.vmi_offsets.kpgd),
+                "-r",
+                self.kernel_profile,
+                "-d",
+                self.vm.vm_name,
+                "--dll-hooks-list",
+                Path(ETC_DIR) / "hooks.txt",
+            ]
+        )
 
         if "memdump" in plugins:
             dumps = workdir / "dumps"
@@ -88,14 +102,16 @@ class DrakmonShell:
         return d
 
     def help(self):
-        usage = dedent("""\
+        usage = dedent(
+            """\
         Available commands:
         - copy(file_path)   # copy file onto vm desktop
         - mount(iso_path)   # mount iso, useful for installing software, e.g. office
         - drakvuf(plugins)  # start drakvuf with provided set of plugins
         - run(cmd)          # run command inside vm
         - exit()            # exit playground
-        """)
+        """
+        )
         print(usage)
 
     def copy(self, local):
@@ -119,34 +135,37 @@ class DrakmonShell:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='DRAKVUF Sandbox interactive shell')
-    parser.add_argument('vm_id', type=int, help='VM id you want to control')
-    parser.add_argument('--dns', default='8.8.8.8')
+    parser = argparse.ArgumentParser(description="DRAKVUF Sandbox interactive shell")
+    parser.add_argument("vm_id", type=int, help="VM id you want to control")
+    parser.add_argument("--dns", default="8.8.8.8")
 
     args = parser.parse_args()
 
     logging.basicConfig(
         level=logging.DEBUG,
-        format='[%(asctime)s][%(levelname)s] %(message)s',
-        handlers=[logging.StreamHandler()]
+        format="[%(asctime)s][%(levelname)s] %(message)s",
+        handlers=[logging.StreamHandler()],
     )
 
-    with graceful_exit(start_dnsmasq(args.vm_id, args.dns)), \
-            DrakmonShell(args.vm_id, args.dns) as shell:
+    with graceful_exit(start_dnsmasq(args.vm_id, args.dns)), DrakmonShell(
+        args.vm_id, args.dns
+    ) as shell:
         helpers = {
-            'help': shell.help,
-            'copy': shell.copy,
-            'mount': shell.mount,
-            'drakvuf': shell.drakvuf,
-            'vm': shell.vm
+            "help": shell.help,
+            "copy": shell.copy,
+            "mount": shell.mount,
+            "drakvuf": shell.drakvuf,
+            "vm": shell.vm,
         }
-        banner = dedent("""
+        banner = dedent(
+            """
         *** Welcome to drakrun playground ***
         Your VM is now ready and running with internet connection.
         You can connect to it using VNC (password can be found in /etc/drakrun/scripts/cfg.template)
         Run help() to list available commands.
-        """)
-        embed(banner1=banner, user_ns=helpers, colors='neutral')
+        """
+        )
+        embed(banner1=banner, user_ns=helpers, colors="neutral")
 
 
 if __name__ == "__main__":

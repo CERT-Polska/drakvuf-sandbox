@@ -69,7 +69,9 @@ class RegressionTester(Karton):
         super().__init__(config)
 
     def analyze_dumps(self, sample, dump_dir, dumps_metadata):
-        manager = ExtractManager(ExtractorModules(self.config.config['draktestd']['modules']))
+        manager = ExtractManager(
+            ExtractorModules(self.config.config["draktestd"]["modules"])
+        )
         family = None
         for dump_metadata in dumps_metadata:
             dump_path = os.path.join(dump_dir, dump_metadata["filename"])
@@ -92,16 +94,26 @@ class RegressionTester(Karton):
             expected_family = testcase.ripped
 
             if family is None or expected_family != family:
-                self.log.error(f"Failed to rip {sample.sha256}. Expected {expected_family}, ripped {family}")
-                result = 'FAIL'
+                self.log.error(
+                    f"Failed to rip {sample.sha256}. Expected {expected_family}, ripped {family}"
+                )
+                result = "FAIL"
             else:
                 self.log.info(f"Ripping {sample.sha256} OK: {family}")
-                result = 'OK'
+                result = "OK"
 
-            out_res = json.dumps({"sample": sample.sha256, "family": {"expected": expected_family, "ripped": family}, "result": result})
+            out_res = json.dumps(
+                {
+                    "sample": sample.sha256,
+                    "family": {"expected": expected_family, "ripped": family},
+                    "result": result,
+                }
+            )
 
             task = Task({"type": "analysis-test-result", "kind": "drakrun"})
-            res = LocalResource(name=self.current_task.root_uid, bucket='draktestd', content=out_res)
+            res = LocalResource(
+                name=self.current_task.root_uid, bucket="draktestd", content=out_res
+            )
             res._uid = res.name
             task.add_payload("result", res)
             self.send_task(task)
@@ -120,8 +132,8 @@ class RegressionTester(Karton):
 
         consumer = RegressionTester(config)
 
-        if not consumer.backend.minio.bucket_exists('draktestd'):
-            consumer.backend.minio.make_bucket(bucket_name='draktestd')
+        if not consumer.backend.minio.bucket_exists("draktestd"):
+            consumer.backend.minio.make_bucket(bucket_name="draktestd")
 
         consumer.loop()
 
@@ -174,7 +186,9 @@ class RegressionTester(Karton):
             while len(results) != len(root_uids):
                 for root_uid in cls.get_finished_tasks(consumer.backend, root_uids):
                     if root_uid not in results:
-                        res = json.load(consumer.backend.minio.get_object('draktestd', root_uid))
+                        res = json.load(
+                            consumer.backend.minio.get_object("draktestd", root_uid)
+                        )
                         results[root_uid] = res
                         print(json.dumps(results[root_uid]))
                         pbar.update(1)

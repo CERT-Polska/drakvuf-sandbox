@@ -18,20 +18,20 @@ def slice_drakmon_logs(task: Task, resources: Dict[str, RemoteResource], minio):
             plugin_fd = {}
             failures = Counter()
 
-            error_path = target_dir / 'parse_errors.log'
+            error_path = target_dir / "parse_errors.log"
 
-            with open(error_path, 'wb') as parse_errors:
+            with open(error_path, "wb") as parse_errors:
                 for line in drakmon_log_f:
                     try:
                         line_s = line.strip().decode()
                         obj = json.loads(line_s)
 
-                        plugin = obj.get('Plugin', 'unknown')
+                        plugin = obj.get("Plugin", "unknown")
 
                         if plugin not in plugin_fd:
-                            plugin_fd[plugin] = open(target_dir / f'{plugin}.log', 'w')
+                            plugin_fd[plugin] = open(target_dir / f"{plugin}.log", "w")
                         else:
-                            plugin_fd[plugin].write('\n')
+                            plugin_fd[plugin].write("\n")
 
                         plugin_fd[plugin].write(json.dumps(obj))
                     except (UnicodeDecodeError, json.JSONDecodeError):
@@ -41,7 +41,7 @@ def slice_drakmon_logs(task: Task, resources: Dict[str, RemoteResource], minio):
                         match = re.match(plugin_heuristic, line)
                         if match:
                             # we've matched a unicode word, this shouldn't fail
-                            plugin = match.group(1).decode('utf-8', 'replace')
+                            plugin = match.group(1).decode("utf-8", "replace")
                         else:
                             plugin = "unknown"
 
@@ -57,7 +57,11 @@ def slice_drakmon_logs(task: Task, resources: Dict[str, RemoteResource], minio):
 
             for plugin_name, fd in plugin_fd.items():
                 fd.close()
-                minio.fput_object("drakrun", f"{analysis_uid}/{plugin_name}.log", target_dir / f'{plugin_name}.log')
+                minio.fput_object(
+                    "drakrun",
+                    f"{analysis_uid}/{plugin_name}.log",
+                    target_dir / f"{plugin_name}.log",
+                )
                 yield f"{plugin_name}.log"
 
     del resources["drakmon.log"]

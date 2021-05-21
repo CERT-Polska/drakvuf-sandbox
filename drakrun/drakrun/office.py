@@ -2,22 +2,24 @@ import sys
 import regex as re
 import logging
 from oletools.olevba import VBA_Parser
+
 # Temporary workaround till oletools 0.56 are released.
 VBA_Parser.detect_vba_stomping = lambda self: False
 
 
-'''
+"""
 Following code which generates a vba macro callgraph comes from Vba2Graph
 project: https://github.com/MalwareCantFly/Vba2Graph. It includes small bug
 fixes and added support for python3.
-'''
+"""
 
 
 LINE_SEP = "\n"
 
 
 class Graph:
-    '''Simple implementation of directed graph to minimalize number of dependencies.'''
+    """Simple implementation of directed graph to minimalize number of dependencies."""
+
     def __init__(self):
         self.nodes = set()
         self.edges = set()
@@ -33,10 +35,15 @@ def vba2graph_from_vba_object(filepath):
     logging.info("Extracting macros from file")
     full_vba_code = ""
     vba_parser = VBA_Parser(filepath)
-    for (subfilename, stream_path, vba_filename, vba_code) in vba_parser.extract_macros():
+    for (
+        subfilename,
+        stream_path,
+        vba_filename,
+        vba_code,
+    ) in vba_parser.extract_macros():
         # workaround till oletools version 0.56
         if isinstance(vba_code, bytes):
-            vba_code = vba_code.decode('latin1', errors='replace')
+            vba_code = vba_code.decode("latin1", errors="replace")
         full_vba_code += vba_code
     vba_parser.close()
     return full_vba_code
@@ -69,7 +76,7 @@ def vba_clean_metadata(vba_content_lines):
     result_vba_lines = []
     for vba_line in vba_content_lines:
         # Check and discard empty lines.
-        if (vba_line.startswith("Attribute") or vba_line.startswith("'")):
+        if vba_line.startswith("Attribute") or vba_line.startswith("'"):
             continue
 
         # Crop inline comments.
@@ -106,19 +113,24 @@ def vba_extract_functions(vba_content_lines):
         #   - would become: NyKQpQhtmrFfWX (lstrcmpA) (External)
         #   Private Declare PtrSafe Function mcvWGqJifEVHwB Lib "urlmon" Alias "URLDownloadToFileA" (ByVal pfsseerwseer As Long,...
         #   - would become: mcvWGqJifEVHwB (URLDownloadToFileA) (External)
-        if " Lib " in vba_line and ' Alias ' in vba_line and not inside_function:
+        if " Lib " in vba_line and " Alias " in vba_line and not inside_function:
             if " Function " in vba_line:
                 func_type = " Function "
             else:
                 func_type = " Sub "
 
-            declared_func_name = vba_line[vba_line.find(func_type) + len(
-                func_type):vba_line.find(" Lib ")]
+            declared_func_name = vba_line[
+                vba_line.find(func_type) + len(func_type) : vba_line.find(" Lib ")
+            ]
             external_func_name = vba_line[
-                vba_line.find(" Alias \"") + len(" Alias \""):vba_line.find(
-                    "\" (",
-                    vba_line.find(" Alias \"") + len(" Alias \""))]
-            func_name = declared_func_name + " (" + external_func_name + ")" + " (External)"
+                vba_line.find(' Alias "')
+                + len(' Alias "') : vba_line.find(
+                    '" (', vba_line.find(' Alias "') + len(' Alias "')
+                )
+            ]
+            func_name = (
+                declared_func_name + " (" + external_func_name + ")" + " (External)"
+            )
 
             if "libc.dylib" in vba_line:
                 func_name += "(Mac)"
@@ -137,8 +149,12 @@ def vba_extract_functions(vba_content_lines):
                 func_type = " Function "
             else:
                 func_type = " Sub "
-            func_name = vba_line[vba_line.find(func_type) + len(
-                func_type):vba_line.find(" Lib ")] + " (External)"
+            func_name = (
+                vba_line[
+                    vba_line.find(func_type) + len(func_type) : vba_line.find(" Lib ")
+                ]
+                + " (External)"
+            )
 
             if "libc.dylib" in vba_line:
                 func_name += "(Mac)"
@@ -153,10 +169,17 @@ def vba_extract_functions(vba_content_lines):
         # Some macros have the word "Function" as string inside a code line.
         # This should remove FP funtions, by checking the line start.
         legit_declare_line_start = False
-        if vba_line.startswith("Sub") or vba_line.startswith("Function") or vba_line.startswith("Private") or vba_line.startswith("Public"):
+        if (
+            vba_line.startswith("Sub")
+            or vba_line.startswith("Function")
+            or vba_line.startswith("Private")
+            or vba_line.startswith("Public")
+        ):
             legit_declare_line_start = True
 
-        is_func_end = vba_line.startswith("End Sub") or vba_line.startswith("End Function")
+        is_func_end = vba_line.startswith("End Sub") or vba_line.startswith(
+            "End Function"
+        )
 
         # Check if we've reached the end of a function.
         if is_func_end:
@@ -169,11 +192,13 @@ def vba_extract_functions(vba_content_lines):
 
             # Extract function name from declaration.
             if "Function " in vba_line:
-                func_name = vba_line[(
-                    func_start_pos + len("Function ")):vba_line.find("(")]
+                func_name = vba_line[
+                    (func_start_pos + len("Function ")) : vba_line.find("(")
+                ]
             elif "Sub " in vba_line:
-                func_name = vba_line[(
-                    func_start_pos + len("Sub ")):vba_line.find("(")]
+                func_name = vba_line[
+                    (func_start_pos + len("Sub ")) : vba_line.find("(")
+                ]
             else:
                 logging.error("Error parsing function name")
                 sys.exit(1)
@@ -208,7 +233,9 @@ def vba_extract_properties(vba_content_lines):
 
     for vba_line in vba_content_lines:
         # Look for property start keywords.
-        prop_start_pos = max(vba_line.find("Property Let "), vba_line.find("Property Get "))
+        prop_start_pos = max(
+            vba_line.find("Property Let "), vba_line.find("Property Get ")
+        )
 
         # Look for property end keywords.
         is_prop_end = vba_line.startswith("End Property")
@@ -224,8 +251,12 @@ def vba_extract_properties(vba_content_lines):
 
             # Extract property name from declaration.
             if "Property Let " in vba_line or "Property Get " in vba_line:
-                prop_name = vba_line[(
-                    prop_start_pos + len("Property Let ")):vba_line.find("(")] + " (Property)"
+                prop_name = (
+                    vba_line[
+                        (prop_start_pos + len("Property Let ")) : vba_line.find("(")
+                    ]
+                    + " (Property)"
+                )
 
             else:
                 logging.error("Error parsing property name")
@@ -257,7 +288,9 @@ def create_call_graph(vba_func_dict):
     for func_name in vba_func_dict:
         func_code = vba_func_dict[func_name]
         # Split function code into tokens.
-        func_code_tokens = list(filter(None, re.split('[\"(, \\-!?:\r\n)&=.><]+', func_code)))
+        func_code_tokens = list(
+            filter(None, re.split('["(, \\-!?:\r\n)&=.><]+', func_code))
+        )
 
         # Inside each function's code, we are looking for a function name.
         for func_name1 in vba_func_dict:
@@ -309,11 +342,11 @@ def get_outer_nodes_from_vba_file(filename):
 
 
 def is_office_word_file(extension):
-    return extension in ['doc', 'docm', 'docx', 'dotm', 'rtf']
+    return extension in ["doc", "docm", "docx", "dotm", "rtf"]
 
 
 def is_office_excel_file(extension):
-    return extension in ['xls', 'xlsx', 'xlsm', 'xltx', 'xltm']
+    return extension in ["xls", "xlsx", "xlsm", "xltx", "xltm"]
 
 
 def is_office_file(extension):
