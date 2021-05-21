@@ -537,14 +537,12 @@ def on_create_rekall_profile_failure(
         Parameters:
             msg (str): Message to raise
             should_raise (bool): Should it raise an exception or log a warning
-            exception (Exception): Exception object which can be used for tracebacks
+            exception (Exception): Exception object which is used for tracebacks
 
         Returns:
             None
     """
     if should_raise:
-        if exception is None:
-            logging.debug(traceback.format_exc())
         raise Exception(f"[REQUIRED DLL] {msg}") from exception
     else:
         logging.warning(f"[SKIPPING DLL] {msg}")
