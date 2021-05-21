@@ -12,7 +12,7 @@ from drakrun.config import (
     LIB_DIR,
     InstallInfo
 )
-from drakrun.util import safe_delete
+from drakrun.util import safe_delete, try_run
 
 log = logging.getLogger("drakrun")
 
@@ -74,13 +74,15 @@ def delete_vm_conf(vm_id: int) -> bool:
 
 
 class VirtualMachine:
-    def __init__(self, backend: StorageBackendBase, vm_id: int) -> None:
+    def __init__(self, backend: StorageBackendBase, vm_id: int, fmt: str = "vm-{}", cfg_path=None) -> None:
         self.backend = backend
         self.vm_id = vm_id
+        self._format = fmt
+        self._cfg_path = cfg_path or Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg"
 
     @property
     def vm_name(self) -> str:
-        return f"vm-{self.vm_id}"
+        return self._format.format(self.vm_id)
 
     @property
     def is_running(self) -> bool:
@@ -91,26 +93,81 @@ class VirtualMachine:
         )
         return res.returncode == 0
 
-    def restore(self) -> None:
+    def create(self, pause=False, **kwargs):
+        args = ['xl', 'create']
+        if pause:
+            args += ['-p']
+        args += [self._cfg_path]
+        logging.info(f"Creating VM {self.vm_name}")
+        try_run(args, f"Failed to launch VM {self.vm_name}", **kwargs)
+
+    def pause(self, **kwargs):
+        logging.info(f"Pausing VM {self.vm_name}")
+        try_run(['xl', 'pause', self.vm_name], f"Failed to pause VM {self.vm_name}", **kwargs)
+
+    def unpause(self, **kwargs):
+        logging.info(f"Unpausing VM {self.vm_name}")
+        try_run(['xl', 'unpause', self.vm_name], f"Failed to unpause VM {self.vm_name}", **kwargs)
+
+    def save(self, filename, pause=False, cont=False, **kwargs):
+        logging.info(f"Saving VM {self.vm_name}")
+        args = ['xl', 'save']
+
+        # no such args will shutdown the VM after saving
+        if pause is True:
+            args += ['-p']
+        elif cont is True:
+            args += ['-c']
+
+        if kwargs.get('stderr') is None:
+            kwargs['stderr'] = subprocess.STDOUT
+
+        # we are explicitely passing stdout=None so that things can be print to terminal
+        kwargs['stdout'] = kwargs.get('stdout')
+
+        args += [self.vm_name, filename]
+
+        try_run(args, f"Failed to save VM {self.vm_name}", **kwargs)
+
+    def restore(
+        self,
+        snapshot_path=None,
+        pause=False,
+        **kwargs
+    ) -> None:
         """ Restore virtual machine from snapshot.
         :raises: subprocess.CalledProcessError
         """
         if self.is_running:
             self.destroy()
-        cfg_path = Path(VM_CONFIG_DIR) / f"{self.vm_name}.cfg"
-        snapshot_path = Path(VOLUME_DIR) / "snapshot.sav"
+
+        args = ['xl', 'restore']
+
+        if snapshot_path is None:
+            snapshot_path = Path(VOLUME_DIR) / "snapshot.sav"
+
+        if pause is True:
+            args += ['-p']
+
+        if kwargs.get('stderr') is None:
+            kwargs['stderr'] = subprocess.STDOUT
+
+        # we are explicitely passing stdout=None so that things can be print to terminal
+        kwargs['stdout'] = kwargs.get('stdout')
 
         # No need to rollback vm-0. Since the state of vm-0
         # is correct by definition.
-        if self.vm_id != 0:
+        if self.vm_id != 0 and self.backend is not None and self.vm_id is not None:
             self.backend.rollback_vm_storage(self.vm_id)
 
-        subprocess.run(["xl", "restore", cfg_path, snapshot_path], check=True)
+        args += [self._cfg_path, snapshot_path]
+        logging.info(f"Restoring VM {self.vm_name}")
+        try_run(args, msg=f"Failed to restore VM {self.vm_name}", **kwargs)
 
-    def destroy(self):
+    def destroy(self, **kwargs):
         """ Destroy a running virtual machine.
         :raises: subprocess.CalledProcessError
         """
         if self.is_running:
             logging.info(f"Destroying {self.vm_name}")
-            subprocess.run(["xl", "destroy", self.vm_name], check=True)
+            try_run(["xl", "destroy", self.vm_name], f"Failed to destroy VM {self.vm_name}", **kwargs)

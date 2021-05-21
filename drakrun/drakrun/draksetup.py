@@ -201,11 +201,12 @@ def perform_xtf():
         tmpf.write(test_cfg)
         tmpf.flush()
 
+        test_hvm64 = VirtualMachine(None, None, "test-hvm64-example", tmpf.name)
         logging.info('Checking if the test domain already exists...')
-        subprocess.run('xl destroy test-hvm64-example', shell=True)
+        test_hvm64.destroy()
 
         logging.info('Creating new test domain...')
-        subprocess.run(f'xl create -p {tmpf.name}', shell=True, stderr=subprocess.STDOUT, timeout=30, check=True)
+        test_hvm64.create(pause=True, timeout=30)
 
         module_dir = os.path.dirname(os.path.realpath(__file__))
         test_altp2m_tool = os.path.join(module_dir, "tools", "test-altp2m")
@@ -216,12 +217,12 @@ def perform_xtf():
         except subprocess.CalledProcessError as e:
             output = e.output.decode('utf-8', 'replace')
             logging.error(f'Failed to enable altp2m on domain. Your hardware might not support Extended Page Tables. Logs:\n{output}')
-            subprocess.run('xl destroy test-hvm64-example', shell=True)
+            test_hvm64.destroy()
             return False
 
         logging.info('Performing simple XTF test...')
         p = subprocess.Popen(['xl', 'console', 'test-hvm64-example'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        subprocess.run('xl unpause test-hvm64-example', shell=True, stderr=subprocess.STDOUT, timeout=30, check=True)
+        test_hvm64.unpause(timeout=30)
         stdout_b, _ = p.communicate(timeout=10)
 
         stdout_text = stdout_b.decode('utf-8')
@@ -342,17 +343,13 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
     )
     install_info.save()
 
-    try:
-        subprocess.check_output('xl uptime vm-0', shell=True, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError:
-        pass
-    else:
-        logging.info('Detected that vm-0 is already running, stopping it.')
-        subprocess.run('xl destroy vm-0', shell=True, check=True)
+    backend = get_storage_backend(install_info)
+
+    vm0 = VirtualMachine(backend, 0)
+    vm0.destroy()
 
     generate_vm_conf(install_info, 0)
 
-    backend = get_storage_backend(install_info)
     backend.initialize_vm0_volume(disk_size)
 
     try:
@@ -372,11 +369,7 @@ def install(vcpus, memory, storage_backend, disk_size, iso_path, zfs_tank_name, 
 
     cfg_path = os.path.join(VM_CONFIG_DIR, "vm-0.cfg")
 
-    try:
-        subprocess.run('xl create {}'.format(shlex.quote(cfg_path)), shell=True, check=True)
-    except subprocess.CalledProcessError:
-        logging.exception("Failed to launch VM vm-0")
-        return
+    vm0.create()
 
     logging.info("-" * 80)
     logging.info("Initial VM setup is complete and the vm-0 was launched.")
@@ -543,9 +536,9 @@ def postinstall(report, generate_usermode):
     install_info = InstallInfo.load()
     storage_backend = get_storage_backend(install_info)
 
-    vm = VirtualMachine(storage_backend, 0)
+    vm0 = VirtualMachine(storage_backend, 0)
 
-    if vm.is_running is False:
+    if vm0.is_running is False:
         logging.exception("vm-0 is not running")
         return
 
@@ -597,7 +590,7 @@ def postinstall(report, generate_usermode):
     # Create vm-0 snapshot, and destroy it
     # WARNING: qcow2 snapshot method is a noop. fresh images are created on the fly
     # so we can't keep the vm-0 running
-    subprocess.check_output('xl save vm-0 ' + os.path.join(VOLUME_DIR, "snapshot.sav"), shell=True)
+    vm0.save(os.path.join(VOLUME_DIR, "snapshot.sav"))
     logging.info("Snapshot was saved succesfully.")
 
     # Memory state is frozen, we can't do any writes to persistent storage
