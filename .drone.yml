@@ -238,8 +238,6 @@ steps:
 node:
    purpose: e2e
 depends_on:
-- check-drakcore
-- check-drakrun
 - build-drakcore
 - build-drakrun
 - build-drakvuf-bundle

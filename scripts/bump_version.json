@@ -6,5 +6,5 @@
         "drakrun/drakrun/version.py": "__version__ = \"$VERSION\"",
         "docs/conf.py": "release = 'v$VERSION'"
     },
-    "regex": "(\\d+\\.\\d+\\.\\d+(?:-(post|dev|alpha|beta|rc)[0-9])?)"
+    "regex": "(\\d+\\.\\d+\\.\\d+(?:-(post|dev|alpha|beta|rc)[0-9]?)?)"
 }

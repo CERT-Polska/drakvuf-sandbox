@@ -12,7 +12,6 @@ import secrets
 import subprocess
 import string
 import tempfile
-from shutil import copyfile
 from typing import Optional
 
 import click
@@ -588,26 +587,23 @@ def postinstall(report, generate_usermode):
 
     logging.info("Saving VM snapshot...")
 
-    # snapshot domain but don't destroy it, leave it in paused state
-    vm0.save(os.path.join(VOLUME_DIR, "snapshot.sav"), pause=True)
+    # Create vm-0 snapshot, and destroy it
+    # WARNING: qcow2 snapshot method is a noop. fresh images are created on the fly
+    # so we can't keep the vm-0 running
+    vm0.save(os.path.join(VOLUME_DIR, "snapshot.sav"))
     logging.info("Snapshot was saved succesfully.")
 
+    # Memory state is frozen, we can't do any writes to persistent storage
     logging.info("Snapshotting persistent memory...")
     storage_backend.snapshot_vm0_volume()
 
-    logging.info("Unpausing VM")
-    vm0.unpause()
-
-    injector = Injector('vm-0', runtime_info, kernel_profile)
     if generate_usermode:
+        # Restore a VM and create usermode profiles
         try:
-            for file in dll_file_list:
-                create_rekall_profile(injector, file)
-        except RuntimeError as e:
+            create_missing_profiles()
+        except Exception as e:
             logging.warning("Generating usermode profiles failed")
             logging.exception(e)
-
-    vm0.destroy()
 
     if report:
         send_usage_report({
@@ -634,12 +630,39 @@ def profile_exists(profile: DLL) -> bool:
     return (Path(PROFILE_DIR) / f"{profile.dest}.json").is_file()
 
 
-def create_missing_profiles(injector: Injector):
+def create_missing_profiles():
+    """
+    Creates usermode profiles by restoring vm-1 and extracting the DLLs.
+    Assumes that injector is configured properly, i.e. kernel and runtime
+    profiles exist and that vm-1 is free to use.
+    """
+
+    # Prepare injector
+    with open(os.path.join(PROFILE_DIR, "runtime.json"), 'r') as runtime_f:
+        runtime_info = RuntimeInfo.load(runtime_f)
+    kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
+    injector = Injector('vm-1', runtime_info, kernel_profile)
+
     # Ensure that all declared usermode profiles exist
     # This is important when upgrade defines new entries in dll_file_list
+    out_interface = conf['drakrun'].get('out_interface', '')
+    dns_server = conf['drakrun'].get('dns_server', '')
+    backend = get_storage_backend(InstallInfo.load())
+
+    setup_vm_network(vm_id=1, net_enable=False, out_interface=out_interface, dns_server=dns_server)
+    vm = VirtualMachine(backend, 1)
+    vm.restore()
+
     for profile in dll_file_list:
         if not profile_exists(profile):
-            create_rekall_profile(injector, profile)
+            try:
+                create_rekall_profile(injector, profile)
+            except Exception:
+                # silence per-dll errors
+                pass
+
+    vm.destroy()
+    delete_vm_network(vm_id=1, net_enable=False, out_interface=out_interface, dns_server=dns_server)
 
 
 @click.command(help='Perform tasks after drakrun upgrade')
@@ -664,26 +687,8 @@ def postupgrade():
         logging.info("Postupgrade done. DRAKVUF Sandbox not installed.")
         return
 
-    # Prepare injector
-    with open(os.path.join(PROFILE_DIR, "runtime.json"), 'r') as runtime_f:
-        runtime_info = RuntimeInfo.load(runtime_f)
-    kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
-    injector = Injector('vm-1', runtime_info, kernel_profile)
-
     stop_all_drakruns()
-
-    # Use vm-1 for generating profiles
-    out_interface = conf['drakrun'].get('out_interface', '')
-    dns_server = conf['drakrun'].get('dns_server', '')
-    setup_vm_network(vm_id=1, net_enable=False, out_interface=out_interface, dns_server=dns_server)
-    backend = get_storage_backend(install_info)
-    vm = VirtualMachine(backend, 1)
-    vm.restore()
-
-    create_missing_profiles(injector)
-
-    vm.destroy()
-    delete_vm_network(vm_id=1, net_enable=False, out_interface=out_interface, dns_server=dns_server)
+    create_missing_profiles()
     start_enabled_drakruns()
 
 

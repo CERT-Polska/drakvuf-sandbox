@@ -6,12 +6,10 @@ from drakrun.storage import LvmStorageBackend
 from drakrun.util import safe_delete
 from common_utils import tool_exists
 import subprocess
-import os
 import logging
 import tempfile
 import secrets
 import string
-import time
 
 
 @pytest.fixture(scope="session")
