@@ -50,7 +50,7 @@ from drakrun.vm import (
     delete_vm_conf,
     VirtualMachine,
 )
-from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete, exception_handler
+from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
 from tqdm import tqdm
 from pathlib import Path, PureWindowsPath
 import traceback
@@ -526,6 +526,31 @@ def send_usage_report(report):
         logging.exception("Failed to send usage report. This is not a serious problem.")
 
 
+def on_create_rekall_profile_failure(
+    msg: str,
+    should_raise: bool,
+    exception: Exception = None,
+):
+    """
+    An exception handler for create_rekall_profile
+
+        Parameters:
+            msg (str): Message to raise
+            should_raise (bool): Should it raise an exception or log a warning
+            exception (Exception): Exception object which can be used for tracebacks
+
+        Returns:
+            None
+    """
+    if should_raise:
+        if exception is None:
+            logging.debug(traceback.format_exc())
+        raise Exception(f"[REQUIRED DLL] {msg}") from exception
+    else:
+        logging.warning(f"[SKIPPING DLL] {msg}")
+        logging.debug(traceback.format_exc())
+
+
 def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
     tmp = None
     cmd = None
@@ -564,11 +589,17 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
         logging.debug(traceback.format_exc())
         raise Exception(f"Failed to parse json response on {file.path}")
     except FileNotFoundError as e:
-        exception_handler(f"Failed to copy file {file.path}", raise_on_error, e)
+        on_create_rekall_profile_failure(
+            f"Failed to copy file {file.path}", raise_on_error, e
+        )
     except RuntimeError as e:
-        exception_handler(f"Failed to fetch profile for {file.path}", raise_on_error, e)
+        on_create_rekall_profile_failure(
+            f"Failed to fetch profile for {file.path}", raise_on_error, e
+        )
     except subprocess.TimeoutExpired as e:
-        exception_handler(f"Injector timed out for {file.path}", raise_on_error, e)
+        on_create_rekall_profile_failure(
+            f"Injector timed out for {file.path}", raise_on_error, e
+        )
     except Exception as e:
         # Take care if the error message is changed
         if str(e) == "Some error occurred in injector":
@@ -580,7 +611,7 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
                 logging.debug("stderr: " + cmd.stderr.decode())
                 logging.debug("rc: " + str(cmd.returncode))
             logging.debug(traceback.format_exc())
-            exception_handler(
+            on_create_rekall_profile_failure(
                 f"Unexpected exception while creating rekall profile for {file.path}",
                 raise_on_error,
                 e,
