@@ -15,7 +15,7 @@ from drakcore.util import get_config, redis_working, get_minio_helper
 from drakcore.analysis import AnalysisProxy
 from drakcore.database import Database
 
-app = Flask(__name__, static_folder='frontend/build/static')
+app = Flask(__name__, static_folder="frontend/build/static")
 conf = get_config()
 
 if redis_working():
@@ -25,8 +25,10 @@ else:
     backend = None
     minio = get_minio_helper(conf)
 
-db = Database(conf.config["drakmon"].get("database", "sqlite:///var/lib/drakcore/drakcore.db"),
-              pathlib.Path(__file__).parent / "migrations")
+db = Database(
+    conf.config["drakmon"].get("database", "sqlite:///var/lib/drakcore/drakcore.db"),
+    pathlib.Path(__file__).parent / "migrations",
+)
 
 
 @app.before_first_request
@@ -52,13 +54,13 @@ def add_header(response):
     return response
 
 
-@app.route("/redis_state", methods=['GET'])
+@app.route("/redis_state", methods=["GET"])
 def get_redis_state():
     res = {"status": redis_working()}
     return jsonify(res)
 
 
-@app.route("/upload", methods=['POST'])
+@app.route("/upload", methods=["POST"])
 def upload():
     producer = Producer(conf)
 
