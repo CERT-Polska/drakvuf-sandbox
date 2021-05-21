@@ -30,7 +30,7 @@ from karton.core import Karton, Config, Task, LocalResource, Resource
 import drakrun.office as d_office
 from drakrun.version import __version__ as DRAKRUN_VERSION
 from drakrun.drakpdb import dll_file_list
-from drakrun.config import InstallInfo, ETC_DIR, VM_CONFIG_DIR, VOLUME_DIR, PROFILE_DIR
+from drakrun.config import InstallInfo, ETC_DIR, PROFILE_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
 from drakrun.util import (
@@ -87,7 +87,11 @@ def with_logs(object_name):
                                         bucket="drakrun")
                     task_uid = self.current_task.payload.get('override_uid') or self.current_task.uid
                     res._uid = f"{task_uid}/{res.name}"
-                    res.upload(self.backend)
+
+                    # Karton rejects empty resources
+                    # Ensure that we upload it only when some data was actually generated
+                    if buffer.tell() > 0:
+                        res.upload(self.backend)
                 except Exception:
                     self.log.exception("Failed to upload analysis logs")
         return wrapper
@@ -158,18 +162,26 @@ class DrakrunKarton(Karton):
             plugins = [x for x in list_str.split(',') if x.strip()]
             self.active_plugins[quality] = plugins
 
-    def generate_plugin_cmdline(self, quality, enabled_plugins):
+    def generate_plugin_cmdline(self, plugin_list):
+        if len(plugin_list) == 0:
+            # Disable all plugins explicitly as all plugins are enabled by default.
+            return list(chain.from_iterable(["-x", plugin] for plugin in sorted(self.active_plugins["_all_"])))
+        else:
+            return list(chain.from_iterable(["-a", plugin] for plugin in sorted(plugin_list)))
+
+    def get_plugin_list(self, quality, requested_plugins):
+        """
+        Determine final plugin list that will be used during analysis.
+        """
         plugin_list = self.active_plugins["_all_"]
         if quality in self.active_plugins:
             plugin_list = self.active_plugins[quality]
-
-        plugin_list = list(set(plugin_list) & set(enabled_plugins))
+        plugin_list = list(set(plugin_list) & set(requested_plugins))
 
         if "ipt" in plugin_list and "codemon" not in plugin_list:
             self.log.info("Using ipt plugin implies using codemon")
             plugin_list.append("codemon")
-
-        return list(chain.from_iterable(["-a", plugin] for plugin in sorted(plugin_list)))
+        return plugin_list
 
     @classmethod
     def reconfigure(cls, config: Dict[str, str]):
@@ -474,7 +486,7 @@ class DrakrunKarton(Karton):
 
         return (workdir, outdir)
 
-    def build_drakvuf_cmdline(self, timeout, cwd, full_cmd, dump_dir, ipt_dir, workdir):
+    def build_drakvuf_cmdline(self, timeout, cwd, full_cmd, dump_dir, ipt_dir, workdir, enabled_plugins):
         hooks_list = os.path.join(workdir, "hooks.txt")
         kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
 
@@ -555,6 +567,10 @@ class DrakrunKarton(Karton):
                 self.log.info("Setting up network...")
                 injector.create_process("cmd /C ipconfig /renew >nul", wait=True, timeout=120)
 
+            task_quality = self.current_task.headers.get("quality", "high")
+            requested_plugins = self.current_task.payload.get("plugins", self.active_plugins['_all_'])
+            analysis_info['plugins'] = self.get_plugin_list(task_quality, requested_plugins)
+
             drakvuf_cmd = self.build_drakvuf_cmdline(
                 timeout=timeout,
                 cwd=subprocess.list2cmdline([ntpath.dirname(injected_fn)]),
@@ -562,6 +578,7 @@ class DrakrunKarton(Karton):
                 dump_dir=os.path.join(outdir, "dumps"),
                 ipt_dir=os.path.join(outdir, "ipt"),
                 workdir=workdir,
+                enabled_plugins=analysis_info['plugins'],
             )
 
             try:
@@ -695,10 +712,11 @@ def validate_xen_commandline():
     required_cmdline = {
         "sched": "credit",
         "force-ept": "1",
-        "ept": "pml=0",
+        "ept": "ad=0",
         "hap_1gb": "0",
         "hap_2mb": "0",
-        "altp2m": "1"
+        "altp2m": "1",
+        "hpet": "legacy-replacement",
     }
 
     parsed_xl_info = get_xl_info()

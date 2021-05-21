@@ -2,6 +2,8 @@
 Managing snapshots
 ==================
 
+.. _snapshot-modification:
+
 Snapshot modification
 =====================
 
@@ -23,9 +25,11 @@ Execute ``drakplayground 0`` as root. Output of the command should look similarl
     xc: info: Restore successful
     xc: info: XenStore: mfn 0xfeffc, dom 0, evt 1
     xc: info: Console: mfn 0xfefff, dom 0, evt 2
-    Python 3.7.3 (default, Jul 25 2020, 13:03:44)
-    Type 'copyright', 'credits' or 'license' for more information
-    IPython 7.9.0 -- An enhanced Interactive Python. Type '?' for help.
+
+    *** Welcome to drakrun playground ***
+    Your VM is now ready and running with internet connection.
+    You can connect to it using VNC (password can be found in /etc/drakrun/scripts/cfg.template)
+    Run help() to list available commands.
 
     In [1]:
 

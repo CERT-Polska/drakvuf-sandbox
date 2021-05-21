@@ -7,12 +7,10 @@ from drakrun.networking import (
     stop_dnsmasq,
     add_iptable_rule,
     del_iptable_rule,
-    start_tcpdump_collector
 )
 
 from pytest_steps import depends_on, test_steps
 from drakrun.draksetup import find_default_interface
-import os
 import subprocess
 from pathlib import Path
 from drakrun.test.common_utils import tool_exists
