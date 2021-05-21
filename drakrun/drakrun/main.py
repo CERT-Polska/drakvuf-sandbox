@@ -287,6 +287,15 @@ class DrakrunKarton(Karton):
             start_command = None
         return start_command
 
+    def _karton_safe_get_headers(self, task, key, fallback):
+        ret = task.headers.get(key, fallback)
+        # intentional workaround due to a bug in karton
+        if ret is None:
+            self.log.warning(f"Could not get {key}, falling back to {fallback}")
+            ret = fallback
+
+        return ret
+
     def crop_dumps(self, dirpath, target_zip):
         zipf = zipfile.ZipFile(target_zip, 'w', zipfile.ZIP_DEFLATED)
 
@@ -521,9 +530,9 @@ class DrakrunKarton(Karton):
         drakmon_log_fp = os.path.join(outdir, "drakmon.log")
 
         with self.run_vm() as vm, \
-             graceful_exit(start_dnsmasq(self.instance_id, dns_server)), \
-             graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), \
-             open(drakmon_log_fp, "wb") as drakmon_log:
+                graceful_exit(start_dnsmasq(self.instance_id, dns_server)), \
+                graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), \
+                open(drakmon_log_fp, "wb") as drakmon_log:
 
             analysis_info['snapshot_version'] = vm.backend.get_vm0_snapshot_time()
 
@@ -611,7 +620,8 @@ class DrakrunKarton(Karton):
         self.update_vnc_info()
 
         # Get sample extension. If none set, fall back to exe/dll
-        extension = task.headers.get("extension", "exe").lower()
+        extension = self._karton_safe_get_headers(task, "extension", "exe").lower()
+
         if '(DLL)' in magic_output:
             extension = 'dll'
         self.log.info("Running file as %s", extension)
@@ -691,7 +701,7 @@ class DrakrunKarton(Karton):
         with open(os.path.join(outdir, 'metadata.json'), 'w') as f:
             f.write(json.dumps(metadata))
 
-        quality = task.headers.get("quality", "high")
+        quality = self._karton_safe_get_headers(task, "quality", "high")
         self.send_raw_analysis(sample, outdir, metadata, dumps_metadata, quality)
 
 
