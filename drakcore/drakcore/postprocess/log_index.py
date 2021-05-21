@@ -59,7 +59,9 @@ def generate_log_index(task: Task, resources: Dict[str, RemoteResource], minio):
                 index = generate_file_index(tmp_file)
                 data = json.dumps(index).encode()
                 stream = io.BytesIO(data)
-                minio.put_object("drakrun", f"{analysis_uid}/index/{name}", stream, len(data))
+                minio.put_object(
+                    "drakrun", f"{analysis_uid}/index/{name}", stream, len(data)
+                )
         except NoSuchKey:
             # some resources might be already deleted by other plugins
             pass

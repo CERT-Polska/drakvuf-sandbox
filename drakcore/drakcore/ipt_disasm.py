@@ -1,23 +1,29 @@
-import os
 import argparse
-import json
-import pprint
 from pathlib import Path
-from functools import reduce
 from collections import defaultdict
 import subprocess
 import tempfile
 import logging
 import sys
 
-from karton.core import Task, RemoteResource
-from typing import Dict
-from drakcore.ipt_utils import log, load_drakvuf_output, get_fault_va, get_fault_pa, get_trap_pa, get_frame_va, page_align, is_page_aligned, select_cr3, hexint
-from zipfile import ZipFile
+from drakcore.ipt_utils import (
+    log,
+    load_drakvuf_output,
+    get_fault_va,
+    get_fault_pa,
+    get_trap_pa,
+    get_frame_va,
+    page_align,
+    is_page_aligned,
+    select_cr3,
+    hexint,
+)
 
 
 def debug_faults(page_faults):
-    faulted_pages = sorted(set(page_align((get_fault_va(fault))) for fault in page_faults))
+    faulted_pages = sorted(
+        set(page_align((get_fault_va(fault))) for fault in page_faults)
+    )
 
     ranges = []
     current = []
@@ -31,7 +37,7 @@ def debug_faults(page_faults):
 
     for chunk in ranges:
         beg = chunk[0]
-        end = chunk[-1] + 0xfff
+        end = chunk[-1] + 0xFFF
         length = (end + 1 - beg) / 0x1000
         log.debug("%#016x - %#016x (%d pages)", beg, end, length)
 
@@ -76,11 +82,14 @@ def match_frames(page_faults, frames, foreign_frames):
                 unresolved += 1
             else:
                 foreign_resolved += 1
-        log.info("%#016x -> %s", va_page, frame['DumpFile'] if frame else "?")
+        log.info("%#016x -> %s", va_page, frame["DumpFile"] if frame else "?")
         if frame:
-            results.append((va_page, frame['DumpFile']))
+            results.append((va_page, frame["DumpFile"]))
 
-    log.info("Failed to resolve %d faults. Let's hope they're not related to code", unresolved)
+    log.info(
+        "Failed to resolve %d faults. Let's hope they're not related to code",
+        unresolved,
+    )
     log.info("Resolved %d from external CR3", foreign_resolved)
 
     return results
@@ -95,8 +104,8 @@ def get_ptxed_cmdline(analysis_dir, cr3_value, vcpu, use_blocks=False):
         return
 
     codemon_out = load_drakvuf_output(analysis_dir / "codemon.log")
-    page_faults = [obj for obj in codemon_out if obj['EventType'] == 'pagefault']
-    executed_frames = [obj for obj in codemon_out if obj['EventType'] == 'execframe']
+    page_faults = [obj for obj in codemon_out if obj["EventType"] == "pagefault"]
+    executed_frames = [obj for obj in codemon_out if obj["EventType"] == "execframe"]
 
     faults_in_process = list(select_cr3(lambda cr3: cr3 == cr3_value, page_faults))
     frames_in_process = list(select_cr3(lambda cr3: cr3 == cr3_value, executed_frames))
@@ -130,10 +139,27 @@ def get_ptxed_cmdline(analysis_dir, cr3_value, vcpu, use_blocks=False):
 
 def cmdline_main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dry-run", action="store_true", default=False, help="Print generated ptxed command, don't run it")
-    parser.add_argument("--verbose", action="store_true", default=False, help="Print additional debug messages")
-    parser.add_argument("--blocks", action="store_true", default=False, help="Use drak-ipt-blocks instead of ptxed")
-    parser.add_argument("--analysis", help="Analysis directory (as downloaded from MinIO)")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Print generated ptxed command, don't run it",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Print additional debug messages",
+    )
+    parser.add_argument(
+        "--blocks",
+        action="store_true",
+        default=False,
+        help="Use drak-ipt-blocks instead of ptxed",
+    )
+    parser.add_argument(
+        "--analysis", help="Analysis directory (as downloaded from MinIO)"
+    )
     parser.add_argument("--cr3", type=hexint, help="CR3 of process of interest")
     parser.add_argument("--vcpu", type=int, help="Number of vCPU to disassemble")
     args = parser.parse_args()
@@ -151,15 +177,17 @@ def cmdline_main():
         sys.exit(0)
 
     with tempfile.NamedTemporaryFile() as f:
-        filter_cmdline = [f'drak-ipt-filter {analysis_dir}/ipt/ipt_stream_vcpu{args.vcpu} {args.cr3}']
+        filter_cmdline = [
+            f"drak-ipt-filter {analysis_dir}/ipt/ipt_stream_vcpu{args.vcpu} {args.cr3}"
+        ]
 
         if args.verbose:
-            filter_cmdline.append('pv')
+            filter_cmdline.append("pv")
 
-        filter_cmdline.append(f'cat > {f.name}')
+        filter_cmdline.append(f"cat > {f.name}")
 
         logging.info(f"Filtering IPT stream for CR3: {args.cr3}")
-        subprocess.run(' | '.join(filter_cmdline), shell=True)
+        subprocess.run(" | ".join(filter_cmdline), shell=True)
 
         logging.info("Generating trace disassembly")
         ptxed_cmdline = ptxed_cmdline + ["--pt", f.name]

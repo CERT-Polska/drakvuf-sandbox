@@ -1,15 +1,13 @@
 import logging
-import contextlib
 import os
 import subprocess
 import time
 import shlex
 import shutil
-import re
 import json
 import datetime
 
-from typing import Generator, Tuple
+from typing import Tuple
 from drakrun.config import InstallInfo, VOLUME_DIR
 from drakrun.util import safe_delete
 
@@ -83,8 +81,10 @@ class ZfsStorageBackend(StorageBackendBase):
         try:
             subprocess.check_output("zfs -?", shell=True)
         except subprocess.CalledProcessError:
-            raise RuntimeError("Failed to execute zfs command. "
-                               "Make sure you have ZFS support installed.")
+            raise RuntimeError(
+                "Failed to execute zfs command. "
+                "Make sure you have ZFS support installed."
+            )
 
     def initialize_vm0_volume(self, disk_size: str):
         vm0_vol = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0"))
@@ -94,7 +94,9 @@ class ZfsStorageBackend(StorageBackendBase):
             )
         except subprocess.CalledProcessError as exc:
             if b"dataset does not exist" not in exc.output:
-                raise RuntimeError(f"Failed to destroy the existing ZFS volume {vm0_vol}.")
+                raise RuntimeError(
+                    f"Failed to destroy the existing ZFS volume {vm0_vol}."
+                )
         try:
             subprocess.check_output(
                 " ".join(
@@ -141,8 +143,10 @@ class ZfsStorageBackend(StorageBackendBase):
                 else:
                     break
             else:
-                raise RuntimeError(f"Failed to see {vm_zvol} created after executing "
-                                   "zfs clone command.")
+                raise RuntimeError(
+                    f"Failed to see {vm_zvol} created after executing "
+                    "zfs clone command."
+                )
 
             subprocess.run(["zfs", "snapshot", vm_snap], check=True)
 
@@ -150,8 +154,10 @@ class ZfsStorageBackend(StorageBackendBase):
 
     def get_vm0_snapshot_time(self):
         base_snap = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0@booted"))
-        out = subprocess.check_output(f"zfs get -H -p -o value creation {base_snap}", shell=True)
-        ts = int(out.decode('ascii').strip())
+        out = subprocess.check_output(
+            f"zfs get -H -p -o value creation {base_snap}", shell=True
+        )
+        ts = int(out.decode("ascii").strip())
         return ts
 
     def export_vm0(self, file):
@@ -159,7 +165,7 @@ class ZfsStorageBackend(StorageBackendBase):
             subprocess.run(
                 ["zfs", "send", f"{self.zfs_tank_name}/vm-0@booted"],
                 check=True,
-                stdout=snapshot_file
+                stdout=snapshot_file,
             )
 
     def import_vm0(self, file):
@@ -168,7 +174,7 @@ class ZfsStorageBackend(StorageBackendBase):
             subprocess.run(
                 ["zfs", "recv", f"{self.zfs_tank_name}/vm-0@booted"],
                 check=True,
-                stdout=snapshot_file
+                stdout=snapshot_file,
             )
 
     def delete_vm_volume(self, vm_id: int):
@@ -186,8 +192,7 @@ class ZfsStorageBackend(StorageBackendBase):
         try:
             logging.info("Deleting zfs tank")
             subprocess.run(
-                ["zfs", "destroy", "-r", f"{self.zfs_tank_name}"],
-                check=True
+                ["zfs", "destroy", "-r", f"{self.zfs_tank_name}"], check=True
             )
         except subprocess.CalledProcessError as exc:
             logging.error(exc.stdout)
@@ -207,8 +212,10 @@ class Qcow2StorageBackend(StorageBackendBase):
         try:
             subprocess.check_output("qemu-img --version", shell=True)
         except subprocess.CalledProcessError:
-            raise RuntimeError("Failed to determine qemu-img version. "
-                               "Make sure you have qemu-utils installed.")
+            raise RuntimeError(
+                "Failed to determine qemu-img version. "
+                "Make sure you have qemu-utils installed."
+            )
 
     def initialize_vm0_volume(self, disk_size: str):
         try:
@@ -254,19 +261,19 @@ class Qcow2StorageBackend(StorageBackendBase):
                 "qcow2",
                 "-o",
                 f"backing_file={vm0_path}",
-                volume_path
+                volume_path,
             ],
             check=True,
         )
 
     def get_vm0_snapshot_time(self):
-        return int(os.path.getmtime(os.path.join(VOLUME_DIR, 'vm-0.img')))
+        return int(os.path.getmtime(os.path.join(VOLUME_DIR, "vm-0.img")))
 
     def export_vm0(self, path: str):
-        shutil.copy(os.path.join(VOLUME_DIR, 'vm-0.img'), path)
+        shutil.copy(os.path.join(VOLUME_DIR, "vm-0.img"), path)
 
     def import_vm0(self, path: str):
-        shutil.copy(path, os.path.join(VOLUME_DIR, 'vm-0.img'))
+        shutil.copy(path, os.path.join(VOLUME_DIR, "vm-0.img"))
 
     def delete_vm_volume(self, vm_id: str):
         # unmount can be done here
@@ -288,10 +295,14 @@ class LvmStorageBackend(StorageBackendBase):
     def check_tools(self):
         """ Verify existence of lvm command utility """
         try:
-            subprocess.run(["vgs", self.lvm_volume_group], check=True, stdout=subprocess.DEVNULL)
+            subprocess.run(
+                ["vgs", self.lvm_volume_group], check=True, stdout=subprocess.DEVNULL
+            )
         except subprocess.CalledProcessError:
-            raise RuntimeError("Failed to execute vgs command"
-                               f"Make sure you have LVM support installed with {self.lvm_volume_group} as a volume group")
+            raise RuntimeError(
+                "Failed to execute vgs command"
+                f"Make sure you have LVM support installed with {self.lvm_volume_group} as a volume group"
+            )
 
     def initialize_vm0_volume(self, disk_size: str):
         """Create base volume for vm-0 with given size
@@ -306,24 +317,28 @@ class LvmStorageBackend(StorageBackendBase):
                     "-v",
                     "-y",
                     # "--noudevsync",
-                    f"{self.lvm_volume_group}/vm-0"
+                    f"{self.lvm_volume_group}/vm-0",
                 ],
                 stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as exc:
             if b"Failed to find logical volume" not in exc.output:
-                raise RuntimeError(f"Failed to destroy logical volume {self.lvm_volume_group}/vm-0")
+                raise RuntimeError(
+                    f"Failed to destroy logical volume {self.lvm_volume_group}/vm-0"
+                )
         try:
             logging.info("Creating new volume vm-0")
             subprocess.run(
                 [
                     "lvcreate",
                     "-y",
-                    "-L", disk_size,
-                    "-n", "vm-0",
-                    self.lvm_volume_group
+                    "-L",
+                    disk_size,
+                    "-n",
+                    "vm-0",
+                    self.lvm_volume_group,
                 ],
-                check=True
+                check=True,
             )
         except subprocess.CalledProcessError:
             raise RuntimeError("Failed to create a new volume using lvcreate.")
@@ -333,22 +348,21 @@ class LvmStorageBackend(StorageBackendBase):
         # vm-0 is the original disk being treated as a snapshot
         # vm-0-snap is being created just for the access time of the change in vm snapshot
         subprocess.run(
-            [
-                "lvremove",
-                f"{self.lvm_volume_group}/vm-0-snap"
-            ],
-            stderr=subprocess.DEVNULL
+            ["lvremove", f"{self.lvm_volume_group}/vm-0-snap"],
+            stderr=subprocess.DEVNULL,
         )
         try:
             subprocess.check_output(
                 [
                     "lvcreate",
                     "-s",
-                    "-L", self.snapshot_disksize,
-                    "-n", "vm-0-snap",
-                    f"{self.lvm_volume_group}/vm-0"
+                    "-L",
+                    self.snapshot_disksize,
+                    "-n",
+                    "vm-0-snap",
+                    f"{self.lvm_volume_group}/vm-0",
                 ],
-                stderr=subprocess.STDOUT
+                stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as exc:
             logging.debug(exc.output)
@@ -374,24 +388,28 @@ class LvmStorageBackend(StorageBackendBase):
                         "-v",
                         "-y",
                         # "--noudevsync",
-                        f"{self.lvm_volume_group}/vm-{vm_id}"
+                        f"{self.lvm_volume_group}/vm-{vm_id}",
                     ],
                     stderr=subprocess.STDOUT,
                 )
             except subprocess.CalledProcessError as exc:
                 logging.debug(exc.output)
-                raise RuntimeError(f"Failed to discard previous logical volume {self.lvm_volume_group}/vm-{vm_id}")
+                raise RuntimeError(
+                    f"Failed to discard previous logical volume {self.lvm_volume_group}/vm-{vm_id}"
+                )
 
         try:
             subprocess.check_output(
                 [
                     "lvcreate",
                     "-s",
-                    "-L", self.snapshot_disksize,
-                    "-n", f"vm-{vm_id}",
-                    f"{self.lvm_volume_group}/vm-0"
+                    "-L",
+                    self.snapshot_disksize,
+                    "-n",
+                    f"vm-{vm_id}",
+                    f"{self.lvm_volume_group}/vm-0",
                 ],
-                stderr=subprocess.STDOUT
+                stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as exc:
             logging.debug(exc.output)
@@ -400,19 +418,24 @@ class LvmStorageBackend(StorageBackendBase):
     def get_vm0_snapshot_time(self):
         """ Get UNIX timestamp of when vm-0 snapshot was last modified """
 
-        p = subprocess.run(["lvs", "-o", "lv_name,lv_time", "--reportformat", "json"],
-                           capture_output=True, check=True)
+        p = subprocess.run(
+            ["lvs", "-o", "lv_name,lv_time", "--reportformat", "json"],
+            capture_output=True,
+            check=True,
+        )
 
-        lvs = json.loads(p.stdout.decode('utf-8'))['report'][0]['lv']
-        target_lvs = list(filter(lambda x: x['lv_name'] == 'vm-0-snap', lvs))
+        lvs = json.loads(p.stdout.decode("utf-8"))["report"][0]["lv"]
+        target_lvs = list(filter(lambda x: x["lv_name"] == "vm-0-snap", lvs))
 
         if len(target_lvs) > 1:
-            raise RuntimeError('Found multiple lvs named vm-0-snap!')
+            raise RuntimeError("Found multiple lvs named vm-0-snap!")
 
         if len(target_lvs) == 0:
-            raise RuntimeError('Failed to find LV vm-0-snap!')
+            raise RuntimeError("Failed to find LV vm-0-snap!")
 
-        dt = datetime.datetime.strptime(target_lvs[0]['lv_time'], "%Y-%m-%d %H:%M:%S %z")
+        dt = datetime.datetime.strptime(
+            target_lvs[0]["lv_time"], "%Y-%m-%d %H:%M:%S %z"
+        )
         return int(dt.timestamp())
 
     def export_vm0(self, path: str):
@@ -425,9 +448,9 @@ class LvmStorageBackend(StorageBackendBase):
                 f"if=/dev/{self.lvm_volume_group}/vm-0",
                 f"of={path}",
                 "bs=4k",
-                "status=progress"
+                "status=progress",
             ],
-            check=True
+            check=True,
         )
 
     def import_vm0(self, path: str):
@@ -438,9 +461,9 @@ class LvmStorageBackend(StorageBackendBase):
                 f"of=/dev/{self.lvm_volume_group}/vm-0",
                 f"if={path}",
                 "bs=4k",
-                "status=progress"
+                "status=progress",
             ],
-            check=True
+            check=True,
         )
 
     def delete_vm_volume(self, vm_id: str):
@@ -451,7 +474,7 @@ class LvmStorageBackend(StorageBackendBase):
                     "-v",
                     "-y",
                     # "--noudevsync",
-                    f"{self.lvm_volume_group}/vm-{vm_id}"
+                    f"{self.lvm_volume_group}/vm-{vm_id}",
                 ],
                 stderr=subprocess.STDOUT,
             )

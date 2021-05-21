@@ -4,19 +4,19 @@ import tempfile
 import subprocess
 from pathlib import Path, PureWindowsPath as WinPath
 from IPython import embed
+from textwrap import dedent
 
 from drakrun.networking import (
     setup_vm_network,
     start_dnsmasq,
     delete_vm_network,
-    stop_dnsmasq,
 )
-from drakrun.vm import generate_vm_conf, VirtualMachine
+from drakrun.vm import generate_vm_conf, VirtualMachine, FIRST_CDROM_DRIVE
 from drakrun.config import InstallInfo, PROFILE_DIR, ETC_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.util import RuntimeInfo, graceful_exit
 from drakrun.injector import Injector
-from drakrun.draksetup import find_default_interface
+from drakrun.draksetup import find_default_interface, insert_cd
 
 
 class DrakmonShell:
@@ -31,7 +31,7 @@ class DrakmonShell:
         self.vm = VirtualMachine(backend, vm_id)
         self._dns = dns
 
-        with open(Path(PROFILE_DIR) / "runtime.json", 'r') as f:
+        with open(Path(PROFILE_DIR) / "runtime.json", "r") as f:
             self.runtime_info = RuntimeInfo.load(f)
         self.desktop = WinPath(r"%USERPROFILE%") / "Desktop"
 
@@ -47,7 +47,11 @@ class DrakmonShell:
 
         logging.info(f"Ensuring that drakrun@{vm_id} service is stopped...")
         try:
-            subprocess.run(['systemctl', 'stop', f'drakrun@{vm_id}'], stderr=subprocess.STDOUT, check=True)
+            subprocess.run(
+                ["systemctl", "stop", f"drakrun@{vm_id}"],
+                stderr=subprocess.STDOUT,
+                check=True,
+            )
         except subprocess.CalledProcessError:
             raise Exception(f"drakrun@{vm_id} not stopped")
 
@@ -58,17 +62,27 @@ class DrakmonShell:
         log = open(workdir / "drakmon.log", "wb")
 
         cmd = ["drakvuf"]
-        cmd.extend([
-            "-o", "json",
-            "F",
-            "-j", "5",
-            "-t", str(timeout),
-            "-i", str(self.runtime_info.inject_pid),
-            "-k", str(self.runtime_info.vmi_offsets.kpgd),
-            "-r", self.kernel_profile,
-            "-d", self.vm.vm_name,
-            "--dll-hooks-list", Path(ETC_DIR) / "hooks.txt",
-        ])
+        cmd.extend(
+            [
+                "-o",
+                "json",
+                "F",
+                "-j",
+                "5",
+                "-t",
+                str(timeout),
+                "-i",
+                str(self.runtime_info.inject_pid),
+                "-k",
+                str(self.runtime_info.vmi_offsets.kpgd),
+                "-r",
+                self.kernel_profile,
+                "-d",
+                self.vm.vm_name,
+                "--dll-hooks-list",
+                Path(ETC_DIR) / "hooks.txt",
+            ]
+        )
 
         if "memdump" in plugins:
             dumps = workdir / "dumps"
@@ -87,9 +101,26 @@ class DrakmonShell:
 
         return d
 
+    def help(self):
+        usage = dedent(
+            """\
+        Available commands:
+        - copy(file_path)   # copy file onto vm desktop
+        - mount(iso_path)   # mount iso, useful for installing software, e.g. office
+        - drakvuf(plugins)  # start drakvuf with provided set of plugins
+        - run(cmd)          # run command inside vm
+        - exit()            # exit playground
+        """
+        )
+        print(usage)
+
     def copy(self, local):
         local = Path(local)
         self.injector.write_file(local, self.desktop / local.name)
+
+    def mount(self, local_iso_path, drive=FIRST_CDROM_DRIVE):
+        local_iso_path = Path(local_iso_path)
+        insert_cd(self.vm.vm_name, drive, local_iso_path)
 
     def run(self, cmd):
         self.injector.create_process(cmd)
@@ -104,26 +135,37 @@ class DrakmonShell:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='DRAKVUF Sandbox interactive shell')
-    parser.add_argument('vm_id', type=int, help='VM id you want to control')
-    parser.add_argument('--dns', default='8.8.8.8')
+    parser = argparse.ArgumentParser(description="DRAKVUF Sandbox interactive shell")
+    parser.add_argument("vm_id", type=int, help="VM id you want to control")
+    parser.add_argument("--dns", default="8.8.8.8")
 
     args = parser.parse_args()
 
     logging.basicConfig(
         level=logging.DEBUG,
-        format='[%(asctime)s][%(levelname)s] %(message)s',
-        handlers=[logging.StreamHandler()]
+        format="[%(asctime)s][%(levelname)s] %(message)s",
+        handlers=[logging.StreamHandler()],
     )
 
-    with graceful_exit(start_dnsmasq(args.vm_id, args.dns)), \
-            DrakmonShell(args.vm_id, args.dns) as shell:
+    with graceful_exit(start_dnsmasq(args.vm_id, args.dns)), DrakmonShell(
+        args.vm_id, args.dns
+    ) as shell:
         helpers = {
-            'copy': shell.copy,
-            'drakvuf': shell.drakvuf,
-            'vm': shell.vm
+            "help": shell.help,
+            "copy": shell.copy,
+            "mount": shell.mount,
+            "drakvuf": shell.drakvuf,
+            "vm": shell.vm,
         }
-        embed(banner='', user_ns=helpers, colors='neutral')
+        banner = dedent(
+            """
+        *** Welcome to drakrun playground ***
+        Your VM is now ready and running with internet connection.
+        You can connect to it using VNC (password can be found in /etc/drakrun/scripts/cfg.template)
+        Run help() to list available commands.
+        """
+        )
+        embed(banner1=banner, user_ns=helpers, colors="neutral")
 
 
 if __name__ == "__main__":

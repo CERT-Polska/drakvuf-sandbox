@@ -31,13 +31,13 @@ class InstallInfo(DataClassJsonMixin):
     _INSTALL_FILE_PATH = os.path.join(ETC_DIR, _INSTALL_FILENAME)
 
     @staticmethod
-    def load() -> 'InstallInfo':
+    def load() -> "InstallInfo":
         """ Reads and parses install.json file """
         with open(InstallInfo._INSTALL_FILE_PATH, "r") as f:
             return InstallInfo.from_json(f.read())
 
     @staticmethod
-    def try_load() -> Optional['InstallInfo']:
+    def try_load() -> Optional["InstallInfo"]:
         """ Tries to load install.json of fails with None """
         try:
             return InstallInfo.load()
