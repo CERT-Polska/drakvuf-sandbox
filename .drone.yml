@@ -3,12 +3,16 @@ type: docker
 name: check-drakcore
 
 steps:
+- name: black check
+  image: cytopia/black:latest-release-0.3
+  commands:
+    - python3 -m black --check --diff drakrun/
 - name: flake8 drakcore
   image: python:3.8-buster
   commands:
     - pip3 install flake8
     - pip3 install -r drakcore/requirements.txt
-    - cd drakcore && flake8 --ignore E402,F401,E501
+    - flake8 --extend-ignore=E501,E203 --max-line-length=88 drakcore/
 - name: Check formatting with prettier
   image: node:14
   commands:
@@ -26,12 +30,16 @@ type: docker
 name: check-drakrun
 
 steps:
+- name: black check
+  image: cytopia/black:latest-release-0.3
+  commands:
+    - python3 -m black --check --diff drakcore/
 - name: lint drakrun
   image: python:3.8-buster
   commands:
     - pip3 install flake8
     - pip3 install -r drakrun/requirements.txt
-    - cd drakrun && flake8 --ignore E402,F401,E501
+    - flake8 --extend-ignore=E501,E203 --max-line-length=88 drakrun/
 - name: run drakrun tests
   image: python:3.8-buster
   commands:

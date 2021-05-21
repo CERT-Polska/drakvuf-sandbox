@@ -21,21 +21,22 @@ def monkeysession(request):
 
 @pytest.fixture(scope="module")
 def patch(monkeysession):
-    if not tool_exists('xl'):
+    if not tool_exists("xl"):
         pytest.skip("xen is not found")
 
     def install_patch():
         return InstallInfo(
             vcpus=1,
             memory=512,
-            storage_backend='qcow2',
-            disk_size='200M',
+            storage_backend="qcow2",
+            disk_size="200M",
             iso_path=None,  # not being required
             zfs_tank_name=None,
             lvm_volume_group=None,
             enable_unattended=None,
-            iso_sha256=None
+            iso_sha256=None,
         )
+
     monkeysession.setattr(InstallInfo, "load", install_patch)
     monkeysession.setattr(InstallInfo, "try_load", install_patch)
 
@@ -53,14 +54,16 @@ def test_vm(patch, config):
 @pytest.fixture(scope="module")
 def config():
     tmpf = tempfile.NamedTemporaryFile(delete=False).name
-    module_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
+    module_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..")
     cfg_path = os.path.join(module_dir, "tools", "test-hvm64-example.cfg")
     firmware_path = os.path.join(module_dir, "tools", "test-hvm64-example")
 
-    with open(cfg_path, 'r') as f:
-        test_cfg = f.read().replace('{{ FIRMWARE_PATH }}', firmware_path).encode('utf-8')
+    with open(cfg_path, "r") as f:
+        test_cfg = (
+            f.read().replace("{{ FIRMWARE_PATH }}", firmware_path).encode("utf-8")
+        )
 
-    with open(tmpf, 'wb') as f:
+    with open(tmpf, "wb") as f:
         f.write(test_cfg)
 
     yield tmpf
@@ -75,19 +78,32 @@ def snapshot_file():
 
 
 def get_vm_state(vm_name: str) -> str:
-    out_lines = subprocess.check_output("xl list", shell=True).decode().split('\n')
+    out_lines = subprocess.check_output("xl list", shell=True).decode().split("\n")
     # get the line with vm_name
     out = next((line for line in out_lines if vm_name in line), None)
     if out is None:
         raise Exception(f"{vm_name} not found in xl list")
     else:
-        state = re.sub(r' +', ' ', out).split(' ')[4].strip().strip('-')
+        state = re.sub(r" +", " ", out).split(" ")[4].strip().strip("-")
         return state
 
 
 def destroy_vm(vm_name: str) -> str:
-    if subprocess.run(f"xl list {vm_name}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
-        subprocess.run(f"xl destroy {vm_name}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if (
+        subprocess.run(
+            f"xl list {vm_name}",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).returncode
+        == 0
+    ):
+        subprocess.run(
+            f"xl destroy {vm_name}",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         logging.info(f"Destroying {vm_name}")
 
 
@@ -96,10 +112,10 @@ class TestVM:
     def test_vm_name(self, patch):
         logging.info("testing VM names")
         vm = VirtualMachine(None, 0)
-        assert vm.vm_name == 'vm-0'
+        assert vm.vm_name == "vm-0"
         logging.info("testing VM names with new fmt")
         vm = VirtualMachine(None, 0, "test-vm-{}")
-        assert vm.vm_name == 'test-vm-0'
+        assert vm.vm_name == "test-vm-0"
 
     def test_vm_create_and_is_running(self, config, test_vm):
 
@@ -109,7 +125,7 @@ class TestVM:
 
         logging.info("testing vm create with pause=False")
         test_vm.create(pause=False)
-        assert get_vm_state(test_vm.vm_name) != 'p'
+        assert get_vm_state(test_vm.vm_name) != "p"
         assert test_vm.is_running is True
 
         logging.info("testing vm create for a created VM")
@@ -121,14 +137,16 @@ class TestVM:
 
         logging.info("testing vm create with pause=True")
         test_vm.create(pause=True)
-        assert get_vm_state(test_vm.vm_name) == 'p'
+        assert get_vm_state(test_vm.vm_name) == "p"
 
         # destroy the vm
         destroy_vm(test_vm.vm_name)
 
         logging.info("testing vm create with non-existant file")
         with pytest.raises(Exception):
-            new_vm = VirtualMachine(None, 0, "test-hvm64-example", '/tmp/unexitant-file')
+            new_vm = VirtualMachine(
+                None, 0, "test-hvm64-example", "/tmp/unexitant-file"
+            )
             new_vm.create()
 
         logging.info("testing vm create with empty file")
@@ -143,11 +161,11 @@ class TestVM:
 
     def test_vm_unpause(self, test_vm):
         test_vm.create(pause=True)
-        assert get_vm_state(test_vm.vm_name) == 'p'
+        assert get_vm_state(test_vm.vm_name) == "p"
 
         logging.info("testing vm unpause")
         test_vm.unpause()
-        assert get_vm_state(test_vm.vm_name) != 'p'
+        assert get_vm_state(test_vm.vm_name) != "p"
 
         # it shows stderr but rc is 0
 
@@ -176,11 +194,11 @@ class TestVM:
 
         # destroy_vm(test_vm.vm_name)
         test_vm.create(pause=True)
-        assert get_vm_state(test_vm.vm_name) == 'p'
+        assert get_vm_state(test_vm.vm_name) == "p"
 
         logging.info("test vm save with pause=True")
         test_vm.save(snapshot_file, pause=True)
-        assert get_vm_state(test_vm.vm_name) == 'p'
+        assert get_vm_state(test_vm.vm_name) == "p"
 
         # should destroy the vm
         logging.info("test vm save with with no pause/cont args")
@@ -192,7 +210,7 @@ class TestVM:
         # initialize the VM after previous destruction
         test_vm.create()
 
-        assert get_vm_state(test_vm.vm_name) != 'p'
+        assert get_vm_state(test_vm.vm_name) != "p"
 
         # test-hvm64-example goes to shutdown immediately, we get `--ps--` state during assertion
 
@@ -236,18 +254,18 @@ class TestVM:
         # should not raise any exceptions if everything is fine
         logging.info("test vm with proper args")
         test_vm.restore(snapshot_path=snapshot_file)
-        assert get_vm_state(test_vm.vm_name) != 'p'
+        assert get_vm_state(test_vm.vm_name) != "p"
 
         destroy_vm(test_vm.vm_name)
 
         logging.info("test vm with proper args and pause=True")
         test_vm.restore(snapshot_path=snapshot_file, pause=True)
-        assert get_vm_state(test_vm.vm_name) == 'p'
+        assert get_vm_state(test_vm.vm_name) == "p"
 
         logging.info("restoring a restored VM")
         test_vm.restore(snapshot_path=snapshot_file)
         # should get the new state
-        assert get_vm_state(test_vm.vm_name) != 'p'
+        assert get_vm_state(test_vm.vm_name) != "p"
 
         destroy_vm(test_vm.vm_name)
 

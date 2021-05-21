@@ -15,13 +15,14 @@ class AnalysisProxy:
     def get_apicalls(self, output_file, pid):
         """ Download API calls of this process """
         return self.minio.fget_object(
-            self.bucket,
-            f"{self.uid}/apicall/{pid}.json",
-            output_file.name)
+            self.bucket, f"{self.uid}/apicall/{pid}.json", output_file.name
+        )
 
     def get_processed(self, output_file, name):
         """ Download post-process results """
-        return self.minio.fget_object(self.bucket, f"{self.uid}/{name}.json", output_file.name)
+        return self.minio.fget_object(
+            self.bucket, f"{self.uid}/{name}.json", output_file.name
+        )
 
     def list_logs(self):
         """ List DRAKVUF logs """
@@ -34,7 +35,8 @@ class AnalysisProxy:
             self.bucket,
             f"{self.uid}/{log_type}.log",
             output_file.name,
-            request_headers=headers)
+            request_headers=headers,
+        )
 
     def get_log_index(self, log_type, output_file):
         """
@@ -42,27 +44,34 @@ class AnalysisProxy:
         log line
         """
         return self.minio.fget_object(
-            self.bucket,
-            f"{self.uid}/index/{log_type}",
-            output_file.name)
+            self.bucket, f"{self.uid}/index/{log_type}", output_file.name
+        )
 
     def get_pcap_dump(self, output_file):
         """ Download dump.pcap file. """
-        return self.minio.fget_object(self.bucket, f"{self.uid}/dump.pcap", output_file.name)
+        return self.minio.fget_object(
+            self.bucket, f"{self.uid}/dump.pcap", output_file.name
+        )
 
     def get_wireshark_key_file(self, output_file):
         """
         Download tls session keys in format that is accepted by wireshark.
         """
-        return self.minio.fget_object(self.bucket, f"{self.uid}/wireshark_key_file.txt", output_file.name)
+        return self.minio.fget_object(
+            self.bucket, f"{self.uid}/wireshark_key_file.txt", output_file.name
+        )
 
     def get_dumps(self, output_file):
         """ Download memory dumps """
-        return self.minio.fget_object(self.bucket, f"{self.uid}/dumps.zip", output_file.name)
+        return self.minio.fget_object(
+            self.bucket, f"{self.uid}/dumps.zip", output_file.name
+        )
 
     def get_graph(self, output_file):
         """ Download ProcDOT graph """
-        return self.minio.fget_object(self.bucket, f"{self.uid}/graph.dot", output_file.name)
+        return self.minio.fget_object(
+            self.bucket, f"{self.uid}/graph.dot", output_file.name
+        )
 
     def get_metadata(self):
         """ Download metadata.json """
@@ -78,5 +87,7 @@ class AnalysisProxy:
 
     def enumerate(self):
         """ Return iterator over all analyses stored in the bucket """
-        return map(lambda obj: AnalysisProxy(self.minio, obj.object_name.strip('/')),
-                   self.minio.list_objects_v2(self.bucket))
+        return map(
+            lambda obj: AnalysisProxy(self.minio, obj.object_name.strip("/")),
+            self.minio.list_objects_v2(self.bucket),
+        )

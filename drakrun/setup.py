@@ -11,20 +11,20 @@ with open("drakrun/version.py") as f:
 
 setup(
     name="drakrun",
-    version=version['__version__'],
+    version=version["__version__"],
     description="DRAKRUN",
     package_dir={"drakrun": "drakrun"},
     packages=["drakrun", "drakrun.test"],
     include_package_data=True,
     install_requires=open("requirements.txt").read().splitlines(),
     scripts=[
-        'drakrun/py-scripts/drakrun',
-        'drakrun/py-scripts/draksetup',
-        'drakrun/py-scripts/drakpush',
-        'drakrun/py-scripts/drakpdb',
-        'drakrun/py-scripts/drakplayground',
-        'drakrun/py-scripts/draktestd',
-        'drakrun/py-scripts/draktest',
+        "drakrun/py-scripts/drakrun",
+        "drakrun/py-scripts/draksetup",
+        "drakrun/py-scripts/drakpush",
+        "drakrun/py-scripts/drakpdb",
+        "drakrun/py-scripts/drakplayground",
+        "drakrun/py-scripts/draktestd",
+        "drakrun/py-scripts/draktest",
     ],
     classifiers=[
         "Programming Language :: Python",

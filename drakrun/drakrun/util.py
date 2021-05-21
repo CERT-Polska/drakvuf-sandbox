@@ -39,12 +39,12 @@ class VmiOffsets:
     kpgd: int = field(metadata=hexstring)
 
     @staticmethod
-    def from_tool_output(output: str) -> 'VmiOffsets':
+    def from_tool_output(output: str) -> "VmiOffsets":
         """
         Parse vmi-win-offsets tool output and return VmiOffsets.
         If any of the fields is missing, throw TypeError
         """
-        offsets = re.findall(r'^([a-z_]+):(0x[0-9a-f]+)$', output, re.MULTILINE)
+        offsets = re.findall(r"^([a-z_]+):(0x[0-9a-f]+)$", output, re.MULTILINE)
         vals = {k: int(v, 16) for k, v in offsets}
         return VmiOffsets(**vals)
 
@@ -55,48 +55,56 @@ class RuntimeInfo:
     vmi_offsets: VmiOffsets
     inject_pid: int
 
-    def load(file_obj: IO[AnyStr]) -> 'RuntimeInfo':
+    def load(file_obj: IO[AnyStr]) -> "RuntimeInfo":
         return RuntimeInfo.from_json(file_obj.read())
 
 
 def patch_config(cfg):
     try:
-        access_key = cfg.config['minio']['access_key']
-        secret_key = cfg.config['minio']['secret_key']
+        access_key = cfg.config["minio"]["access_key"]
+        secret_key = cfg.config["minio"]["secret_key"]
     except KeyError:
-        sys.stderr.write('WARNING! Misconfiguration: section [minio] of config.ini doesn\'t contain access_key or secret_key.\n')
+        sys.stderr.write(
+            "WARNING! Misconfiguration: section [minio] of config.ini doesn't contain access_key or secret_key.\n"
+        )
         return cfg
 
     if not access_key and not secret_key:
-        if not os.path.exists('/etc/drakcore/minio.env'):
-            raise RuntimeError('ERROR! MinIO access credentials are not configured (and can not be auto-detected), unable to start.\n')
+        if not os.path.exists("/etc/drakcore/minio.env"):
+            raise RuntimeError(
+                "ERROR! MinIO access credentials are not configured (and can not be auto-detected), unable to start.\n"
+            )
 
-        with open('/etc/drakcore/minio.env', 'r') as f:
-            minio_cfg = [line.strip().split('=', 1) for line in f if line.strip() and '=' in line]
+        with open("/etc/drakcore/minio.env", "r") as f:
+            minio_cfg = [
+                line.strip().split("=", 1) for line in f if line.strip() and "=" in line
+            ]
             minio_cfg = {k: v for k, v in minio_cfg}
 
         try:
-            cfg.config['minio']['access_key'] = minio_cfg['MINIO_ACCESS_KEY']
-            cfg.config['minio']['secret_key'] = minio_cfg['MINIO_SECRET_KEY']
+            cfg.config["minio"]["access_key"] = minio_cfg["MINIO_ACCESS_KEY"]
+            cfg.config["minio"]["secret_key"] = minio_cfg["MINIO_SECRET_KEY"]
         except KeyError:
-            sys.stderr.write('WARNING! Misconfiguration: minio.env doesn\'t contain MINIO_ACCESS_KEY or MINIO_SECRET_KEY.\n')
+            sys.stderr.write(
+                "WARNING! Misconfiguration: minio.env doesn't contain MINIO_ACCESS_KEY or MINIO_SECRET_KEY.\n"
+            )
 
     return cfg
 
 
 def get_domid_from_instance_id(instance_id: int) -> int:
     output = subprocess.check_output(["xl", "domid", f"vm-{instance_id}"])
-    return int(output.decode('utf-8').strip())
+    return int(output.decode("utf-8").strip())
 
 
 def get_xl_info():
-    xl_info_out = subprocess.check_output(['xl', 'info']).decode('utf-8', 'replace')
-    xl_info_lines = xl_info_out.strip().split('\n')
+    xl_info_out = subprocess.check_output(["xl", "info"]).decode("utf-8", "replace")
+    xl_info_lines = xl_info_out.strip().split("\n")
 
     cfg = {}
 
     for line in xl_info_lines:
-        k, v = line.split(':', 1)
+        k, v = line.split(":", 1)
         k, v = k.strip(), v.strip()
         cfg[k] = v
 
@@ -104,7 +112,7 @@ def get_xl_info():
 
 
 def get_xen_commandline(parsed_xl_info):
-    opts = parsed_xl_info['xen_commandline'].split(' ')
+    opts = parsed_xl_info["xen_commandline"].split(" ")
 
     cfg = {}
 
@@ -112,10 +120,10 @@ def get_xen_commandline(parsed_xl_info):
         if not opt.strip():
             continue
 
-        if '=' not in opt:
-            cfg[opt] = '1'
+        if "=" not in opt:
+            cfg[opt] = "1"
         else:
-            k, v = opt.split('=', 1)
+            k, v = opt.split("=", 1)
             cfg[k] = v
 
     return cfg
@@ -134,8 +142,10 @@ def safe_delete(file_path) -> bool:
         return False
 
 
-def try_run(list_args: list, msg: str, reraise=True, **kwargs) -> subprocess.CompletedProcess:
-    '''
+def try_run(
+    list_args: list, msg: str, reraise=True, **kwargs
+) -> subprocess.CompletedProcess:
+    """
     Runs subprocess.run in a try except with some default arguments ( which can be overriden by supplying kwargs )
 
             Parameters:
@@ -156,17 +166,17 @@ def try_run(list_args: list, msg: str, reraise=True, **kwargs) -> subprocess.Com
                     sub (subprocess.CompletedProcess): Object with the completed process
                         or
                     None: if the subprocess failed and reraise=False
-    '''
+    """
 
     try:
-        kwargs['stdout']
+        kwargs["stdout"]
     except KeyError:
-        kwargs['stdout'] = subprocess.PIPE
+        kwargs["stdout"] = subprocess.PIPE
 
-    if kwargs.get('stderr') is None:
-        kwargs['stderr'] = subprocess.PIPE
-    if kwargs.get('check') is None:
-        kwargs['check'] = True
+    if kwargs.get("stderr") is None:
+        kwargs["stderr"] = subprocess.PIPE
+    if kwargs.get("check") is None:
+        kwargs["check"] = True
 
     try:
         sub = subprocess.run(list_args, **kwargs)

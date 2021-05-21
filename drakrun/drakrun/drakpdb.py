@@ -42,10 +42,26 @@ dll_file_list = [
     # DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile", "--json-wow-ole32"),
     *dll_pair("ole32"),
     DLL("Windows/System32/combase.dll", "combase_profile", None),
-    DLL("Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll", "clr_profile", "--json-clr"),
-    DLL("Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll", "mscorwks_profile", "--json-mscorwks"),
-    DLL("Windows/winsxs/x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll", "gdiplus_profile", None),
-    DLL("Windows/winsxs/amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll", "wow_gdiplus_profile", None),
+    DLL(
+        "Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll",
+        "clr_profile",
+        "--json-clr",
+    ),
+    DLL(
+        "Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll",
+        "mscorwks_profile",
+        "--json-mscorwks",
+    ),
+    DLL(
+        "Windows/winsxs/x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll",
+        "gdiplus_profile",
+        None,
+    ),
+    DLL(
+        "Windows/winsxs/amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll",
+        "wow_gdiplus_profile",
+        None,
+    ),
     *dll_pair("Wldap32"),
     *dll_pair("comctl32"),
     *dll_pair("crypt32"),
@@ -81,7 +97,8 @@ dll_file_list = [
 
 CV_RSDS_HEADER = "CV_RSDS" / Struct(
     "Signature" / Const(b"RSDS", Bytes(4)),
-    "GUID" / Struct(
+    "GUID"
+    / Struct(
         "Data1" / Int32ul,
         "Data2" / Int16ul,
         "Data3" / Int16ul,
@@ -143,7 +160,7 @@ TYPE_ENUM_TO_VTYPE = {
     "T_USHORT": ["unsigned short", {}],
     "T_VOID": ["Void", {}],
     "T_WCHAR": ["UnicodeString", {}],
-    "T_HRESULT": ["long", {}]
+    "T_HRESULT": ["long", {}],
 }
 
 
@@ -156,6 +173,7 @@ class Demangler(object):
     Ref:
     http://www.kegel.com/mangle.html
     """
+
     STRING_MANGLE_MAP = {
         r"?0": ",",
         r"?1": "/",
@@ -183,14 +201,19 @@ class Demangler(object):
         r"?$CB": "!",
     }
 
-    STRING_MANGLE_RE = re.compile("(" + "|".join(
-        [x.replace("?", "\\?").replace("$", "\\$")
-         for x in STRING_MANGLE_MAP]) + ")")
+    STRING_MANGLE_RE = re.compile(
+        "("
+        + "|".join(
+            [x.replace("?", "\\?").replace("$", "\\$") for x in STRING_MANGLE_MAP]
+        )
+        + ")"
+    )
 
     def _UnpackMangledString(self, string):
         string = string.split("@")[3]
         result = "str:" + self.STRING_MANGLE_RE.sub(
-            lambda m: self.STRING_MANGLE_MAP[m.group(0)], string)
+            lambda m: self.STRING_MANGLE_MAP[m.group(0)], string
+        )
         return result
 
     SIMPLE_X86_CALL = re.compile(r"[_@]([A-Za-z0-9_]+)@(\d{1,3})$")
@@ -308,7 +331,9 @@ def make_pdb_profile(filepath, dll_origin_path=None, dll_path=None):
 
     gsyms = pdb.STREAM_GSYM
     profile = {"$FUNCTIONS": {}, "$CONSTANTS": {}, "$STRUCTS": {}}
-    struct_specs = {name: info for name, info in traverse_tree(pdb.STREAM_TPI.structures.values())}
+    struct_specs = {
+        name: info for name, info in traverse_tree(pdb.STREAM_TPI.structures.values())
+    }
 
     for structName, structFields in struct_specs.items():
         if structFields != [0, {}]:
@@ -348,14 +373,19 @@ def make_pdb_profile(filepath, dll_origin_path=None, dll_path=None):
                 if ndx == 0:
                     next_sym_name = sym_name
                 else:
-                    next_sym_name = '{}_{}'.format(sym_name, ndx)
+                    next_sym_name = "{}_{}".format(sym_name, ndx)
 
                 ndx += 1
                 profile[target_key][next_sym_name] = mapped
 
     del mapped_syms
     guid = pdb.STREAM_PDB.GUID
-    guid_str = "%.8X%.4X%.4X%s" % (guid.Data1, guid.Data2, guid.Data3, guid.Data4.hex().upper())
+    guid_str = "%.8X%.4X%.4X%s" % (
+        guid.Data1,
+        guid.Data2,
+        guid.Data3,
+        guid.Data4.hex().upper(),
+    )
     symstore_hash = "%s%s" % (guid_str, pdb.STREAM_PDB.Age)
     base_fn = os.path.splitext(os.path.basename(filepath))[0]
 
@@ -363,9 +393,11 @@ def make_pdb_profile(filepath, dll_origin_path=None, dll_path=None):
         "GUID_AGE": symstore_hash,
         "PDBFile": os.path.basename(filepath),
         "ProfileClass": base_fn[0].upper() + base_fn[1:].lower(),
-        "Timestamp": pdb.STREAM_PDB.TimeDateStamp.replace(tzinfo=None).strftime("%Y-%m-%d %H:%M:%SZ"),
+        "Timestamp": pdb.STREAM_PDB.TimeDateStamp.replace(tzinfo=None).strftime(
+            "%Y-%m-%d %H:%M:%SZ"
+        ),
         "Type": "Profile",
-        "Version": pdb.STREAM_PDB.Version
+        "Version": pdb.STREAM_PDB.Version,
     }
 
     # Additional metadata requested by the ApiVectors developers
@@ -385,16 +417,18 @@ def make_pdb_profile(filepath, dll_origin_path=None, dll_path=None):
     return json.dumps(profile, indent=4, sort_keys=True)
 
 
-def fetch_pdb(pdbname, guidage, destdir='.'):
-    url = "https://msdl.microsoft.com/download/symbols/{}/{}/{}".format(pdbname, guidage.lower(), pdbname)
+def fetch_pdb(pdbname, guidage, destdir="."):
+    url = "https://msdl.microsoft.com/download/symbols/{}/{}/{}".format(
+        pdbname, guidage.lower(), pdbname
+    )
 
     try:
         with requests.get(url, stream=True) as res:
             res.raise_for_status()
-            total_size = int(res.headers.get('content-length', 0))
+            total_size = int(res.headers.get("content-length", 0))
             dest = os.path.join(destdir, os.path.basename(pdbname))
 
-            with tqdm(total=total_size, unit='iB', unit_scale=True) as pbar:
+            with tqdm(total=total_size, unit="iB", unit_scale=True) as pbar:
                 with open(dest, "wb") as f:
                     for chunk in res.iter_content(chunk_size=1024 * 8):
                         if chunk:
@@ -412,24 +446,41 @@ def pdb_guid(file):
     pe = PE(file, fast_load=True)
     pe.parse_data_directories()
     try:
-        codeview = next(filter(lambda x: x.struct.Type == DEBUG_TYPE[u'IMAGE_DEBUG_TYPE_CODEVIEW'], pe.DIRECTORY_ENTRY_DEBUG))
+        codeview = next(
+            filter(
+                lambda x: x.struct.Type == DEBUG_TYPE["IMAGE_DEBUG_TYPE_CODEVIEW"],
+                pe.DIRECTORY_ENTRY_DEBUG,
+            )
+        )
     except StopIteration:
         print("Failed to find CodeView in pdb")
         raise RuntimeError("Failed to find GUID age")
 
     offset = codeview.struct.PointerToRawData
     size = codeview.struct.SizeOfData
-    tmp = CV_RSDS_HEADER.parse(pe.__data__[offset:offset + size])
-    guidstr = u"%08x%04x%04x%s%x" % (tmp.GUID.Data1, tmp.GUID.Data2, tmp.GUID.Data3, hexlify(tmp.GUID.Data4).decode('ascii'), tmp.Age)
+    tmp = CV_RSDS_HEADER.parse(pe.__data__[offset : offset + size])
+    guidstr = "%08x%04x%04x%s%x" % (
+        tmp.GUID.Data1,
+        tmp.GUID.Data2,
+        tmp.GUID.Data3,
+        hexlify(tmp.GUID.Data4).decode("ascii"),
+        tmp.Age,
+    )
     return {"filename": tmp.Filename, "GUID": guidstr}
 
 
 def main():
-    parser = argparse.ArgumentParser(description='drakpdb')
-    parser.add_argument('action', type=str, help='one of: fetch_pdb (requires --pdb-name), parse_pdb (requires --pdb-name and --guid_age), pdb_guid (requires --file)')
-    parser.add_argument('--pdb_name', type=str, help='name of pdb file without extension, e.g. ntkrnlmp')
-    parser.add_argument('--guid_age', type=str, help='guid/age of the pdb file')
-    parser.add_argument('--file', type=str, help='file to get GUID age from')
+    parser = argparse.ArgumentParser(description="drakpdb")
+    parser.add_argument(
+        "action",
+        type=str,
+        help="one of: fetch_pdb (requires --pdb-name), parse_pdb (requires --pdb-name and --guid_age), pdb_guid (requires --file)",
+    )
+    parser.add_argument(
+        "--pdb_name", type=str, help="name of pdb file without extension, e.g. ntkrnlmp"
+    )
+    parser.add_argument("--guid_age", type=str, help="guid/age of the pdb file")
+    parser.add_argument("--file", type=str, help="file to get GUID age from")
 
     args = parser.parse_args()
 
@@ -440,7 +491,7 @@ def main():
     elif args.action == "pdb_guid":
         print(pdb_guid(args.file))
     else:
-        raise RuntimeError('Unknown action')
+        raise RuntimeError("Unknown action")
 
 
 if __name__ == "__main__":

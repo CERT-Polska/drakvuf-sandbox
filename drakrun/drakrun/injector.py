@@ -15,12 +15,18 @@ class Injector:
         """ Build base command line for all injection methods """
         return [
             "injector",
-            "-o", "json",
-            "-d", self.vm_name,
-            "-r", self.kernel_profile,
-            "-i", str(self.runtime_info.inject_pid),
-            "-k", hex(self.runtime_info.vmi_offsets.kpgd),
-            "-m", method,
+            "-o",
+            "json",
+            "-d",
+            self.vm_name,
+            "-r",
+            self.kernel_profile,
+            "-i",
+            str(self.runtime_info.inject_pid),
+            "-k",
+            hex(self.runtime_info.vmi_offsets.kpgd),
+            "-m",
+            method,
         ]
 
     def _get_cmdline_writefile(self, local: str, remote: str) -> List[str]:
@@ -43,29 +49,24 @@ class Injector:
         return cmd
 
     def write_file(
-            self,
-            local_path: str,
-            remote_path: str,
-            timeout: int = 60) -> subprocess.CompletedProcess:
+        self, local_path: str, remote_path: str, timeout: int = 60
+    ) -> subprocess.CompletedProcess:
         """ Copy local file to the VM """
         injector_cmd = self._get_cmdline_writefile(local_path, remote_path)
-        return subprocess.run(injector_cmd, stdout=subprocess.PIPE, timeout=timeout, check=True)
+        return subprocess.run(
+            injector_cmd, stdout=subprocess.PIPE, timeout=timeout, check=True
+        )
 
     def read_file(
-            self,
-            remote_path: str,
-            local_path: str,
-            timeout: int = 60
+        self, remote_path: str, local_path: str, timeout: int = 60
     ) -> subprocess.CompletedProcess:
         """ Copy VM file to local """
         injector_cmd = self._get_cmdline_readfile(remote_path, local_path)
         return subprocess.run(injector_cmd, timeout=timeout, capture_output=True)
 
     def create_process(
-            self,
-            cmdline: str,
-            wait: bool = False,
-            timeout: int = 60) -> subprocess.CompletedProcess:
+        self, cmdline: str, wait: bool = False, timeout: int = 60
+    ) -> subprocess.CompletedProcess:
         injector_cmd = self._get_cmdline_createproc(cmdline, wait=wait)
         """ Create a process inside the VM with given command line """
         return subprocess.run(injector_cmd, check=True)
