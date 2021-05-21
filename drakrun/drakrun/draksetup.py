@@ -2,7 +2,6 @@ import configparser
 import hashlib
 import logging
 import io
-import shlex
 import sys
 import os
 import re
