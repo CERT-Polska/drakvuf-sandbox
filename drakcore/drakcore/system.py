@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
-from karton.core import Config
 from karton.system import SystemService
-from drakcore.util import get_config, redis_working, get_minio_helper
+from drakcore.util import get_config, get_minio_helper
 
 
 def main():
