@@ -40,12 +40,6 @@ steps:
     - pip3 install flake8
     - pip3 install -r drakrun/requirements.txt
     - flake8 --extend-ignore=E501,E203 --max-line-length=88 drakrun/
-- name: run drakrun tests
-  image: python:3.8-buster
-  commands:
-    - pip3 install -r drakrun/drakrun/test/requirements.txt
-    - pip3 install ./drakrun
-    - pytest -v drakrun/drakrun/test/
 node:
    purpose: generic
 trigger:
