@@ -23,20 +23,24 @@ def dll_pair(name: str, extension: str = "dll") -> List[DLL]:
     ]
 
 
+# something is wrong if these DLLs fail
+compulsory_dll_file_list = [
+    DLL("Windows/SysWOW64/ntdll.dll", "wow_ntdll_profile", "--json-wow"),
+    DLL("Windows/System32/win32k.sys", "win32k_profile", "--json-win32k"),
+    DLL("Windows/System32/kernel32.dll", "kernel32_profile", "--json-kernel32"),
+    DLL("Windows/SysWOW64/kernel32.dll", "wow_kernel32_profile", "--json-wow-kernel32"),
+    DLL("Windows/System32/ntdll.dll", "ntdll_profile", "--json-ntdll"),
+]
+
 # profile file list, without 'C:\' and with '/' instead of '\'
 dll_file_list = [
-    DLL("Windows/SysWOW64/ntdll.dll", "wow_ntdll_profile", "--json-wow"),
     DLL("Windows/System32/drivers/tcpip.sys", "tcpip_profile", "--json-tcpip"),
-    DLL("Windows/System32/win32k.sys", "win32k_profile", "--json-win32k"),
     DLL("Windows/System32/sspicli.dll", "sspicli_profile", "--json-sspicli"),
-    DLL("Windows/System32/kernel32.dll", "kernel32_profile", "--json-kernel32"),
     DLL("Windows/System32/KernelBase.dll", "kernelbase_profile", "--json-kernelbase"),
-    DLL("Windows/SysWOW64/kernel32.dll", "wow_kernel32_profile", "--json-wow-kernel32"),
     DLL("Windows/System32/IPHLPAPI.DLL", "iphlpapi_profile", "--json-iphlpapi"),
     DLL("Windows/SysWOW64/IPHLPAPI.DLL", "wow_iphlpapi_profile", None),
     DLL("Windows/System32/mpr.dll", "mpr_profile", "--json-mpr"),
     DLL("Windows/SysWOW64/mpr.dll", "wow_mpr_profile", None),
-    DLL("Windows/System32/ntdll.dll", "ntdll_profile", "--json-ntdll"),
     # Don't use DRAKVUF arguments, they're used by wmimon which is compiled out
     # DLL("Windows/System32/ole32.dll", "ole32_profile", "--json-ole32"),
     # DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile", "--json-wow-ole32"),
