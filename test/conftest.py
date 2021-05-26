@@ -44,7 +44,6 @@ DRAKMON_DEPS = [
     "bridge-utils",
     "dnsmasq",
     "libmagic1",
-    "ntfs-3g",
 ]
 
 DRAKVUF_DEPS = [
