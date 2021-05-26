@@ -126,6 +126,9 @@ class AnalysisProcessor(Karton):
             "dumps_metadata", self.current_task.get_payload("dumps_metadata")
         )
 
+        # metadata.json is internal, don't leak it to other services
+        del task_resources["metadata.json"]
+
         for (name, resource) in task_resources.items():
             task.add_payload(name, resource)
         self.send_task(task)
