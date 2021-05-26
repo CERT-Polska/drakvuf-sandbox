@@ -109,7 +109,7 @@ def stop_dnsmasq(vm_id: int):
             os.kill(dnsmasq_pid, signal.SIGTERM)
             log.info(f"Stopped dnsmasq of vm-{vm_id}")
         except OSError:
-            log.info("dnsmasq-vm{vm_id} is already stopped")
+            log.info(f"dnsmasq-vm{vm_id} is already stopped")
 
 
 def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server: str):
