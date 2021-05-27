@@ -6,7 +6,6 @@ from io import StringIO
 
 from drakcore.version import __version__ as DRAKCORE_VERSION
 from karton.core import Karton, RemoteResource, LocalResource, Task
-from karton.core.resource import ResourceBase
 from drakcore.postprocess import REGISTERED_PLUGINS
 from drakcore.util import get_config
 
