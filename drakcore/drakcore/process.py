@@ -6,6 +6,7 @@ from io import StringIO
 
 from drakcore.version import __version__ as DRAKCORE_VERSION
 from karton.core import Karton, RemoteResource, LocalResource, Task
+from karton.core.resource import ResourceBase
 from drakcore.postprocess import REGISTERED_PLUGINS
 from drakcore.util import get_config
 
@@ -121,6 +122,11 @@ class AnalysisProcessor(Karton):
             }
         )
 
+        # Add metadata information about task analysis.
+        metadata = json.loads(task_resources["metadata.json"].content)
+        for k in metadata:
+            task.add_payload(k, metadata[k])
+
         # Add metadata information about dumps within dumps.zip
         task.add_payload(
             "dumps_metadata", self.current_task.get_payload("dumps_metadata")
@@ -128,6 +134,7 @@ class AnalysisProcessor(Karton):
 
         for (name, resource) in task_resources.items():
             task.add_payload(name, resource)
+
         self.send_task(task)
 
 
