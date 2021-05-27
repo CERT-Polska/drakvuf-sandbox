@@ -124,8 +124,7 @@ class AnalysisProcessor(Karton):
 
         # Add metadata information about task analysis.
         metadata = json.loads(task_resources["metadata.json"].content)
-        for k in metadata:
-            task.add_payload(k, metadata[k])
+        task.add_payload("metadata", metadata)
 
         # Add metadata information about dumps within dumps.zip
         task.add_payload(
