@@ -44,6 +44,7 @@ DRAKMON_DEPS = [
     "bridge-utils",
     "dnsmasq",
     "libmagic1",
+    "lvm2",
 ]
 
 DRAKVUF_DEPS = [
@@ -187,14 +188,3 @@ def karton_bucket(drakmon_vm):
             time.sleep(1.0)
 
     return None
-
-
-def pytest_sessionfinish(session, exitstatus):
-    """ Dump logs if we're going to exit with an error """
-    if exitstatus == 0:
-        return
-
-    print("Testing finished with errors, collecting logs")
-    with Connection("testvm", config=FABRIC_CONFIG) as c:
-        for service in DRAKMON_SERVICES:
-            c.run(f"journalctl -u {service}")

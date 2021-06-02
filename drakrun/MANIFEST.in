@@ -1,2 +1,3 @@
 include drakrun/cfg.template
 include drakrun/tools/*
+include drakrun/test/*

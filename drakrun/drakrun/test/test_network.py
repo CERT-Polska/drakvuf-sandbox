@@ -1,3 +1,4 @@
+import time
 import pytest
 from drakrun.networking import (
     setup_vm_network,
@@ -66,16 +67,16 @@ def network_setup_test():
     if not tool_exists("brctl"):
         pytest.skip("brctl does not exist")
 
-    setup_vm_network(1, True, find_default_interface(), "8.8.8.8")
+    setup_vm_network(10, True, find_default_interface(), "8.8.8.8")
     assert (
         iptable_rule_exists(
-            "INPUT -i drak1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
+            "INPUT -i drak10 -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
         )
         is True
     )
 
     # setting up network again should not run
-    setup_vm_network(1, True, find_default_interface(), "8.8.8.8")
+    setup_vm_network(10, True, find_default_interface(), "8.8.8.8")
 
 
 @depends_on(network_setup_test)
@@ -88,22 +89,30 @@ def dnsmasq_start_test():
     for pid in dnsmasq_pids:
         subprocess.run(["pkill", "-F", str(pid)])
 
-    start_dnsmasq(1, "8.8.8.8", True)
-    cmd = subprocess.run(["pgrep", "-F", "/var/run/dnsmasq-vm1.pid"])
+    start_dnsmasq(10, "8.8.8.8", True)
+
+    # wait up to 10 seconds for the pidfile to appear
+    for _ in range(10):
+        cmd = subprocess.run(["pgrep", "-F", "/var/run/dnsmasq-vm10.pid"])
+        # we can break, pidfile appeared
+        if cmd.returncode == 0:
+            break
+        time.sleep(1.0)
+
     assert cmd.returncode == 0
 
     # starting already stopped dnsmasq
     # what should be the expected behavior?
-    start_dnsmasq(1, "8.8.8.8", True)
+    start_dnsmasq(10, "8.8.8.8", True)
 
 
 @depends_on(dnsmasq_start_test)
 def dnsmasq_stop_test():
-    stop_dnsmasq(1)
-    assert subprocess.run(["pgrep", "-F", "/var/run/dnsmasq-vm1.pid"]).returncode == 1
+    stop_dnsmasq(10)
+    assert subprocess.run(["pgrep", "-F", "/var/run/dnsmasq-vm10.pid"]).returncode == 1
 
     # stopping already stopped dnsmasq
-    stop_dnsmasq(1)
+    stop_dnsmasq(10)
 
     # stopping a non started dnsmasq
     stop_dnsmasq(5)
@@ -120,13 +129,13 @@ def tcpdump_collector_test():
 
 @depends_on(network_setup_test)
 def network_delete_test():
-    delete_vm_network(1, True, find_default_interface(), "8.8.8.8")
+    delete_vm_network(10, True, find_default_interface(), "8.8.8.8")
     assert not iptable_rule_exists(
-        "INPUT -i drak1 -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
+        "INPUT -i drak10 -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
     )
 
     # deleting non existant network should not raise errors but log outputs
-    delete_vm_network(1, True, find_default_interface(), "8.8.8.8")
+    delete_vm_network(10, True, find_default_interface(), "8.8.8.8")
 
 
 @test_steps(
