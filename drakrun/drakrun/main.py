@@ -378,7 +378,7 @@ class DrakrunKarton(Karton):
             zipf.writestr(zipfile.ZipInfo("dumps/"), "")
 
         if current_size > max_total_size:
-            self.log.error(
+            self.log.warning(
                 "Some dumps were deleted, because the configured size threshold was exceeded."
             )
         return dumps_metadata
