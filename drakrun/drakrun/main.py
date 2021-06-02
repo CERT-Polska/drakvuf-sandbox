@@ -304,6 +304,8 @@ class DrakrunKarton(Karton):
         return subprocess.list2cmdline(start_command)
 
     def _get_start_command(self, extension, sample, file_path):
+        start_command = None
+
         if extension == "dll":
             start_command = self.current_task.payload.get(
                 "start_command", self._get_dll_run_command(sample.content)
@@ -315,8 +317,16 @@ class DrakrunKarton(Karton):
         elif extension == "ps1":
             start_command = "powershell.exe -executionpolicy bypass -File %f"
         else:
-            self.log.error("Unknown file extension - %s", extension)
-            start_command = None
+            self.log.info("Unknown file extension - %s", extension)
+            # It's OK to fail on unknown extension
+            return None
+
+        if not start_command:
+            # We should have a start up command at this point
+            self.log.error(
+                "Unable to run malware sample. Could not generate any suitable"
+                " command to run it."
+            )
         return start_command
 
     def _karton_safe_get_headers(self, task, key, fallback):
@@ -727,10 +737,6 @@ class DrakrunKarton(Karton):
 
         start_command = task.payload.get("start_command", cmd)
         if not start_command:
-            self.log.error(
-                "Unable to run malware sample. Could not generate any suitable"
-                " command to run it."
-            )
             return
         self.log.info("Start command: %s", start_command)
 
