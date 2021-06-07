@@ -596,7 +596,7 @@ class DrakrunKarton(Karton):
         )
 
         if anti_hammering_threshold:
-            drakvuf_cmd.extend(["--traps-ttl", anti_hammering_threshold])
+            drakvuf_cmd.extend(["--traps-ttl", str(anti_hammering_threshold)])
 
         drakvuf_cmd.extend(self.get_profile_list())
 
