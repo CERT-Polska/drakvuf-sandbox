@@ -74,7 +74,7 @@ def upload():
     else:
         filename = request.files["file"].filename
     if not re.fullmatch(
-        r"^((?![\\/><|:&])[\x20-\xfe])+\.(?:dll|exe|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm)$",
+        r"^((?![\\/><|:&])[\x20-\xfe])+\.(?:dll|exe|ps1|bat|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm|ppt|pttx|vbs|js|jse|hta|html|htm)$",
         filename,
         flags=re.IGNORECASE,
     ):

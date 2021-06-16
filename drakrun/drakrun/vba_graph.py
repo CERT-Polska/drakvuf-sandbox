@@ -339,15 +339,3 @@ def get_outer_nodes_from_vba_file(filename):
         logging.warning("Something went wrong. Perhaps this is not an office document.")
         logging.warning(ex)
         return None
-
-
-def is_office_word_file(extension):
-    return extension in ["doc", "docm", "docx", "dotm", "rtf"]
-
-
-def is_office_excel_file(extension):
-    return extension in ["xls", "xlsx", "xlsm", "xltx", "xltm"]
-
-
-def is_office_file(extension):
-    return is_office_word_file(extension) or is_office_excel_file(extension)

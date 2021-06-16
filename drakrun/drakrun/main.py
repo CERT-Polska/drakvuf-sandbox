@@ -22,12 +22,10 @@ from configparser import NoOptionError
 from itertools import chain
 from pathlib import Path
 
-import pefile
 import magic
 import ntpath
 from karton.core import Karton, Config, Task, LocalResource, Resource
 
-import drakrun.office as d_office
 from drakrun.version import __version__ as DRAKRUN_VERSION
 from drakrun.drakpdb import dll_file_list
 from drakrun.config import InstallInfo, ETC_DIR, PROFILE_DIR
@@ -42,6 +40,7 @@ from drakrun.util import (
 )
 from drakrun.vm import generate_vm_conf, VirtualMachine
 from drakrun.injector import Injector
+from drakrun.sample_startup import SampleStartupRouter
 
 
 class LocalLogBuffer(logging.Handler):
@@ -207,7 +206,7 @@ class DrakrunKarton(Karton):
 
     @classmethod
     def reconfigure(cls, config: Dict[str, str]):
-        """ Reconfigure DrakrunKarton class """
+        """Reconfigure DrakrunKarton class"""
 
         def load_json(config, key):
             try:
@@ -256,78 +255,6 @@ class DrakrunKarton(Karton):
         dns_server = self.config.config["drakrun"].get("dns_server", "")
 
         setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
-
-    @staticmethod
-    def _get_dll_run_command(pe_data):
-        d = [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]]
-        pe = pefile.PE(data=pe_data, fast_load=True)
-        pe.parse_data_directories(directories=d)
-
-        try:
-            exports = [
-                (e.ordinal, e.name.decode("utf-8", "ignore"))
-                for e in pe.DIRECTORY_ENTRY_EXPORT.symbols
-            ]
-        except AttributeError:
-            return "regsvr32 /s %f"
-
-        for export in exports:
-            if export[1] == "DllRegisterServer":
-                return "regsvr32 /s %f"
-
-            if "DllMain" in export[1]:
-                return "rundll32 %f,{}".format(export[1])
-
-        if exports:
-            if exports[0][1]:
-                return "rundll32 %f,{}".format(export[1].split("@")[0])
-            elif exports[0][0]:
-                return "rundll32 %f,#{}".format(export[0])
-
-        return "regsvr32 /s %f"
-
-    @staticmethod
-    def _get_office_file_run_command(extension, file_path):
-        start_command = ["cmd.exe", "/C", "start"]
-        if d_office.is_office_word_file(extension):
-            start_command.append("winword.exe")
-        else:
-            start_command.append("excel.exe")
-        start_command.extend(["/t", "%f"])
-
-        outer_macros = d_office.get_outer_nodes_from_vba_file(file_path)
-        if not outer_macros:
-            outer_macros = []
-        for outer_macro in outer_macros:
-            start_command.append(f"/m{outer_macro}")
-
-        return subprocess.list2cmdline(start_command)
-
-    def _get_start_command(self, extension, sample, file_path):
-        start_command = None
-
-        if extension == "dll":
-            start_command = self.current_task.payload.get(
-                "start_command", self._get_dll_run_command(sample.content)
-            )
-        elif extension in ["exe", "vbs"]:
-            start_command = "%f"
-        elif d_office.is_office_file(extension):
-            start_command = self._get_office_file_run_command(extension, file_path)
-        elif extension == "ps1":
-            start_command = "powershell.exe -executionpolicy bypass -File %f"
-        else:
-            self.log.info("Unknown file extension - %s", extension)
-            # It's OK to fail on unknown extension
-            return None
-
-        if not start_command:
-            # We should have a start up command at this point
-            self.log.error(
-                "Unable to run malware sample. Could not generate any suitable"
-                " command to run it."
-            )
-        return start_command
 
     def _karton_safe_get_headers(self, task, key, fallback):
         ret = task.headers.get(key, fallback)
@@ -637,13 +564,10 @@ class DrakrunKarton(Karton):
                 self.log.error(f"Raw log line: {result.stdout}")
                 raise e
 
-            if "%f" not in start_command:
-                self.log.warning("No file name in start command")
-            cur_start_command = start_command.replace("%f", injected_fn)
-
             # don't include our internal maintanance commands
-            analysis_info["start_command"] = cur_start_command
-            self.log.info("Using command: %s", cur_start_command)
+            start_command = start_command.replace("%f", injected_fn)
+            analysis_info["start_command"] = start_command
+            self.log.info("Using command: %s", start_command)
 
             if self.net_enable:
                 self.log.info("Setting up network...")
@@ -662,7 +586,7 @@ class DrakrunKarton(Karton):
             drakvuf_cmd = self.build_drakvuf_cmdline(
                 timeout=timeout,
                 cwd=subprocess.list2cmdline([ntpath.dirname(injected_fn)]),
-                full_cmd=cur_start_command,
+                full_cmd=start_command,
                 dump_dir=os.path.join(outdir, "dumps"),
                 ipt_dir=os.path.join(outdir, "ipt"),
                 workdir=workdir,
@@ -733,12 +657,21 @@ class DrakrunKarton(Karton):
 
         # Try to come up with a start command for this file
         # or use the one provided by the sender
-        cmd = self._get_start_command(extension, sample, sample_path)
-
-        start_command = task.payload.get("start_command", cmd)
+        start_command = task.payload.get(
+            "start_command",
+            SampleStartupRouter.get_sample_startup_command(
+                extension, sample, sample_path
+            ),
+        )
         if not start_command:
+            # We should have a start up command at this point
+            self.log.error(
+                "Unable to run malware sample. Could not generate any suitable"
+                " command to run it."
+            )
             return
-        self.log.info("Start command: %s", start_command)
+        if "%f" not in start_command:
+            self.log.warning("No file name in start command")
 
         # If task contains 'custom_hooks' override local defaults
         with open(os.path.join(workdir, "hooks.txt"), "wb") as hooks:

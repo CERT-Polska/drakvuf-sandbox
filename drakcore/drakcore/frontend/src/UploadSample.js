@@ -141,11 +141,11 @@ class UploadSample extends Component {
       : this.state.file.name;
     if (
       !fname.match(
-        /^((?![\\/><|:&])[\x20-\xfe])+\.(?:dll|exe|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm|ps1)$/i
+        /^((?![\\/><|:&])[\x20-\xfe])+\.(?:dll|exe|ps1|bat|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm|ppt|pttx|vbs|js|jse|hta|html|htm)$/i
       )
     ) {
       errMsg =
-        "File name should not contain special characters. Moreover only .dll, .exe, .ps1 and office files are supported.";
+        "File name should not contain special characters and should have one of following extensions: dll, exe, ps1, bat, doc, docm, docx, dotm, xls, xlsx, xlsm, xltx, xltm, ppt, pttx, vbs, js, jse, hta, html, htm";
     }
 
     if (hasCustomStartCmd) {
