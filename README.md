@@ -50,8 +50,6 @@ This project is authored by:
 * Hubert Jasudowicz ([@chivay](https://github.com/chivay)) - chivay@cert.pl
 * Konstanty Cieśliński ([@kscieslinski](https://github.com/kscieslinski)) - konstanty.cieslinski@cert.pl
 
-You can also reach us on IRC - [#drakvuf-sandbox@irc.freenode.net](https://webchat.freenode.net/#drakvuf-sandbox).
-
 If you have any questions about [DRAKVUF](https://drakvuf.com/) engine itself, contact tamas@tklengyel.com
 
 ## Acknowledgements
