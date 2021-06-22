@@ -659,9 +659,7 @@ class DrakrunKarton(Karton):
         # or use the one provided by the sender
         start_command = task.payload.get(
             "start_command",
-            sample_startup.get_sample_startup_command(
-                extension, sample, sample_path
-            ),
+            sample_startup.get_sample_startup_command(extension, sample, sample_path),
         )
         if not start_command:
             # We should have a start up command at this point
