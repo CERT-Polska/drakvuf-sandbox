@@ -40,7 +40,7 @@ from drakrun.util import (
 )
 from drakrun.vm import generate_vm_conf, VirtualMachine
 from drakrun.injector import Injector
-from drakrun.sample_startup import SampleStartupRouter
+import drakrun.sample_startup as sample_startup
 
 
 class LocalLogBuffer(logging.Handler):
@@ -659,7 +659,7 @@ class DrakrunKarton(Karton):
         # or use the one provided by the sender
         start_command = task.payload.get(
             "start_command",
-            SampleStartupRouter.get_sample_startup_command(
+            sample_startup.get_sample_startup_command(
                 extension, sample, sample_path
             ),
         )
