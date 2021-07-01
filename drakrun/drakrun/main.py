@@ -533,6 +533,17 @@ class DrakrunKarton(Karton):
 
         return drakvuf_cmd
 
+    def log_startup_failure(self, log_path):
+        self.log.warning("Injection succeeded but the sample didn't execute properly")
+
+        with open(log_path, "r") as drakvuf_log:
+            # There should be only line line
+            for line in drakvuf_log:
+                entry = json.loads(line)
+                if entry["Plugin"] == "inject":
+                    self.log.info("Injection failed with error: %s", entry["Error"])
+                    break
+
     def analyze_sample(self, sample_path, workdir, outdir, start_command, timeout):
         analysis_info = dict()
 
@@ -598,10 +609,11 @@ class DrakrunKarton(Karton):
                     drakvuf_cmd, stdout=drakmon_log, check=True, timeout=timeout + 60
                 )
             except subprocess.CalledProcessError as e:
-                if e.returncode == 4:
-                    self.log.error(
-                        "Injection succeeded but the sample didn't execute properly. Check drakmon.log for details."
-                    )
+                # see DRAKVUF src/exitcodes.h for more details
+                INJECTION_UNSUCCESSFUL = 4
+
+                if e.returncode == INJECTION_UNSUCCESSFUL:
+                    self.log_startup_failure(drakmon_log_fp)
                 else:
                     raise e
             except subprocess.TimeoutExpired as e:
