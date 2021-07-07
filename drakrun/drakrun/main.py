@@ -614,8 +614,7 @@ class DrakrunKarton(Karton):
 
                 if e.returncode == INJECTION_UNSUCCESSFUL:
                     self.log_startup_failure(drakmon_log_fp)
-                else:
-                    raise e
+                raise e
             except subprocess.TimeoutExpired as e:
                 self.log.exception("DRAKVUF timeout expired")
                 raise e
