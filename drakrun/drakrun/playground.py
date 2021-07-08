@@ -156,6 +156,7 @@ def main():
             "mount": shell.mount,
             "drakvuf": shell.drakvuf,
             "vm": shell.vm,
+            "run": shell.run,
         }
         banner = dedent(
             """
