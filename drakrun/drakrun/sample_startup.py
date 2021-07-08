@@ -15,13 +15,13 @@ def get_sample_startup_command(extension, sample, file_path):
 
     if extension == "dll":
         start_command = get_dll_startup_command(sample.content)
-    elif extension in ["exe", "bat", "vbs"]:
+    elif extension in ["exe", "bat"]:
         start_command = "%f"
     elif extension == "ps1":
         start_command = "powershell.exe -executionpolicy bypass -File %f"
     elif is_office_file(extension):
         start_command = get_office_file_startup_command(extension, file_path)
-    elif extension in ["js", "jse"]:
+    elif extension in ["js", "jse", "vbs"]:
         start_command = "wscript.exe %f"
     elif extension in ["hta", "html", "htm"]:
         start_command = "mshta.exe %f"
