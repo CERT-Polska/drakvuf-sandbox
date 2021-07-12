@@ -1,6 +1,6 @@
 {
   "name": "drakcore",
-  "version": "0.17.0-dev",
+  "version": "0.17.0-rc1",
   "private": true,
   "dependencies": {
     "@novnc/novnc": "^1.2.0",
