@@ -3,7 +3,7 @@
     {
       "type": "qemu",
       "iso_urls": [
-        "https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-10.9.0-amd64-netinst.iso"
+        "https://cdimage.debian.org/debian-cd/10.10.0/amd64/iso-cd/debian-10.10.0-amd64-netinst.iso"
       ],
       "boot_command": [
         "<esc><wait>",
@@ -15,7 +15,7 @@
         "url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg <wait>",
         "<enter><wait>"
       ],
-      "iso_checksum": "sha256:8660593d10de0ce7577c9de4dab886ff540bc9843659c8879d8eea0ab224c109",
+      "iso_checksum": "sha256:c433254a7c5b5b9e6a05f9e1379a0bd6ab3323f89b56537b684b6d1bd1f8b6ad",
       "output_directory": "debian_base",
       "http_directory": ".",
       "shutdown_command": "shutdown -P now",
