@@ -187,8 +187,10 @@ def try_run(
         logging.debug(kwargs)
         raise Exception("Command not found") from e
     except subprocess.CalledProcessError as e:
-        logging.debug("stdout: \n{}".format(e.stdout.decode()))
-        logging.debug("stderr: \n{}".format(e.stderr.decode()))
+        if e.stdout is not None:
+            logging.debug("stdout: \n{}".format(e.stdout.decode()))
+        if e.stderr is not None:
+            logging.debug("stderr: \n{}".format(e.stderr.decode()))
         logging.debug("returncode: {}".format(e.returncode))
         if reraise:
             raise Exception(msg) from e
