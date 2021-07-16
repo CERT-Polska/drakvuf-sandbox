@@ -519,7 +519,7 @@ def install(
 def send_usage_report(report):
     try:
         res = requests.post(
-            "https://drakvuf.icedev.pl/usage/draksetup", json=report, timeout=5
+            "https://drakvuf.cert.pl/usage/draksetup", json=report, timeout=5
         )
         res.raise_for_status()
     except RequestException:
