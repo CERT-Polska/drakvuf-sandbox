@@ -802,8 +802,10 @@ def create_missing_profiles():
     # restore vm-1
     out_interface = conf["drakrun"].get("out_interface", "")
     dns_server = conf["drakrun"].get("dns_server", "")
-    backend = get_storage_backend(InstallInfo.load())
+    install_info = IntallInfo.load()
+    backend = get_storage_backend(install_info)
 
+    generate_vm_conf(install_info, 1)
     setup_vm_network(
         vm_id=1, net_enable=False, out_interface=out_interface, dns_server=dns_server
     )
