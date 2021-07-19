@@ -112,6 +112,11 @@ def stop_dnsmasq(vm_id: int):
             log.info(f"dnsmasq-vm{vm_id} is already stopped")
 
 
+def interface_exists(iface: str) -> bool:
+    proc = subprocess.run(["ip", "link", "show", iface], capture_output=True)
+    return proc.returncode == 0
+
+
 def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server: str):
     try:
         subprocess.check_output(
@@ -142,6 +147,9 @@ def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server
     add_iptable_rule(f"INPUT -i drak{vm_id} -d 0.0.0.0/0 -j DROP")
 
     if net_enable:
+        if not interface_exists(out_interface):
+            raise ValueError(f"Invalid network interface: {repr(out_interface)}")
+
         with open("/proc/sys/net/ipv4/ip_forward", "w") as f:
             f.write("1\n")
 
