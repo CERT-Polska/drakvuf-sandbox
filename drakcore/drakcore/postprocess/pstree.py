@@ -1,10 +1,10 @@
 import logging
 import json
+import shlex
 from pathlib import PureWindowsPath
 from karton.core import Task, RemoteResource
 from io import BytesIO
 from typing import Dict
-
 
 class MultipleProcessesReturned(Exception):
     def __init__(self, processes):
@@ -127,28 +127,9 @@ def parse_running_process_entry(pstree, entry):
 
 
 def split_commandline(cmdline):
-    # Substitute multiple spaces with single space.
-    cmdline = " ".join(cmdline.split())
-    args = []
-    pos = 0
-    while pos < len(cmdline):
-        if cmdline[pos] == '"':
-            end = cmdline.find('"', pos + 1)
-            assert end != -1
-            args.append(cmdline[pos + 1 : end])
-            pos = end + 2
-            continue
-        else:
-            end = cmdline.find(" ", pos + 1)
-            if end == -1:
-                args.append(cmdline[pos:])
-                break
-            else:
-                args.append(cmdline[pos:end])
-                pos = end + 1
-    # Procmon escapes arguments – revert.
-    args = [arg.encode().decode("unicode_escape") for arg in args]
-    return args
+    # Procmon plugin performs extra cmdline encoding.
+    cmdline = cmdline.encode().decode("unicode_escape")
+    return shlex.split(cmdline, posix=False)
 
 
 def parse_nt_create_user_process_entry(pstree, entry):
