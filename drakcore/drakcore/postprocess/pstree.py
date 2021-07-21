@@ -109,7 +109,7 @@ def parse_running_process_entry(pstree, entry):
         parent = Process(
             pid=entry["PPID"],
             procname="Mocked parent",
-            ts_from=0,  # We don't know when the process was created.
+            ts_from=0.0,  # We don't know when the process was created.
             # But we know it is not longer alive.
             ts_to=float(entry["TimeStamp"]),
         )
@@ -117,7 +117,7 @@ def parse_running_process_entry(pstree, entry):
     p = Process(
         pid=entry["PID"],
         procname=entry["RunningProcess"],
-        ts_from=0,  # We don't know when the process was created.
+        ts_from=0.0,  # We don't know when the process was created.
         # At this point, we don't know yet when the process will be terminated.
         ts_to=None,
         parent=parent,
