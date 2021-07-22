@@ -217,8 +217,15 @@ def parse_mm_clean_process_address_space_entry(
 
 def tree_from_log(file: TextIO) -> List[Dict[str, Any]]:
     pstree = ProcessTree()
+    prev_line = None
     for line in file:
         try:
+            if line == prev_line:
+                # There is still some unfixed bug in drakvuf, that duplicates some entries.
+                # Just ignore the duplicate.
+                continue
+            prev_line = line
+
             entry = json.loads(line)
             if "RunningProcess" in entry:
                 # Process has been created before the analysis started.
