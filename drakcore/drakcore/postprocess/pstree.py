@@ -129,7 +129,13 @@ def parse_running_process_entry(pstree: ProcessTree, entry: Dict[str, Any]) -> N
 def split_commandline(cmdline: str) -> [str]:
     # Procmon plugin performs extra cmdline encoding.
     cmdline = cmdline.encode().decode("unicode_escape")
-    return shlex.split(cmdline, posix=False)
+    try:
+        return shlex.split(cmdline, posix=False)
+    except Exception:
+        # If we fail to parse cmdline, wrap it into list, so we don't
+        # loose any information.
+        logging.info("Failed to convert commandline to args")
+        return [cmdline]
 
 
 def parse_nt_create_user_process_entry(
