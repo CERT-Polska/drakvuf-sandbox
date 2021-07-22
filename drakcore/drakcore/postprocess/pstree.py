@@ -4,19 +4,7 @@ import shlex
 from pathlib import PureWindowsPath
 from karton.core import Task, RemoteResource
 from io import BytesIO
-from typing import Dict
-
-class MultipleProcessesReturned(Exception):
-    def __init__(self, processes):
-        processs_str = ", ".join([str(p) for p in processes])
-        message = f"More than one proces fulfills condition: {processs_str}"
-        super().__init__(message)
-
-
-class MissingParentProcessError(Exception):
-    def __init__(self, process):
-        message = f"Cannot find parent process of {process}"
-        super().__init__(message)
+from typing import Dict, List, Optional, Any, TextIO
 
 
 class Process:
@@ -42,16 +30,16 @@ class Process:
 
 class ProcessTree:
     def __init__(self):
-        self.processes = []
+        self.processes: List[Process] = []
 
-    def add_process(self, p):
+    def add_process(self, p: Process) -> None:
         processes = self.get_processes(p.pid, p.ts_from, p.ts_from)
         if len(processes) != 0:
             raise MultipleProcessesReturned(processes)
 
         self.processes.append(p)
 
-    def get_processes(self, pid, ts_from, ts_to):
+    def get_processes(self, pid: int, ts_from: float, ts_to: float) -> List[Process]:
         """
         Retrieves all processes with given pid that were alive in provided time period: [ts_from, ts_to].
         """
@@ -65,7 +53,7 @@ class ProcessTree:
                 processes.append(p)
         return processes
 
-    def get_single_process(self, pid, ts_from, ts_to):
+    def get_single_process(self, pid, ts_from, ts_to) -> Optional[Process]:
         """
         Retrieves process with given pid that was alive in provided time period.
         Fails if there is more than 1 process that fulfills this condidions.
@@ -76,7 +64,7 @@ class ProcessTree:
         return next(iter(processes), None)
 
     def __str__(self):
-        def print_tree_rec(depth, root):
+        def print_tree_rec(depth: int, root: Process) -> str:
             res = "\t" * depth + str(root) + "\n"
             res += "".join([print_tree_rec(depth + 1, c) for c in root.children])
             return res
@@ -85,8 +73,8 @@ class ProcessTree:
         subtrees = [print_tree_rec(0, r) for r in roots]
         return "\n".join(subtrees)
 
-    def as_dict(self):
-        def tree_as_dict(root):
+    def as_dict(self) -> List[Dict[str, Any]]:
+        def tree_as_dict(root) -> Dict[str, Any]:
             subtrees = [tree_as_dict(c) for c in root.children]
             return {
                 "pid": root.pid,
@@ -102,7 +90,20 @@ class ProcessTree:
         return root_subtrees
 
 
-def parse_running_process_entry(pstree, entry):
+class MultipleProcessesReturned(Exception):
+    def __init__(self, processes: List[Process]):
+        processs_str = ", ".join([str(p) for p in processes])
+        message = f"More than one proces fulfills condition: {processs_str}"
+        super().__init__(message)
+
+
+class MissingParentProcessError(Exception):
+    def __init__(self, process: Process):
+        message = f"Cannot find parent process of {process}"
+        super().__init__(message)
+
+
+def parse_running_process_entry(pstree: ProcessTree, entry: Dict[str, Any]) -> None:
     parent = pstree.get_single_process(entry["PPID"], 0, float(entry["TimeStamp"]))
     if parent is None:
         # Running processes might have parents that we don't have any information about. Mock them.
@@ -126,13 +127,13 @@ def parse_running_process_entry(pstree, entry):
     pstree.add_process(p)
 
 
-def split_commandline(cmdline):
+def split_commandline(cmdline: str) -> [str]:
     # Procmon plugin performs extra cmdline encoding.
     cmdline = cmdline.encode().decode("unicode_escape")
     return shlex.split(cmdline, posix=False)
 
 
-def parse_nt_create_user_process_entry(pstree, entry):
+def parse_nt_create_user_process_entry(pstree: ProcessTree, entry: Dict[Any]) -> None:
     # NtCreateUserProcess method is used to create processes from Vista+.
     if int(entry["Status"], 16) != 0:
         # Ignore unsuccessful entries.
@@ -156,7 +157,9 @@ def parse_nt_create_user_process_entry(pstree, entry):
     pstree.add_process(p)
 
 
-def parse_nt_create_process_ex_entry(pstree, entry):
+def parse_nt_create_process_ex_entry(
+    pstree: ProcessTree, entry: Dict[str, Any]
+) -> None:
     # NtCreateProcessEx method was used to create processes up to Windows XP.
     if int(entry["Status"], 16) != 0:
         # Ignore unsuccessful entries.
@@ -179,7 +182,9 @@ def parse_nt_create_process_ex_entry(pstree, entry):
     pstree.add_process(p)
 
 
-def parse_nt_terminate_process_entry(pstree, entry):
+def parse_nt_terminate_process_entry(
+    pstree: ProcessTree, entry: Dict[str, Any]
+) -> None:
     pid = entry["ExitPid"] if entry["ExitPid"] != 0 else entry["PID"]
     p = pstree.get_single_process(
         pid, float(entry["TimeStamp"]), float(entry["TimeStamp"])
@@ -190,7 +195,9 @@ def parse_nt_terminate_process_entry(pstree, entry):
     p.ts_to = float(entry["TimeStamp"])
 
 
-def parse_mm_clean_process_address_space_entry(pstree, entry):
+def parse_mm_clean_process_address_space_entry(
+    pstree: ProcessTree, entry: Dict[str, Any]
+) -> None:
     pid = entry["ExitPid"]
     p = pstree.get_single_process(
         pid, float(entry["TimeStamp"]), float(entry["TimeStamp"])
@@ -201,7 +208,7 @@ def parse_mm_clean_process_address_space_entry(pstree, entry):
     p.ts_to = float(entry["TimeStamp"])
 
 
-def tree_from_log(file):
+def tree_from_log(file: TextIO) -> List[Dict[str, Any]]:
     pstree = ProcessTree()
     for line in file:
         try:
