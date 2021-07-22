@@ -5,24 +5,23 @@ from pathlib import PureWindowsPath
 from karton.core import Task, RemoteResource
 from io import BytesIO
 from typing import Dict, List, Optional, Any, TextIO
+from dataclasses import dataclass, field
 
 
+@dataclass
 class Process:
     """
     Process is uniquely identified by pid + ts_from + ts_to, as there can be only one
     process with selected `pid` value at a time.
     """
 
-    def __init__(
-        self, pid, procname="Unnamed", ts_from=None, ts_to=None, parent=None, args=[]
-    ):
-        self.pid = pid
-        self.procname = procname
-        self.args = args
-        self.ts_from = ts_from
-        self.ts_to = ts_to
-        self.parent = parent
-        self.children = []
+    pid: int
+    procname: str = "Unnamed"
+    args: List[str] = field(default_factory=list)
+    ts_from: Optional[float] = None
+    ts_to: Optional[float] = None
+    parent: Optional["Process"] = None
+    children: List["Process"] = field(default_factory=list)
 
     def __str__(self):
         return f"{PureWindowsPath(self.procname).name}({self.pid}) {self.args}"
@@ -133,7 +132,9 @@ def split_commandline(cmdline: str) -> [str]:
     return shlex.split(cmdline, posix=False)
 
 
-def parse_nt_create_user_process_entry(pstree: ProcessTree, entry: Dict[Any]) -> None:
+def parse_nt_create_user_process_entry(
+    pstree: ProcessTree, entry: Dict[str, Any]
+) -> None:
     # NtCreateUserProcess method is used to create processes from Vista+.
     if int(entry["Status"], 16) != 0:
         # Ignore unsuccessful entries.
