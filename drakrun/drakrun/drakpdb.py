@@ -19,16 +19,16 @@ DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 def dll_pair(name: str, extension: str = "dll") -> List[DLL]:
     return [
         DLL(f"Windows/System32/{name}.{extension}", f"{name}_profile", None),
-        DLL(f"Windows/SysWOW64/{name}.{extension}", f"wow_{name}_profile", None),
+        DLL(f"Windows/SysWOW64/{name}.{extension}", f"x86_{name}_profile", None),
     ]
 
 
 # something is wrong if these DLLs fail
 compulsory_dll_file_list = [
-    DLL("Windows/SysWOW64/ntdll.dll", "wow_ntdll_profile", "--json-wow"),
+    DLL("Windows/SysWOW64/ntdll.dll", "x86_ntdll_profile", "--json-wow"),
     DLL("Windows/System32/win32k.sys", "win32k_profile", "--json-win32k"),
     DLL("Windows/System32/kernel32.dll", "kernel32_profile", "--json-kernel32"),
-    DLL("Windows/SysWOW64/kernel32.dll", "wow_kernel32_profile", "--json-wow-kernel32"),
+    DLL("Windows/SysWOW64/kernel32.dll", "x86_kernel32_profile", "--json-wow-kernel32"),
     DLL("Windows/System32/ntdll.dll", "ntdll_profile", "--json-ntdll"),
 ]
 
@@ -38,12 +38,12 @@ dll_file_list = [
     DLL("Windows/System32/sspicli.dll", "sspicli_profile", "--json-sspicli"),
     DLL("Windows/System32/KernelBase.dll", "kernelbase_profile", "--json-kernelbase"),
     DLL("Windows/System32/IPHLPAPI.DLL", "iphlpapi_profile", "--json-iphlpapi"),
-    DLL("Windows/SysWOW64/IPHLPAPI.DLL", "wow_iphlpapi_profile", None),
+    DLL("Windows/SysWOW64/IPHLPAPI.DLL", "x86_iphlpapi_profile", None),
     DLL("Windows/System32/mpr.dll", "mpr_profile", "--json-mpr"),
-    DLL("Windows/SysWOW64/mpr.dll", "wow_mpr_profile", None),
+    DLL("Windows/SysWOW64/mpr.dll", "x86_mpr_profile", None),
     # Don't use DRAKVUF arguments, they're used by wmimon which is compiled out
     # DLL("Windows/System32/ole32.dll", "ole32_profile", "--json-ole32"),
-    # DLL("Windows/SysWOW64/ole32.dll", "wow_ole32_profile", "--json-wow-ole32"),
+    # DLL("Windows/SysWOW64/ole32.dll", "x86_ole32_profile", "--json-wow-ole32"),
     *dll_pair("ole32"),
     DLL("Windows/System32/combase.dll", "combase_profile", None),
     DLL(
@@ -58,12 +58,12 @@ dll_file_list = [
     ),
     DLL(
         "Windows/winsxs/x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll",
-        "gdiplus_profile",
+        "x86_gdiplus_profile",
         None,
     ),
     DLL(
         "Windows/winsxs/amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll",
-        "wow_gdiplus_profile",
+        "gdiplus_profile",
         None,
     ),
     *dll_pair("Wldap32"),
