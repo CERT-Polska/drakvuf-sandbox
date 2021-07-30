@@ -24,11 +24,11 @@ sys.path.insert(0, os.path.abspath('../drakrun'))
 # -- Project information -----------------------------------------------------
 
 project = 'DRAKVUF Sandbox'
-copyright = '2020, CERT Polska'
+copyright = '2021, CERT Polska'
 author = 'CERT Polska'
 
 # The full version, including alpha/beta/rc tags
-release = 'v0.17.0-rc1'
+release = 'v0.17.0'
 
 latex_engine = 'xelatex'
 
