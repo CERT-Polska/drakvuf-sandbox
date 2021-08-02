@@ -11,7 +11,7 @@ from pefile import PE, DEBUG_TYPE
 from construct import Struct, Const, Bytes, Int32ul, Int16ul, CString, EnumIntegerString
 from requests import HTTPError
 from tqdm import tqdm
-from typing import NamedTuple, Optional, List
+from typing import NamedTuple, Optional
 
 DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 
