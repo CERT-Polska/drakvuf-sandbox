@@ -46,12 +46,9 @@ dll_file_list = [
         "--json-kernelbase",
     ),
     DLL("Windows/System32/IPHLPAPI.DLL", "amd64_iphlpapi_profile", "--json-iphlpapi"),
-    DLL("Windows/SysWOW64/IPHLPAPI.DLL", "wow64_iphlpapi_profile", None),
+    DLL("Windows/SysWOW64/IPHLPAPI.DLL", "x86_iphlpapi_profile", None),
     DLL("Windows/System32/mpr.dll", "amd64_mpr_profile", "--json-mpr"),
-    DLL("Windows/SysWOW64/mpr.dll", "wow64_wow_mpr_profile", None),
-    # Don't use DRAKVUF arguments, they're used by wmimon which is compiled out
-    # DLL("Windows/System32/ole32.dll", "ole32_profile", "--json-ole32"),
-    # DLL("Windows/SysWOW64/ole32.dll", "x86_ole32_profile", "--json-wow-ole32"),
+    DLL("Windows/SysWOW64/mpr.dll", "x86_mpr_profile", None),
     *dll_pair("ole32"),
     DLL("Windows/System32/combase.dll", "amd64_combase_profile", None),
     DLL(
