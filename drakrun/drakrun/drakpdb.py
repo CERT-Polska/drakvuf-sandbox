@@ -42,8 +42,8 @@ dll_file_list = [
     DLL("Windows/SysWOW64/IPHLPAPI.DLL", "x86_iphlpapi_profile", None),
     DLL("Windows/System32/mpr.dll", "amd64_mpr_profile", "--json-mpr"),
     DLL("Windows/SysWOW64/mpr.dll", "x86_mpr_profile", None),
-    DLL("Windows/SysWOW64/ole32.dll", "x86_ole32_profile", None),
     DLL("Windows/System32/ole32.dll", "amd64_ole32_profile", None),
+    DLL("Windows/SysWOW64/ole32.dll", "x86_ole32_profile", None),
     # wasn't able to find this file in our snapshot - should be investigated
     # at some point
     DLL("Windows/System32/combase.dll", "amd64_combase_profile", None),
@@ -59,13 +59,13 @@ dll_file_list = [
         "--json-mscorwks",
     ),
     DLL(
-        "Windows/winsxs/x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll",
-        "x86_gdiplus_profile",
+        "Windows/winsxs/amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll",
+        "amd64_gdiplus_profile",
         None,
     ),
     DLL(
-        "Windows/winsxs/amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll",
-        "amd64_gdiplus_profile",
+        "Windows/winsxs/x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll",
+        "x86_gdiplus_profile",
         None,
     ),
     DLL("Windows/System32/Wldap32.dll", "amd64_Wldap32_profile", None),
