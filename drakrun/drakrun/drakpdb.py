@@ -30,7 +30,7 @@ compulsory_dll_file_list = [
     DLL("Windows/System32/kernel32.dll", "amd64_kernel32_profile", "--json-kernel32"),
     DLL(
         "Windows/SysWOW64/kernel32.dll",
-        "wow64_wow_kernel32_profile",
+        "wow64_kernel32_profile",
         "--json-wow-kernel32",
     ),
     DLL("Windows/System32/ntdll.dll", "amd64_ntdll_profile", "--json-ntdll"),
