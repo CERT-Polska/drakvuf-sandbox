@@ -47,6 +47,7 @@ dll_file_list = [
     # wasn't able to find this file in our snapshot - should be investigated
     # at some point
     DLL("Windows/System32/combase.dll", "amd64_combase_profile", None),
+    # .NET DLLs aren't present in winsxs and are 32-bit, use x86_prefix
     DLL(
         "Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll",
         "x86_clr_profile",
