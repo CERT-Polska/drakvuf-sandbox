@@ -18,42 +18,42 @@ DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 
 def dll_pair(name: str, extension: str = "dll") -> List[DLL]:
     return [
-        DLL(f"Windows/System32/{name}.{extension}", f"{name}_profile", None),
-        DLL(f"Windows/SysWOW64/{name}.{extension}", f"x86_{name}_profile", None),
+        DLL(f"Windows/System32/{name}.{extension}", f"amd64_{name}_profile", None),
+        DLL(f"Windows/SysWOW64/{name}.{extension}", f"wow64_{name}_profile", None),
     ]
 
 
 # something is wrong if these DLLs fail
 compulsory_dll_file_list = [
-    DLL("Windows/SysWOW64/ntdll.dll", "x86_ntdll_profile", "--json-wow"),
-    DLL("Windows/System32/win32k.sys", "win32k_profile", "--json-win32k"),
-    DLL("Windows/System32/kernel32.dll", "kernel32_profile", "--json-kernel32"),
-    DLL("Windows/SysWOW64/kernel32.dll", "x86_kernel32_profile", "--json-wow-kernel32"),
-    DLL("Windows/System32/ntdll.dll", "ntdll_profile", "--json-ntdll"),
+    DLL("Windows/SysWOW64/ntdll.dll", "wow64_ntdll_profile", "--json-wow"),
+    DLL("Windows/System32/win32k.sys", "amd64_win32k_profile", "--json-win32k"),
+    DLL("Windows/System32/kernel32.dll", "amd64_kernel32_profile", "--json-kernel32"),
+    DLL("Windows/SysWOW64/kernel32.dll", "wow64_wow_kernel32_profile", "--json-wow-kernel32"),
+    DLL("Windows/System32/ntdll.dll", "amd64_ntdll_profile", "--json-ntdll"),
 ]
 
 # profile file list, without 'C:\' and with '/' instead of '\'
 dll_file_list = [
-    DLL("Windows/System32/drivers/tcpip.sys", "tcpip_profile", "--json-tcpip"),
-    DLL("Windows/System32/sspicli.dll", "sspicli_profile", "--json-sspicli"),
-    DLL("Windows/System32/KernelBase.dll", "kernelbase_profile", "--json-kernelbase"),
-    DLL("Windows/System32/IPHLPAPI.DLL", "iphlpapi_profile", "--json-iphlpapi"),
-    DLL("Windows/SysWOW64/IPHLPAPI.DLL", "x86_iphlpapi_profile", None),
-    DLL("Windows/System32/mpr.dll", "mpr_profile", "--json-mpr"),
-    DLL("Windows/SysWOW64/mpr.dll", "x86_mpr_profile", None),
+    DLL("Windows/System32/drivers/tcpip.sys", "amd64_tcpip_profile", "--json-tcpip"),
+    DLL("Windows/System32/sspicli.dll", "amd64_sspicli_profile", "--json-sspicli"),
+    DLL("Windows/System32/KernelBase.dll", "amd64_kernelbase_profile", "--json-kernelbase"),
+    DLL("Windows/System32/IPHLPAPI.DLL", "amd64_iphlpapi_profile", "--json-iphlpapi"),
+    DLL("Windows/SysWOW64/IPHLPAPI.DLL", "wow64_iphlpapi_profile", None),
+    DLL("Windows/System32/mpr.dll", "amd64_mpr_profile", "--json-mpr"),
+    DLL("Windows/SysWOW64/mpr.dll", "wow64_wow_mpr_profile", None),
     # Don't use DRAKVUF arguments, they're used by wmimon which is compiled out
     # DLL("Windows/System32/ole32.dll", "ole32_profile", "--json-ole32"),
     # DLL("Windows/SysWOW64/ole32.dll", "x86_ole32_profile", "--json-wow-ole32"),
     *dll_pair("ole32"),
-    DLL("Windows/System32/combase.dll", "combase_profile", None),
+    DLL("Windows/System32/combase.dll", "amd64_combase_profile", None),
     DLL(
         "Windows/Microsoft.NET/Framework/v4.0.30319/clr.dll",
-        "clr_profile",
+        "amd64_clr_profile",
         "--json-clr",
     ),
     DLL(
         "Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll",
-        "mscorwks_profile",
+        "amd64_mscorwks_profile",
         "--json-mscorwks",
     ),
     DLL(
@@ -63,7 +63,7 @@ dll_file_list = [
     ),
     DLL(
         "Windows/winsxs/amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll",
-        "gdiplus_profile",
+        "amd64_gdiplus_profile",
         None,
     ),
     *dll_pair("Wldap32"),
