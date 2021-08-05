@@ -556,6 +556,16 @@ class DrakrunKarton(Karton):
             drakmon_log_fp, "wb"
         ) as drakmon_log:
 
+            # Pause VM and do pre-sample RAM dump
+            self.log.info("Launching vmi-dump-memory pre_sample_dump...")
+            try:
+                dump_args = ["vmi-dump-memory", f"{vm.vm_name}", "/tmp/drakrun/pre_sample_dump"]
+                subprocess.run(dump_args, check=True)
+            except subprocess.CalledProcessError as e:
+                self.log.error("vmi-dump-memory pre_sample_dump failed.")
+                raise e
+            self.log.info("vmi-dump-memory pre_sample_dump succeeded.")
+
             analysis_info["snapshot_version"] = vm.backend.get_vm0_snapshot_time()
 
             kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
@@ -618,6 +628,16 @@ class DrakrunKarton(Karton):
             except subprocess.TimeoutExpired as e:
                 self.log.exception("DRAKVUF timeout expired")
                 raise e
+
+            # Pause VM and do post-sample RAM dump
+            self.log.info("Launching vmi-dump-memory post_sample_dump...")
+            try:
+                dump_args = ["vmi-dump-memory", f"{vm.vm_name}", "/tmp/drakrun/post_sample_dump"]
+                subprocess.run(dump_args, check=True)
+            except subprocess.CalledProcessError as e:
+                self.log.error("vmi-dump-memory post_sample_dump failed.")
+                raise e
+            self.log.info("vmi-dump-memory post_sample_dump succeeded.")
 
         return analysis_info
 
