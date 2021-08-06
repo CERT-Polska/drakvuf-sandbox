@@ -614,7 +614,9 @@ class DrakrunKarton(Karton):
 
                 if e.returncode == INJECTION_UNSUCCESSFUL:
                     self.log_startup_failure(drakmon_log_fp)
-                raise e
+                else:
+                    # Something bad happened
+                    raise e
             except subprocess.TimeoutExpired as e:
                 self.log.exception("DRAKVUF timeout expired")
                 raise e
@@ -712,7 +714,7 @@ class DrakrunKarton(Karton):
             except Exception:
                 self.log.exception("Analysis attempt failed. Retrying...")
         else:
-            self.log.error(f"Giving up after {max_attempts} failures...")
+            self.log.warning(f"Giving up after {max_attempts} failures...")
             return
 
         self.log.info("Analysis done. Collecting artifacts...")
