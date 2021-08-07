@@ -189,19 +189,6 @@ def parse_nt_create_process_ex_entry(
     pstree.add_process(p)
 
 
-def parse_nt_terminate_process_entry(
-    pstree: ProcessTree, entry: Dict[str, Any]
-) -> None:
-    pid = entry["ExitPid"] if entry["ExitPid"] != 0 else entry["PID"]
-    p = pstree.get_single_process(
-        pid, float(entry["TimeStamp"]), float(entry["TimeStamp"])
-    )
-    if p is None:
-        # ExitProcess might call TerminateProcess twice, so maybe we had already marked it.
-        return
-    p.ts_to = float(entry["TimeStamp"])
-
-
 def parse_mm_clean_process_address_space_entry(
     pstree: ProcessTree, entry: Dict[str, Any]
 ) -> None:
@@ -236,9 +223,6 @@ def tree_from_log(file: TextIO) -> List[Dict[str, Any]]:
             elif "Method" in entry and entry["Method"] == "NtCreateProcessEx":
                 # Process has been created after the analysis started.
                 parse_nt_create_process_ex_entry(pstree, entry)
-            elif "Method" in entry and entry["Method"] == "NtTerminateProcess":
-                # Process has been terminated. This can be deleted once MmCleanProcessAddressSpace will be added to procmon.
-                parse_nt_terminate_process_entry(pstree, entry)
             elif "Method" in entry and entry["Method"] == "MmCleanProcessAddressSpace":
                 # Process has been terminated.
                 parse_mm_clean_process_address_space_entry(pstree, entry)
