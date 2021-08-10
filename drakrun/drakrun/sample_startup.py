@@ -44,13 +44,14 @@ def get_office_file_startup_command(extension, file_path):
         return None
     start_command.extend(["/t", "%f"])
 
-    vbaparser = VBA_Parser(file_path)
-    if vbaparser.detect_vba_macros():
-        outer_macros = get_outer_nodes_from_vba_file(file_path)
-        if not outer_macros:
-            outer_macros = []
-        for outer_macro in outer_macros:
-            start_command.append(f"/m{outer_macro}")
+    if file_type_allows_macros(extension):
+        vbaparser = VBA_Parser(file_path)
+        if vbaparser.detect_vba_macros():
+            outer_macros = get_outer_nodes_from_vba_file(file_path)
+            if not outer_macros:
+                outer_macros = []
+            for outer_macro in outer_macros:
+                start_command.append(f"/m{outer_macro}")
 
     return subprocess.list2cmdline(start_command)
 
@@ -82,6 +83,10 @@ def get_dll_startup_command(pe_data):
             return "rundll32 %f,#{}".format(export[0])
 
     return "regsvr32 /s %f"
+
+
+def file_type_allows_macros(extension):
+    return extension in ["docm", "dotm", "xls", "xlsm", "xltm", "pptx"]
 
 
 def is_office_word_file(extension):
