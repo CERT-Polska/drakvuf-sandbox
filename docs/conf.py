@@ -28,7 +28,7 @@ copyright = '2021, CERT Polska'
 author = 'CERT Polska'
 
 # The full version, including alpha/beta/rc tags
-release = 'v0.17.1'
+release = 'v0.17.2'
 
 latex_engine = 'xelatex'
 
