@@ -544,6 +544,20 @@ class DrakrunKarton(Karton):
                     self.log.info("Injection failed with error: %s", entry["Error"])
                     break
 
+    def _memory_dump(self, vm_name, dump_path, dump_name):
+        label = f"{self.analysis_uid}_{dump_name}"
+        dump_fp = os.path.join(dump_path, f"{label}")
+        task = f"memory dump {label} of {vm_name}"
+        try:
+            self.log.info(f"starting {task}...")
+            dump_args = ["vmi-dump-memory", f"{vm_name}", f"{dump_fp}"]
+            subprocess.run(dump_args, check=True)
+        except subprocess.CalledProcessError as e:
+            self.log.error(f"{task} failed.")
+            raise e
+        self.log.info(f"{task} succeeded.")
+
+
     def analyze_sample(self, sample_path, workdir, outdir, start_command, timeout):
         analysis_info = dict()
 
@@ -556,15 +570,8 @@ class DrakrunKarton(Karton):
             drakmon_log_fp, "wb"
         ) as drakmon_log:
 
-            # Pause VM and do pre-sample RAM dump
-            self.log.info("Launching vmi-dump-memory pre_sample_dump...")
-            try:
-                dump_args = ["vmi-dump-memory", f"{vm.vm_name}", "/tmp/drakrun/pre_sample_dump"]
-                subprocess.run(dump_args, check=True)
-            except subprocess.CalledProcessError as e:
-                self.log.error("vmi-dump-memory pre_sample_dump failed.")
-                raise e
-            self.log.info("vmi-dump-memory pre_sample_dump succeeded.")
+            memory_dump_path = self.config.config["drakrun"].get("memory_dump_path", "/tmp/drakrun")
+            self._memory_dump(vm.vm_name, memory_dump_path, "before_sample")
 
             analysis_info["snapshot_version"] = vm.backend.get_vm0_snapshot_time()
 
@@ -629,15 +636,7 @@ class DrakrunKarton(Karton):
                 self.log.exception("DRAKVUF timeout expired")
                 raise e
 
-            # Pause VM and do post-sample RAM dump
-            self.log.info("Launching vmi-dump-memory post_sample_dump...")
-            try:
-                dump_args = ["vmi-dump-memory", f"{vm.vm_name}", "/tmp/drakrun/post_sample_dump"]
-                subprocess.run(dump_args, check=True)
-            except subprocess.CalledProcessError as e:
-                self.log.error("vmi-dump-memory post_sample_dump failed.")
-                raise e
-            self.log.info("vmi-dump-memory post_sample_dump succeeded.")
+            self._memory_dump(vm.vm_name, memory_dump_path, "after_sample")
 
         return analysis_info
 
