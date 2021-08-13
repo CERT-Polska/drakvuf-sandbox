@@ -545,25 +545,23 @@ class DrakrunKarton(Karton):
                     self.log.info("Injection failed with error: %s", entry["Error"])
                     break
 
-    def _memory_dump(self, vm_name, dump_path, dump_name):
-        label = f"{self.analysis_uid}_{dump_name}"
-        dump_fp = os.path.join(dump_path, f"{label}")
-        task = f"memory dump {label} of {vm_name}"
+    def _memory_dump(self, vm_name, dump_path, dump_filename):
+        dump_fp = os.path.join(dump_path, f"{dump_filename}")
+        self.log.info(f"dumping raw memory from {vm_name} guest to {dump_filename}...")
         try:
-            self.log.info(f"starting {task}...")
-            dump_args = ["vmi-dump-memory", f"{vm_name}", f"{dump_fp}"]
+            dump_args = ["vmi-dump-memory", f"{vm_name}", dump_fp]
             subprocess.run(dump_args, check=True)
         except subprocess.CalledProcessError as e:
-            self.log.error(f"{task} failed.")
+            self.log.error(f"raw memory dump from {vm_name} failed.")
             raise e
-        self.log.info(f"{task} succeeded.")
-
+        self.log.info(f"raw memory dump from {vm_name} succeeded.")
 
     def analyze_sample(self, sample_path, workdir, outdir, start_command, timeout):
         analysis_info = dict()
 
         dns_server = self.config.config["drakrun"].get("dns_server", "8.8.8.8")
         drakmon_log_fp = os.path.join(outdir, "drakmon.log")
+        raw_memory_dump = self.config.config["drakrun"].getboolean("raw_memory_dump", fallback=False)
 
         with self.run_vm() as vm, graceful_exit(
             start_dnsmasq(self.instance_id, dns_server)
@@ -571,8 +569,8 @@ class DrakrunKarton(Karton):
             drakmon_log_fp, "wb"
         ) as drakmon_log:
 
-            memory_dump_path = self.config.config["drakrun"].get("memory_dump_path", "/tmp/drakrun")
-            self._memory_dump(vm.vm_name, memory_dump_path, "before_sample")
+            if raw_memory_dump:
+                self._memory_dump(vm.vm_name, outdir, "memory_dump_pre_sample.raw")
 
             analysis_info["snapshot_version"] = vm.backend.get_vm0_snapshot_time()
 
@@ -639,7 +637,8 @@ class DrakrunKarton(Karton):
                 self.log.exception("DRAKVUF timeout expired")
                 raise e
 
-            self._memory_dump(vm.vm_name, memory_dump_path, "after_sample")
+            if raw_memory_dump:
+                self._memory_dump(vm.vm_name, outdir, "memory_dump_post_sample.raw")
 
         return analysis_info
 
