@@ -137,7 +137,7 @@ def drakmon_vm():
             logging.info("Uploading %s", d)
             c.put(d)
 
-        c.run("apt update -y")
+        c.run("apt-get --allow-releaseinfo-change update")
 
         apt_install(c, DRAKVUF_DEPS)
 
