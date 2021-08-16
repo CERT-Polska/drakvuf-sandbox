@@ -6,7 +6,7 @@ steps:
 - name: black check
   image: cytopia/black:latest-release-0.3
   commands:
-    - python3 -m black --check --diff drakrun/
+    - python3 -m black --check --diff drakcore/
 - name: flake8 drakcore
   image: python:3.8-buster
   commands:
@@ -33,7 +33,7 @@ steps:
 - name: black check
   image: cytopia/black:latest-release-0.3
   commands:
-    - python3 -m black --check --diff drakcore/
+    - python3 -m black --check --diff drakrun/
 - name: lint drakrun
   image: python:3.8-buster
   commands:
