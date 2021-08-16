@@ -137,7 +137,7 @@ def drakmon_vm():
             logging.info("Uploading %s", d)
             c.put(d)
 
-        c.run("apt-get update")
+        c.run("apt update -y")
 
         apt_install(c, DRAKVUF_DEPS)
 
