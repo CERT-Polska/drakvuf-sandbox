@@ -508,10 +508,12 @@ def main():
     parser.add_argument(
         "action",
         type=str,
-        help="one of: fetch_pdb (requires --pdb-name), parse_pdb (requires --pdb-name and --guid_age), pdb_guid (requires --file)",
+        help="one of: fetch_pdb (requires --pdb-name and --guid_age), parse_pdb (requires --pdb-name), pdb_guid (requires --file)",
     )
     parser.add_argument(
-        "--pdb_name", type=str, help="name of pdb file without extension, e.g. ntkrnlmp"
+        "--pdb_name",
+        type=str,
+        help="name of pdb file with extension, e.g. ntkrnlmp.pdb",
     )
     parser.add_argument("--guid_age", type=str, help="guid/age of the pdb file")
     parser.add_argument("--file", type=str, help="file to get GUID age from")
