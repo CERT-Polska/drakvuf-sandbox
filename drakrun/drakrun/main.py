@@ -545,10 +545,10 @@ class DrakrunKarton(Karton):
                     break
 
     def _memory_dump(self, vm_name, dump_path, dump_filename):
-        dump_fp = os.path.join(dump_path, f"{dump_filename}")
+        dump_fp = os.path.join(dump_path, dump_filename)
         self.log.info(f"dumping raw memory from {vm_name} guest to {dump_filename}...")
         try:
-            dump_args = ["vmi-dump-memory", f"{vm_name}", dump_fp]
+            dump_args = ["vmi-dump-memory", vm_name, dump_fp]
             subprocess.run(dump_args, check=True)
         except subprocess.CalledProcessError as e:
             self.log.error(f"raw memory dump from {vm_name} failed.")
