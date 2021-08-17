@@ -427,7 +427,7 @@ def make_pdb_profile(
 
     profile["$METADATA"] = {
         "DLL_GUID_AGE": dll_symstore_hash,
-        "PDB_GUID_AGE": pdb_symstore_hash,  # TOREVIEW: Is "PDB_GUID_AGE" ok or "GUID_AGE" should remain?
+        "GUID_AGE": pdb_symstore_hash,
         "PDBFile": os.path.basename(filepath),
         "ProfileClass": base_filename[0].upper() + base_filename[1:].lower(),
         "Timestamp": pdb.STREAM_PDB.TimeDateStamp.replace(tzinfo=None).strftime(
