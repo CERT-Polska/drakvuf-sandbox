@@ -550,7 +550,7 @@ def on_create_rekall_profile_failure(
 
 
 def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
-    tmp = None
+    pdb_tmp_filepath = None
     cmd = None
     out = None
     try:
@@ -573,11 +573,11 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
             raise Exception("Some error occurred in injector")
 
         guid = pdb_guid(local_dll_path)
-        tmp = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
+        pdb_tmp_filepath = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
 
         logging.debug("Parsing PDB into JSON profile...")
         profile = make_pdb_profile(
-            tmp, dll_origin_path=guest_dll_path, dll_path=local_dll_path
+            pdb_tmp_filepath, dll_origin_path=guest_dll_path, dll_path=local_dll_path, dll_symstore_hash=guid["GUID"]
         )
         with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), "w") as f:
             f.write(profile)
@@ -617,8 +617,8 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
     finally:
         safe_delete(local_dll_path)
         # was crashing here if the first file reached some exception
-        if tmp is not None:
-            safe_delete(os.path.join(PROFILE_DIR, tmp))
+        if pdb_tmp_filepath is not None:
+            safe_delete(os.path.join(PROFILE_DIR, pdb_tmp_filepath))
 
 
 def extract_explorer_pid(
