@@ -577,7 +577,10 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
 
         logging.debug("Parsing PDB into JSON profile...")
         profile = make_pdb_profile(
-            pdb_tmp_filepath, dll_origin_path=guest_dll_path, dll_path=local_dll_path, dll_symstore_hash=guid["GUID"]
+            pdb_tmp_filepath,
+            dll_origin_path=guest_dll_path,
+            dll_path=local_dll_path,
+            dll_symstore_hash=guid["GUID"],
         )
         with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), "w") as f:
             f.write(profile)

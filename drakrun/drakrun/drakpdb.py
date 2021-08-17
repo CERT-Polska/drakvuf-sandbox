@@ -351,7 +351,9 @@ def process_struct(struct_info):
     return [struct_info.size, field_info]
 
 
-def make_pdb_profile(filepath, dll_origin_path=None, dll_path=None, dll_symstore_hash=None):
+def make_pdb_profile(
+    filepath, dll_origin_path=None, dll_path=None, dll_symstore_hash=None
+):
     pdb = pdbparse.parse(filepath)
 
     try:
