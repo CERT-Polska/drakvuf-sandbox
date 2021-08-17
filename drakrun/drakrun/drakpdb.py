@@ -416,13 +416,13 @@ def make_pdb_profile(
 
     del mapped_syms
     pdb_guid = pdb.STREAM_PDB.GUID
-    pdb_guid_str = "%08x%04x%04x%s" % (
+    pdb_guid_str = "%08X%04X%04X%s" % (
         pdb_guid.Data1,
         pdb_guid.Data2,
         pdb_guid.Data3,
         pdb_guid.Data4.hex(),
     )
-    pdb_symstore_hash = "%s%x" % (pdb_guid_str, pdb.STREAM_PDB.Age)
+    pdb_symstore_hash = "%s%X" % (pdb_guid_str, pdb.STREAM_PDB.Age)
     base_filename = os.path.splitext(os.path.basename(filepath))[0]
 
     profile["$METADATA"] = {
@@ -496,7 +496,7 @@ def pdb_guid(file):
     offset = codeview.struct.PointerToRawData
     size = codeview.struct.SizeOfData
     tmp = CV_RSDS_HEADER.parse(pe.__data__[offset : offset + size])
-    guidstr = "%08x%04x%04x%s%x" % (
+    guidstr = "%08X%04X%04X%s%X" % (
         tmp.GUID.Data1,
         tmp.GUID.Data2,
         tmp.GUID.Data3,
