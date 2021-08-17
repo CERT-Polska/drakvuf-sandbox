@@ -860,7 +860,11 @@ def postupgrade():
 
 
 def get_enabled_drakruns():
-    for fn in os.listdir("/etc/systemd/system/default.target.wants"):
+    service_path = "/etc/systemd/system/default.target.wants"
+    if not os.path.isdir(service_path):
+        return []
+
+    for fn in os.listdir(service_path):
         if re.fullmatch("drakrun@[0-9]+\\.service", fn):
             yield fn
 
