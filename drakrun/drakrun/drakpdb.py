@@ -351,7 +351,9 @@ def process_struct(struct_info):
     return [struct_info.size, field_info]
 
 
-def make_pdb_profile(filepath, dll_origin_path=None, dll_path=None):
+def make_pdb_profile(
+    filepath, dll_origin_path=None, dll_path=None, dll_symstore_hash=None
+):
     pdb = pdbparse.parse(filepath)
 
     try:
@@ -413,20 +415,21 @@ def make_pdb_profile(filepath, dll_origin_path=None, dll_path=None):
                 profile[target_key][next_sym_name] = mapped
 
     del mapped_syms
-    guid = pdb.STREAM_PDB.GUID
-    guid_str = "%.8X%.4X%.4X%s" % (
-        guid.Data1,
-        guid.Data2,
-        guid.Data3,
-        guid.Data4.hex().upper(),
+    pdb_guid = pdb.STREAM_PDB.GUID
+    pdb_guid_str = "%08x%04x%04x%s" % (
+        pdb_guid.Data1,
+        pdb_guid.Data2,
+        pdb_guid.Data3,
+        pdb_guid.Data4.hex(),
     )
-    symstore_hash = "%s%s" % (guid_str, pdb.STREAM_PDB.Age)
-    base_fn = os.path.splitext(os.path.basename(filepath))[0]
+    pdb_symstore_hash = "%s%x" % (pdb_guid_str, pdb.STREAM_PDB.Age)
+    base_filename = os.path.splitext(os.path.basename(filepath))[0]
 
     profile["$METADATA"] = {
-        "GUID_AGE": symstore_hash,
+        "DLL_GUID_AGE": dll_symstore_hash,
+        "GUID_AGE": pdb_symstore_hash,
         "PDBFile": os.path.basename(filepath),
-        "ProfileClass": base_fn[0].upper() + base_fn[1:].lower(),
+        "ProfileClass": base_filename[0].upper() + base_filename[1:].lower(),
         "Timestamp": pdb.STREAM_PDB.TimeDateStamp.replace(tzinfo=None).strftime(
             "%Y-%m-%d %H:%M:%SZ"
         ),
