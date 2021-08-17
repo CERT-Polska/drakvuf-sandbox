@@ -4,7 +4,7 @@ from drakrun.util import RuntimeInfo
 
 
 class Injector:
-    """ Helper class, simplifying usage of DRAKVUF Injector """
+    """Helper class, simplifying usage of DRAKVUF Injector"""
 
     def __init__(self, vm_name: str, runtime_info: RuntimeInfo, kernel_profile: str):
         self.vm_name = vm_name
@@ -12,7 +12,7 @@ class Injector:
         self.runtime_info = runtime_info
 
     def _get_cmdline_generic(self, method: str) -> List[str]:
-        """ Build base command line for all injection methods """
+        """Build base command line for all injection methods"""
         return [
             "injector",
             "-o",
@@ -51,7 +51,7 @@ class Injector:
     def write_file(
         self, local_path: str, remote_path: str, timeout: int = 60
     ) -> subprocess.CompletedProcess:
-        """ Copy local file to the VM """
+        """Copy local file to the VM"""
         injector_cmd = self._get_cmdline_writefile(local_path, remote_path)
         return subprocess.run(
             injector_cmd, stdout=subprocess.PIPE, timeout=timeout, check=True
@@ -60,7 +60,7 @@ class Injector:
     def read_file(
         self, remote_path: str, local_path: str, timeout: int = 60
     ) -> subprocess.CompletedProcess:
-        """ Copy VM file to local """
+        """Copy VM file to local"""
         injector_cmd = self._get_cmdline_readfile(remote_path, local_path)
         return subprocess.run(injector_cmd, timeout=timeout, capture_output=True)
 
