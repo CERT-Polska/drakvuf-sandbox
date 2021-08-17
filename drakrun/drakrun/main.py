@@ -71,6 +71,7 @@ def with_logs(object_name):
                 method(self, *args, **kwargs)
             except Exception:
                 self.log.exception("Analysis failed")
+                raise
             finally:
                 # Unregister local handler
                 self.log.removeHandler(handler)
