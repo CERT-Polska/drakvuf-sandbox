@@ -37,31 +37,31 @@ class StorageBackendBase:
         raise NotImplementedError
 
     def snapshot_vm0_volume(self):
-        """ Saves or snapshots base vm-0 volume for later use by other VMs """
+        """Saves or snapshots base vm-0 volume for later use by other VMs"""
         raise NotImplementedError
 
     def get_vm_disk_path(self, vm_id: int) -> str:
-        """ Returns disk path for given VM as defined by XL configuration """
+        """Returns disk path for given VM as defined by XL configuration"""
         raise NotImplementedError
 
     def rollback_vm_storage(self, vm_id: int):
-        """ Rolls back changes and prepares fresh storage for new run of this VM """
+        """Rolls back changes and prepares fresh storage for new run of this VM"""
         raise NotImplementedError
 
     def get_vm0_snapshot_time(self):
-        """ Get UNIX timestamp of when vm-0 snapshot was last modified """
+        """Get UNIX timestamp of when vm-0 snapshot was last modified"""
         raise NotImplementedError
 
     def export_vm0(self, file):
-        """ Export vm-0 disk into a file (symmetric to import_vm0) """
+        """Export vm-0 disk into a file (symmetric to import_vm0)"""
         raise NotImplementedError
 
     def import_vm0(self, file):
-        """ Import vm-0 disk from a file (symmetric to export_vm0) """
+        """Import vm-0 disk from a file (symmetric to export_vm0)"""
         raise NotImplementedError
 
     def delete_vm_volume(self, vm_id: int):
-        """ Delete vm_id disk volume """
+        """Delete vm_id disk volume"""
         raise NotImplementedError
 
 
@@ -77,7 +77,7 @@ class ZfsStorageBackend(StorageBackendBase):
 
     @staticmethod
     def check_tools():
-        """ Verify existence of zfs command utility """
+        """Verify existence of zfs command utility"""
         try:
             subprocess.check_output("zfs -?", shell=True)
         except subprocess.CalledProcessError:
@@ -200,7 +200,7 @@ class ZfsStorageBackend(StorageBackendBase):
 
 
 class Qcow2StorageBackend(StorageBackendBase):
-    """ Implements storage backend based on QEMU QCOW2 image format """
+    """Implements storage backend based on QEMU QCOW2 image format"""
 
     def __init__(self, install_info: InstallInfo):
         super().__init__(install_info)
@@ -208,7 +208,7 @@ class Qcow2StorageBackend(StorageBackendBase):
 
     @staticmethod
     def check_tools():
-        """ Verify existence of qemu-img """
+        """Verify existence of qemu-img"""
         try:
             subprocess.check_output("qemu-img --version", shell=True)
         except subprocess.CalledProcessError:
@@ -293,7 +293,7 @@ class LvmStorageBackend(StorageBackendBase):
         self.snapshot_disksize = "1G"
 
     def check_tools(self):
-        """ Verify existence of lvm command utility """
+        """Verify existence of lvm command utility"""
         try:
             subprocess.run(
                 ["vgs", self.lvm_volume_group], check=True, stdout=subprocess.DEVNULL
@@ -344,7 +344,7 @@ class LvmStorageBackend(StorageBackendBase):
             raise RuntimeError("Failed to create a new volume using lvcreate.")
 
     def snapshot_vm0_volume(self):
-        """ Saves or snapshots base vm-0 volume for later use by other VMs """
+        """Saves or snapshots base vm-0 volume for later use by other VMs"""
         # vm-0 is the original disk being treated as a snapshot
         # vm-0-snap is being created just for the access time of the change in vm snapshot
         subprocess.run(
@@ -369,11 +369,11 @@ class LvmStorageBackend(StorageBackendBase):
             raise RuntimeError("Couldn't create snapshot")
 
     def get_vm_disk_path(self, vm_id: int) -> str:
-        """ Returns disk path for given VM as defined by XL configuration """
+        """Returns disk path for given VM as defined by XL configuration"""
         return f"phy:/dev/{self.lvm_volume_group}/vm-{vm_id},hda,w"
 
     def rollback_vm_storage(self, vm_id: int):
-        """ Rolls back changes and prepares fresh storage for new run of this VM """
+        """Rolls back changes and prepares fresh storage for new run of this VM"""
         vm_id_vol = os.path.join("/dev", f"{self.lvm_volume_group}", f"vm-{vm_id}")
 
         if vm_id == 0:
@@ -416,7 +416,7 @@ class LvmStorageBackend(StorageBackendBase):
             raise RuntimeError("Couldn't rollback disk")
 
     def get_vm0_snapshot_time(self):
-        """ Get UNIX timestamp of when vm-0 snapshot was last modified """
+        """Get UNIX timestamp of when vm-0 snapshot was last modified"""
 
         p = subprocess.run(
             ["lvs", "-o", "lv_name,lv_time", "--reportformat", "json"],
@@ -439,7 +439,7 @@ class LvmStorageBackend(StorageBackendBase):
         return int(dt.timestamp())
 
     def export_vm0(self, path: str):
-        """ Export vm-0 disk into a file (symmetric to import_vm0) """
+        """Export vm-0 disk into a file (symmetric to import_vm0)"""
         # As dd copies empty spaces also
         # Should we use compressions in this? Will it have any issues while importing?
         subprocess.run(
@@ -454,7 +454,7 @@ class LvmStorageBackend(StorageBackendBase):
         )
 
     def import_vm0(self, path: str):
-        """ Import vm-0 disk from a file (symmetric to export_vm0) """
+        """Import vm-0 disk from a file (symmetric to export_vm0)"""
         subprocess.run(
             [
                 "dd",
@@ -493,11 +493,11 @@ REGISTERED_BACKEND_NAMES: Tuple[str] = tuple(REGISTERED_BACKENDS.keys())
 
 
 class InvalidStorageBackend(Exception):
-    """ Thrown when tried to create unsupported storage backend """
+    """Thrown when tried to create unsupported storage backend"""
 
 
 def get_storage_backend(install_info: InstallInfo) -> StorageBackendBase:
-    """ Return installed storage backend or throw InvalidStorageBackend """
+    """Return installed storage backend or throw InvalidStorageBackend"""
     if install_info.storage_backend not in REGISTERED_BACKEND_NAMES:
         raise InvalidStorageBackend
 

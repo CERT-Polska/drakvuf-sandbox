@@ -627,7 +627,7 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
 def extract_explorer_pid(
     domain: str, kernel_profile: str, offsets: VmiOffsets, timeout: int = 30
 ) -> Optional[int]:
-    """ Call get-explorer-pid helper and get its PID """
+    """Call get-explorer-pid helper and get its PID"""
     module_dir = os.path.dirname(os.path.realpath(__file__))
     pid_tool = os.path.join(module_dir, "tools", "get-explorer-pid")
     try:
@@ -650,7 +650,7 @@ def extract_explorer_pid(
 def extract_vmi_offsets(
     domain: str, kernel_profile: str, timeout: int = 30
 ) -> Optional[VmiOffsets]:
-    """ Call vmi-win-offsets helper and obtain VmiOffsets values """
+    """Call vmi-win-offsets helper and obtain VmiOffsets values"""
     try:
         output = subprocess.check_output(
             ["vmi-win-offsets", "--name", domain, "--json-kernel", kernel_profile],
@@ -1105,7 +1105,7 @@ def snapshot_import(name, bucket, full, zpool):
 
 
 def do_export_minimal(mc, bucket, name):
-    """ Perform minimal snapshot export, symmetric to do_import_minimal """
+    """Perform minimal snapshot export, symmetric to do_import_minimal"""
     logging.info("Uploading installation info")
     install_info = InstallInfo.load()
     install_data = json.dumps(install_info.to_dict()).encode()
@@ -1128,7 +1128,7 @@ def do_export_minimal(mc, bucket, name):
 
 
 def do_import_minimal(mc, name, bucket, zpool):
-    """ Perform minimal snapshot import, symmetric to do_export_minimal """
+    """Perform minimal snapshot import, symmetric to do_export_minimal"""
     logging.info("Downloading installation info")
     mc.fget_object(
         bucket,
@@ -1161,7 +1161,7 @@ def do_import_minimal(mc, name, bucket, zpool):
 
 
 def do_export_full(mc, bucket, name):
-    """ Perform full snapshot export, symmetric to do_import_full """
+    """Perform full snapshot export, symmetric to do_import_full"""
     do_export_minimal(mc, bucket, name)
 
     with tempfile.NamedTemporaryFile() as compressed_snapshot:
@@ -1184,7 +1184,7 @@ def do_export_full(mc, bucket, name):
 
 
 def do_import_full(mc, name, bucket, zpool):
-    """ Perform full snapshot import, symmetric to do_export_full """
+    """Perform full snapshot import, symmetric to do_export_full"""
     do_import_minimal(mc, name, bucket, zpool)
 
     with tempfile.NamedTemporaryFile() as compressed_snapshot:

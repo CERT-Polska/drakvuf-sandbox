@@ -32,13 +32,13 @@ class InstallInfo(DataClassJsonMixin):
 
     @staticmethod
     def load() -> "InstallInfo":
-        """ Reads and parses install.json file """
+        """Reads and parses install.json file"""
         with open(InstallInfo._INSTALL_FILE_PATH, "r") as f:
             return InstallInfo.from_json(f.read())
 
     @staticmethod
     def try_load() -> Optional["InstallInfo"]:
-        """ Tries to load install.json of fails with None """
+        """Tries to load install.json of fails with None"""
         try:
             return InstallInfo.load()
         except FileNotFoundError:
@@ -50,11 +50,11 @@ class InstallInfo(DataClassJsonMixin):
             raise Exception("install.json not deleted")
 
     def save(self):
-        """ Serializes self and writes to install.json """
+        """Serializes self and writes to install.json"""
         with open(InstallInfo._INSTALL_FILE_PATH, "w") as f:
             f.write(json.dumps(self.to_dict(), indent=4))
 
 
 def is_installed() -> bool:
-    """ Returns true when install.json is present """
+    """Returns true when install.json is present"""
     return InstallInfo.try_load() is not None

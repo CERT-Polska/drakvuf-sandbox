@@ -4,9 +4,9 @@ name: check-drakcore
 
 steps:
 - name: black check
-  image: cytopia/black:latest-release-0.3
+  image: pyfound/black:21.7b0
   commands:
-    - python3 -m black --check --diff drakcore/
+    - black --check --diff drakcore/
 - name: flake8 drakcore
   image: python:3.8-buster
   commands:
@@ -31,9 +31,9 @@ name: check-drakrun
 
 steps:
 - name: black check
-  image: cytopia/black:latest-release-0.3
+  image: pyfound/black:21.7b0
   commands:
-    - python3 -m black --check --diff drakrun/
+    - black --check --diff drakrun/
 - name: lint drakrun
   image: python:3.8-buster
   commands:

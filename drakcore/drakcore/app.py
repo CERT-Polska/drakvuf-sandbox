@@ -29,7 +29,7 @@ db = Database(
 
 @app.before_first_request
 def update_metadata_cache():
-    """ Scans whole MinIO bucket and fetch missing metadata files """
+    """Scans whole MinIO bucket and fetch missing metadata files"""
     for analysis in AnalysisProxy(minio, None).enumerate():
         try:
             get_analysis_metadata(analysis.uid)
