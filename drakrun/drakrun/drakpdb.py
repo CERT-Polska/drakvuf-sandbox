@@ -495,15 +495,16 @@ def pdb_guid(file):
 
     offset = codeview.struct.PointerToRawData
     size = codeview.struct.SizeOfData
-    tmp = CV_RSDS_HEADER.parse(pe.__data__[offset : offset + size])
-    guidstr = "%08x%04x%04x%s%x" % (
-        tmp.GUID.Data1,
-        tmp.GUID.Data2,
-        tmp.GUID.Data3,
-        hexlify(tmp.GUID.Data4).decode("ascii"),
-        tmp.Age,
+    codeview = CV_RSDS_HEADER.parse(pe.__data__[offset : offset + size])
+    guid = codeview.GUID
+    guid_str = "%08x%04x%04x%s" % (
+        guid.Data1,
+        guid.Data2,
+        guid.Data3,
+        guid.Data4.hex(),
     )
-    return {"filename": tmp.Filename, "GUID": guidstr}
+    symstore_hash = "%s%x" % (guid_str, codeview.Age)
+    return {"filename": codeview.Filename, "GUID": symstore_hash}
 
 
 def main():
