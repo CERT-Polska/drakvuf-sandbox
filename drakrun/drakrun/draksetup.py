@@ -573,7 +573,9 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
             raise Exception("Some error occurred in injector")
 
         codeview_data = pe_codeview_data(local_dll_path)
-        pdb_tmp_filepath = fetch_pdb(codeview_data["filename"], codeview_data["symstore_hash"], PROFILE_DIR)
+        pdb_tmp_filepath = fetch_pdb(
+            codeview_data["filename"], codeview_data["symstore_hash"], PROFILE_DIR
+        )
 
         logging.debug("Parsing PDB into JSON profile...")
         profile = make_pdb_profile(

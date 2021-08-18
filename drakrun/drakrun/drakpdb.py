@@ -501,7 +501,10 @@ def pe_codeview_data(file):
     offset = codeview.struct.PointerToRawData
     size = codeview.struct.SizeOfData
     codeview_struct = CV_RSDS_HEADER.parse(pe.__data__[offset : offset + size])
-    return {"filename": codeview_struct.Filename, "symstore_hash": make_symstore_hash(codeview_struct)}
+    return {
+        "filename": codeview_struct.Filename,
+        "symstore_hash": make_symstore_hash(codeview_struct),
+    }
 
 
 def main():
@@ -517,7 +520,9 @@ def main():
         help="name of pdb file with extension, e.g. ntkrnlmp.pdb",
     )
     parser.add_argument("--guid_age", type=str, help="guid/age of the pdb file")
-    parser.add_argument("--file", type=str, help="file to get symstore_hash (GUID + Age) from")
+    parser.add_argument(
+        "--file", type=str, help="file to get symstore_hash (GUID + Age) from"
+    )
 
     args = parser.parse_args()
 
