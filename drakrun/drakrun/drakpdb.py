@@ -7,11 +7,12 @@ import json
 
 import requests
 from binascii import hexlify
-from pefile import PE, DEBUG_TYPE
 from construct import Struct, Const, Bytes, Int32ul, Int16ul, CString, EnumIntegerString
+from construct.lib.containers import Container
+from pefile import PE, DEBUG_TYPE
 from requests import HTTPError
 from tqdm import tqdm
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Union
 
 DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 
@@ -351,6 +352,17 @@ def process_struct(struct_info):
     return [struct_info.size, field_info]
 
 
+def make_symstore_hash(codeview_struct: Union[Container, pdbparse.PDBInfoStream]):
+    guid = codeview_struct.GUID
+    guid_str = "%08x%04x%04x%s" % (
+        guid.Data1,
+        guid.Data2,
+        guid.Data3,
+        guid.Data4.hex(),
+    )
+    return "%s%x" % (guid_str, codeview_struct.Age)
+
+
 def make_pdb_profile(
     filepath, dll_origin_path=None, dll_path=None, dll_symstore_hash=None
 ):
@@ -415,14 +427,7 @@ def make_pdb_profile(
                 profile[target_key][next_sym_name] = mapped
 
     del mapped_syms
-    pdb_guid = pdb.STREAM_PDB.GUID
-    pdb_guid_str = "%08x%04x%04x%s" % (
-        pdb_guid.Data1,
-        pdb_guid.Data2,
-        pdb_guid.Data3,
-        pdb_guid.Data4.hex(),
-    )
-    pdb_symstore_hash = "%s%x" % (pdb_guid_str, pdb.STREAM_PDB.Age)
+    pdb_symstore_hash = make_symstore_hash(pdb.STREAM_PDB)
     base_filename = os.path.splitext(os.path.basename(filepath))[0]
 
     profile["$METADATA"] = {
@@ -496,15 +501,7 @@ def pdb_guid(file):
     offset = codeview.struct.PointerToRawData
     size = codeview.struct.SizeOfData
     codeview = CV_RSDS_HEADER.parse(pe.__data__[offset : offset + size])
-    guid = codeview.GUID
-    guid_str = "%08x%04x%04x%s" % (
-        guid.Data1,
-        guid.Data2,
-        guid.Data3,
-        guid.Data4.hex(),
-    )
-    symstore_hash = "%s%x" % (guid_str, codeview.Age)
-    return {"filename": codeview.Filename, "GUID": symstore_hash}
+    return {"filename": codeview.Filename, "GUID": make_symstore_hash(codeview)}
 
 
 def main():
