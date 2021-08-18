@@ -23,7 +23,7 @@ from drakrun.drakpdb import (
     make_pdb_profile,
     dll_file_list,
     compulsory_dll_file_list,
-    pdb_guid,
+    pe_codeview_data,
     DLL,
 )
 from drakrun.config import (
@@ -572,15 +572,15 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
             # Take care if the error message is changed
             raise Exception("Some error occurred in injector")
 
-        guid = pdb_guid(local_dll_path)
-        pdb_tmp_filepath = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
+        codeview_data = pe_codeview_data(local_dll_path)
+        pdb_tmp_filepath = fetch_pdb(codeview_data["filename"], codeview_data["symstore_hash"], PROFILE_DIR)
 
         logging.debug("Parsing PDB into JSON profile...")
         profile = make_pdb_profile(
             pdb_tmp_filepath,
             dll_origin_path=guest_dll_path,
             dll_path=local_dll_path,
-            dll_symstore_hash=guid["GUID"],
+            dll_symstore_hash=codeview_data["symstore_hash"],
         )
         with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), "w") as f:
             f.write(profile)
