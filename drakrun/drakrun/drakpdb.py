@@ -6,7 +6,6 @@ import pdbparse
 import json
 
 import requests
-from binascii import hexlify
 from construct import Struct, Const, Bytes, Int32ul, Int16ul, CString, EnumIntegerString
 from construct.lib.containers import Container
 from pefile import PE, DEBUG_TYPE
