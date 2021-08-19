@@ -561,7 +561,9 @@ class DrakrunKarton(Karton):
 
         dns_server = self.config.config["drakrun"].get("dns_server", "8.8.8.8")
         drakmon_log_fp = os.path.join(outdir, "drakmon.log")
-        raw_memory_dump = self.config.config["drakrun"].getboolean("raw_memory_dump", fallback=False)
+        raw_memory_dump = self.config.config["drakrun"].getboolean(
+            "raw_memory_dump", fallback=False
+        )
 
         with self.run_vm() as vm, graceful_exit(
             start_dnsmasq(self.instance_id, dns_server)
