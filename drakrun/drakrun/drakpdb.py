@@ -351,9 +351,11 @@ def process_struct(struct_info):
     return [struct_info.size, field_info]
 
 
-def make_symstore_hash(codeview_struct: Union[Container, pdbparse.PDBInfoStream]) -> str:
+def make_symstore_hash(
+    codeview_struct: Union[Container, pdbparse.PDBInfoStream]
+) -> str:
     """
-        If `codeview_struct` is an instance of Container, it should be returned from `CV_RSDS_HEADER.parse()`.
+    If `codeview_struct` is an instance of Container, it should be returned from `CV_RSDS_HEADER.parse()`.
     """
     guid = codeview_struct.GUID
     guid_str = "%08x%04x%04x%s" % (
