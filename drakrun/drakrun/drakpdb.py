@@ -1,4 +1,5 @@
 import argparse
+from operator import attrgetter
 import os
 import re
 
@@ -8,7 +9,7 @@ import json
 import requests
 from construct import Struct, Const, Bytes, Int32ul, Int16ul, CString, EnumIntegerString
 from construct.lib.containers import Container
-from pefile import PE, DEBUG_TYPE
+import pefile
 from requests import HTTPError
 from tqdm import tqdm
 from typing import NamedTuple, Optional, Union
@@ -453,7 +454,7 @@ def make_pdb_profile(
 
     if dll_path:
         try:
-            pe = PE(dll_path, fast_load=True)
+            pe = pefile.PE(dll_path, fast_load=True)
             profile["$EXTRAS"]["ImageBase"] = hex(pe.OPTIONAL_HEADER.ImageBase)
         except AttributeError:
             # I think that DLLs have some sanity and the optional header is
@@ -488,13 +489,13 @@ def fetch_pdb(pdbname, guidage, destdir="."):
     raise RuntimeError("Failed to fetch PDB")
 
 
-def pe_codeview_data(file):
-    pe = PE(file, fast_load=True)
+def pe_codeview_data(filepath):
+    pe = pefile.PE(filepath, fast_load=True)
     pe.parse_data_directories()
     try:
         codeview = next(
             filter(
-                lambda x: x.struct.Type == DEBUG_TYPE["IMAGE_DEBUG_TYPE_CODEVIEW"],
+                lambda x: x.struct.Type == pefile.DEBUG_TYPE["IMAGE_DEBUG_TYPE_CODEVIEW"],
                 pe.DIRECTORY_ENTRY_DEBUG,
             )
         )
@@ -509,6 +510,54 @@ def pe_codeview_data(file):
         "filename": codeview_struct.Filename,
         "symstore_hash": make_symstore_hash(codeview_struct),
     }
+
+
+def get_product_version(pe):
+    """
+    Based on https://stackoverflow.com/a/16076661/12452744
+    """
+    def LOWORD(dword):
+        return dword & 0x0000ffff
+
+    def HIWORD(dword):
+        return dword >> 16
+
+    assert len(pe.VS_FIXEDFILEINFO) == 1
+    try:
+        ms = pe.VS_FIXEDFILEINFO[0].ProductVersionMS
+        ls = pe.VS_FIXEDFILEINFO[0].ProductVersionLS
+        return "{}.{}.{}.{}".format(HIWORD(ms), LOWORD(ms), HIWORD(ls), LOWORD(ls))
+    except AttributeError:
+        return "0.0.0.0"
+
+
+def make_static_apiscout_profile_for_dll(filepath):
+    """
+    Based on https://github.com/danielplohmann/apiscout/blob/0fca2eefa5b557b05eb77ab7a3246825f7aa71c3/apiscout/db_builder/DatabaseBuilder.py#L99-L127
+    """
+    pe = pefile.PE(filepath)
+    if not hasattr(pe, "DIRECTORY_ENTRY_EXPORT"):
+        raise Exception(f"DIRECTORY_ENTRY_EXPORT not found in '{filepath}'")
+
+    dll_entry = {}
+    dll_entry["base_address"] = pe.OPTIONAL_HEADER.ImageBase
+    dll_entry["bitness"] = 32 if pe.FILE_HEADER.Machine == 0x14c else 64
+    dll_entry["version"] = get_product_version(pe)
+    dll_entry["filepath"] = filepath
+    dll_entry["aslr_offset"] = 0
+    dll_entry["exports"] = []
+    for exp in sorted(pe.DIRECTORY_ENTRY_EXPORT.symbols, key=attrgetter('address')):
+        export_info = {}
+
+        export_info["address"] = exp.address
+        if exp.name is None:
+            export_info["name"] = "None"
+        else:
+            export_info["name"] = exp.name.decode("utf-8")
+        export_info["ordinal"] = exp.ordinal
+        dll_entry["exports"].append(export_info)
+
+    return dll_entry
 
 
 def main():
