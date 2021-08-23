@@ -28,7 +28,7 @@ from karton.core import Karton, Config, Task, LocalResource, Resource
 
 from drakrun.version import __version__ as DRAKRUN_VERSION
 from drakrun.drakpdb import dll_file_list
-from drakrun.config import InstallInfo, ETC_DIR, PROFILE_DIR
+from drakrun.config import InstallInfo, ETC_DIR, PROFILE_DIR, APISCOUT_PROFILE_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
 from drakrun.util import (
@@ -400,6 +400,10 @@ class DrakrunKarton(Karton):
         if self.config.config.getboolean("drakrun", "attach_profiles", fallback=False):
             self.log.info("Uploading profiles...")
             task.add_payload("profiles", self.build_profile_payload())
+
+        self.log.info("Uploading static ApiScout profile...")
+        apiscout_profile_payload = Resource.from_directory(name="apiscout_profile", directory_path=APISCOUT_PROFILE_DIR)
+        task.add_payload("apiscout_profile", apiscout_profile_payload)
 
         self.log.info("Uploading artifacts...")
         for resource in self.upload_artifacts(self.analysis_uid, outdir):
