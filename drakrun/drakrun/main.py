@@ -402,7 +402,9 @@ class DrakrunKarton(Karton):
             task.add_payload("profiles", self.build_profile_payload())
 
         self.log.info("Uploading static ApiScout profile...")
-        apiscout_profile_payload = Resource.from_directory(name="apiscout_profile", directory_path=APISCOUT_PROFILE_DIR)
+        apiscout_profile_payload = Resource.from_directory(
+            name="apiscout_profile", directory_path=APISCOUT_PROFILE_DIR
+        )
         task.add_payload("apiscout_profile", apiscout_profile_payload)
 
         self.log.info("Uploading artifacts...")

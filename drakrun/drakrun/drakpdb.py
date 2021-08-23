@@ -495,7 +495,8 @@ def pe_codeview_data(filepath):
     try:
         codeview = next(
             filter(
-                lambda x: x.struct.Type == pefile.DEBUG_TYPE["IMAGE_DEBUG_TYPE_CODEVIEW"],
+                lambda x: x.struct.Type
+                == pefile.DEBUG_TYPE["IMAGE_DEBUG_TYPE_CODEVIEW"],
                 pe.DIRECTORY_ENTRY_DEBUG,
             )
         )
@@ -516,8 +517,9 @@ def get_product_version(pe):
     """
     Based on https://stackoverflow.com/a/16076661/12452744
     """
+
     def LOWORD(dword):
-        return dword & 0x0000ffff
+        return dword & 0x0000FFFF
 
     def HIWORD(dword):
         return dword >> 16
@@ -541,12 +543,12 @@ def make_static_apiscout_profile_for_dll(filepath):
 
     dll_entry = {}
     dll_entry["base_address"] = pe.OPTIONAL_HEADER.ImageBase
-    dll_entry["bitness"] = 32 if pe.FILE_HEADER.Machine == 0x14c else 64
+    dll_entry["bitness"] = 32 if pe.FILE_HEADER.Machine == 0x14C else 64
     dll_entry["version"] = get_product_version(pe)
     dll_entry["filepath"] = filepath
     dll_entry["aslr_offset"] = 0
     dll_entry["exports"] = []
-    for exp in sorted(pe.DIRECTORY_ENTRY_EXPORT.symbols, key=attrgetter('address')):
+    for exp in sorted(pe.DIRECTORY_ENTRY_EXPORT.symbols, key=attrgetter("address")):
         export_info = {}
 
         export_info["address"] = exp.address
