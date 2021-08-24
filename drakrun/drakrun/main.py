@@ -437,10 +437,14 @@ class DrakrunKarton(Karton):
             self.log.info("Uploading profiles...")
             task.add_payload("profiles", self.build_profile_payload())
 
-        self.log.info("Uploading static ApiScout profile...")
-        task.add_payload(
-            "static_apiscout_profile.json", self.build_static_apiscout_profile_payload()
-        )
+        if self.config.config.getboolean(
+            "drakrun", "attach_apiscout_profile", fallback=False
+        ):
+            self.log.info("Uploading static ApiScout profile...")
+            task.add_payload(
+                "static_apiscout_profile.json",
+                self.build_static_apiscout_profile_payload(),
+            )
 
         self.log.info("Uploading artifacts...")
         for resource in self.upload_artifacts(self.analysis_uid, outdir):
