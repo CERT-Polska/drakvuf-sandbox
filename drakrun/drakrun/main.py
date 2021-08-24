@@ -380,7 +380,9 @@ class DrakrunKarton(Karton):
         From https://github.com/danielplohmann/apiscout/blob/0fca2eefa5b557b05eb77ab7a3246825f7aa71c3/apiscout/db_builder/DatabaseBuilder.py#L129-L131
         """
         filename = os.path.basename(dll_info["filepath"])
-        return "{}_{}_{}_0x{:x}".format(dll_info["bitness"], dll_info["version"], filename, dll_info["base_address"])
+        return "{}_{}_{}_0x{:x}".format(
+            dll_info["bitness"], dll_info["version"], filename, dll_info["base_address"]
+        )
 
     def build_static_apiscout_profile_payload(self) -> Dict[str, LocalResource]:
         dlls_profiles = {}
@@ -396,7 +398,9 @@ class DrakrunKarton(Karton):
             # "crawled_paths": [],
             "dlls": dlls_profiles,
             # "filtered": False,
-            "num_apis": sum(len(dll_profile['exports']) for dll_profile in dlls_profiles.values()),
+            "num_apis": sum(
+                len(dll_profile["exports"]) for dll_profile in dlls_profiles.values()
+            ),
             "num_dlls": len(dlls_profiles),
             "os_name": "Windows 7 Service Pack 1 (AMD64)",
             # "os_version": "6.1.7601",
