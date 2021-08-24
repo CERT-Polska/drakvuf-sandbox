@@ -25,7 +25,6 @@ from drakrun.drakpdb import (
     compulsory_dll_file_list,
     pe_codeview_data,
     DLL,
-    make_static_apiscout_profile_for_dll,
 )
 from drakrun.config import (
     InstallInfo,
@@ -52,6 +51,7 @@ from drakrun.vm import (
     delete_vm_conf,
     VirtualMachine,
 )
+from drakrun.apiscout import make_static_apiscout_profile_for_dll
 from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
 from tqdm import tqdm
 from pathlib import Path, PureWindowsPath
@@ -577,9 +577,11 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
             # Take care if the error message is changed
             raise Exception("Some error occurred in injector")
 
-        static_apiscout_profile = make_static_apiscout_profile_for_dll(local_dll_path)
+        static_apiscout_dll_profile = make_static_apiscout_profile_for_dll(
+            local_dll_path
+        )
         with open(os.path.join(APISCOUT_PROFILE_DIR, f"{file.dest}.json"), "w") as f:
-            f.write(json.dumps(static_apiscout_profile, indent=4, sort_keys=True))
+            f.write(json.dumps(static_apiscout_dll_profile, indent=4, sort_keys=True))
 
         codeview_data = pe_codeview_data(local_dll_path)
         pdb_tmp_filepath = fetch_pdb(
