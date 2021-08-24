@@ -377,8 +377,9 @@ class DrakrunKarton(Karton):
             return Resource.from_directory(name="profiles", directory_path=tmp_dir)
 
     def build_static_apiscout_profile_payload(self) -> Dict[str, LocalResource]:
+        dll_basename_list = [dll.dest for dll in dll_file_list]
         static_apiscout_profile = build_static_apiscout_profile(
-            dll.dest for dll in dll_file_list
+            APISCOUT_PROFILE_DIR, dll_basename_list
         )
         return LocalResource(
             name="static_apiscout_profile.json",

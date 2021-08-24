@@ -1,5 +1,3 @@
-from drakrun.config import APISCOUT_PROFILE_DIR
-
 import json
 from operator import attrgetter
 import os
@@ -67,11 +65,13 @@ def build_apiscout_dll_key(dll_info):
     )
 
 
-def build_static_apiscout_profile(dll_basename_list: List[str]) -> Dict[str, Any]:
+def build_static_apiscout_profile(
+    apiscout_profile_dir: str, dll_basename_list: List[str]
+) -> Dict[str, Any]:
     dlls_profiles = {}
 
     for dll_basename in dll_basename_list:
-        filepath = Path(APISCOUT_PROFILE_DIR) / f"{dll_basename}.json"
+        filepath = Path(apiscout_profile_dir) / f"{dll_basename}.json"
         with open(filepath) as f:
             dll_profile = json.load(f)
         dlls_profiles[build_apiscout_dll_key(dll_profile)] = dll_profile
