@@ -382,9 +382,12 @@ class DrakrunKarton(Karton):
             filepath = Path(APISCOUT_PROFILE_DIR) / f"{dll.dest}.json"
             with open(filepath) as f:
                 dll_profile = json.load(f)
-            static_apiscout_profile[dll_profile['filepath']] = dll_profile
+            static_apiscout_profile[dll_profile["filepath"]] = dll_profile
 
-        return LocalResource(name="static_apiscout_profile.json", content=json.dumps(static_apiscout_profile, indent=4, sort_keys=True))
+        return LocalResource(
+            name="static_apiscout_profile.json",
+            content=json.dumps(static_apiscout_profile, indent=4, sort_keys=True),
+        )
 
     def send_raw_analysis(self, sample, outdir, metadata, dumps_metadata, quality):
         """
@@ -413,7 +416,9 @@ class DrakrunKarton(Karton):
             task.add_payload("profiles", self.build_profile_payload())
 
         self.log.info("Uploading static ApiScout profile...")
-        task.add_payload("static_apiscout_profile.json", self.build_static_apiscout_profile_payload())
+        task.add_payload(
+            "static_apiscout_profile.json", self.build_static_apiscout_profile_payload()
+        )
 
         self.log.info("Uploading artifacts...")
         for resource in self.upload_artifacts(self.analysis_uid, outdir):
