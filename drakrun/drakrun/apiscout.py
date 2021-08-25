@@ -85,7 +85,6 @@ def build_static_apiscout_profile(
         ),
         "num_dlls": len(dlls_profiles),
         "os_name": "Windows 7 Service Pack 1 (AMD64)",
-        # "os_version": "6.1.7601",
     }
 
     return static_apiscout_profile
