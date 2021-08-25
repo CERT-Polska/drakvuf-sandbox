@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from collections import defaultdict
+import json
 import subprocess
 import tempfile
 import logging
@@ -95,7 +96,7 @@ def match_frames(page_faults, frames, foreign_frames):
     return results
 
 
-def get_ptxed_cmdline(analysis_dir, cr3_value, vcpu, use_blocks=False):
+def get_ptxed_cmdline(analysis_dir, cr3_value, pt_stream, use_blocks=False):
     log.debug("Analysis directory: %s", analysis_dir)
     log.debug("CR3: %#x", cr3_value)
 
@@ -123,18 +124,69 @@ def get_ptxed_cmdline(analysis_dir, cr3_value, vcpu, use_blocks=False):
     for addr, fname in mappings:
         name = Path(fname).name
         fpath = analysis_dir / "ipt" / "dumps" / name
-        if fpath.stat().st_size == 0x1000:
+        if not fpath.exists():
+            log.warning(f"Missing {fpath}")
+            continue
+        if fpath.name != "(null)" and fpath.stat().st_size == 0x1000:
             pages.append("--raw")
             pages.append(f"{fpath}:0x{addr:x}")
 
-    binary = ["ptxed", "--block-decoder"]
+    binary = ["ptxed", "--block-decoder", "--block:show-blocks"]
 
     if use_blocks:
         binary = ["drak-ipt-blocks", "--cr3", hex(cr3_value)]
 
-    ptxed_cmdline = binary + pages
+    ptxed_cmdline = binary + pages + ["--pt", pt_stream]
     log.info("IPT: Succesfully generated ptxed command line")
     return ptxed_cmdline
+
+
+def generate_ipt_blocks(process):
+    for line in process.stdout:
+        entry = json.loads(line)
+        if entry["event"] == "block_executed":
+            yield int(entry["data"], 16)
+
+
+def generate_ptxed(process):
+    prev_block = False
+
+    for line in process.stdout:
+        if prev_block and all(
+            map(lambda c: c in "0123456789abcdef", line[:16].decode())
+        ):
+            yield int(line[:16], 16)
+            prev_block = False
+
+        if line.startswith(b"[cbr"):
+            continue
+        if line.startswith(b"[ptwrite"):
+            continue
+        if line.startswith(b"[enabled"):
+            continue
+        if line.startswith(b"[disabled"):
+            continue
+        if line.startswith(b"[resumed"):
+            continue
+        if line.startswith(b"[exec mode"):
+            continue
+        if line.strip().decode() == "[block]":
+            prev_block = True
+            continue
+
+
+def get_executed_blocks(analysis_dir, cr3_value, pt_stream, use_blocks=False):
+    if use_blocks:
+        current = get_ptxed_cmdline(analysis_dir, cr3_value, pt_stream, use_blocks)
+        proc = subprocess.Popen(current, stdout=subprocess.PIPE)
+        yield from generate_ipt_blocks(proc)
+    else:
+        with tempfile.NamedTemporaryFile() as filtered_stream:
+            print("Filtering IPT stream with drak-ipt-filter")
+            subprocess.run(["drak-ipt-filter", pt_stream, hex(cr3_value)], stdout=filtered_stream)
+            current = get_ptxed_cmdline(analysis_dir, cr3_value, filtered_stream.name, use_blocks)
+            proc = subprocess.Popen(current, stdout=subprocess.PIPE)
+            yield from generate_ptxed(proc)
 
 
 def cmdline_main():
@@ -153,8 +205,6 @@ def cmdline_main():
     )
     parser.add_argument(
         "--blocks",
-        action="store_true",
-        default=False,
         help="Use drak-ipt-blocks instead of ptxed",
     )
     parser.add_argument(

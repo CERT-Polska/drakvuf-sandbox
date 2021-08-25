@@ -215,6 +215,29 @@ def metadata(task_uid):
     return jsonify(get_analysis_metadata(task_uid))
 
 
+@app.route("/ipt/<analysis_uid>/<int:pid>")
+def ipt(analysis_uid, pid):
+    value = backend.redis.get(f"drakipt:{analysis_uid}.{pid}")
+    if value:
+        data = json.loads(value)
+        return {"data": data}
+
+    # Set empty data, to ensure that next request won't trigger a task
+    key = f"drakipt:{analysis_uid}.{pid}"
+    backend.redis.setnx(key, json.dumps([]))
+    backend.redis.expire(key, 60)
+
+    p = Producer(conf, identity="karton.drakcore.web")
+
+    t = Task(headers={"type": "drakcore-request", "kind": "drakrun-internal"})
+    t.add_payload("analysis_uid", analysis_uid)
+    t.add_payload("pid", pid)
+
+    p.send_task(t)
+
+    return {"msg": "Request submitted, data should appear soon."}
+
+
 @app.route("/status/<task_uid>")
 def status(task_uid):
     res = {"status": "done"}
