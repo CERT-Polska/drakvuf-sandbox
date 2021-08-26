@@ -789,6 +789,14 @@ def postinstall(report, generate_usermode):
             }
         )
 
+    os_info = {
+        "os_name": version,
+        "os_timestamp": storage_backend.get_vm0_snapshot_time(),
+    }
+
+    with open(os.path.join(APISCOUT_PROFILE_DIR, "OS_INFO.json"), "w") as f:
+        f.write(json.dumps(os_info, indent=4, sort_keys=True))
+
     logging.info("All right, drakrun setup is done.")
     logging.info("First instance of drakrun will be enabled automatically...")
     subprocess.check_output("systemctl enable drakrun@1", shell=True)

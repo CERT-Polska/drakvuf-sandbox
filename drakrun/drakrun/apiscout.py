@@ -76,6 +76,9 @@ def build_static_apiscout_profile(
             dll_profile = json.load(f)
         dlls_profiles[build_apiscout_dll_key(dll_profile)] = dll_profile
 
+    with open(os.path.join(apiscout_profile_dir, "OS_INFO.json"), "r") as f:
+        os_info = json.load(f)
+
     static_apiscout_profile = {
         "aslr_offsets": False,
         "dlls": dlls_profiles,
@@ -84,7 +87,10 @@ def build_static_apiscout_profile(
             len(dll_profile["exports"]) for dll_profile in dlls_profiles.values()
         ),
         "num_dlls": len(dlls_profiles),
-        "os_name": "Windows 7 Service Pack 1 (AMD64)",
+        "os_name": os_info["os_name"],
+        "os_version": os_info[
+            "os_timestamp"
+        ],  # Accurate value (e.g. "6.1.7601") can be got with it...
     }
 
     return static_apiscout_profile
