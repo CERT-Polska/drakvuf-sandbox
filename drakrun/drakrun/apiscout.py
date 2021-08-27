@@ -6,7 +6,7 @@ import pefile
 from typing import List, Dict, Any
 
 
-def get_product_version(pe):
+def get_product_version(pe: pefile.PE) -> str:
     """
     Based on https://stackoverflow.com/a/16076661/12452744
     """
@@ -26,7 +26,7 @@ def get_product_version(pe):
         return "0.0.0.0"
 
 
-def make_static_apiscout_profile_for_dll(filepath):
+def make_static_apiscout_profile_for_dll(filepath: str) -> Dict[str, Any]:
     """
     Based on https://github.com/danielplohmann/apiscout/blob/0fca2eefa5b557b05eb77ab7a3246825f7aa71c3/apiscout/db_builder/DatabaseBuilder.py#L99-L127
     """
@@ -48,14 +48,14 @@ def make_static_apiscout_profile_for_dll(filepath):
         if exp.name is None:
             export_info["name"] = "None"
         else:
-            export_info["name"] = exp.name.decode("utf-8")
+            export_info["name"] = exp.name.decode()
         export_info["ordinal"] = exp.ordinal
         dll_entry["exports"].append(export_info)
 
     return dll_entry
 
 
-def build_apiscout_dll_key(dll_info):
+def build_apiscout_dll_key(dll_info: Dict[str, Any]) -> str:
     """
     From https://github.com/danielplohmann/apiscout/blob/0fca2eefa5b557b05eb77ab7a3246825f7aa71c3/apiscout/db_builder/DatabaseBuilder.py#L129-L131
     """
