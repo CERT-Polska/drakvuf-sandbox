@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 import contextlib
 import logging
 import sys
@@ -545,17 +544,26 @@ class DrakrunKarton(Karton):
                     self.log.info("Injection failed with error: %s", entry["Error"])
                     break
 
-    def _memory_dump(self, vm_name, dump_path, dump_filename):
-        dump_fp = os.path.join(dump_path, dump_filename)
+    def _memory_dump(self, vm_name, dump_filepath):
+        """Dump raw memory from running vm using vmi-dump-memory and compress it with gzip"""
 
-        self.log.info(f"dumping raw memory from {vm_name} guest to {dump_filename}...")
-        try:
-            dump_args = ["vmi-dump-memory", vm_name, dump_fp]
-            subprocess.run(dump_args, check=True)
-        except subprocess.CalledProcessError as e:
-            self.log.error(f"raw memory dump from {vm_name} failed.")
-            raise e
-        self.log.info(f"raw memory dump from {vm_name} succeeded.")
+        with tempfile.NamedTemporaryFile() as raw_memdump, open(
+            f"{dump_filepath}.gz", "wb"
+        ) as compressed_file:
+            self.log.info(f"dumping raw memory from {vm_name} guest...")
+            try:
+                dump_args = ["vmi-dump-memory", vm_name, raw_memdump.name]
+                subprocess.run(dump_args, check=True)
+            except subprocess.CalledProcessError as e:
+                self.log.error(f"raw memory dump from {vm_name} failed.")
+                raise e
+
+            self.log.info(f"Compressing {vm_name} guest memory dump...")
+            subprocess.check_call(
+                ["gzip", "-c", raw_memdump.name], stdout=compressed_file
+            )
+
+            self.log.info(f"raw memory dump from {vm_name} succeeded.")
 
     def analyze_sample(self, sample_path, workdir, outdir, start_command, timeout):
         analysis_info = dict()
@@ -639,7 +647,7 @@ class DrakrunKarton(Karton):
 
             if raw_memory_dump:
                 self._memory_dump(
-                    vm.vm_name, outdir, "memory_dump_post_sample.raw_memdump"
+                    vm.vm_name, os.path.join(outdir, "post_sample.raw_memdump")
                 )
 
         return analysis_info
