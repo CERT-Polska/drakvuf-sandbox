@@ -652,7 +652,7 @@ class DrakrunKarton(Karton):
 
         return analysis_info
 
-    def file_sha256(self, filename, blocksize=65536):
+    def _file_sha256(self, filename, blocksize=65536):
         hash = hashlib.sha256()
         with open(filename, "rb") as f:
             for block in iter(lambda: f.read(blocksize), b""):
@@ -665,7 +665,7 @@ class DrakrunKarton(Karton):
         sample = task.get_resource("sample")
         magic_output = magic.from_buffer(sample.content)
         sha256sum = hashlib.sha256(sample.content).hexdigest()
-        snapshot_sha256 = self.file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
+        snapshot_sha256 = self._file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
 
         self.log.info(f"Running on: {socket.gethostname()}")
         self.log.info(f"Sample SHA256: {sha256sum}")
