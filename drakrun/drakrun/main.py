@@ -550,12 +550,12 @@ class DrakrunKarton(Karton):
         with tempfile.NamedTemporaryFile() as raw_memdump, open(
             f"{dump_filepath}.gz", "wb"
         ) as compressed_file:
-            self.log.info(f"dumping raw memory from {vm_name} guest...")
+            self.log.info(f"Dumping raw memory from {vm_name} guest...")
             try:
                 dump_args = ["vmi-dump-memory", vm_name, raw_memdump.name]
                 subprocess.run(dump_args, check=True)
             except subprocess.CalledProcessError as e:
-                self.log.error(f"raw memory dump from {vm_name} failed.")
+                self.log.error(f"Dumping raw memory from {vm_name} failed.")
                 raise e
 
             self.log.info(f"Compressing {vm_name} guest memory dump...")
@@ -563,7 +563,7 @@ class DrakrunKarton(Karton):
                 ["gzip", "-c", raw_memdump.name], stdout=compressed_file
             )
 
-            self.log.info(f"raw memory dump from {vm_name} succeeded.")
+            self.log.info(f"Raw memory dump from {vm_name} succeeded.")
 
     def analyze_sample(self, sample_path, workdir, outdir, start_command, timeout):
         analysis_info = dict()
