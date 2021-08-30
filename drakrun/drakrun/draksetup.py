@@ -58,6 +58,8 @@ from pathlib import Path, PureWindowsPath
 import traceback
 
 
+log = logging.getLogger(__name__)
+
 conf = configparser.ConfigParser()
 conf.read(os.path.join(ETC_DIR, "config.ini"))
 
@@ -847,8 +849,7 @@ def create_missing_profiles():
             try:
                 create_rekall_profile(injector, profile)
             except Exception:
-                # silence per-dll errors
-                pass
+                log.exception("Unexpected exception from create_rekall_profile!")
 
     vm.destroy()
     delete_vm_network(

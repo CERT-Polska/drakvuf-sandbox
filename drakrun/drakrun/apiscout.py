@@ -17,7 +17,7 @@ def get_bitness(pe: pefile.PE) -> int:
         log.error(
             f"Unsupported machine_type: {pe.FILE_HEADER.Machine} -> {pefile.MACHINE_TYPE[pe.FILE_HEADER.Machine]}"
         )
-        return 0
+        return None
 
 
 def get_product_version(pe: pefile.PE) -> str:
@@ -33,14 +33,14 @@ def get_product_version(pe: pefile.PE) -> str:
 
     if len(pe.VS_FIXEDFILEINFO) != 1:
         log.error("Unsupported case: len(pe.VS_FIXEDFILEINFO) != 1")
-        return "0.0.0.0"
+        return None
     try:
         ms = pe.VS_FIXEDFILEINFO[0].ProductVersionMS
         ls = pe.VS_FIXEDFILEINFO[0].ProductVersionLS
         return "{}.{}.{}.{}".format(HIWORD(ms), LOWORD(ms), HIWORD(ls), LOWORD(ls))
     except AttributeError:
         log.exception("")
-        return "0.0.0.0"
+        return None
 
 
 def make_static_apiscout_profile_for_dll(filepath: str) -> Dict[str, Any]:
@@ -60,7 +60,7 @@ def make_static_apiscout_profile_for_dll(filepath: str) -> Dict[str, Any]:
     dll_entry = {}
     dll_entry["base_address"] = pe.OPTIONAL_HEADER.ImageBase
     dll_entry["bitness"] = get_bitness(pe)
-    dll_entry["version"] = get_product_version(pe)
+    dll_entry["version"] = get_product_version(pe) or "0.0.0.0"
     dll_entry["filepath"] = filepath
     dll_entry["aslr_offset"] = 0
     dll_entry["exports"] = []
