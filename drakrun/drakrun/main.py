@@ -28,7 +28,7 @@ from karton.core import Karton, Config, Task, LocalResource, Resource
 
 from drakrun.version import __version__ as DRAKRUN_VERSION
 from drakrun.drakpdb import dll_file_list
-from drakrun.config import InstallInfo, ETC_DIR, PROFILE_DIR
+from drakrun.config import InstallInfo, ETC_DIR, PROFILE_DIR, VOLUME_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
 from drakrun.util import (
@@ -547,6 +547,7 @@ class DrakrunKarton(Karton):
 
     def _memory_dump(self, vm_name, dump_path, dump_filename):
         dump_fp = os.path.join(dump_path, dump_filename)
+
         self.log.info(f"dumping raw memory from {vm_name} guest to {dump_filename}...")
         try:
             dump_args = ["vmi-dump-memory", vm_name, dump_fp]
@@ -570,9 +571,6 @@ class DrakrunKarton(Karton):
         ), graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), open(
             drakmon_log_fp, "wb"
         ) as drakmon_log:
-
-            if raw_memory_dump:
-                self._memory_dump(vm.vm_name, outdir, "memory_dump_pre_sample.raw")
 
             analysis_info["snapshot_version"] = vm.backend.get_vm0_snapshot_time()
 
@@ -640,9 +638,18 @@ class DrakrunKarton(Karton):
                 raise e
 
             if raw_memory_dump:
-                self._memory_dump(vm.vm_name, outdir, "memory_dump_post_sample.raw")
+                self._memory_dump(
+                    vm.vm_name, outdir, "memory_dump_post_sample.raw_memdump"
+                )
 
         return analysis_info
+
+    def file_sha256(self, filename, blocksize=65536):
+        hash = hashlib.sha256()
+        with open(filename, "rb") as f:
+            for block in iter(lambda: f.read(blocksize), b""):
+                hash.update(block)
+        return hash.hexdigest()
 
     @with_logs("drakrun.log")
     def process(self, task: Task):
@@ -650,10 +657,12 @@ class DrakrunKarton(Karton):
         sample = task.get_resource("sample")
         magic_output = magic.from_buffer(sample.content)
         sha256sum = hashlib.sha256(sample.content).hexdigest()
+        snapshot_sha256 = self.file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
 
         self.log.info(f"Running on: {socket.gethostname()}")
         self.log.info(f"Sample SHA256: {sha256sum}")
         self.log.info(f"Analysis UID: {self.analysis_uid}")
+        self.log.info(f"Snapshot SHA256: {snapshot_sha256}")
 
         # Timeout sanity check
         timeout = task.payload.get("timeout") or self.default_timeout
@@ -717,6 +726,7 @@ class DrakrunKarton(Karton):
 
         metadata = {
             "sample_sha256": sha256sum,
+            "snapshot_sha256": snapshot_sha256,
             "magic_output": magic_output,
             "time_started": int(time.time()),
         }
