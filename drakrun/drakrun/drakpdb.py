@@ -8,7 +8,7 @@ import json
 import requests
 from construct import Struct, Const, Bytes, Int32ul, Int16ul, CString, EnumIntegerString
 from construct.lib.containers import Container
-from pefile import PE, DEBUG_TYPE
+import pefile
 from requests import HTTPError
 from tqdm import tqdm
 from typing import NamedTuple, Optional, Union
@@ -453,7 +453,7 @@ def make_pdb_profile(
 
     if dll_path:
         try:
-            pe = PE(dll_path, fast_load=True)
+            pe = pefile.PE(dll_path, fast_load=True)
             profile["$EXTRAS"]["ImageBase"] = hex(pe.OPTIONAL_HEADER.ImageBase)
         except AttributeError:
             # I think that DLLs have some sanity and the optional header is
@@ -488,13 +488,14 @@ def fetch_pdb(pdbname, guidage, destdir="."):
     raise RuntimeError("Failed to fetch PDB")
 
 
-def pe_codeview_data(file):
-    pe = PE(file, fast_load=True)
+def pe_codeview_data(filepath):
+    pe = pefile.PE(filepath, fast_load=True)
     pe.parse_data_directories()
     try:
         codeview = next(
             filter(
-                lambda x: x.struct.Type == DEBUG_TYPE["IMAGE_DEBUG_TYPE_CODEVIEW"],
+                lambda x: x.struct.Type
+                == pefile.DEBUG_TYPE["IMAGE_DEBUG_TYPE_CODEVIEW"],
                 pe.DIRECTORY_ENTRY_DEBUG,
             )
         )
