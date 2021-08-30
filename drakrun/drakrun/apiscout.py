@@ -49,7 +49,10 @@ def make_static_apiscout_profile_for_dll(filepath: str) -> Dict[str, Any]:
     """
     pe = pefile.PE(filepath, fast_load=True)
     pe.parse_data_directories(
-        directories=[pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]]
+        directories=[
+            pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"],
+            pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"],
+        ]
     )
     if not hasattr(pe, "DIRECTORY_ENTRY_EXPORT"):
         raise RuntimeError(f"DIRECTORY_ENTRY_EXPORT not found in '{filepath}'")
