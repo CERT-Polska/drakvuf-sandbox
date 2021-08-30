@@ -1,7 +1,6 @@
 import json
 import logging
 from operator import attrgetter
-import os
 from pathlib import Path, PureWindowsPath
 import pefile
 from typing import List, Dict, Any
@@ -97,7 +96,7 @@ def build_static_apiscout_profile(
             dll_profile = json.load(f)
         dlls_profiles[build_apiscout_dll_key(dll_profile)] = dll_profile
 
-    with open(os.path.join(apiscout_profile_dir, "OS_INFO.json"), "r") as f:
+    with open(Path(apiscout_profile_dir) / "OS_INFO.json", "r") as f:
         os_info = json.load(f)
 
     static_apiscout_profile = {
