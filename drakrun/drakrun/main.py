@@ -580,6 +580,9 @@ class DrakrunKarton(Karton):
             drakmon_log_fp, "wb"
         ) as drakmon_log:
 
+            if raw_memory_dump:
+                self._memory_dump(vm.vm_name, outdir, "memory_dump_pre_sample.raw")
+
             analysis_info["snapshot_version"] = vm.backend.get_vm0_snapshot_time()
 
             kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
