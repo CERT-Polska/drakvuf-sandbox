@@ -1,9 +1,24 @@
 import json
+import logging
 from operator import attrgetter
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import pefile
 from typing import List, Dict, Any
+
+log = logging.getLogger(__name__)
+
+
+def get_bitness(pe: pefile.PE) -> int:
+    if pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE["IMAGE_FILE_MACHINE_AMD64"]:
+        return 64
+    elif pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE["IMAGE_FILE_MACHINE_I386"]:
+        return 32
+    else:
+        log.error(
+            f"Unsupported machine_type: {pe.FILE_HEADER.Machine} -> {pefile.MACHINE_TYPE[pe.FILE_HEADER.Machine]}"
+        )
+        return 0
 
 
 def get_product_version(pe: pefile.PE) -> str:
@@ -17,12 +32,15 @@ def get_product_version(pe: pefile.PE) -> str:
     def HIWORD(dword):
         return dword >> 16
 
-    assert len(pe.VS_FIXEDFILEINFO) == 1
+    if len(pe.VS_FIXEDFILEINFO) != 1:
+        log.error("Unsupported case: len(pe.VS_FIXEDFILEINFO) != 1")
+        return "0.0.0.0"
     try:
         ms = pe.VS_FIXEDFILEINFO[0].ProductVersionMS
         ls = pe.VS_FIXEDFILEINFO[0].ProductVersionLS
         return "{}.{}.{}.{}".format(HIWORD(ms), LOWORD(ms), HIWORD(ls), LOWORD(ls))
     except AttributeError:
+        log.exception("")
         return "0.0.0.0"
 
 
@@ -30,13 +48,16 @@ def make_static_apiscout_profile_for_dll(filepath: str) -> Dict[str, Any]:
     """
     Based on https://github.com/danielplohmann/apiscout/blob/0fca2eefa5b557b05eb77ab7a3246825f7aa71c3/apiscout/db_builder/DatabaseBuilder.py#L99-L127
     """
-    pe = pefile.PE(filepath)
+    pe = pefile.PE(filepath, fast_load=True)
+    pe.parse_data_directories(
+        directories=[pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]]
+    )
     if not hasattr(pe, "DIRECTORY_ENTRY_EXPORT"):
-        raise Exception(f"DIRECTORY_ENTRY_EXPORT not found in '{filepath}'")
+        raise RuntimeError(f"DIRECTORY_ENTRY_EXPORT not found in '{filepath}'")
 
     dll_entry = {}
     dll_entry["base_address"] = pe.OPTIONAL_HEADER.ImageBase
-    dll_entry["bitness"] = 32 if pe.FILE_HEADER.Machine == 0x14C else 64
+    dll_entry["bitness"] = get_bitness(pe)
     dll_entry["version"] = get_product_version(pe)
     dll_entry["filepath"] = filepath
     dll_entry["aslr_offset"] = 0
@@ -59,7 +80,7 @@ def build_apiscout_dll_key(dll_info: Dict[str, Any]) -> str:
     """
     From https://github.com/danielplohmann/apiscout/blob/0fca2eefa5b557b05eb77ab7a3246825f7aa71c3/apiscout/db_builder/DatabaseBuilder.py#L129-L131
     """
-    filename = os.path.basename(dll_info["filepath"])
+    filename = PureWindowsPath(dll_info["filepath"]).name
     return "{}_{}_{}_0x{:x}".format(
         dll_info["bitness"], dll_info["version"], filename, dll_info["base_address"]
     )
