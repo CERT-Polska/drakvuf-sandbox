@@ -111,9 +111,8 @@ def build_static_apiscout_profile(
         ),
         "num_dlls": len(dlls_profiles),
         "os_name": os_info["os_name"],
-        "os_version": os_info[
-            "os_timestamp"
-        ],  # Accurate value (e.g. "6.1.7601") can be got with it...
+        # For recovering accurate version (e.g. "6.1.7601") ...
+        "os_version": os_info["os_timestamp"],
     }
 
     return static_apiscout_profile
