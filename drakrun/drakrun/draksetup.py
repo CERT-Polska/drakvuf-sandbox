@@ -51,7 +51,10 @@ from drakrun.vm import (
     delete_vm_conf,
     VirtualMachine,
 )
-from drakrun.apiscout import make_static_apiscout_profile_for_dll
+from drakrun.apiscout import (
+    make_static_apiscout_profile_for_dll,
+    build_static_apiscout_profile,
+)
 from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
 from tqdm import tqdm
 from pathlib import Path, PureWindowsPath
@@ -850,6 +853,13 @@ def create_missing_profiles():
                 create_rekall_profile(injector, profile)
             except Exception:
                 log.exception("Unexpected exception from create_rekall_profile!")
+
+    dll_basename_list = [dll.dest for dll in dll_file_list]
+    static_apiscout_profile = build_static_apiscout_profile(
+        APISCOUT_PROFILE_DIR, dll_basename_list
+    )
+    with open(Path(APISCOUT_PROFILE_DIR) / "static_apiscout_profile.json", "w") as f:
+        json.dump(static_apiscout_profile, f)
 
     vm.destroy()
     delete_vm_network(

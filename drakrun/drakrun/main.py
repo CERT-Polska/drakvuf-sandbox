@@ -41,7 +41,6 @@ from drakrun.util import (
 from drakrun.vm import generate_vm_conf, VirtualMachine
 from drakrun.injector import Injector
 import drakrun.sample_startup as sample_startup
-from drakrun.apiscout import build_static_apiscout_profile
 
 
 class LocalLogBuffer(logging.Handler):
@@ -376,16 +375,6 @@ class DrakrunKarton(Karton):
 
             return Resource.from_directory(name="profiles", directory_path=tmp_dir)
 
-    def build_static_apiscout_profile_payload(self) -> Dict[str, LocalResource]:
-        dll_basename_list = [dll.dest for dll in dll_file_list]
-        static_apiscout_profile = build_static_apiscout_profile(
-            APISCOUT_PROFILE_DIR, dll_basename_list
-        )
-        return LocalResource(
-            name="static_apiscout_profile.json",
-            content=json.dumps(static_apiscout_profile, indent=4, sort_keys=True),
-        )
-
     def send_raw_analysis(self, sample, outdir, metadata, dumps_metadata, quality):
         """
         Offload drakrun-prod by sending raw analysis output to be processed by
@@ -418,7 +407,10 @@ class DrakrunKarton(Karton):
             self.log.info("Uploading static ApiScout profile...")
             task.add_payload(
                 "static_apiscout_profile.json",
-                self.build_static_apiscout_profile_payload(),
+                LocalResource(
+                    name="static_apiscout_profile.json",
+                    path=Path(APISCOUT_PROFILE_DIR) / "static_apiscout_profile.json",
+                ),
             )
 
         self.log.info("Uploading artifacts...")
