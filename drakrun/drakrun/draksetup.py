@@ -811,8 +811,10 @@ def postinstall(report, generate_usermode):
     logging.info("  # draksetup scale <number of instances>")
 
 
-def profile_exists(profile: DLL) -> bool:
-    return (Path(PROFILE_DIR) / f"{profile.dest}.json").is_file()
+def profiles_exist(profile_name: str) -> bool:
+    return (Path(PROFILE_DIR) / f"{profile_name}.json").is_file() and (
+        Path(APISCOUT_PROFILE_DIR) / f"{profile_name}.json"
+    ).is_file()
 
 
 def create_missing_profiles():
@@ -844,11 +846,11 @@ def create_missing_profiles():
     # Ensure that all declared usermode profiles exist
     # This is important when upgrade defines new entries in dll_file_list and compulsory_dll_file_list
     for profile in compulsory_dll_file_list:
-        if not profile_exists(profile):
+        if not profiles_exist(profile.dest):
             create_rekall_profile(injector, profile, True)
 
     for profile in dll_file_list:
-        if not profile_exists(profile):
+        if not profiles_exist(profile.dest):
             try:
                 create_rekall_profile(injector, profile)
             except Exception:
