@@ -17,7 +17,7 @@ steps:
   image: node:14
   commands:
     - cd drakcore/drakcore/frontend
-    - npm install
+    - npm ci
     - npx prettier --check src/
 node:
    purpose: generic

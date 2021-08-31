@@ -6,12 +6,12 @@ import pdbparse
 import json
 
 import requests
-from binascii import hexlify
-from pefile import PE, DEBUG_TYPE
 from construct import Struct, Const, Bytes, Int32ul, Int16ul, CString, EnumIntegerString
+from construct.lib.containers import Container
+import pefile
 from requests import HTTPError
 from tqdm import tqdm
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Union
 
 DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 
@@ -351,6 +351,22 @@ def process_struct(struct_info):
     return [struct_info.size, field_info]
 
 
+def make_symstore_hash(
+    codeview_struct: Union[Container, pdbparse.PDBInfoStream]
+) -> str:
+    """
+    If `codeview_struct` is an instance of Container, it should be returned from `CV_RSDS_HEADER.parse()`.
+    """
+    guid = codeview_struct.GUID
+    guid_str = "%08x%04x%04x%s" % (
+        guid.Data1,
+        guid.Data2,
+        guid.Data3,
+        guid.Data4.hex(),
+    )
+    return "%s%x" % (guid_str, codeview_struct.Age)
+
+
 def make_pdb_profile(
     filepath, dll_origin_path=None, dll_path=None, dll_symstore_hash=None
 ):
@@ -415,14 +431,7 @@ def make_pdb_profile(
                 profile[target_key][next_sym_name] = mapped
 
     del mapped_syms
-    pdb_guid = pdb.STREAM_PDB.GUID
-    pdb_guid_str = "%08x%04x%04x%s" % (
-        pdb_guid.Data1,
-        pdb_guid.Data2,
-        pdb_guid.Data3,
-        pdb_guid.Data4.hex(),
-    )
-    pdb_symstore_hash = "%s%x" % (pdb_guid_str, pdb.STREAM_PDB.Age)
+    pdb_symstore_hash = make_symstore_hash(pdb.STREAM_PDB)
     base_filename = os.path.splitext(os.path.basename(filepath))[0]
 
     profile["$METADATA"] = {
@@ -444,7 +453,7 @@ def make_pdb_profile(
 
     if dll_path:
         try:
-            pe = PE(dll_path, fast_load=True)
+            pe = pefile.PE(dll_path, fast_load=True)
             profile["$EXTRAS"]["ImageBase"] = hex(pe.OPTIONAL_HEADER.ImageBase)
         except AttributeError:
             # I think that DLLs have some sanity and the optional header is
@@ -479,13 +488,14 @@ def fetch_pdb(pdbname, guidage, destdir="."):
     raise RuntimeError("Failed to fetch PDB")
 
 
-def pdb_guid(file):
-    pe = PE(file, fast_load=True)
+def pe_codeview_data(filepath):
+    pe = pefile.PE(filepath, fast_load=True)
     pe.parse_data_directories()
     try:
         codeview = next(
             filter(
-                lambda x: x.struct.Type == DEBUG_TYPE["IMAGE_DEBUG_TYPE_CODEVIEW"],
+                lambda x: x.struct.Type
+                == pefile.DEBUG_TYPE["IMAGE_DEBUG_TYPE_CODEVIEW"],
                 pe.DIRECTORY_ENTRY_DEBUG,
             )
         )
@@ -495,15 +505,11 @@ def pdb_guid(file):
 
     offset = codeview.struct.PointerToRawData
     size = codeview.struct.SizeOfData
-    tmp = CV_RSDS_HEADER.parse(pe.__data__[offset : offset + size])
-    guidstr = "%08x%04x%04x%s%x" % (
-        tmp.GUID.Data1,
-        tmp.GUID.Data2,
-        tmp.GUID.Data3,
-        hexlify(tmp.GUID.Data4).decode("ascii"),
-        tmp.Age,
-    )
-    return {"filename": tmp.Filename, "GUID": guidstr}
+    codeview_struct = CV_RSDS_HEADER.parse(pe.__data__[offset : offset + size])
+    return {
+        "filename": codeview_struct.Filename,
+        "symstore_hash": make_symstore_hash(codeview_struct),
+    }
 
 
 def main():
@@ -511,7 +517,7 @@ def main():
     parser.add_argument(
         "action",
         type=str,
-        help="one of: fetch_pdb (requires --pdb-name and --guid_age), parse_pdb (requires --pdb-name), pdb_guid (requires --file)",
+        help="one of: fetch_pdb (requires --pdb-name and --guid_age), parse_pdb (requires --pdb-name), pe_codeview_data (requires --file)",
     )
     parser.add_argument(
         "--pdb_name",
@@ -519,7 +525,9 @@ def main():
         help="name of pdb file with extension, e.g. ntkrnlmp.pdb",
     )
     parser.add_argument("--guid_age", type=str, help="guid/age of the pdb file")
-    parser.add_argument("--file", type=str, help="file to get GUID age from")
+    parser.add_argument(
+        "--file", type=str, help="file to get symstore_hash (GUID + Age) from"
+    )
 
     args = parser.parse_args()
 
@@ -527,8 +535,8 @@ def main():
         print(make_pdb_profile(args.pdb_name))
     elif args.action == "fetch_pdb":
         fetch_pdb(args.pdb_name, args.guid_age)
-    elif args.action == "pdb_guid":
-        print(pdb_guid(args.file))
+    elif args.action == "pe_codeview_data":
+        print(pe_codeview_data(args.file))
     else:
         raise RuntimeError("Unknown action")
 

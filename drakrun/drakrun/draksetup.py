@@ -23,7 +23,7 @@ from drakrun.drakpdb import (
     make_pdb_profile,
     dll_file_list,
     compulsory_dll_file_list,
-    pdb_guid,
+    pe_codeview_data,
     DLL,
 )
 from drakrun.config import (
@@ -33,6 +33,7 @@ from drakrun.config import (
     PROFILE_DIR,
     ETC_DIR,
     VM_CONFIG_DIR,
+    APISCOUT_PROFILE_DIR,
 )
 from drakrun.networking import (
     setup_vm_network,
@@ -50,11 +51,14 @@ from drakrun.vm import (
     delete_vm_conf,
     VirtualMachine,
 )
+from drakrun.apiscout import make_static_apiscout_profile_for_dll
 from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
 from tqdm import tqdm
 from pathlib import Path, PureWindowsPath
 import traceback
 
+
+log = logging.getLogger(__name__)
 
 conf = configparser.ConfigParser()
 conf.read(os.path.join(ETC_DIR, "config.ini"))
@@ -85,6 +89,7 @@ def ensure_dirs():
 
     os.makedirs(LIB_DIR, exist_ok=True)
     os.makedirs(PROFILE_DIR, exist_ok=True)
+    os.makedirs(APISCOUT_PROFILE_DIR, exist_ok=True)
     os.makedirs(VOLUME_DIR, exist_ok=True)
 
 
@@ -152,6 +157,8 @@ def start_enabled_drakruns():
 def cleanup_postinstall_files():
     for profile in os.listdir(PROFILE_DIR):
         safe_delete(os.path.join(PROFILE_DIR, profile))
+    for profile_file in os.listdir(APISCOUT_PROFILE_DIR):
+        safe_delete(os.path.join(APISCOUT_PROFILE_DIR, profile_file))
 
 
 @click.command(help="Cleanup the changes made by draksetup")
@@ -572,15 +579,23 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
             # Take care if the error message is changed
             raise Exception("Some error occurred in injector")
 
-        guid = pdb_guid(local_dll_path)
-        pdb_tmp_filepath = fetch_pdb(guid["filename"], guid["GUID"], PROFILE_DIR)
+        static_apiscout_dll_profile = make_static_apiscout_profile_for_dll(
+            local_dll_path
+        )
+        with open(os.path.join(APISCOUT_PROFILE_DIR, f"{file.dest}.json"), "w") as f:
+            f.write(json.dumps(static_apiscout_dll_profile, indent=4, sort_keys=True))
+
+        codeview_data = pe_codeview_data(local_dll_path)
+        pdb_tmp_filepath = fetch_pdb(
+            codeview_data["filename"], codeview_data["symstore_hash"], PROFILE_DIR
+        )
 
         logging.debug("Parsing PDB into JSON profile...")
         profile = make_pdb_profile(
             pdb_tmp_filepath,
             dll_origin_path=guest_dll_path,
             dll_path=local_dll_path,
-            dll_symstore_hash=guid["GUID"],
+            dll_symstore_hash=codeview_data["symstore_hash"],
         )
         with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), "w") as f:
             f.write(profile)
@@ -776,6 +791,14 @@ def postinstall(report, generate_usermode):
             }
         )
 
+    os_info = {
+        "os_name": version,
+        "os_timestamp": storage_backend.get_vm0_snapshot_time(),
+    }
+
+    with open(os.path.join(APISCOUT_PROFILE_DIR, "OS_INFO.json"), "w") as f:
+        f.write(json.dumps(os_info, indent=4, sort_keys=True))
+
     logging.info("All right, drakrun setup is done.")
     logging.info("First instance of drakrun will be enabled automatically...")
     subprocess.check_output("systemctl enable drakrun@1", shell=True)
@@ -826,8 +849,7 @@ def create_missing_profiles():
             try:
                 create_rekall_profile(injector, profile)
             except Exception:
-                # silence per-dll errors
-                pass
+                log.exception("Unexpected exception from create_rekall_profile!")
 
     vm.destroy()
     delete_vm_network(

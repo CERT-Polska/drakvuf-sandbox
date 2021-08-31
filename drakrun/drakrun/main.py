@@ -28,7 +28,7 @@ from karton.core import Karton, Config, Task, LocalResource, Resource
 
 from drakrun.version import __version__ as DRAKRUN_VERSION
 from drakrun.drakpdb import dll_file_list
-from drakrun.config import InstallInfo, ETC_DIR, PROFILE_DIR, VOLUME_DIR
+from drakrun.config import InstallInfo, ETC_DIR, PROFILE_DIR, APISCOUT_PROFILE_DIR, VOLUME_DIR
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
 from drakrun.util import (
@@ -41,6 +41,7 @@ from drakrun.util import (
 from drakrun.vm import generate_vm_conf, VirtualMachine
 from drakrun.injector import Injector
 import drakrun.sample_startup as sample_startup
+from drakrun.apiscout import build_static_apiscout_profile
 
 
 class LocalLogBuffer(logging.Handler):
@@ -375,6 +376,16 @@ class DrakrunKarton(Karton):
 
             return Resource.from_directory(name="profiles", directory_path=tmp_dir)
 
+    def build_static_apiscout_profile_payload(self) -> Dict[str, LocalResource]:
+        dll_basename_list = [dll.dest for dll in dll_file_list]
+        static_apiscout_profile = build_static_apiscout_profile(
+            APISCOUT_PROFILE_DIR, dll_basename_list
+        )
+        return LocalResource(
+            name="static_apiscout_profile.json",
+            content=json.dumps(static_apiscout_profile, indent=4, sort_keys=True),
+        )
+
     def send_raw_analysis(self, sample, outdir, metadata, dumps_metadata, quality):
         """
         Offload drakrun-prod by sending raw analysis output to be processed by
@@ -400,6 +411,15 @@ class DrakrunKarton(Karton):
         if self.config.config.getboolean("drakrun", "attach_profiles", fallback=False):
             self.log.info("Uploading profiles...")
             task.add_payload("profiles", self.build_profile_payload())
+
+        if self.config.config.getboolean(
+            "drakrun", "attach_apiscout_profile", fallback=False
+        ):
+            self.log.info("Uploading static ApiScout profile...")
+            task.add_payload(
+                "static_apiscout_profile.json",
+                self.build_static_apiscout_profile_payload(),
+            )
 
         self.log.info("Uploading artifacts...")
         for resource in self.upload_artifacts(self.analysis_uid, outdir):
