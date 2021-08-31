@@ -1208,6 +1208,15 @@ def do_export_full(mc, bucket, name):
             bucket, f"{name}/profiles/{file}", os.path.join(PROFILE_DIR, file)
         )
 
+    # Upload ApiScout profile
+    for file in os.listdir(APISCOUT_PROFILE_DIR):
+        logging.info("Uploading file %s", file)
+        mc.fput_object(
+            bucket,
+            f"{name}/apiscout_profile/{file}",
+            os.path.join(APISCOUT_PROFILE_DIR, file),
+        )
+
 
 def do_import_full(mc, name, bucket, zpool):
     """Perform full snapshot import, symmetric to do_export_full"""
@@ -1222,12 +1231,20 @@ def do_import_full(mc, name, bucket, zpool):
                 ["zcat", compressed_snapshot.name], stdout=snapshot, check=True
             )
 
-    profile_prefix = f"{name}/profiles/"
-    for object in mc.list_objects(bucket, prefix=profile_prefix):
-        # Strip profile prefix
-        profile_name = object.object_name[len(profile_prefix) :]
+    profiles_prefix = f"{name}/profiles/"
+    for object in mc.list_objects(bucket, prefix=profiles_prefix):
+        # Strip profiles prefix
+        profile_name = object.object_name[len(profiles_prefix) :]
         mc.fget_object(
             bucket, object.object_name, os.path.join(PROFILE_DIR, profile_name)
+        )
+
+    apiscout_profile_prefix = f"{name}/apiscout_profile/"
+    for object in mc.list_objects(bucket, prefix=apiscout_profile_prefix):
+        # Strip apiscout profile prefix
+        filename = object.object_name[len(apiscout_profile_prefix) :]
+        mc.fget_object(
+            bucket, object.object_name, os.path.join(APISCOUT_PROFILE_DIR, filename)
         )
 
 
