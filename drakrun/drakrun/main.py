@@ -571,27 +571,6 @@ class DrakrunKarton(Karton):
                     self.log.info("Injection failed with error: %s", entry["Error"])
                     break
 
-    def _memory_dump(self, vm_name, dump_filepath):
-        """Dump raw memory from running vm using vmi-dump-memory and compress it with gzip"""
-
-        with tempfile.NamedTemporaryFile() as raw_memdump, open(
-            f"{dump_filepath}.gz", "wb"
-        ) as compressed_file:
-            self.log.info(f"Dumping raw memory from {vm_name} guest...")
-            try:
-                dump_args = ["vmi-dump-memory", vm_name, raw_memdump.name]
-                subprocess.run(dump_args, check=True)
-            except subprocess.CalledProcessError as e:
-                self.log.error(f"Dumping raw memory from {vm_name} failed.")
-                raise e
-
-            self.log.info(f"Compressing {vm_name} guest memory dump...")
-            subprocess.check_call(
-                ["gzip", "-c", raw_memdump.name], stdout=compressed_file
-            )
-
-            self.log.info(f"Raw memory dump from {vm_name} succeeded.")
-
     def analyze_sample(self, sample_path, workdir, outdir, start_command, timeout):
         analysis_info = dict()
 
@@ -606,9 +585,6 @@ class DrakrunKarton(Karton):
         ), graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), open(
             drakmon_log_fp, "wb"
         ) as drakmon_log:
-
-            if raw_memory_dump:
-                self._memory_dump(vm.vm_name, outdir, "memory_dump_pre_sample.raw")
 
             analysis_info["snapshot_version"] = vm.backend.get_vm0_snapshot_time()
 
@@ -676,9 +652,7 @@ class DrakrunKarton(Karton):
                 raise e
 
             if raw_memory_dump:
-                self._memory_dump(
-                    vm.vm_name, os.path.join(outdir, "post_sample.raw_memdump")
-                )
+                vm.memory_dump(os.path.join(outdir, "post_sample.raw_memdump"))
 
         return analysis_info
 
