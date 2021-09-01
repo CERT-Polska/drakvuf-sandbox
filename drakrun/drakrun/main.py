@@ -254,6 +254,7 @@ class DrakrunKarton(Karton):
         return f"vm-{self.instance_id}"
 
     def init_drakrun(self):
+
         generate_vm_conf(self.install_info, self.instance_id)
 
         if not self.backend.minio.bucket_exists("drakrun"):
@@ -263,6 +264,13 @@ class DrakrunKarton(Karton):
         dns_server = self.config.config["drakrun"].get("dns_server", "")
 
         setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
+
+        self.log.info("Caculating snapshot sha256 hash...")
+        snapshot_hash = hashlib.sha256()
+        with open(os.path.join(VOLUME_DIR, "snapshot.sav"), "rb") as f:
+            for block in iter(lambda: f.read(65536), b""):
+                snapshot_hash.update(block)
+        self.snapshot_sha256 = snapshot_hash.hexdigest()
 
     def _karton_safe_get_headers(self, task, key, fallback):
         ret = task.headers.get(key, fallback)
@@ -656,25 +664,17 @@ class DrakrunKarton(Karton):
 
         return analysis_info
 
-    def _file_sha256(self, filename, blocksize=65536):
-        hash = hashlib.sha256()
-        with open(filename, "rb") as f:
-            for block in iter(lambda: f.read(blocksize), b""):
-                hash.update(block)
-        return hash.hexdigest()
-
     @with_logs("drakrun.log")
     def process(self, task: Task):
         # Gather basic facts
         sample = task.get_resource("sample")
         magic_output = magic.from_buffer(sample.content)
         sha256sum = hashlib.sha256(sample.content).hexdigest()
-        snapshot_sha256 = self._file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
 
         self.log.info(f"Running on: {socket.gethostname()}")
         self.log.info(f"Sample SHA256: {sha256sum}")
         self.log.info(f"Analysis UID: {self.analysis_uid}")
-        self.log.info(f"Snapshot SHA256: {snapshot_sha256}")
+        self.log.info(f"Snapshot SHA256: {self.snapshot_sha256}")
 
         # Timeout sanity check
         timeout = task.payload.get("timeout") or self.default_timeout
@@ -738,7 +738,7 @@ class DrakrunKarton(Karton):
 
         metadata = {
             "sample_sha256": sha256sum,
-            "snapshot_sha256": snapshot_sha256,
+            "snapshot_sha256": self.snapshot_sha256,
             "magic_output": magic_output,
             "time_started": int(time.time()),
         }
