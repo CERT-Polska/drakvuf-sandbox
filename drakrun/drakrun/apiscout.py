@@ -1,6 +1,7 @@
 import json
 import logging
 from operator import attrgetter
+import os
 from pathlib import Path, PureWindowsPath
 import pefile
 from typing import List, Dict, Any
@@ -97,6 +98,11 @@ def build_static_apiscout_profile(
 
     for dll_basename in dll_basename_list:
         filepath = Path(apiscout_profile_dir) / f"{dll_basename}.json"
+        if not os.path.isfile(filepath):
+            log.warning(
+                f"'{filepath}' not found. Is there a problem with profiles generation?"
+            )
+            continue
         with open(filepath) as f:
             dll_profile = json.load(f)
         dlls_profiles[build_apiscout_dll_key(dll_profile)] = dll_profile
