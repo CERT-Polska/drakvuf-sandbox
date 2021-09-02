@@ -70,6 +70,8 @@ dll_file_list = [
     ),
     DLL("Windows/System32/Wldap32.dll", "amd64_Wldap32_profile", None),
     DLL("Windows/SysWOW64/Wldap32.dll", "x86_Wldap32_profile", None),
+    DLL("Windows/System32/advapi32.dll", "amd64_advapi32_profile", None),
+    DLL("Windows/SysWOW64/advapi32.dll", "x86_advapi32_profile", None),
     DLL("Windows/System32/comctl32.dll", "amd64_comctl32_profile", None),
     DLL("Windows/SysWOW64/comctl32.dll", "x86_comctl32_profile", None),
     DLL("Windows/System32/crypt32.dll", "amd64_crypt32_profile", None),
