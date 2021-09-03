@@ -28,7 +28,13 @@ from karton.core import Karton, Config, Task, LocalResource, Resource
 
 from drakrun.version import __version__ as DRAKRUN_VERSION
 from drakrun.drakpdb import dll_file_list
-from drakrun.config import InstallInfo, ETC_DIR, PROFILE_DIR, APISCOUT_PROFILE_DIR
+from drakrun.config import (
+    InstallInfo,
+    ETC_DIR,
+    PROFILE_DIR,
+    APISCOUT_PROFILE_DIR,
+    VOLUME_DIR,
+)
 from drakrun.storage import get_storage_backend
 from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
 from drakrun.util import (
@@ -37,6 +43,7 @@ from drakrun.util import (
     get_xen_commandline,
     graceful_exit,
     RuntimeInfo,
+    file_sha256,
 )
 from drakrun.vm import generate_vm_conf, VirtualMachine
 from drakrun.injector import Injector
@@ -248,6 +255,7 @@ class DrakrunKarton(Karton):
         return f"vm-{self.instance_id}"
 
     def init_drakrun(self):
+
         generate_vm_conf(self.install_info, self.instance_id)
 
         if not self.backend.minio.bucket_exists("drakrun"):
@@ -257,6 +265,9 @@ class DrakrunKarton(Karton):
         dns_server = self.config.config["drakrun"].get("dns_server", "")
 
         setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
+
+        self.log.info("Caculating snapshot hash...")
+        self.snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
 
     def _karton_safe_get_headers(self, task, key, fallback):
         ret = task.headers.get(key, fallback)
@@ -570,6 +581,9 @@ class DrakrunKarton(Karton):
 
         dns_server = self.config.config["drakrun"].get("dns_server", "8.8.8.8")
         drakmon_log_fp = os.path.join(outdir, "drakmon.log")
+        raw_memory_dump = self.config.config["drakrun"].getboolean(
+            "raw_memory_dump", fallback=False
+        )
 
         with self.run_vm() as vm, graceful_exit(
             start_dnsmasq(self.instance_id, dns_server)
@@ -642,6 +656,9 @@ class DrakrunKarton(Karton):
                 self.log.exception("DRAKVUF timeout expired")
                 raise e
 
+            if raw_memory_dump:
+                vm.memory_dump(os.path.join(outdir, "post_sample.raw_memdump.gz"))
+
         return analysis_info
 
     @with_logs("drakrun.log")
@@ -654,6 +671,7 @@ class DrakrunKarton(Karton):
         self.log.info(f"Running on: {socket.gethostname()}")
         self.log.info(f"Sample SHA256: {sha256sum}")
         self.log.info(f"Analysis UID: {self.analysis_uid}")
+        self.log.info(f"Snapshot SHA256: {self.snapshot_sha256}")
 
         # Timeout sanity check
         timeout = task.payload.get("timeout") or self.default_timeout
@@ -717,6 +735,7 @@ class DrakrunKarton(Karton):
 
         metadata = {
             "sample_sha256": sha256sum,
+            "snapshot_sha256": self.snapshot_sha256,
             "magic_output": magic_output,
             "time_started": int(time.time()),
         }
