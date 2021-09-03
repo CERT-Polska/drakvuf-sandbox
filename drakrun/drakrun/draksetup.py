@@ -1056,7 +1056,7 @@ def memdump_export(bucket, instance):
     logging.info("Restoring VM and performing memory dump")
 
     try:
-        vm.restore()
+        vm.restore(pause=True)
     except subprocess.CalledProcessError:
         logging.exception(f"Failed to restore VM {vm.vm_name}")
         with open(f"/var/log/xen/qemu-dm-{vm.vm_name}.log", "rb") as f:
