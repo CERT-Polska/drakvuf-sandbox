@@ -43,6 +43,7 @@ from drakrun.util import (
     get_xen_commandline,
     graceful_exit,
     RuntimeInfo,
+    file_sha256,
 )
 from drakrun.vm import generate_vm_conf, VirtualMachine
 from drakrun.injector import Injector
@@ -265,12 +266,8 @@ class DrakrunKarton(Karton):
 
         setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
 
-        self.log.info("Caculating snapshot sha256 hash...")
-        snapshot_hash = hashlib.sha256()
-        with open(os.path.join(VOLUME_DIR, "snapshot.sav"), "rb") as f:
-            for block in iter(lambda: f.read(65536), b""):
-                snapshot_hash.update(block)
-        self.snapshot_sha256 = snapshot_hash.hexdigest()
+        self.log.info("Caculating snapshot hash...")
+        self.snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
 
     def _karton_safe_get_headers(self, task, key, fallback):
         ret = task.headers.get(key, fallback)

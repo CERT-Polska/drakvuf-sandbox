@@ -52,7 +52,7 @@ from drakrun.vm import (
     VirtualMachine,
 )
 from drakrun.apiscout import make_static_apiscout_profile_for_dll
-from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete
+from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete, file_sha256
 from tqdm import tqdm
 from pathlib import Path, PureWindowsPath
 import traceback
@@ -1031,11 +1031,7 @@ def memdump_export(bucket, instance):
         return
 
     logging.info("Calculating snapshot hash...")
-    snapshot_hash = hashlib.sha256()
-    with open(os.path.join(VOLUME_DIR, "snapshot.sav"), "rb") as f:
-        for block in iter(lambda: f.read(65536), b""):
-            snapshot_hash.update(block)
-    snapshot_sha256 = snapshot_hash.hexdigest()
+    snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
     name = f"{snapshot_sha256}_pre_sample.raw_memdump.gz"
 
     mc = get_minio_client(conf)

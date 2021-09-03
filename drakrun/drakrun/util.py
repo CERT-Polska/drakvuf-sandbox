@@ -7,6 +7,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import IO, AnyStr
 import traceback
+import hashlib
 
 from dataclasses_json import config, dataclass_json
 
@@ -214,3 +215,11 @@ def graceful_exit(proc: subprocess.Popen):
             proc.kill()
             proc.wait()
             log.error("Process was forceully killed")
+
+
+def file_sha256(filename, blocksize=65536) -> str:
+    snapshot_hash = hashlib.sha256()
+    with open(filename, "rb") as f:
+        for block in iter(lambda: f.read(65536), b""):
+            snapshot_hash.update(block)
+    return snapshot_hash.hexdigest()
