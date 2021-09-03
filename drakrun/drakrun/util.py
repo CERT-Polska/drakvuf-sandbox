@@ -218,8 +218,8 @@ def graceful_exit(proc: subprocess.Popen):
 
 
 def file_sha256(filename, blocksize=65536) -> str:
-    snapshot_hash = hashlib.sha256()
+    file_hash = hashlib.sha256()
     with open(filename, "rb") as f:
-        for block in iter(lambda: f.read(65536), b""):
-            snapshot_hash.update(block)
-    return snapshot_hash.hexdigest()
+        for block in iter(lambda: f.read(blocksize), b""):
+            file_hash.update(block)
+    return file_hash.hexdigest()
