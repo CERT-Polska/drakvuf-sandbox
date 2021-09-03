@@ -1045,13 +1045,13 @@ def memdump_export(bucket, instance):
         return
 
     try:
-        result = mc.stat_object(bucket, name)
+        mc.stat_object(bucket, name)
         logging.info("This file already exists in specified bucket")
         return
     except NoSuchKey:
         pass
-    except:
-        raise
+    except Exception:
+        logging.exception("Failed to check if object exists on minio")
 
     logging.info(f"Restoring VM and performing memory dump")
 
