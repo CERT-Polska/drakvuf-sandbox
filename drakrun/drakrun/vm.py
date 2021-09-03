@@ -176,13 +176,13 @@ class VirtualMachine:
                 **kwargs,
             )
 
-    def memory_dump(self, dump_filepath):
+    def memory_dump(self, compressed_filepath):
         """Dump raw memory from running vm using vmi-dump-memory and compress it with gzip
         :raises: subprocess.CalledProcessError
         """
 
         with tempfile.NamedTemporaryFile() as raw_memdump, open(
-            f"{dump_filepath}.gz", "wb"
+            compressed_filepath, "wb"
         ) as compressed_file:
 
             log.info(f"Dumping raw memory from {self.vm_name} guest...")

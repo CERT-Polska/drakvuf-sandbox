@@ -660,7 +660,7 @@ class DrakrunKarton(Karton):
                 raise e
 
             if raw_memory_dump:
-                vm.memory_dump(os.path.join(outdir, "post_sample.raw_memdump"))
+                vm.memory_dump(os.path.join(outdir, "post_sample.raw_memdump.gz"))
 
         return analysis_info
 
