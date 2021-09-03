@@ -1053,7 +1053,7 @@ def memdump_export(bucket, instance):
     except Exception:
         logging.exception("Failed to check if object exists on minio")
 
-    logging.info(f"Restoring VM and performing memory dump")
+    logging.info("Restoring VM and performing memory dump")
 
     try:
         vm.restore()
