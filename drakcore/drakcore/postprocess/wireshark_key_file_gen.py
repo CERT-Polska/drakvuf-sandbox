@@ -1,8 +1,9 @@
 import json
 import logging
 from io import BytesIO
-from karton.core import Task, RemoteResource
 from typing import Dict
+
+from karton.core import RemoteResource, Task
 
 
 def gen_key_file_from_log(tlsmon_log):

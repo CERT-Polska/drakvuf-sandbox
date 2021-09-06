@@ -1,6 +1,6 @@
 import os
-import sys
 import secrets
+import sys
 
 from karton.core import Config
 

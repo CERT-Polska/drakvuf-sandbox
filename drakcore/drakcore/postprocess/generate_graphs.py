@@ -1,10 +1,11 @@
-import os
-import tempfile
 import logging
+import os
 import subprocess
-
-from karton.core import Task, RemoteResource
+import tempfile
 from typing import Dict
+
+from karton.core import RemoteResource, Task
+
 from drakcore.postprocess.drakparse import parse_logs
 
 

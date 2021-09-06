@@ -1,8 +1,8 @@
 import json
 import logging
-from typing import Dict, Iterable, Generator, Union
 from datetime import datetime
 from sys import argv, exit
+from typing import Dict, Generator, Iterable, Union
 
 # set this to False for more debugging
 void_unknown = True

@@ -1,13 +1,14 @@
-import os
-import logging
-import json
 import functools
+import json
+import logging
+import os
 from io import StringIO
 
-from drakcore.version import __version__ as DRAKCORE_VERSION
-from karton.core import Karton, RemoteResource, LocalResource, Task
+from karton.core import Karton, LocalResource, RemoteResource, Task
+
 from drakcore.postprocess import REGISTERED_PLUGINS
 from drakcore.util import get_config
+from drakcore.version import __version__ as DRAKCORE_VERSION
 
 
 class LocalLogBuffer(logging.Handler):

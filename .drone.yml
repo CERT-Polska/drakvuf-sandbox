@@ -7,6 +7,11 @@ steps:
   image: pyfound/black:21.7b0
   commands:
     - black --check --diff drakcore/
+- name: isort check
+  image: python:3.8-buster
+  commands:
+    - pip3 install isort==5.9.3
+    - isort --profile black drakcore/
 - name: flake8 drakcore
   image: python:3.8-buster
   commands:
@@ -34,6 +39,11 @@ steps:
   image: pyfound/black:21.7b0
   commands:
     - black --check --diff drakrun/
+- name: isort check
+  image: python:3.8-buster
+  commands:
+    - pip3 install isort==5.9.3
+    - isort --profile black drakcore/
 - name: lint drakrun
   image: python:3.8-buster
   commands:

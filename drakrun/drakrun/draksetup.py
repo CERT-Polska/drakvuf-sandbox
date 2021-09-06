@@ -1,62 +1,62 @@
 import configparser
 import hashlib
-import logging
 import io
-import sys
+import json
+import logging
 import os
 import re
-import json
-import time
 import secrets
-import subprocess
 import string
+import subprocess
+import sys
 import tempfile
+import time
+import traceback
+from pathlib import Path, PureWindowsPath
 from typing import Optional
 
 import click
 import requests
-from requests import RequestException
 from minio import Minio
 from minio.error import NoSuchKey
+from requests import RequestException
+from tqdm import tqdm
+
+from drakrun.apiscout import make_static_apiscout_profile_for_dll
+from drakrun.config import (
+    APISCOUT_PROFILE_DIR,
+    ETC_DIR,
+    LIB_DIR,
+    PROFILE_DIR,
+    VM_CONFIG_DIR,
+    VOLUME_DIR,
+    InstallInfo,
+)
 from drakrun.drakpdb import (
+    DLL,
+    compulsory_dll_file_list,
+    dll_file_list,
     fetch_pdb,
     make_pdb_profile,
-    dll_file_list,
-    compulsory_dll_file_list,
     pe_codeview_data,
-    DLL,
 )
-from drakrun.config import (
-    InstallInfo,
-    LIB_DIR,
-    VOLUME_DIR,
-    PROFILE_DIR,
-    ETC_DIR,
-    VM_CONFIG_DIR,
-    APISCOUT_PROFILE_DIR,
-)
+from drakrun.injector import Injector
 from drakrun.networking import (
+    delete_vm_network,
     setup_vm_network,
     start_dnsmasq,
-    delete_vm_network,
     stop_dnsmasq,
 )
-from drakrun.storage import get_storage_backend, REGISTERED_BACKEND_NAMES
-from drakrun.injector import Injector
+from drakrun.storage import REGISTERED_BACKEND_NAMES, get_storage_backend
+from drakrun.util import RuntimeInfo, VmiOffsets, file_sha256, safe_delete
 from drakrun.vm import (
-    generate_vm_conf,
     FIRST_CDROM_DRIVE,
     SECOND_CDROM_DRIVE,
-    get_all_vm_conf,
-    delete_vm_conf,
     VirtualMachine,
+    delete_vm_conf,
+    generate_vm_conf,
+    get_all_vm_conf,
 )
-from drakrun.apiscout import make_static_apiscout_profile_for_dll
-from drakrun.util import RuntimeInfo, VmiOffsets, safe_delete, file_sha256
-from tqdm import tqdm
-from pathlib import Path, PureWindowsPath
-import traceback
-
 
 log = logging.getLogger(__name__)
 

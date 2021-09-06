@@ -1,13 +1,13 @@
 import contextlib
+import hashlib
 import logging
 import os
 import re
 import subprocess
 import sys
+import traceback
 from dataclasses import dataclass, field
 from typing import IO, AnyStr
-import traceback
-import hashlib
 
 from dataclasses_json import config, dataclass_json
 
