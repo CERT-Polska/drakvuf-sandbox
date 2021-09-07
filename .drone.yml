@@ -11,7 +11,7 @@ steps:
   image: python:3.8-buster
   commands:
     - pip3 install isort==5.9.3
-    - isort --profile black drakcore/
+    - isort --profile black --check drakcore/
 - name: flake8 drakcore
   image: python:3.8-buster
   commands:
@@ -43,7 +43,7 @@ steps:
   image: python:3.8-buster
   commands:
     - pip3 install isort==5.9.3
-    - isort --profile black drakrun/
+    - isort --profile black --check drakrun/
 - name: lint drakrun
   image: python:3.8-buster
   commands:
