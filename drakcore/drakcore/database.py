@@ -1,6 +1,7 @@
 import json
+from typing import Any, Dict, Optional
+
 from msql import BaseDb
-from typing import Dict, Any, Optional
 
 AnalysisMetadata = Dict[str, Any]
 

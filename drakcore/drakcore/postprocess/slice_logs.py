@@ -1,12 +1,12 @@
-import re
 import json
-import tempfile
 import logging
-
-from typing import Dict
-from karton.core import Task, RemoteResource
+import re
+import tempfile
 from collections import Counter
 from pathlib import Path
+from typing import Dict
+
+from karton.core import RemoteResource, Task
 
 
 def slice_drakmon_logs(task: Task, resources: Dict[str, RemoteResource], minio):

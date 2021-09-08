@@ -1,54 +1,54 @@
 #!/usr/bin/python3
 
-import contextlib
-import logging
-import sys
-import os
-import shutil
 import argparse
-import subprocess
+import contextlib
+import functools
 import hashlib
+import json
+import logging
+import ntpath
+import os
+import re
+import shutil
 import socket
+import subprocess
+import sys
+import tempfile
 import time
 import zipfile
-import json
-import re
-import functools
-import tempfile
-from io import StringIO
-from typing import List, Dict
-from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 from configparser import NoOptionError
+from io import StringIO
 from itertools import chain
 from pathlib import Path
+from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
+from typing import Dict, List
 
 import magic
-import ntpath
-from karton.core import Karton, Config, Task, LocalResource, Resource
+from karton.core import Config, Karton, LocalResource, Resource, Task
 
-from drakrun.version import __version__ as DRAKRUN_VERSION
-from drakrun.drakpdb import dll_file_list
-from drakrun.config import (
-    InstallInfo,
-    ETC_DIR,
-    PROFILE_DIR,
-    APISCOUT_PROFILE_DIR,
-    VOLUME_DIR,
-)
-from drakrun.storage import get_storage_backend
-from drakrun.networking import start_tcpdump_collector, start_dnsmasq, setup_vm_network
-from drakrun.util import (
-    patch_config,
-    get_xl_info,
-    get_xen_commandline,
-    graceful_exit,
-    RuntimeInfo,
-    file_sha256,
-)
-from drakrun.vm import generate_vm_conf, VirtualMachine
-from drakrun.injector import Injector
 import drakrun.sample_startup as sample_startup
 from drakrun.apiscout import build_static_apiscout_profile
+from drakrun.config import (
+    APISCOUT_PROFILE_DIR,
+    ETC_DIR,
+    PROFILE_DIR,
+    VOLUME_DIR,
+    InstallInfo,
+)
+from drakrun.drakpdb import dll_file_list
+from drakrun.injector import Injector
+from drakrun.networking import setup_vm_network, start_dnsmasq, start_tcpdump_collector
+from drakrun.storage import get_storage_backend
+from drakrun.util import (
+    RuntimeInfo,
+    file_sha256,
+    get_xen_commandline,
+    get_xl_info,
+    graceful_exit,
+    patch_config,
+)
+from drakrun.version import __version__ as DRAKRUN_VERSION
+from drakrun.vm import VirtualMachine, generate_vm_conf
 
 
 class LocalLogBuffer(logging.Handler):

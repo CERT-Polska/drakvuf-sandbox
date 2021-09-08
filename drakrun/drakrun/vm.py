@@ -1,12 +1,12 @@
+import logging
 import os
 import re
-import logging
 import subprocess
 import tempfile
 from pathlib import Path
 
-from drakrun.storage import get_storage_backend, StorageBackendBase
-from drakrun.config import VM_CONFIG_DIR, VOLUME_DIR, ETC_DIR, LIB_DIR, InstallInfo
+from drakrun.config import ETC_DIR, LIB_DIR, VM_CONFIG_DIR, VOLUME_DIR, InstallInfo
+from drakrun.storage import StorageBackendBase, get_storage_backend
 from drakrun.util import safe_delete, try_run
 
 log = logging.getLogger("drakrun")

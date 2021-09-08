@@ -1,14 +1,14 @@
+import datetime
+import json
 import logging
 import os
-import subprocess
-import time
 import shlex
 import shutil
-import json
-import datetime
-
+import subprocess
+import time
 from typing import Tuple
-from drakrun.config import InstallInfo, VOLUME_DIR
+
+from drakrun.config import VOLUME_DIR, InstallInfo
 from drakrun.util import safe_delete
 
 

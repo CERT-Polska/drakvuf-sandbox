@@ -1,9 +1,10 @@
-import os
 import json
-
+import os
 from dataclasses import dataclass
 from typing import Optional
+
 from dataclasses_json import DataClassJsonMixin
+
 from drakrun.util import safe_delete
 
 ETC_DIR = os.getenv("DRAKRUN_ETC_DIR") or "/etc/drakrun"

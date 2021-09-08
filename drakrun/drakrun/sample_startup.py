@@ -1,11 +1,10 @@
 import logging
+import subprocess
 
 import pefile
-import subprocess
 from oletools.olevba import VBA_Parser
 
 from drakrun.vba_graph import get_outer_nodes_from_vba_file
-
 
 log = logging.getLogger("drakrun")
 

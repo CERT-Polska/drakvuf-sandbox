@@ -1,17 +1,16 @@
 import argparse
+import json
 import os
 import re
+from typing import NamedTuple, Optional, Union
 
 import pdbparse
-import json
-
-import requests
-from construct import Struct, Const, Bytes, Int32ul, Int16ul, CString, EnumIntegerString
-from construct.lib.containers import Container
 import pefile
+import requests
+from construct import Bytes, Const, CString, EnumIntegerString, Int16ul, Int32ul, Struct
+from construct.lib.containers import Container
 from requests import HTTPError
 from tqdm import tqdm
-from typing import NamedTuple, Optional, Union
 
 DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 

@@ -1,22 +1,22 @@
 import argparse
-from pathlib import Path
-from collections import defaultdict
-import subprocess
-import tempfile
 import logging
+import subprocess
 import sys
+import tempfile
+from collections import defaultdict
+from pathlib import Path
 
 from drakcore.ipt_utils import (
-    log,
-    load_drakvuf_output,
-    get_fault_va,
     get_fault_pa,
-    get_trap_pa,
+    get_fault_va,
     get_frame_va,
-    page_align,
-    is_page_aligned,
-    select_cr3,
+    get_trap_pa,
     hexint,
+    is_page_aligned,
+    load_drakvuf_output,
+    log,
+    page_align,
+    select_cr3,
 )
 
 

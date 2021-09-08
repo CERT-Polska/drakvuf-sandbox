@@ -1,20 +1,19 @@
 import json
 import os
-import re
 import pathlib
+import re
 from tempfile import NamedTemporaryFile
-from zipfile import ZipFile, ZIP_DEFLATED
+from zipfile import ZIP_DEFLATED, ZipFile
 
-from flask import Flask, jsonify, request, send_file, send_from_directory, abort
-from karton.core import Producer, Task, Resource
+from flask import Flask, abort, jsonify, request, send_file, send_from_directory
+from karton.core import Producer, Resource, Task
 from karton.core.task import TaskState
 from minio.error import NoSuchKey
 
-from drakcore.system import SystemService
-from drakcore.util import get_config
 from drakcore.analysis import AnalysisProxy
 from drakcore.database import Database
-
+from drakcore.system import SystemService
+from drakcore.util import get_config
 
 app = Flask(__name__, static_folder="frontend/build/static")
 conf = get_config()
