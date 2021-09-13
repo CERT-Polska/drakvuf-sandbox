@@ -1,10 +1,11 @@
 import json
 import logging
-from operator import attrgetter
 import os
+from operator import attrgetter
 from pathlib import Path, PureWindowsPath
+from typing import Any, Dict, List
+
 import pefile
-from typing import List, Dict, Any
 
 log = logging.getLogger(__name__)
 
