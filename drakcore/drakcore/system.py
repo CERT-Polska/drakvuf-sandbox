@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
 import urllib3
-from minio import Minio
 from karton.core import Config
 from karton.system import SystemService
+from minio import Minio
+
 from drakcore.util import get_config
 
 

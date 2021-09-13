@@ -1,6 +1,8 @@
-from drakcore.app import get_analysis_metadata
-from karton.core import Task, RemoteResource
 from typing import Dict
+
+from karton.core import RemoteResource, Task
+
+from drakcore.app import get_analysis_metadata
 
 
 def insert_metadata(task: Task, resources: Dict[str, RemoteResource], minio):

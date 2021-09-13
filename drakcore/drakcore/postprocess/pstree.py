@@ -1,11 +1,12 @@
-import logging
 import json
+import logging
 import shlex
-from pathlib import PureWindowsPath
-from karton.core import Task, RemoteResource
-from io import BytesIO
-from typing import Dict, List, Optional, Any, TextIO
 from dataclasses import dataclass, field
+from io import BytesIO
+from pathlib import PureWindowsPath
+from typing import Any, Dict, List, Optional, TextIO
+
+from karton.core import RemoteResource, Task
 
 
 @dataclass

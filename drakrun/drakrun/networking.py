@@ -1,10 +1,10 @@
-import os
-import subprocess
 import logging
-
-from typing import Optional
-from drakrun.util import get_domid_from_instance_id
+import os
 import signal
+import subprocess
+from typing import Optional
+
+from drakrun.util import get_domid_from_instance_id
 
 log = logging.getLogger("drakrun")
 

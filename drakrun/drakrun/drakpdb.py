@@ -1,17 +1,16 @@
 import argparse
+import json
 import os
 import re
+from typing import NamedTuple, Optional, Union
 
 import pdbparse
-import json
-
-import requests
-from construct import Struct, Const, Bytes, Int32ul, Int16ul, CString, EnumIntegerString
-from construct.lib.containers import Container
 import pefile
+import requests
+from construct import Bytes, Const, CString, EnumIntegerString, Int16ul, Int32ul, Struct
+from construct.lib.containers import Container
 from requests import HTTPError
 from tqdm import tqdm
-from typing import NamedTuple, Optional, Union
 
 DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 
@@ -70,6 +69,8 @@ dll_file_list = [
     ),
     DLL("Windows/System32/Wldap32.dll", "amd64_Wldap32_profile", None),
     DLL("Windows/SysWOW64/Wldap32.dll", "x86_Wldap32_profile", None),
+    DLL("Windows/System32/advapi32.dll", "amd64_advapi32_profile", None),
+    DLL("Windows/SysWOW64/advapi32.dll", "x86_advapi32_profile", None),
     DLL("Windows/System32/comctl32.dll", "amd64_comctl32_profile", None),
     DLL("Windows/SysWOW64/comctl32.dll", "x86_comctl32_profile", None),
     DLL("Windows/System32/crypt32.dll", "amd64_crypt32_profile", None),

@@ -1,19 +1,20 @@
+import subprocess
 import time
+from pathlib import Path
+
 import pytest
+from pytest_steps import depends_on, test_steps
+
+from drakrun.draksetup import find_default_interface
 from drakrun.networking import (
-    setup_vm_network,
-    delete_vm_network,
-    iptable_rule_exists,
-    start_dnsmasq,
-    stop_dnsmasq,
     add_iptable_rule,
     del_iptable_rule,
+    delete_vm_network,
+    iptable_rule_exists,
+    setup_vm_network,
+    start_dnsmasq,
+    stop_dnsmasq,
 )
-
-from pytest_steps import depends_on, test_steps
-from drakrun.draksetup import find_default_interface
-import subprocess
-from pathlib import Path
 from drakrun.test.common_utils import tool_exists
 
 

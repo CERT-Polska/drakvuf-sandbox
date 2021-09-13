@@ -1,22 +1,23 @@
-import sys
 import hashlib
 import json
-import time
-import os
 import logging
+import os
+import sys
+import time
+from contextlib import contextmanager
 from dataclasses import dataclass
-from dataclasses_json import dataclass_json
 from typing import Optional
 
-from karton.core import Karton, Task, Producer, Resource, Config, LocalResource
+from dataclasses_json import dataclass_json
+from karton.core import Config, Karton, LocalResource, Producer, Resource, Task
 from karton.core.task import TaskState
 from malduck.extractor import ExtractManager, ExtractorModules
 from mwdblib import MWDB
-from drakrun.version import __version__ as DRAKRUN_VERSION
+from tqdm import tqdm
+
 from drakrun.config import ETC_DIR
 from drakrun.util import patch_config
-from contextlib import contextmanager
-from tqdm import tqdm
+from drakrun.version import __version__ as DRAKRUN_VERSION
 
 
 @contextmanager

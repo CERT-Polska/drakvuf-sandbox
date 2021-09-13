@@ -1,6 +1,7 @@
-import sys
-import regex as re
 import logging
+import sys
+
+import regex as re
 from oletools.olevba import VBA_Parser
 
 # Temporary workaround till oletools 0.56 are released.

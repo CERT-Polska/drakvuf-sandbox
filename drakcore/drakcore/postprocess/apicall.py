@@ -1,9 +1,10 @@
 import json
-import os
 import logging
-from karton.core import Task, RemoteResource
-from typing import Dict
+import os
 from tempfile import NamedTemporaryFile
+from typing import Dict
+
+from karton.core import RemoteResource, Task
 
 
 def process_logfile(log):

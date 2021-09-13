@@ -1,11 +1,12 @@
+import logging
 import os
 import re
-import logging
 import subprocess
+import tempfile
 from pathlib import Path
 
-from drakrun.storage import get_storage_backend, StorageBackendBase
-from drakrun.config import VM_CONFIG_DIR, VOLUME_DIR, ETC_DIR, LIB_DIR, InstallInfo
+from drakrun.config import ETC_DIR, LIB_DIR, VM_CONFIG_DIR, VOLUME_DIR, InstallInfo
+from drakrun.storage import StorageBackendBase, get_storage_backend
 from drakrun.util import safe_delete, try_run
 
 log = logging.getLogger("drakrun")
@@ -174,3 +175,30 @@ class VirtualMachine:
                 f"Failed to destroy VM {self.vm_name}",
                 **kwargs,
             )
+
+    def memory_dump(self, compressed_filepath):
+        """Dump raw memory from running vm using vmi-dump-memory and compress it with gzip
+        :raises: subprocess.CalledProcessError
+        """
+
+        with tempfile.NamedTemporaryFile() as raw_memdump, open(
+            compressed_filepath, "wb"
+        ) as compressed_file:
+
+            log.info(f"Dumping raw memory from {self.vm_name} guest...")
+            try:
+                subprocess.run(
+                    ["vmi-dump-memory", self.vm_name, raw_memdump.name], check=True
+                )
+            except subprocess.CalledProcessError as e:
+                log.error(f"Dumping raw memory from {self.vm_name} failed.")
+                raise e
+
+            log.info(f"Compressing {self.vm_name} guest memory dump...")
+            try:
+                subprocess.run(
+                    ["gzip", "-c", raw_memdump.name], check=True, stdout=compressed_file
+                )
+            except subprocess.CalledProcessError as e:
+                log.error(f"Compressing raw memory from {self.vm_name} failed.")
+                raise e
