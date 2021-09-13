@@ -98,7 +98,7 @@ def build_static_apiscout_profile(
 
     for dll_basename in dll_basename_list:
         filepath = Path(apiscout_profile_dir) / f"{dll_basename}.json"
-        if not os.path.isfile(filepath):
+        if not filepath.isfile():
             log.warning(
                 f"'{filepath}' not found. Is there a problem with profiles generation?"
             )
