@@ -1315,7 +1315,7 @@ def do_import_full(mc, name, bucket, zpool):
     profiles_prefix = f"{name}/profiles/"
     for object in mc.list_objects(bucket, prefix=profiles_prefix):
         # Strip profiles prefix
-        profile_name = object.object_name[len(profiles_prefix):]
+        profile_name = object.object_name[len(profiles_prefix) :]
         mc.fget_object(
             bucket, object.object_name, os.path.join(PROFILE_DIR, profile_name)
         )
@@ -1323,7 +1323,7 @@ def do_import_full(mc, name, bucket, zpool):
     apiscout_profile_prefix = f"{name}/apiscout_profile/"
     for object in mc.list_objects(bucket, prefix=apiscout_profile_prefix):
         # Strip apiscout profile prefix
-        filename = object.object_name[len(apiscout_profile_prefix):]
+        filename = object.object_name[len(apiscout_profile_prefix) :]
         mc.fget_object(
             bucket, object.object_name, os.path.join(APISCOUT_PROFILE_DIR, filename)
         )
