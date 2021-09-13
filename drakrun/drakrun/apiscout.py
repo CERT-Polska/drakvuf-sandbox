@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from operator import attrgetter
 from pathlib import Path, PureWindowsPath
 from typing import Any, Dict, List
