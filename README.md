@@ -1,7 +1,4 @@
-# DRAKVUF Sandbox
-[![Slack](https://img.shields.io/badge/Slack-KVM--VMI-important)](https://kvm-vmi.slack.com) [![Join Slack](https://img.shields.io/badge/Slack-Join%20KVM--VMI-blue)](https://kvm-vmi.herokuapp.com) [![Build Status](https://drone.icedev.pl/api/badges/CERT-Polska/drakvuf-sandbox/status.svg)](https://drone.icedev.pl/CERT-Polska/drakvuf-sandbox) [![Documentation Status](https://readthedocs.org/projects/drakvuf-sandbox/badge/?version=latest)](https://drakvuf-sandbox.readthedocs.io/en/latest/?badge=latest)
 
-DRAKVUF Sandbox is an automated black-box malware analysis system with [DRAKVUF](https://drakvuf.com/) engine under the hood, which does not require an agent on guest OS.
 
 This project provides you with a friendly web interface that allows you to upload suspicious files to be analyzed. Once the sandboxing job is finished, you can explore the analysis result through the mentioned interface and get an insight on whether the file is truly malicious or not.
 

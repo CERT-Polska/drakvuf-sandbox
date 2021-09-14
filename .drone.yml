@@ -74,19 +74,18 @@ steps:
     - package/find-python.sh
     - dpkg-buildpackage -us -uc -b
   environment:
-    CACHE_SERVER: http://192.168.21.1:5000/static
+    CACHE_SERVER: https://minio.drakvuf.cert.pl/static
 - name: upload deb
   image: minio/mc
   commands:
     - mc config host add cache "$MINIO_SERVER" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
-    - mc mb --ignore-existing cache/debs
     - mc cp ./drakcore_*_amd64.deb "cache/debs/drakcore_drone-$DRONE_BUILD_NUMBER.deb"
   environment:
     MINIO_ACCESS_KEY:
       from_secret: MINIO_ACCESS_KEY
     MINIO_SECRET_KEY:
       from_secret: MINIO_SECRET_KEY
-    MINIO_SERVER: http://192.168.21.131:9000
+    MINIO_SERVER: https://minio.drakvuf.cert.pl
 node:
    purpose: generic
 trigger:
@@ -114,14 +113,13 @@ steps:
   image: minio/mc
   commands:
     - mc config host add cache "$MINIO_SERVER" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
-    - mc mb --ignore-existing cache/debs
     - mc cp ./drakrun_*_amd64.deb "cache/debs/drakrun_drone-$DRONE_BUILD_NUMBER.deb"
   environment:
     MINIO_ACCESS_KEY:
       from_secret: MINIO_ACCESS_KEY
     MINIO_SECRET_KEY:
       from_secret: MINIO_SECRET_KEY
-    MINIO_SERVER: http://192.168.21.131:9000
+    MINIO_SERVER: https://minio.drakvuf.cert.pl
 node:
    purpose: generic
 trigger:
@@ -157,10 +155,9 @@ steps:
     - export DEBIAN_FRONTEND=noninteractive
     - apt-get update && apt-get install -y -q git wget
     # Configure Minio
-    - wget -q -O /usr/local/bin/mc http://192.168.21.1:5000/static/mc
+    - wget -q -O /usr/local/bin/mc $MINIO_SERVER/static/mc
     - chmod +x /usr/local/bin/mc
-    - mc config host add cache http://192.168.21.131:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
-    - mc mb --ignore-existing cache/debs
+    - mc config host add cache $MINIO_SERVER "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
     # Checkout submodules
     - git submodule update --init --recursive
     - export DRAKVUF_COMMIT=$(git ls-tree HEAD drakvuf | awk '{ print $3 }')
@@ -172,48 +169,9 @@ steps:
       from_secret: MINIO_ACCESS_KEY
     MINIO_SECRET_KEY:
       from_secret: MINIO_SECRET_KEY
+    MINIO_SERVER: https://minio.drakvuf.cert.pl
 node:
    purpose: generic
-trigger:
-  branch:
-  - master
----
-kind: pipeline
-type: docker
-name: build-base-image
-
-steps:
-- name: get DRAKVUF commit
-  image: alpine/git
-  commands:
-      - git submodule update --init --recursive
-      - export DRAKVUF_COMMIT=$(git ls-tree HEAD drakvuf | awk '{ print $3 }')
-      - echo "$DRAKVUF_COMMIT" > drakvuf_commit.txt
-- name: get mc
-  image: minio/mc
-  commands:
-      # Get mc binary for next step
-      - cp /bin/mc .
-- name: build VM
-  image: hashicorp/packer:light
-  commands:
-      - mv mc /bin
-      - mc config host add cache "$MINIO_SERVER" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
-      - mc mb --ignore-existing cache/images
-      - export DRAKVUF_COMMIT=$(cat drakvuf_commit.txt)
-      - apk add qemu-system-x86_64 qemu-img
-      - cd ci/packer
-      - sh build_vm.sh
-  environment:
-    MINIO_ACCESS_KEY:
-      from_secret: MINIO_ACCESS_KEY
-    MINIO_SECRET_KEY:
-      from_secret: MINIO_SECRET_KEY
-    MINIO_SERVER: http://192.168.21.131:9000
-node:
-   purpose: generic
-depends_on:
-- build-drakvuf-bundle
 trigger:
   branch:
   - master
@@ -228,32 +186,26 @@ steps:
   commands:
     - apt-get update && apt-get install -y git
     - mkdir -p ~/.ssh/
-    - echo "$ZEN_SSH_KEY" > ~/.ssh/id_rsa
-    - chmod 600 ~/.ssh/id_rsa
     - cd test
     - pip install -r requirements.txt
     - pytest --capture=no
   environment:
-  # Clean debian image
-  # VM_SNAPSHOT_BASE = "snap1585837798"
-  # Debian with preconfigured Windows in /var/lib/drakrun and /etc/drakrun
-    VM_SNAPSHOT_BASE: snap1587390752
-    VM_RUNNER_HOST: "192.168.21.1:5000"
-    VM_HOST: "192.168.21.129"
-    MINIO_HOST: "192.168.21.131:9000"
+    VM_RUNNER_HOST: "192.168.100.1:8000"
+    MINIO_HOST: "192.168.100.2:8181"
     MINIO_ACCESS_KEY:
       from_secret: MINIO_ACCESS_KEY
     MINIO_SECRET_KEY:
       from_secret: MINIO_SECRET_KEY
-    ZEN_SSH_KEY:
-      from_secret: ZEN_SSH_KEY
+    RUNNER_KEY:
+      from_secret: RUNNER_KEY
+    BASE_IMAGE: "debian-10-generic-amd64"
+    SNAPSHOT_VERSION: "win7-20210818"
 node:
    purpose: e2e
 depends_on:
-- build-drakcore
-- build-drakrun
-- build-drakvuf-bundle
-- build-base-image
+  - build-drakcore
+  - build-drakrun
+  - build-drakvuf-bundle
 trigger:
   branch:
   - master
