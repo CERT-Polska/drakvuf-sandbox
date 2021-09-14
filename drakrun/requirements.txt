@@ -1,4 +1,4 @@
-karton-core==4.2.0
+karton-core==4.3.0
 minio==5.0.7
 redis==3.5.3
 pefile==2019.4.18
