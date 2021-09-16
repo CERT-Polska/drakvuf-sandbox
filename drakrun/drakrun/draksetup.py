@@ -205,6 +205,9 @@ def cleanup():
 
 
 def sanity_check():
+    if not check_root():
+        return False
+
     logging.info("Checking xen-detect...")
     proc = subprocess.run("xen-detect -N", shell=True)
 
