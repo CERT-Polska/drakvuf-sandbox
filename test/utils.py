@@ -30,24 +30,15 @@ class VMRunner:
     def __init__(self, host):
         self.host = host
 
-    def rebuild_vm(self):
-        response = requests.get(f"{self.host}/rebuild-vm")
-        response.raise_for_status()
-
-    def list_snapshots(self):
-        response = requests.get(f"{self.host}/snapshots")
-        response.raise_for_status()
-        return response.json()
-
-    def make_snapshot(self):
-        response = requests.get(f"{self.host}/snapshots/make")
+    def rebuild_vm(self, ssh_key):
+        response = requests.post(f"{self.host}/vm/build", json={
+            "image": "debian-10-generic-amd64",
+            "volume_size": 100,
+            "ssh_key": ssh_key,
+        })
         response.raise_for_status()
         return response.json()
 
-    def set_snapshot(self, name):
-        response = requests.get(f"{self.host}/snapshots/set/{name}")
-        response.raise_for_status()
-        return response.json()
 
 
 class Drakcore:

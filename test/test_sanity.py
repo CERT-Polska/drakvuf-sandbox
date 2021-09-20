@@ -4,7 +4,7 @@ import requests
 import pytest
 
 from utils import get_hypervisor_type, get_service_info, Drakcore
-from conftest import VM_HOST, DRAKMON_SERVICES
+from conftest import DRAKMON_SERVICES
 
 
 def test_running_on_xen(drakmon_vm):
@@ -32,14 +32,14 @@ def test_services_running(drakmon_vm):
         raise Exception("Services down")
 
 
-def test_web_ui_reachable(drakcore):
-    response = requests.get(f"http://{VM_HOST}:6300/")
+def test_web_ui_reachable(drakcore, vm_host):
+    response = requests.get(f"http://{vm_host}:6300/")
     response.raise_for_status()
 
 
 @pytest.fixture
-def drakcore(karton_bucket):
-    return Drakcore(f"http://{VM_HOST}:6300")
+def drakcore(karton_bucket, vm_host):
+    return Drakcore(f"http://{vm_host}:6300")
 
 
 def test_sample_analysis(drakmon_vm, drakcore):
