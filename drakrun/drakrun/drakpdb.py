@@ -167,6 +167,7 @@ TYPE_ENUM_TO_VTYPE = {
     "T_64PSHORT": ["Pointer", dict(target="short")],
     "T_64PRCHAR": ["Pointer", dict(target="unsigned char")],
     "T_64PUCHAR": ["Pointer", dict(target="unsigned char")],
+    "T_64PCHAR": ["Pointer", dict(target="char")],
     "T_64PWCHAR": ["Pointer", dict(target="String")],
     "T_64PULONG": ["Pointer", dict(target="unsigned long")],
     "T_64PUQUAD": ["Pointer", dict(target="unsigned long long")],
