@@ -782,10 +782,6 @@ def postinstall(report, generate_usermode):
     logging.info("Snapshotting persistent memory...")
     storage_backend.snapshot_vm0_volume()
 
-    if generate_usermode:
-        # Restore a VM and create usermode profiles
-        create_missing_profiles()
-
     if report:
         send_usage_report(
             {
@@ -801,6 +797,10 @@ def postinstall(report, generate_usermode):
 
     with open(os.path.join(APISCOUT_PROFILE_DIR, "OS_INFO.json"), "w") as f:
         f.write(json.dumps(os_info, indent=4, sort_keys=True))
+
+    if generate_usermode:
+        # Restore a VM and create usermode profiles
+        create_missing_profiles()
 
     logging.info("All right, drakrun setup is done.")
     logging.info("First instance of drakrun will be enabled automatically...")
