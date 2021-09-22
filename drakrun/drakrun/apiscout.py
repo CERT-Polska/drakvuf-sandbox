@@ -55,8 +55,6 @@ def make_static_apiscout_profile_for_dll(filepath: str) -> Dict[str, Any]:
             pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"],
         ]
     )
-    if not hasattr(pe, "DIRECTORY_ENTRY_EXPORT"):
-        raise RuntimeError(f"DIRECTORY_ENTRY_EXPORT not found in '{filepath}'")
 
     dll_entry = {}
     dll_entry["base_address"] = pe.OPTIONAL_HEADER.ImageBase
@@ -65,6 +63,10 @@ def make_static_apiscout_profile_for_dll(filepath: str) -> Dict[str, Any]:
     dll_entry["filepath"] = filepath
     dll_entry["aslr_offset"] = 0
     dll_entry["exports"] = []
+    if not hasattr(pe, "DIRECTORY_ENTRY_EXPORT"):
+        if pe.is_driver():
+            return dll_entry
+        raise RuntimeError(f"DIRECTORY_ENTRY_EXPORT not found in '{filepath}'")
     for exp in sorted(pe.DIRECTORY_ENTRY_EXPORT.symbols, key=attrgetter("address")):
         export_info = {}
 
@@ -96,6 +98,11 @@ def build_static_apiscout_profile(
 
     for dll_basename in dll_basename_list:
         filepath = Path(apiscout_profile_dir) / f"{dll_basename}.json"
+        if not filepath.is_file():
+            log.warning(
+                f"'{filepath}' not found. Is there a problem with profiles generation?"
+            )
+            continue
         with open(filepath) as f:
             dll_profile = json.load(f)
         dlls_profiles[build_apiscout_dll_key(dll_profile)] = dll_profile

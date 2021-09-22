@@ -22,7 +22,10 @@ from minio.error import NoSuchKey
 from requests import RequestException
 from tqdm import tqdm
 
-from drakrun.apiscout import make_static_apiscout_profile_for_dll
+from drakrun.apiscout import (
+    build_static_apiscout_profile,
+    make_static_apiscout_profile_for_dll,
+)
 from drakrun.config import (
     APISCOUT_PROFILE_DIR,
     ETC_DIR,
@@ -779,10 +782,6 @@ def postinstall(report, generate_usermode):
     logging.info("Snapshotting persistent memory...")
     storage_backend.snapshot_vm0_volume()
 
-    if generate_usermode:
-        # Restore a VM and create usermode profiles
-        create_missing_profiles()
-
     if report:
         send_usage_report(
             {
@@ -799,6 +798,10 @@ def postinstall(report, generate_usermode):
     with open(os.path.join(APISCOUT_PROFILE_DIR, "OS_INFO.json"), "w") as f:
         f.write(json.dumps(os_info, indent=4, sort_keys=True))
 
+    if generate_usermode:
+        # Restore a VM and create usermode profiles
+        create_missing_profiles()
+
     logging.info("All right, drakrun setup is done.")
     logging.info("First instance of drakrun will be enabled automatically...")
     subprocess.check_output("systemctl enable drakrun@1", shell=True)
@@ -808,8 +811,10 @@ def postinstall(report, generate_usermode):
     logging.info("  # draksetup scale <number of instances>")
 
 
-def profile_exists(profile: DLL) -> bool:
-    return (Path(PROFILE_DIR) / f"{profile.dest}.json").is_file()
+def profiles_exist(profile_name: str) -> bool:
+    return (Path(PROFILE_DIR) / f"{profile_name}.json").is_file() and (
+        Path(APISCOUT_PROFILE_DIR) / f"{profile_name}.json"
+    ).is_file()
 
 
 def create_missing_profiles():
@@ -841,15 +846,22 @@ def create_missing_profiles():
     # Ensure that all declared usermode profiles exist
     # This is important when upgrade defines new entries in dll_file_list and compulsory_dll_file_list
     for profile in compulsory_dll_file_list:
-        if not profile_exists(profile):
+        if not profiles_exist(profile.dest):
             create_rekall_profile(injector, profile, True)
 
     for profile in dll_file_list:
-        if not profile_exists(profile):
+        if not profiles_exist(profile.dest):
             try:
                 create_rekall_profile(injector, profile)
             except Exception:
                 log.exception("Unexpected exception from create_rekall_profile!")
+
+    dll_basename_list = [dll.dest for dll in dll_file_list]
+    static_apiscout_profile = build_static_apiscout_profile(
+        APISCOUT_PROFILE_DIR, dll_basename_list
+    )
+    with open(Path(APISCOUT_PROFILE_DIR) / "static_apiscout_profile.json", "w") as f:
+        json.dump(static_apiscout_profile, f)
 
     vm.destroy()
     delete_vm_network(
@@ -1277,6 +1289,15 @@ def do_export_full(mc, bucket, name):
             bucket, f"{name}/profiles/{file}", os.path.join(PROFILE_DIR, file)
         )
 
+    # Upload ApiScout profile
+    for file in os.listdir(APISCOUT_PROFILE_DIR):
+        logging.info("Uploading file %s", file)
+        mc.fput_object(
+            bucket,
+            f"{name}/apiscout_profile/{file}",
+            os.path.join(APISCOUT_PROFILE_DIR, file),
+        )
+
 
 def do_import_full(mc, name, bucket, zpool):
     """Perform full snapshot import, symmetric to do_export_full"""
@@ -1291,12 +1312,20 @@ def do_import_full(mc, name, bucket, zpool):
                 ["zcat", compressed_snapshot.name], stdout=snapshot, check=True
             )
 
-    profile_prefix = f"{name}/profiles/"
-    for object in mc.list_objects(bucket, prefix=profile_prefix):
-        # Strip profile prefix
-        profile_name = object.object_name[len(profile_prefix) :]
+    profiles_prefix = f"{name}/profiles/"
+    for object in mc.list_objects(bucket, prefix=profiles_prefix):
+        # Strip profiles prefix
+        profile_name = object.object_name[len(profiles_prefix) :]
         mc.fget_object(
             bucket, object.object_name, os.path.join(PROFILE_DIR, profile_name)
+        )
+
+    apiscout_profile_prefix = f"{name}/apiscout_profile/"
+    for object in mc.list_objects(bucket, prefix=apiscout_profile_prefix):
+        # Strip apiscout profile prefix
+        filename = object.object_name[len(apiscout_profile_prefix) :]
+        mc.fget_object(
+            bucket, object.object_name, os.path.join(APISCOUT_PROFILE_DIR, filename)
         )
 
 
