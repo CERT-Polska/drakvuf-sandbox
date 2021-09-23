@@ -697,7 +697,7 @@ def insert_cd(domain, drive, iso):
     subprocess.run(["xl", "cd-insert", domain, drive, iso], check=True)
 
 
-@click.command()
+@click.command(help="Finalize sandbox installation")
 @click.option(
     "--report/--no-report",
     "report",
