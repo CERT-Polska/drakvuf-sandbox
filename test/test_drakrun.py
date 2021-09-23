@@ -27,3 +27,6 @@ def test_network(drakmon_vm, drakrun_test_dir):
 
 def test_vm(drakmon_vm, drakrun_test_dir):
     drakmon_vm.run(f". /opt/venvs/drakrun/bin/activate && pytest {drakrun_test_dir}/test_vm.py")
+
+def test_draksetup_test(drakmon_vm):
+    drakmon_vm.run(f"draksetup test")
