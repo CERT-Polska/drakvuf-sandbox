@@ -726,6 +726,7 @@ class DrakrunKarton(Karton):
                     hooks.write(default_hooks.read())
 
         metadata = {
+            "analysis_uid": self.analysis_uid,
             "sample_sha256": sha256sum,
             "snapshot_sha256": self.snapshot_sha256,
             "magic_output": magic_output,
