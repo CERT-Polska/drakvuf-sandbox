@@ -391,8 +391,6 @@ class DrakrunKarton(Karton):
         Offload drakrun-prod by sending raw analysis output to be processed by
         drakrun.processor.
         """
-        payload = {"analysis_uid": self.analysis_uid}
-        payload.update(metadata)
 
         if self.test_run:
             headers = dict(self.test_headers)
@@ -401,7 +399,7 @@ class DrakrunKarton(Karton):
 
         headers["quality"] = quality
 
-        task = Task(headers, payload=payload)
+        task = Task(headers, payload=metadata)
         task.add_payload("sample", sample)
         task.add_payload("dumps_metadata", dumps_metadata)
 
@@ -726,6 +724,7 @@ class DrakrunKarton(Karton):
                     hooks.write(default_hooks.read())
 
         metadata = {
+            "analysis_uid": self.analysis_uid,
             "sample_sha256": sha256sum,
             "snapshot_sha256": self.snapshot_sha256,
             "magic_output": magic_output,
