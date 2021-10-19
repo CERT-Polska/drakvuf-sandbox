@@ -22,7 +22,7 @@ vncpasswd="{{ VNC_PASS }}"
 usb = 1
 usbdevice = "tablet"
 altp2m = 2
-shadow_memory = 16
+shadow_memory = 32
 audio=1
 soundhw='hda'
 cpuid="host,htt=0"
