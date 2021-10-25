@@ -12,7 +12,12 @@ RUN apt-get update && \
     pip3 install virtualenv==20.1.0 && \
     dpkg -i --ignore-depends=sphinx-rtd-theme-common ./dh-virtualenv.deb
 
-RUN wget -O drakvuf.deb "https://debs.icedev.pl/manual/drakvuf-bundle/$(lsb_release -cs)/drakvuf-bundle-0.7-git20200501075508+0f828ce-1.deb" && \
+# This is super cursed but otherwise installation will fail
+# Don't tell anyone
+RUN echo -ne '#!/bin/sh\nexit 0\n' > /bin/systemctl && chmod +x /bin/systemctl
+
+# Install drakvuf bundle for libvmi headers
+RUN wget -O drakvuf.deb "https://minio.drakvuf.cert.pl/static/bundle/$(lsb_release -cs)/drakvuf-bundle-0.8-git20210807130654+d74df17-1-generic.deb" && \
     dpkg -i ./drakvuf.deb && \
     cd /opt && \
     git clone https://xenbits.xen.org/git-http/xtf.git && \
