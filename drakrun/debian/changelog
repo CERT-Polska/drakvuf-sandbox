@@ -1,3 +1,7 @@
+drakrun (0.18.0-rc1) unstable; urgency=low
+  * See GitHub for release notes.
+ -- Arkadiusz Wróbel <arkadiusz.wrobel@cert.pl>  Mon, 25 Oct 2021 19:40:00 +0200
+
 drakrun (0.18.0-dev) unstable; urgency=low
   * See GitHub for release notes.
  -- Hubert Jasudowicz <hubert.jasudowicz@cert.pl>  Mon, 3 Aug 2021 19:30:00 +0200
