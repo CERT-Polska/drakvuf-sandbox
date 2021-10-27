@@ -45,10 +45,11 @@ Feel free to contact us if you have any questions or comments.
 
 This project is authored by:
 
-* Michał Leszczyński ([@icedevml](https://github.com/icedevml)) - monk@cert.pl
-* Adam Kliś ([@BonusPlay](https://github.com/BonusPlay)) - bonus@cert.pl
-* Hubert Jasudowicz ([@chivay](https://github.com/chivay)) - chivay@cert.pl
-* Konstanty Cieśliński ([@kscieslinski](https://github.com/kscieslinski)) - konstanty.cieslinski@cert.pl
+* Arkadiusz Wróbel ([@catsuryuu](https://github.com/catsuyuu)) - catsuryuu@cert.pl
+* Michał Leszczyński ([@icedevml](https://github.com/icedevml))
+* Adam Kliś ([@BonusPlay](https://github.com/BonusPlay))
+* Hubert Jasudowicz ([@chivay](https://github.com/chivay))
+* Konstanty Cieśliński ([@kscieslinski](https://github.com/kscieslinski))
 
 If you have any questions about [DRAKVUF](https://drakvuf.com/) engine itself, contact tamas@tklengyel.com
 
