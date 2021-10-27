@@ -265,7 +265,7 @@ class DrakrunKarton(Karton):
 
         setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
 
-        self.log.info("Caculating snapshot hash...")
+        self.log.info("Calculating snapshot hash...")
         self.snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
 
     def _karton_safe_get_headers(self, task, key, fallback):
