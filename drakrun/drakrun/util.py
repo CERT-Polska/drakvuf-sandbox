@@ -56,6 +56,7 @@ class RuntimeInfo:
     vmi_offsets: VmiOffsets
     inject_pid: int
 
+    @staticmethod
     def load(file_obj: IO[AnyStr]) -> "RuntimeInfo":
         return RuntimeInfo.from_json(file_obj.read())
 
