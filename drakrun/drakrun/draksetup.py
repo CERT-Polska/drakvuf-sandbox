@@ -13,7 +13,6 @@ import tempfile
 import time
 import traceback
 from pathlib import Path, PureWindowsPath
-from typing import Optional
 
 import click
 import requests
@@ -647,7 +646,7 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
 
 def extract_explorer_pid(
     domain: str, kernel_profile: str, offsets: VmiOffsets, timeout: int = 30
-) -> Optional[int]:
+) -> int:
     """Call get-explorer-pid helper and get its PID"""
     module_dir = os.path.dirname(os.path.realpath(__file__))
     pid_tool = os.path.join(module_dir, "tools", "get-explorer-pid")
@@ -670,7 +669,7 @@ def extract_explorer_pid(
 
 def extract_vmi_offsets(
     domain: str, kernel_profile: str, timeout: int = 30
-) -> Optional[VmiOffsets]:
+) -> VmiOffsets:
     """Call vmi-win-offsets helper and obtain VmiOffsets values"""
     try:
         output = subprocess.check_output(
