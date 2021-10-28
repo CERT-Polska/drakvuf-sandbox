@@ -50,8 +50,19 @@ from drakrun.networking import (
     start_dnsmasq,
     stop_dnsmasq,
 )
-from drakrun.storage import REGISTERED_BACKEND_NAMES, get_storage_backend
-from drakrun.util import RuntimeInfo, VmiOffsets, file_sha256, safe_delete
+from drakrun.storage import (
+    REGISTERED_BACKEND_NAMES,
+    StorageBackendBase,
+    get_storage_backend,
+)
+from drakrun.util import (
+    RuntimeInfo,
+    VmiGuidInfo,
+    VmiOffsets,
+    file_sha256,
+    safe_delete,
+    vmi_win_guid,
+)
 from drakrun.vm import (
     FIRST_CDROM_DRIVE,
     SECOND_CDROM_DRIVE,
@@ -697,6 +708,20 @@ def insert_cd(domain, drive, iso):
     subprocess.run(["xl", "cd-insert", domain, drive, iso], check=True)
 
 
+def build_os_info(
+    apiscout_profile_dir: str,
+    kernel_info: VmiGuidInfo,
+    storage_backend: StorageBackendBase,
+):
+    os_info = {
+        "os_name": kernel_info.version,
+        "os_timestamp": storage_backend.get_vm0_snapshot_time(),
+    }
+
+    with open(os.path.join(apiscout_profile_dir, "OS_INFO.json"), "w") as f:
+        f.write(json.dumps(os_info, indent=4, sort_keys=True))
+
+
 @click.command(help="Finalize sandbox installation")
 @click.option(
     "--report/--no-report",
@@ -737,23 +762,13 @@ def postinstall(report, generate_usermode):
         # If unattended install is enabled, we have an additional CD-ROM drive
         eject_cd("vm-0", SECOND_CDROM_DRIVE)
 
-    output = subprocess.check_output(
-        ["vmi-win-guid", "name", "vm-0"], timeout=30
-    ).decode("utf-8")
+    kernel_info = vmi_win_guid("vm-0")
 
-    try:
-        version = re.search(r"Version: (.*)", output).group(1)
-        pdb = re.search(r"PDB GUID: ([0-9a-f]+)", output).group(1)
-        fn = re.search(r"Kernel filename: ([a-z]+\.[a-z]+)", output).group(1)
-    except AttributeError:
-        logging.error("Failed to obtain kernel PDB GUID/Kernel filename.")
-        return
-
-    logging.info("Determined PDB GUID: {}".format(pdb))
-    logging.info("Determined kernel filename: {}".format(fn))
+    logging.info(f"Determined PDB GUID: {kernel_info.guid}")
+    logging.info(f"Determined kernel filename: {kernel_info.filename}")
 
     logging.info("Fetching PDB file...")
-    dest = fetch_pdb(fn, pdb, destdir=PROFILE_DIR)
+    dest = fetch_pdb(kernel_info.filename, kernel_info.guid, destdir=PROFILE_DIR)
 
     logging.info("Generating profile out of PDB file...")
     profile = make_pdb_profile(dest)
@@ -788,18 +803,14 @@ def postinstall(report, generate_usermode):
     if report:
         send_usage_report(
             {
-                "kernel": {"guid": pdb, "filename": fn, "version": version},
+                "kernel": {
+                    "guid": kernel_info.guid,
+                    "filename": kernel_info.filename,
+                    "version": kernel_info.version,
+                },
                 "install_iso": {"sha256": install_info.iso_sha256},
             }
         )
-
-    os_info = {
-        "os_name": version,
-        "os_timestamp": storage_backend.get_vm0_snapshot_time(),
-    }
-
-    with open(os.path.join(APISCOUT_PROFILE_DIR, "OS_INFO.json"), "w") as f:
-        f.write(json.dumps(os_info, indent=4, sort_keys=True))
 
     if generate_usermode:
         # Restore a VM and create usermode profiles
@@ -858,6 +869,8 @@ def create_missing_profiles():
                 create_rekall_profile(injector, profile)
             except Exception:
                 log.exception("Unexpected exception from create_rekall_profile!")
+
+    build_os_info(APISCOUT_PROFILE_DIR, vmi_win_guid(vm.vm_name), backend)
 
     dll_basename_list = [dll.dest for dll in dll_file_list]
     static_apiscout_profile = build_static_apiscout_profile(
