@@ -223,3 +223,29 @@ def file_sha256(filename, blocksize=65536) -> str:
         for block in iter(lambda: f.read(blocksize), b""):
             file_hash.update(block)
     return file_hash.hexdigest()
+
+
+@dataclass
+class VmiGuidInfo:
+    version: str
+    guid: str
+    filename: str
+
+
+def vmi_win_guid(vm_name: str) -> VmiGuidInfo:
+    result = subprocess.run(
+        ["vmi-win-guid", "name", vm_name],
+        timeout=30,
+        capture_output=True,
+    )
+
+    output = result.stdout.decode()
+
+    version = re.search(r"Version: (.*)", output)
+    pdb_guid = re.search(r"PDB GUID: ([0-9a-f]+)", output)
+    kernel_filename = re.search(r"Kernel filename: ([a-z]+\.[a-z]+)", output)
+
+    if version is None or pdb_guid is None or kernel_filename is None:
+        raise RuntimeError("Invalid vmi-win-guid output")
+
+    return VmiGuidInfo(version.group(1), pdb_guid.group(1), kernel_filename.group(1))
