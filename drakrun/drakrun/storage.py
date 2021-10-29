@@ -169,12 +169,12 @@ class ZfsStorageBackend(StorageBackendBase):
             )
 
     def import_vm0(self, file):
-        self.delete_zfs_tank()
+        subprocess.run(["zfs", "create", self.zfs_tank_name], check=True)
         with open(file, "rb") as snapshot_file:
             subprocess.run(
                 ["zfs", "recv", f"{self.zfs_tank_name}/vm-0@booted"],
                 check=True,
-                stdout=snapshot_file,
+                stdin=snapshot_file,
             )
 
     def delete_vm_volume(self, vm_id: int):
