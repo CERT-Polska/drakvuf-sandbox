@@ -25,7 +25,7 @@ DRAKVUF will not run on incompatible processors, as it directly relies on partic
 In order to obtain the source code of DRAKVUF Sandbox, you need to execute the following commands:
 
 ```
-git clone https://github.com/CERT-Polska/drakvuf-sandbox.git
+git clone --recurse-submodules https://github.com/CERT-Polska/drakvuf-sandbox.git
 cd drakvuf-sandbox
 ```
 
@@ -45,7 +45,7 @@ The DRAKVUF Sandbox distribution packages are built using Docker, in order to ma
 
 #### On the Drone CI server
 
-When you open a pull request to this project, Drone CI will run some tests on your code and Debian packages will be also built during the process. The artifacts produced by the CI are available at [debs.icedev.pl](https://debs.icedev.pl/).
+When you open a pull request to this project, Drone CI will run some tests on your code and Debian packages will be also built during the process. The artifacts produced by the CI are available in S3 bucket at [minio.drakvuf.cert.pl/debs](https://minio.drakvuf.cert.pl/debs).
 
 Packages are numbered according to the Drone CI job numbers. You can figure out the job number by inspecting the [status checks](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-status-checks) related to your commit and clicking on `Details` link near `continuous-integration/drone/push` label. The build ID is in the URL and also in the breadcrumb, e.g.: `Repositories -> CERT-Polska/drakvuf-sandbox -> #200`.
 
