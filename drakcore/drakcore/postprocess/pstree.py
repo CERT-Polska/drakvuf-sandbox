@@ -92,8 +92,8 @@ class ProcessTree:
 
 class MultipleProcessesReturned(Exception):
     def __init__(self, processes: List[Process]):
-        processs_str = ", ".join([str(p) for p in processes])
-        message = f"More than one proces fulfills condition: {processs_str}"
+        process_str = ", ".join([str(p) for p in processes])
+        message = f"More than one process fulfills condition: {process_str}"
         super().__init__(message)
 
 
