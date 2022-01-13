@@ -102,8 +102,8 @@ steps:
   commands:
     - export DEBIAN_FRONTEND=noninteractive
     - apt-get update
-    - apt-get install -y wget python2.7 python3 python3-pip python3-venv dh-virtualenv debhelper devscripts libpixman-1-0 libpng16-16 libfdt1 libglib2.0-dev libjson-c3 libyajl2 libaio1 libc6-dev-i386
-    - wget -O drakvuf.deb https://github.com/tklengyel/drakvuf-builds/releases/download/20200317014821-a1ef03c/drakvuf-bundle-0.7-a1ef03c-generic.deb
+    - apt-get install -y wget python2.7 python3 python3-pip python3-venv dh-virtualenv debhelper devscripts libpixman-1-0 libpng16-16 libfdt1 libglib2.0-dev libjson-c3 libyajl2 libaio1 libc6-dev-i386 systemd
+    - wget -O drakvuf.deb https://github.com/CERT-Polska/drakvuf-sandbox/releases/download/v0.18.1/debian_buster_drakvuf-bundle-0.8-git20210921114837+5575888-1-generic.deb
     - dpkg -i drakvuf.deb
     - sh -c "cd /opt && git clone https://xenbits.xen.org/git-http/xtf.git && cd xtf && git checkout 8ab15139728a8efd3ebbb60beb16a958a6a93fa1 && make PYTHON=python2 -j4"
     - cd drakrun
