@@ -45,7 +45,7 @@ Feel free to contact us if you have any questions or comments.
 
 This project is authored by:
 
-* Arkadiusz Wróbel ([@catsuryuu](https://github.com/catsuyuu)) - catsuryuu@cert.pl
+* Arkadiusz Wróbel ([@catsuryuu](https://github.com/catsuryuu)) - catsuryuu@cert.pl
 * Michał Leszczyński ([@icedevml](https://github.com/icedevml))
 * Adam Kliś ([@BonusPlay](https://github.com/BonusPlay))
 * Hubert Jasudowicz ([@chivay](https://github.com/chivay))
