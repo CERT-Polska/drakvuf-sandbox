@@ -608,6 +608,9 @@ class DrakrunKarton(Karton):
             if self.net_enable:
                 self.log.info("Setting up network...")
                 injector.create_process(
+                    "cmd /C ipconfig /release >nul", wait=True, timeout=120
+                )
+                injector.create_process(
                     "cmd /C ipconfig /renew >nul", wait=True, timeout=120
                 )
 
