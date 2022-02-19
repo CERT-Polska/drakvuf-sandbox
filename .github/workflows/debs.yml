@@ -36,6 +36,7 @@ jobs:
       matrix:
         container:
           - "debian:buster"
+          - "debian:bullseye"
           - "ubuntu:bionic"
           - "ubuntu:focal"
     steps:
