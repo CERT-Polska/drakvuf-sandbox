@@ -5,7 +5,8 @@ After=network.target
 [Service]
 Type=simple
 EnvironmentFile=/etc/drakcore/minio.env
-ExecStart=/usr/bin/ionice -c 3 /usr/share/drakcore/minio server /var/lib/drakcore/minio
+ExecStart=/usr/share/drakcore/minio server /var/lib/drakcore/minio
+IOSchedulingClass=idle
 User=root
 Group=root
 Restart=on-failure
