@@ -1,8 +1,8 @@
-requests==2.25.1
-Flask==1.1.1
+requests==2.27.1
+Flask==2.0.3
 karton-core==4.3.0
 redis==3.5.3
-uwsgi==2.0.17.1
+uwsgi==2.0.20
 minio==5.0.7
-colorama==0.4.3
+colorama==0.4.4
 msql==1.2.2
