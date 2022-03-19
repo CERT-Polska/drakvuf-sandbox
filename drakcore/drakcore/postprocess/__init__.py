@@ -1,4 +1,5 @@
 from collections import namedtuple
+import imp
 
 from drakcore.postprocess.apicall import process_api_log
 from drakcore.postprocess.cache_update import insert_metadata
@@ -7,6 +8,8 @@ from drakcore.postprocess.log_index import generate_log_index
 from drakcore.postprocess.pstree import build_process_tree
 from drakcore.postprocess.slice_logs import slice_drakmon_logs
 from drakcore.postprocess.wireshark_key_file_gen import generate_wireshark_key_file
+from drakcore.postprocess.networking_pcap_file import generate_pcap_file
+
 
 PostprocessPlugin = namedtuple("PostprocessPlugin", ("handler", "required"))
 
@@ -25,6 +28,8 @@ REGISTERED_PLUGINS = [
     PostprocessPlugin(generate_wireshark_key_file, required=["tlsmon.log"]),
     # yields index/{name}
     PostprocessPlugin(generate_log_index, required=[]),
+    #yields list of IPs file
+    PostprocessPlugin(generate_pcap_file , required=["dump.pcap"] ),
     # this should be the final step
     PostprocessPlugin(insert_metadata, required=["metadata.json"]),
 ]
