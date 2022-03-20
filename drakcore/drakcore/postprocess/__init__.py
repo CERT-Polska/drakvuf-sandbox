@@ -7,7 +7,8 @@ from drakcore.postprocess.log_index import generate_log_index
 from drakcore.postprocess.networking_pcap_file import generate_pcap
 from drakcore.postprocess.pstree import build_process_tree
 from drakcore.postprocess.slice_logs import slice_drakmon_logs
-from drakcore.postprocess.wireshark_key_file_gen import generate_wireshark_key_file
+from drakcore.postprocess.wireshark_key_file_gen import \
+    generate_wireshark_key_file
 
 PostprocessPlugin = namedtuple("PostprocessPlugin", ("handler", "required"))
 
