@@ -40,17 +40,15 @@ def parse_dest_IPs(pcapfile):
                 pass
 
 
-def generate_pcap_file(
-    task: Task, resources: Dict[str, RemoteResource], minio
-):
+def generate_pcap(task: Task, resources: Dict[str, RemoteResource], minio):
     analysis_uid = task.payload["analysis_uid"]
 
     with resources["dump.pcap"].download_temporary_file() as dump_pcap:
         dest_IPs = parse_dest_IPs(dump_pcap)
         minio.put_object(
-             "drakrun",
-             f"{analysis_uid}/dest_IPs.txt",
-             BytesIO(dest_IPs),
-             len(dest_IPs),
+            "drakrun",
+            f"{analysis_uid}/dest_IPs.txt",
+            BytesIO(dest_IPs),
+            len(dest_IPs),
         )
         yield "dest_IPs.txt"
