@@ -106,3 +106,11 @@ This instruction assumes that you want to create a single-node installation with
     Add ``--no-report`` if you don't want ``draksetup`` to send `basic usage report <https://github.com/CERT-Polska/drakvuf-sandbox/blob/master/USAGE_STATISTICS.md>`_. 
 
 11. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
+
+
+Tools that will be installed in your system:
+============================================
+1. **drak-vncpasswd**: You can find more info about it here: https://linux.die.net/man/1/vncpasswd.
+
+   
+
