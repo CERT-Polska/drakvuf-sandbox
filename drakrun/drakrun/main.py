@@ -34,7 +34,7 @@ from drakrun.config import (
     VOLUME_DIR,
     InstallInfo,
 )
-from drakrun.drakpdb import noncompulsory_dll_file_list
+from drakrun.drakpdb import dll_file_list
 from drakrun.injector import Injector
 from drakrun.networking import setup_vm_network, start_dnsmasq, start_tcpdump_collector
 from drakrun.storage import get_storage_backend
@@ -379,7 +379,7 @@ class DrakrunKarton(Karton):
         with tempfile.TemporaryDirectory() as tmp_path:
             tmp_dir = Path(tmp_path)
 
-            for profile in noncompulsory_dll_file_list:
+            for profile in dll_file_list:
                 fpath = Path(PROFILE_DIR) / f"{profile.dest}.json"
                 if fpath.is_file():
                     shutil.copy(fpath, tmp_dir / fpath.name)
@@ -434,7 +434,7 @@ class DrakrunKarton(Karton):
 
         out = []
 
-        for profile in noncompulsory_dll_file_list:
+        for profile in dll_file_list:
             if profile.arg is None:
                 continue
             if f"{profile.dest}.json" in files:

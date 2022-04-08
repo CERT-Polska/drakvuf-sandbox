@@ -15,6 +15,7 @@ from tqdm import tqdm
 DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 
 
+# profile file list, without 'C:\' and with '/' instead of '\'
 # something is wrong if these DLLs fail
 compulsory_dll_file_list = [
     DLL("Windows/System32/ntdll.dll", "amd64_ntdll_profile", "--json-ntdll"),
@@ -128,6 +129,9 @@ noncompulsory_dll_file_list = [
     DLL("Windows/System32/wtsapi32.dll", "amd64_wtsapi32_profile", None),
     DLL("Windows/SysWOW64/wtsapi32.dll", "x86_wtsapi32_profile", None),
 ]
+
+
+dll_file_list = compulsory_dll_file_list + noncompulsory_dll_file_list
 
 
 CV_RSDS_HEADER = "CV_RSDS" / Struct(
