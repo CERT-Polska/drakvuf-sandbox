@@ -17,7 +17,7 @@ DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 
 # profile file list, without 'C:\' and with '/' instead of '\'
 # something is wrong if these DLLs fail
-compulsory_dll_file_list = [
+required_dll_file_list = [
     DLL("Windows/System32/ntdll.dll", "amd64_ntdll_profile", "--json-ntdll"),
     DLL("Windows/SysWOW64/ntdll.dll", "wow64_ntdll_profile", "--json-wow"),
     DLL("Windows/System32/win32k.sys", "amd64_win32k_profile", "--json-win32k"),
@@ -30,7 +30,7 @@ compulsory_dll_file_list = [
 ]
 
 # profile file list, without 'C:\' and with '/' instead of '\'
-noncompulsory_dll_file_list = [
+unrequired_dll_file_list = [
     DLL("Windows/System32/drivers/tcpip.sys", "amd64_tcpip_profile", "--json-tcpip"),
     DLL("Windows/System32/sspicli.dll", "amd64_sspicli_profile", "--json-sspicli"),
     DLL(
@@ -131,7 +131,7 @@ noncompulsory_dll_file_list = [
 ]
 
 
-dll_file_list = compulsory_dll_file_list + noncompulsory_dll_file_list
+dll_file_list = required_dll_file_list + unrequired_dll_file_list
 
 
 CV_RSDS_HEADER = "CV_RSDS" / Struct(

@@ -36,12 +36,12 @@ from drakrun.config import (
 )
 from drakrun.drakpdb import (
     DLL,
-    compulsory_dll_file_list,
     dll_file_list,
     fetch_pdb,
     make_pdb_profile,
-    noncompulsory_dll_file_list,
     pe_codeview_data,
+    required_dll_file_list,
+    unrequired_dll_file_list,
 )
 from drakrun.injector import Injector
 from drakrun.networking import (
@@ -858,12 +858,12 @@ def create_missing_profiles():
     vm.restore()
 
     # Ensure that all declared usermode profiles exist
-    # This is important when upgrade defines new entries in compulsory_dll_file_list and noncompulsory_dll_file_list
-    for profile in compulsory_dll_file_list:
+    # This is important when upgrade defines new entries in required_dll_file_list and unrequired_dll_file_list
+    for profile in required_dll_file_list:
         if not profiles_exist(profile.dest):
             create_rekall_profile(injector, profile, True)
 
-    for profile in noncompulsory_dll_file_list:
+    for profile in unrequired_dll_file_list:
         if not profiles_exist(profile.dest):
             try:
                 create_rekall_profile(injector, profile)
