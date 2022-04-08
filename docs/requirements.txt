@@ -5,3 +5,4 @@ docutils==0.16
 ipython==7.16.3
 # Workaround for https://github.com/sphinx-doc/sphinx/issues/10291
 Jinja2==2.11.3
+MarkupSafe==2.0.1
