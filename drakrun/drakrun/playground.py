@@ -145,9 +145,7 @@ def main():
         handlers=[logging.StreamHandler()],
     )
 
-    with graceful_exit(start_dnsmasq(args.vm_id, args.dns)), DrakmonShell(
-        args.vm_id, args.dns
-    ) as shell:
+    with DrakmonShell(args.vm_id, args.dns) as shell, graceful_exit(start_dnsmasq(args.vm_id, args.dns)):
         helpers = {
             "help": shell.help,
             "copy": shell.copy,
