@@ -29,7 +29,7 @@ compulsory_dll_file_list = [
 ]
 
 # profile file list, without 'C:\' and with '/' instead of '\'
-dll_file_list = [
+noncompulsory_dll_file_list = [
     DLL("Windows/System32/drivers/tcpip.sys", "amd64_tcpip_profile", "--json-tcpip"),
     DLL("Windows/System32/sspicli.dll", "amd64_sspicli_profile", "--json-sspicli"),
     DLL(

@@ -37,9 +37,9 @@ from drakrun.config import (
 from drakrun.drakpdb import (
     DLL,
     compulsory_dll_file_list,
-    dll_file_list,
     fetch_pdb,
     make_pdb_profile,
+    noncompulsory_dll_file_list,
     pe_codeview_data,
 )
 from drakrun.injector import Injector
@@ -857,12 +857,12 @@ def create_missing_profiles():
     vm.restore()
 
     # Ensure that all declared usermode profiles exist
-    # This is important when upgrade defines new entries in dll_file_list and compulsory_dll_file_list
+    # This is important when upgrade defines new entries in compulsory_dll_file_list and noncompulsory_dll_file_list
     for profile in compulsory_dll_file_list:
         if not profiles_exist(profile.dest):
             create_rekall_profile(injector, profile, True)
 
-    for profile in dll_file_list:
+    for profile in noncompulsory_dll_file_list:
         if not profiles_exist(profile.dest):
             try:
                 create_rekall_profile(injector, profile)
@@ -871,7 +871,7 @@ def create_missing_profiles():
 
     build_os_info(APISCOUT_PROFILE_DIR, vmi_win_guid(vm.vm_name), backend)
 
-    dll_basename_list = [dll.dest for dll in dll_file_list]
+    dll_basename_list = [dll.dest for dll in noncompulsory_dll_file_list]
     static_apiscout_profile = build_static_apiscout_profile(
         APISCOUT_PROFILE_DIR, dll_basename_list
     )
