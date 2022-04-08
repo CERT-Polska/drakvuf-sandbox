@@ -3,3 +3,5 @@ sphinx-rtd-theme==0.5.2
 # Workaround for https://github.com/readthedocs/sphinx_rtd_theme/issues/1115
 docutils==0.16
 ipython==7.16.3
+# Workaround for https://github.com/sphinx-doc/sphinx/issues/10291
+Jinja2==2.11.3
