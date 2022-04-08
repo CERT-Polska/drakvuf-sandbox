@@ -76,6 +76,7 @@ def get_dll_startup_command(pe_data):
             return "rundll32 %f,{}".format(export[1])
 
     if exports:
+        export = exports[0]
         if exports[0][1]:
             return "rundll32 %f,{}".format(export[1].split("@")[0])
         elif exports[0][0]:
