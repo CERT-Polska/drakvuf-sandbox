@@ -5,6 +5,7 @@ on:
     tags:
       - 'v0.*'
       - 'dev-build-*'
+      - 'dev-build_*'
 
 jobs:
   release:
