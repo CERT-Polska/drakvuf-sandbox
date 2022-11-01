@@ -12,8 +12,8 @@ Usage examples
 
 .. code-block:: console
 
-    root@zen2:~/drakvuf# drakpdb pdb_guid --file ntdll.dll
-    {'filename': 'wntdll.pdb', 'GUID': 'dccff2d483fa4dee81dc04552c73bb5e2'}
+    root@zen2:~/drakvuf# drakpdb pe_codeview_data --file ntdll.dll
+    {'filename': 'wntdll.pdb', 'symstore_hash': 'dccff2d483fa4dee81dc04552c73bb5e2'}
     root@zen2:~/drakvuf# drakpdb fetch_pdb --pdb_name wntdll.pdb --guid_age dccff2d483fa4dee81dc04552c73bb5e2
     100%|██████████████████████████████████████████████████████████████| 2.12M/2.12M [00:00<00:00, 2.27MiB/s]
     root@zen2:~/drakvuf# drakpdb parse_pdb --pdb_name wntdll.pdb > profile.json
