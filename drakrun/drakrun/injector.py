@@ -66,7 +66,7 @@ class Injector:
         Copy local file to the VM
         we pass (timeout-5) to drakvuf to give it 5 seconds to finish its loop
         """
-        drakvuf_timeout = timeout - 5 if timeout != 0 else 0
+        drakvuf_timeout = timeout - 5 if timeout > 5 else 0
         injector_cmd = self._get_cmdline_writefile(
             local_path, remote_path, timeout=drakvuf_timeout
         )
