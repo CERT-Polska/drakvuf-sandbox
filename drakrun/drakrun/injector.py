@@ -79,7 +79,7 @@ class Injector:
     ) -> subprocess.CompletedProcess:
         """
         Copy VM file to local
-        we pass (timeout-5) to drakvuf to give it 5 seconds to finish it's loop
+        we pass (timeout-5) to drakvuf to give it 5 seconds to finish its loop
         """
         drakvuf_timeout = timeout - 5 if timeout != 0 else 0
         injector_cmd = self._get_cmdline_readfile(
