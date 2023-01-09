@@ -14,7 +14,7 @@ class Injector:
 
     def _get_cmdline_generic(self, method: str, timeout: int) -> List[str]:
         """Build base command line for all injection methods"""
-        cmd = [
+        return [
             "injector",
             "-o",
             "json",
@@ -31,8 +31,6 @@ class Injector:
             "--timeout",
             str(timeout),
         ]
-
-        return cmd
 
     def _get_cmdline_writefile(
         self, local: str, remote: str, timeout: int = 60
