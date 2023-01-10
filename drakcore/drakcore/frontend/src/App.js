@@ -127,10 +127,10 @@ class App extends Component {
             <div className="container-fluid">
               <div className="row">
                 <div className="col-md-6">
-                  DRAKVUF Sandbox© 2019-2022{" "}
+                  DRAKVUF Sandbox© 2019-2023{" "}
                   <a href="https://cert.pl/">CERT Polska</a>
                   <br />
-                  DRAKVUF® 2014-2022{" "}
+                  DRAKVUF® 2014-2023{" "}
                   <a href="https://tklengyel.com/">Tamas K Lengyel</a>
                 </div>
                 <div className="col-md-6">
