@@ -13,8 +13,7 @@ fi
 
 set -e
 
-# Usage of /build as root is required by DRAKVUF's mkdeb script
-INSTALL_PATH=/build/usr
+INSTALL_PATH=/build/drakvuf/usr
 mkdir -p $INSTALL_PATH
 
 # Build Xen
@@ -38,13 +37,16 @@ popd
 # Build dwarf2json
 pushd drakvuf/dwarf2json
 /usr/local/go/bin/go build
-mkdir -p /build/dwarf2json/
-mv dwarf2json /build/dwarf2json/
 popd
 
 # Package DRAKVUF
 pushd drakvuf
 mkdir /out
+# remove volatility3
+sed -i '/volatility3/d' /build/drakvuf/package/mkdeb
+# change drakvuf build dir
+sed -i 's/\/build/\/build\/drakvuf/g' /build/drakvuf/package/mkdeb
+
 sh ./package/mkdeb
 popd
 
