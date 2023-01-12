@@ -4,7 +4,7 @@ FROM debian:buster
 
 # DRAKVUF build deps
 RUN echo "deb-src http://deb.debian.org/debian buster main" >> /etc/apt/sources.list
-RUN apt-get update && apt-get install -y build-essential git wget curl cmake flex bison libjson-c-dev autoconf-archive clang clang++ python3-dev gcc-8 g++-8 lsb-release patch libsystemd-dev nasm bc ninja-build libgnutls28-dev
+RUN apt-get update && apt-get install -y build-essential git wget curl cmake flex bison libjson-c-dev autoconf-archive clang python3-dev gcc-8 g++-8 lsb-release patch libsystemd-dev nasm bc ninja-build libgnutls28-dev
 
 # Install Golang
 RUN wget -q -O /usr/local/go1.15.3.linux-amd64.tar.gz https://golang.org/dl/go1.15.3.linux-amd64.tar.gz
