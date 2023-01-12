@@ -13,11 +13,6 @@ fi
 
 set -e
 
-# Use clang as compiler, otherwise stuff doesn't build
-# with drakvuf xen_helpers breaking on -Werror-c++-compat
-export CC=clang
-export CXX=clang++
-
 # Usage of /build as root is required by DRAKVUF's mkdeb script
 INSTALL_PATH=/build/usr
 mkdir -p $INSTALL_PATH
