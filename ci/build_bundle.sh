@@ -5,7 +5,6 @@ SCRIPT=`realpath $0`
 SCRIPTPATH=`dirname $SCRIPT`
 source $SCRIPTPATH/build_utils.sh
 
-
 mc stat cache/debs/drakvuf-bundle-${DRAKVUF_COMMIT}.deb
 if [ $? -eq 0 ]; then
     echo "Package already exists. Skipping..."
@@ -13,6 +12,11 @@ if [ $? -eq 0 ]; then
 fi
 
 set -e
+
+# Use clang as compiler, otherwise stuff doesn't build
+# with drakvuf xen_helpers breaking on -Werror-c++-compat
+export CC=clang
+export CXX=clang++
 
 # Usage of /build as root is required by DRAKVUF's mkdeb script
 INSTALL_PATH=/build/usr
