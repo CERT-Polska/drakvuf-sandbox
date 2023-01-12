@@ -92,9 +92,9 @@ mkdir -p /out
 pushd $SANDBOX_DIR/drakvuf
 
 # remove volatility3
-sed -i '/volatility3/d' /build/drakvuf/package/mkdeb
+sed -i '/volatility3/d' ./package/mkdeb
 # change drakvuf build dir
-sed -i 's/\/build/\/build\/drakvuf/g' /build/drakvuf/package/mkdeb
+sed -i 's/\/build/\/build\/drakvuf/g' ./package/mkdeb
 
 sh ./package/mkdeb
 popd
