@@ -25,6 +25,7 @@ In order to analyze IPT data streams, you need to install ``libipt``, ``xed``, `
   git clone https://github.com/intelxed/xed.git
   git clone https://github.com/intelxed/mbuild.git
   git clone https://github.com/gabime/spdlog.git
+  git clone https://github.com/p-ranav/argparse.git -b v2.9
   git clone https://github.com/CERT-Polska/drakvuf-sandbox.git
 
   cd xed
@@ -38,6 +39,10 @@ In order to analyze IPT data streams, you need to install ``libipt``, ``xed``, `
   make install
   
   cd ../spdlog
+  cmake .
+  make -j$(nproc) install
+
+  cd ../argparse
   cmake .
   make -j$(nproc) install
 
