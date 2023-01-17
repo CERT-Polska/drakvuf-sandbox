@@ -332,38 +332,38 @@ class Decoder {
 
 argparse::ArgumentParser build_arguments()
 {
-    argparse::ArgumentParser arguments("drak-ipt-blocks");
+  argparse::ArgumentParser arguments("drak-ipt-blocks");
 
-    arguments.add_argument("--pt")
-        .required()
-        .help("filtered ipt trace from drak-ipt-filter");
+  arguments.add_argument("--pt")
+    .required()
+    .help("filtered ipt trace from drak-ipt-filter");
 
-    arguments.add_argument("--cr3")
-        .required()
-        .scan<'X', uint32_t>()
-        .help("CR3 register value");
+  arguments.add_argument("--cr3")
+    .required()
+    .scan<'X', uint32_t>()
+    .help("CR3 register value");
 
-    arguments.add_argument("--raw")
-        .default_value<std::vector<std::string>>({})
-        .append()
-        .help("<file>:<base> maps a raw binary file from <file> at address <base>");
+  arguments.add_argument("--raw")
+    .default_value<std::vector<std::string>>({})
+    .append()
+    .help("<file>:<base> maps a raw binary file from <file> at address <base>");
 
-    arguments.add_argument("--show-drakvuf")
-        .implicit_value(true)
-        .default_value(false)
-        .help("show drakvuf events");
+  arguments.add_argument("--show-drakvuf")
+    .implicit_value(true)
+    .default_value(false)
+    .help("show drakvuf events");
 
-    arguments.add_argument("--no-mmap")
-        .implicit_value(true)
-        .default_value(false)
-        .help("disables mmap to load files (slow)");
+  arguments.add_argument("--no-mmap")
+    .implicit_value(true)
+    .default_value(false)
+    .help("disables mmap to load files (slow)");
 
-    arguments.add_argument("--verbose")
-        .implicit_value(true)
-        .default_value(false)
-        .help("enables verbose logging");
+  arguments.add_argument("--verbose")
+    .implicit_value(true)
+    .default_value(false)
+    .help("enables verbose logging");
 
-    return arguments;
+  return arguments;
 }
 
 int main(int argc, char *argv[]) {
