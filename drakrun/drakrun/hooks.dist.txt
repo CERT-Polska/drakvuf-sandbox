@@ -299,3 +299,4 @@ cryptsp.dll,CryptEnumProvidersA,log,dword,dword,dword,dword,lpstr,dword
 cryptsp.dll,CryptEnumProvidersW,log,dword,dword,dword,dword,lpwstr,dword
 kernel32.dll,VirtualFree,log,handle,lpvoid,size_t,dword
 ntdll.dll,RtlSecureZeroMemory,log,lpvoid,size_t
+kernel32.dll,CreateProcessA,log,lpcstr,lpstr,lpsecurity_attributes,lpsecurity_attributes,bool,dword,lpvoid,lpwstr,lpstartupinfo,lpprocess_information
