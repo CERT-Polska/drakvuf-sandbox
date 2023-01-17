@@ -31,8 +31,8 @@ MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
 RUNNER_KEY = os.getenv("RUNNER_KEY")
 
 BUNDLE_DEBS = [
-    f"xen-hypervisor-{DRAKVUF_COMMIT}.deb"
-    f"drakvuf-bundle-{DRAKVUF_COMMIT}.deb"
+    f"xen-hypervisor-{DRAKVUF_COMMIT}.deb",
+    f"drakvuf-bundle-{DRAKVUF_COMMIT}.deb",
 ]
 MINIO_DEBS = [
     f"drakcore_drone-{DRONE_BUILD_NUMBER}.deb",
