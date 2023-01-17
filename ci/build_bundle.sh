@@ -6,8 +6,11 @@ SCRIPTPATH=`dirname $SCRIPT`
 source $SCRIPTPATH/build_utils.sh
 
 mc stat cache/debs/drakvuf-bundle-${DRAKVUF_COMMIT}.deb
-if [ $? -eq 0 ]; then
-    echo "Package already exists. Skipping..."
+drak_exists=$?
+mc stat cache/debs/xen-hypervisor-${DRAKVUF_COMMIT}.deb
+xen_exists=$?
+if [ drak_exists -eq 0 ] && [ xen_exists -eq 0 ] ; then
+    echo "Packages exist. Skipping..."
     exit 0
 fi
 
