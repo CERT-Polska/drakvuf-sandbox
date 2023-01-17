@@ -20,6 +20,7 @@
 #include "json-c/json.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/spdlog.h"
+#include "argparse/argparse.hpp"
 
 #define PTW_CURRENT_CR3 (0xC3000000)
 #define PTW_CURRENT_TID (0x1D000000)
@@ -329,72 +330,82 @@ class Decoder {
   uint32_t current_cr3_;
 };
 
+argparse::ArgumentParser build_arguments()
+{
+  argparse::ArgumentParser arguments("drak-ipt-blocks");
+
+  arguments.add_argument("--pt")
+    .required()
+    .help("filtered ipt trace from drak-ipt-filter");
+
+  arguments.add_argument("--cr3")
+    .required()
+    .scan<'X', uint32_t>()
+    .help("CR3 register value");
+
+  arguments.add_argument("--raw")
+    .default_value<std::vector<std::string>>({})
+    .append()
+    .help("<file>:<base> maps a raw binary file from <file> at address <base>");
+
+  arguments.add_argument("--show-drakvuf")
+    .implicit_value(true)
+    .default_value(false)
+    .help("show drakvuf events");
+
+  arguments.add_argument("--no-mmap")
+    .implicit_value(true)
+    .default_value(false)
+    .help("disables mmap to load files (slow)");
+
+  arguments.add_argument("--verbose")
+    .implicit_value(true)
+    .default_value(false)
+    .help("enables verbose logging");
+
+  return arguments;
+}
+
 int main(int argc, char *argv[]) {
   auto err_console = spdlog::stderr_color_st("console");
   spdlog::set_default_logger(err_console);
 
+  auto arguments = build_arguments();
+  try {
+    arguments.parse_args(argc, argv);
+  }
+  catch (const std::runtime_error& err) {
+    spdlog::error(err.what());
+    std::exit(1);
+  }
+
   Decoder decoder{};
   Image image{};
 
-  std::optional<std::string> pt_file;
-  std::optional<uint64_t> cr3_filter;
+  if (arguments["--verbose"] == true)
+    spdlog::set_level(spdlog::level::debug);
 
-  for (int i = 1; i < argc; i++) {
-    const auto arg = std::string(argv[i]);
-    const bool has_more_args = i + 1 < argc;
-    if (arg == "--pt") {
-      if (!has_more_args) {
-        std::cerr << "Missing argument for --pt\n";
-        return 1;
-      }
-      i++;
-      pt_file = std::string(argv[i]);
-    } else if (arg == "--cr3") {
-      if (!has_more_args) {
-        std::cerr << "Missing argument for --cr3\n";
-        return 1;
-      }
-      i++;
-      cr3_filter = std::stoul(std::string(argv[i]), 0, 0);
-    } else if (arg == "--raw") {
-      if (!has_more_args) {
-        std::cerr << "Missing argument for --raw\n";
-        return 1;
-      }
-      i++;
-      const auto arg = std::string(argv[i]);
-      const auto fname = arg.substr(0, arg.find_first_of(":"));
-      const auto addr = arg.substr(arg.find_first_of(":") + 1);
-      const uint64_t virt_addr = std::stoull(addr, 0, 0);
+  if (arguments["--no-mmap"] == true)
+    decoder.enable_mmap_ = false;
 
-      spdlog::debug("Mapping {} at {:x}", fname, virt_addr);
-      if (image.map_page(fname, virt_addr) != 0) {
-        return 1;
-      }
-    } else if (arg == "--show-drakvuf") {
-      decoder.show_drakvuf_ = true;
-    } else if (arg == "--no-mmap") {
-      decoder.enable_mmap_ = false;
-    } else if (arg == "--verbose") {
-      spdlog::set_level(spdlog::level::debug);
-    } else {
-      std::cerr << "Unknown argument " << arg << "\n";
+  if (arguments["--show-drakvuf"] == true)
+    decoder.show_drakvuf_ = true;
+
+  for (auto& arg : arguments.get<std::vector<std::string>>("--raw"))
+  {
+    const auto fname = arg.substr(0, arg.find_first_of(":"));
+    const auto addr = arg.substr(arg.find_first_of(":") + 1);
+    const uint64_t virt_addr = std::stoull(addr, 0, 0);
+
+    spdlog::debug("Mapping {} at {:x}", fname, virt_addr);
+    if (image.map_page(fname, virt_addr) != 0) {
       return 1;
     }
   }
 
-  if (!pt_file) {
-    std::cerr << "Missing --pt [ipt_trace_file]\n";
-    return 1;
-  }
-  if (!cr3_filter) {
-    std::cerr << "Missing --cr3 [cr3_filter]\n";
-    return 1;
-  }
-
   try {
-    decoder.load_pt(*pt_file);
-    image.cr3_value = *cr3_filter;
+    decoder.load_pt(arguments.get<std::string>("--pt"));
+    image.cr3_value = arguments.get<uint32_t>("--cr3");
     spdlog::info("Decoding");
     decoder.decode_stream(&image);
   } catch (const std::runtime_error &exc) {
