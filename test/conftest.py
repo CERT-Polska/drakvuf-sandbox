@@ -30,7 +30,10 @@ MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
 RUNNER_KEY = os.getenv("RUNNER_KEY")
 
-BUNDLE_DEB = f"drakvuf-bundle-{DRAKVUF_COMMIT}.deb"
+BUNDLE_DEBS = [
+    f"xen-hypervisor-{DRAKVUF_COMMIT}.deb"
+    f"drakvuf-bundle-{DRAKVUF_COMMIT}.deb"
+]
 MINIO_DEBS = [
     f"drakcore_drone-{DRONE_BUILD_NUMBER}.deb",
     f"drakrun_drone-{DRONE_BUILD_NUMBER}.deb",
@@ -137,8 +140,8 @@ def drakmon_setup():
     logging.info("Running end to end test")
 
 
-    debs = download_debs(MINIO_DEBS)
-    [drakvuf_bundle] = download_debs([BUNDLE_DEB])
+    sandbox_debs = download_debs(MINIO_DEBS)
+    drakvuf_debs = download_debs(BUNDLE_DEBS)
 
     response = rebuild_vm(VM_RUNNER_HOST,
         ssh_key="ssh-rsa " + key.get_base64(),
@@ -160,7 +163,7 @@ def drakmon_setup():
 
     with Connection("testvm", config=FABRIC_CONFIG) as c:
         # Upload debs
-        for d in map(str, [drakvuf_bundle, *debs]):
+        for d in map(str, drakvuf_debs + sandbox_debs):
             logging.info("Uploading %s", d)
             c.put(d)
 
@@ -169,7 +172,8 @@ def drakmon_setup():
         apt_install(c, DRAKVUF_DEPS)
 
         # Install DRAKVUF
-        dpkg_install(c, drakvuf_bundle.name)
+        for d in drakvuf_debs:
+            dpkg_install(c, d.name)
 
         # Reboot into Xen
         c.run("systemctl reboot", disown=True)
@@ -187,7 +191,7 @@ def drakmon_setup():
         apt_install(c, ["redis-server"])
         apt_install(c, DRAKMON_DEPS)
 
-        for d in debs:
+        for d in sandbox_debs:
             dpkg_install(c, d.name)
 
         # Save default config

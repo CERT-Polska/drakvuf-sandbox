@@ -52,3 +52,4 @@ sh ./package/mkdeb
 popd
 
 mc cp /out/drakvuf-bundle*.deb "cache/debs/drakvuf-bundle-$DRAKVUF_COMMIT.deb"
+mc cp /out/xen-hypervisor*.deb "cache/debs/xen-hypervisor-$DRAKVUF_COMMIT.deb"
