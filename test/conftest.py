@@ -60,6 +60,7 @@ DRAKVUF_DEPS = [
     "libjson-c3",
     "libyajl2",
     "libaio1",
+    "libx11-6",
 ]
 
 DRAKMON_SERVICES = [
