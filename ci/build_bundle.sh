@@ -48,12 +48,6 @@ sed -i '/volatility3/d' ./package/mkdeb
 # change drakvuf build dir
 sed -i 's/\/build/\/build\/drakvuf/g' ./package/mkdeb
 
-# DEBUGGING
-find dwarf2json
-cat ./package/mkdeb
-pwd
-ls -lha
-
 sh ./package/mkdeb
 popd
 
