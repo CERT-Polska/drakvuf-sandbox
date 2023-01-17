@@ -2,9 +2,6 @@ kind: pipeline
 type: docker
 name: check-drakcore
 
-workspace:
-  path: /build
-
 steps:
 - name: black check
   image: pyfound/black:21.7b0
@@ -149,6 +146,9 @@ trigger:
 kind: pipeline
 type: docker
 name: build-drakvuf-bundle
+
+workspace:
+  path: /build
 
 steps:
 - name: package drakvuf-bundle
