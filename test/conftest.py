@@ -64,6 +64,7 @@ DRAKVUF_DEPS = [
     "libyajl2",
     "libaio1",
     "libx11-6",
+    "lvm2",
 ]
 
 DRAKMON_SERVICES = [
