@@ -91,9 +91,9 @@ echo "[+] Packaging DRAKVUF"
 mkdir -p /out
 pushd $SANDBOX_DIR/drakvuf
 
-# remove volatility3
+# Remove volatility3
 sed -i '/volatility3/d' ./package/mkdeb
-# change drakvuf build dir
+# Change drakvuf build dir
 sed -i 's/\/build/\/build\/drakvuf/g' ./package/mkdeb
 
 sh ./package/mkdeb
