@@ -9,7 +9,7 @@ mc stat cache/debs/drakvuf-bundle-${DRAKVUF_COMMIT}.deb
 drak_exists=$?
 mc stat cache/debs/xen-hypervisor-${DRAKVUF_COMMIT}.deb
 xen_exists=$?
-if [ drak_exists -eq 0 ] && [ xen_exists -eq 0 ] ; then
+if [ $drak_exists -eq 0 ] && [ $xen_exists -eq 0 ] ; then
     echo "Packages exist. Skipping..."
     exit 0
 fi
