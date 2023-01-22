@@ -1212,7 +1212,7 @@ def snapshot_import(name, bucket, full, zpool):
             cfg_path = os.path.join(VM_CONFIG_DIR, "vm-0.cfg")
 
             try:
-                subprocess.run(["xl" "create", cfg_path], check=True)
+                subprocess.run(["xl", "create", cfg_path], check=True)
             except subprocess.CalledProcessError:
                 logging.exception("Failed to launch VM vm-0")
                 return
