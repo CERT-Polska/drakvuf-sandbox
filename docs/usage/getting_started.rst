@@ -32,8 +32,13 @@ This instruction assumes that you want to create a single-node installation with
     .. code-block:: console
 
       # apt update
+      # apt install ./xen-hypervisor*.deb
       # apt install ./drakvuf-bundle*.deb
       # reboot
+
+    .. warning ::
+      Always install xen-hypervisor from drakvuf-sandbox release.
+      Mismatching packages from different releases may lead to unexpected results.
 3. Install DRAKVUF Sandbox stack:
 
     .. code-block:: console

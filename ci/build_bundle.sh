@@ -5,17 +5,18 @@ SCRIPT=`realpath $0`
 SCRIPTPATH=`dirname $SCRIPT`
 source $SCRIPTPATH/build_utils.sh
 
-
 mc stat cache/debs/drakvuf-bundle-${DRAKVUF_COMMIT}.deb
-if [ $? -eq 0 ]; then
-    echo "Package already exists. Skipping..."
+drak_exists=$?
+mc stat cache/debs/xen-hypervisor-${DRAKVUF_COMMIT}.deb
+xen_exists=$?
+if [ $drak_exists -eq 0 ] && [ $xen_exists -eq 0 ] ; then
+    echo "Packages exist. Skipping..."
     exit 0
 fi
 
 set -e
 
-# Usage of /build as root is required by DRAKVUF's mkdeb script
-INSTALL_PATH=/build/usr
+INSTALL_PATH=/build/drakvuf/usr
 mkdir -p $INSTALL_PATH
 
 # Build Xen
@@ -39,14 +40,19 @@ popd
 # Build dwarf2json
 pushd drakvuf/dwarf2json
 /usr/local/go/bin/go build
-mkdir -p /build/dwarf2json/
-mv dwarf2json /build/dwarf2json/
 popd
 
 # Package DRAKVUF
 pushd drakvuf
 mkdir /out
+
+# remove volatility3
+sed -i '/volatility3/d' ./package/mkdeb
+# change drakvuf build dir
+sed -i 's/\/build/\/build\/drakvuf/g' ./package/mkdeb
+
 sh ./package/mkdeb
 popd
 
 mc cp /out/drakvuf-bundle*.deb "cache/debs/drakvuf-bundle-$DRAKVUF_COMMIT.deb"
+mc cp /out/xen-hypervisor*.deb "cache/debs/xen-hypervisor-$DRAKVUF_COMMIT.deb"

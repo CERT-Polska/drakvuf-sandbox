@@ -23,6 +23,7 @@ Install new packages and reboot:
 
 .. code-block :: console
 
+    # apt install ./xen-hypervisor*.deb
     # apt install ./drakvuf-bundle*.deb
     # apt install ./drakrun*.deb
     # apt install ./drakcore*.deb

@@ -147,6 +147,9 @@ kind: pipeline
 type: docker
 name: build-drakvuf-bundle
 
+workspace:
+  path: /build
+
 steps:
 - name: package drakvuf-bundle
   image: debian:buster
@@ -199,7 +202,7 @@ steps:
     RUNNER_KEY:
       from_secret: RUNNER_KEY
     BASE_IMAGE: "debian-10-generic-amd64"
-    SNAPSHOT_VERSION: "win7-20210922"
+    SNAPSHOT_VERSION: "win7-20230213"
 node:
    purpose: e2e
 depends_on:
