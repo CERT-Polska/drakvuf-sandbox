@@ -109,6 +109,8 @@ jobs:
     container: debian:buster
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: true
       - name: Get Drakvuf commit id
         run: |
           export DEBIAN_FRONTEND=noninteractive
