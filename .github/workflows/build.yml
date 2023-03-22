@@ -50,7 +50,17 @@ jobs:
       - name: Check with flake8
         run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakrun/
   package_drakcore:
+    needs: [lint_drakcore, lint_drakcore_frontend]
     runs-on: ubuntu-latest
     container: debian:buster
     steps:
       - uses: actions/checkout@v2
+      - run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y wget curl python3 python3-venv python3-pip dh-virtualenv debhelper devscripts
+          curl -sL https://deb.nodesource.com/setup_14.x | bash -
+          apt-get install -y nodejs
+          cd drakcore
+          package/find-python.sh
+          dpkg-buildpackage -us -uc -b
