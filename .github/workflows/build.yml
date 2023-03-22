@@ -104,3 +104,15 @@ jobs:
         with:
           name: drakrun-debs
           path: ./drakrun_*_amd64.deb
+  package_drakvuf_bundle:
+    runs-on: ubuntu-latest
+    container: debian:buster
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get Drakvuf commit id
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update && apt-get install -y -q git wget
+          export DRAKVUF_COMMIT=$(git ls-tree HEAD drakvuf | awk '{ print $3 }')
+          echo "Drakvuf commit is ${DRAKVUF_COMMIT}"
+          echo "DRAKVUF_COMMIT=$DRAKVUF_COMMIT" >> $GITHUB_ENV
