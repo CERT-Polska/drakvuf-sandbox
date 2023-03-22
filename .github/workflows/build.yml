@@ -136,6 +136,7 @@ jobs:
         name: Build Drakvuf bundle
         run: |
           cp -ra . /build
+          cd /build
           sh drakvuf/package/depends.sh
           bash ci/build_bundle.sh
       - uses: actions/upload-artifact@v3
