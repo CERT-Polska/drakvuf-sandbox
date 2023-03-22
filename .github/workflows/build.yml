@@ -23,9 +23,15 @@ jobs:
       - run: pip3 install -r drakcore/requirements.txt
       - name: Check with flake8
         run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakcore/
+  lint_drakcore_frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
       - name: Install web dependencies
+        working-directory: drakcore/drakcore/frontend
         run: npm ci
       - name: Check with prettier
+        working-directory: drakcore/drakcore/frontend
         run: npx prettier --check src/
   lint_drakrun:
     runs-on: ubuntu-latest
