@@ -117,6 +117,7 @@ jobs:
           submodules: true
       - name: Get Drakvuf commit id
         run: |
+          git config --global --add safe.directory "$(pwd)"
           export DRAKVUF_COMMIT=$(git ls-tree HEAD drakvuf | awk '{ print $3 }')
           echo "Drakvuf commit is ${DRAKVUF_COMMIT}"
           echo "DRAKVUF_COMMIT=$DRAKVUF_COMMIT" >> $GITHUB_ENV
