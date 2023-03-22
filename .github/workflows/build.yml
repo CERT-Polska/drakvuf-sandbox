@@ -105,6 +105,7 @@ jobs:
           name: drakrun-debs
           path: ./drakrun_*_amd64.deb
   package_drakvuf_bundle:
+    needs: [lint_drakcore, lint_drakcore_frontend, lint_drakrun]
     runs-on: ubuntu-latest
     container: debian:buster
     steps:
@@ -114,10 +115,32 @@ jobs:
           apt-get update && apt-get install -y -q git wget
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
       - name: Get Drakvuf commit id
         run: |
+          # Workaround for fatal: detected dubious ownership
+          # https://git-scm.com/docs/git-config/2.35.2#Documentation/git-config.txt-safedirectory
           git config --global --add safe.directory "$(pwd)"
           export DRAKVUF_COMMIT=$(git ls-tree HEAD drakvuf | awk '{ print $3 }')
           echo "Drakvuf commit is ${DRAKVUF_COMMIT}"
           echo "DRAKVUF_COMMIT=$DRAKVUF_COMMIT" >> $GITHUB_ENV
+      - name: Cache Drakvuf bundle
+        id: cache-drakvuf-bundle
+        uses: actions/cache@v3
+        with:
+          path: |
+            /out/drakvuf-bundle*.deb 
+            /out/xen-hypervisor*.deb
+          key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}
+      - if: ${{ steps.cache-drakvuf-bundle.outputs.cache-hit != 'true' }}
+        name: Build Drakvuf bundle
+        run: |
+          cp -ra . /build
+          sh drakvuf/package/depends.sh
+          bash ci/build_bundle.sh
+      - uses: actions/upload-artifact@v3
+        with:
+          name: drakvuf-bundle-debs
+          path: |
+            /out/drakvuf-bundle*.deb 
+            /out/xen-hypervisor*.deb
