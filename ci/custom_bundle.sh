@@ -22,8 +22,8 @@ fi
 SANDBOX_DIR=$1
 
 # Don't clobber local repository
-cp -ra $SANDBOX_DIR /repo-local
-SANDBOX_DIR=/repo-local
+cp -ra $SANDBOX_DIR /build
+SANDBOX_DIR=/build
 
 PATCH_DIR=$2
 XEN_DIR=$SANDBOX_DIR/drakvuf/xen
