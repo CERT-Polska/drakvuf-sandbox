@@ -49,3 +49,8 @@ jobs:
       - run: pip3 install -r drakrun/requirements.txt
       - name: Check with flake8
         run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakrun/
+  package_drakcore:
+    runs-on: ubuntu-latest
+    container: debian:buster
+    steps:
+      - uses: actions/checkout@v2
