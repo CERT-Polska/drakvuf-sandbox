@@ -14,7 +14,7 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
-      - run: pip3 install black==21.7b0 isort==5.9.3 flake8
+      - run: pip3 install black==22.6.0 isort==5.9.3 flake8
       - name: Check with black
         run: black --check --diff drakcore/
       - name: Check with isort
@@ -33,7 +33,7 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
-      - run: pip3 install black==21.7b0 isort==5.9.3 flake8
+      - run: pip3 install black==22.6.0 isort==5.9.3 flake8
       - name: Check with black
         run: black --check --diff drakrun/
       - name: Check with isort
