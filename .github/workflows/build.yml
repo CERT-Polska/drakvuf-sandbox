@@ -1,4 +1,4 @@
-name: "Build and test mwdb-core"
+name: "Build and test Drakvuf Sandbox"
 on:
   push:
     branches:
