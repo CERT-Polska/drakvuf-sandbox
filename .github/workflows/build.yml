@@ -1,0 +1,43 @@
+name: "Build and test mwdb-core"
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+jobs:
+  lint_drakcore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - run: pip3 install black==21.7b0 isort==5.9.3 flake8
+      - name: Check with black
+        run: black --check --diff drakcore/
+      - name: Check with isort
+        run: isort --profile black --check drakcore/
+      - run: pip3 install -r drakcore/requirements.txt
+      - name: Check with flake8
+        run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakcore/
+      - name: Install web dependencies
+        run: npm ci
+      - name: Check with prettier
+        run: npx prettier --check src/
+  lint_drakrun:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - run: pip3 install black==21.7b0 isort==5.9.3 flake8
+      - name: Check with black
+        run: black --check --diff drakrun/
+      - name: Check with isort
+        run: isort --profile black --check drakrun/
+      - run: pip3 install -r drakrun/requirements.txt
+      - name: Check with flake8
+        run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakrun/
