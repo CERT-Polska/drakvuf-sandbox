@@ -145,3 +145,29 @@ jobs:
           path: |
             /out/drakvuf-bundle*.deb 
             /out/xen-hypervisor*.deb
+  test_e2e:
+    needs: [ package_drakcore, package_drakrun, package_drakvuf_bundle ]
+    runs-on: ubuntu-latest
+    container: python:3.8-buster
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Download debs from artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: /debs
+      - name: Install git
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update && apt-get install -y -q git
+      - name: Start tests
+        run: |
+          cd test
+          pip install -r requirements.txt
+          pytest -v --capture=no
+        env:
+          DRAKVUF_DEBS_PATH: "/debs"
+          BASE_IMAGE: "debian-10-generic-amd64"
+          SNAPSHOT_VERSION: "win7-20230213"
+          MINIO_HOST: "192.168.100.1"

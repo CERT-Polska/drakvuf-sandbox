@@ -78,7 +78,7 @@ def resolve_debs(debs):
         raise RuntimeError(f"Incorrect DRAKVUF_DEBS_PATH: {DRAKVUF_DEBS_PATH}")
 
     for deb in debs:
-        path_candidates = list(debs_path.glob(deb))
+        path_candidates = list(debs_path.glob("**/" + deb))
         if not path_candidates:
             raise RuntimeError(f"{deb} not found under DRAKVUF_DEBS_PATH")
         if len(path_candidates) > 1:
@@ -105,15 +105,16 @@ def drakmon_ssh(drakmon_setup: DrakvufVM):
 @pytest.fixture(scope="session")
 def drakmon_setup():
     logging.info("Running end to end test: creating VM")
+
+    drakvuf_sandbox_debs = list(resolve_debs(DRAKVUF_SANDBOX_DEBS))
+    drakvuf_debs = list(resolve_debs(DRAKVUF_DEBS))
+
     drakvuf_vm = DrakvufVM.create(BASE_IMAGE)
     logging.info(f"VM {drakvuf_vm.identity} created.")
     try:
         logging.info("Waiting for VM to be alive...")
         while not drakvuf_vm.is_alive():
             time.sleep(0.5)
-
-        drakvuf_sandbox_debs = list(resolve_debs(DRAKVUF_SANDBOX_DEBS))
-        drakvuf_debs = list(resolve_debs(DRAKVUF_DEBS))
 
         with drakvuf_vm.connect_ssh() as ssh:
             for deb in (drakvuf_sandbox_debs + drakvuf_debs):
