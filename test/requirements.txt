@@ -1,4 +1,2 @@
-fabric==2.5.0
-minio==5.0.8
-requests==2.23.0
 pytest==5.4.1
+./vm-runner-client
