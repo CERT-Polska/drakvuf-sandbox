@@ -154,7 +154,7 @@ jobs:
         with:
           submodules: recursive
       - name: Download debs from artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/download-artifact@v3
         with:
           path: /debs
       - name: Install git
@@ -163,6 +163,7 @@ jobs:
           apt-get update && apt-get install -y -q git
       - name: Start tests
         run: |
+          git config --global --add safe.directory "$(pwd)"
           cd test
           pip install -r requirements.txt
           pytest -v --capture=no
