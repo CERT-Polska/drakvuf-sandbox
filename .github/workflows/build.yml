@@ -167,8 +167,13 @@ jobs:
           cd test
           pip install -r requirements.txt
           pytest -v --capture=no
+          python -m vm_runner_client destroy
         env:
           DRAKVUF_DEBS_PATH: "/debs"
           BASE_IMAGE: "debian-10-generic-amd64"
           SNAPSHOT_VERSION: "win7-20230213"
           MINIO_HOST: "192.168.100.1:8181"
+      - name: Job failed - suspending VM (if possible)
+        if: ${{ failure() }}
+        run: |
+          python -m vm_runner_client suspend

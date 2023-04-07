@@ -111,53 +111,53 @@ def drakmon_setup():
 
     drakvuf_vm = DrakvufVM.create(BASE_IMAGE)
     logging.info(f"VM {drakvuf_vm.identity} created.")
-    try:
-        logging.info("Waiting for VM to be alive...")
-        while not drakvuf_vm.is_alive():
-            time.sleep(0.5)
 
-        with drakvuf_vm.connect_ssh() as ssh:
-            for deb in (drakvuf_sandbox_debs + drakvuf_debs):
-                logging.info("Uploading %s", deb.name)
-                ssh.put(deb.as_posix())
+    logging.info("Waiting for VM to be alive...")
+    while not drakvuf_vm.is_alive():
+        time.sleep(0.5)
 
-            logging.info("Upload finished")
-            ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
-            logging.info("Install apt")
-            apt_install(ssh, DRAKVUF_DEPS)
+    with drakvuf_vm.connect_ssh() as ssh:
+        for deb in (drakvuf_sandbox_debs + drakvuf_debs):
+            logging.info("Uploading %s", deb.name)
+            ssh.put(deb.as_posix())
 
-            # Install DRAKVUF
-            for d in drakvuf_debs:
-                dpkg_install(ssh, d.name)
+        logging.info("Upload finished")
+        ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
+        logging.info("Install apt")
+        apt_install(ssh, DRAKVUF_DEPS)
 
-            # Reboot into Xen
-            ssh.run("systemctl reboot", disown=True)
+        # Install DRAKVUF
+        for d in drakvuf_debs:
+            dpkg_install(ssh, d.name)
 
-        logging.info("Rebooting...")
+        # Reboot into Xen
+        ssh.run("systemctl reboot", disown=True)
 
-        # Wait until VM reboots
-        while drakvuf_vm.is_alive():
-            time.sleep(0.5)
+    logging.info("Rebooting...")
 
-        logging.info("VM went down")
+    # Wait until VM reboots
+    while drakvuf_vm.is_alive():
+        time.sleep(0.5)
 
-        while not drakvuf_vm.is_alive():
-            time.sleep(0.5)
+    logging.info("VM went down")
 
-        logging.info("VM back up")
+    while not drakvuf_vm.is_alive():
+        time.sleep(0.5)
 
-        with drakvuf_vm.connect_ssh() as ssh:
-            ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
-            apt_install(ssh, ["redis-server"])
-            apt_install(ssh, DRAKMON_DEPS)
+    logging.info("VM back up")
 
-            for d in drakvuf_sandbox_debs:
-                dpkg_install(ssh, d.name)
+    with drakvuf_vm.connect_ssh() as ssh:
+        ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
+        apt_install(ssh, ["redis-server"])
+        apt_install(ssh, DRAKMON_DEPS)
 
-            # Save default config
-            ssh.run("cp /etc/drakrun/config.ini /etc/drakrun/config.ini.bak")
+        for d in drakvuf_sandbox_debs:
+            dpkg_install(ssh, d.name)
 
-            ssh.run(f"""
+        # Save default config
+        ssh.run("cp /etc/drakrun/config.ini /etc/drakrun/config.ini.bak")
+
+        ssh.run(f"""
 cat > /etc/drakrun/config.ini <<EOF
 [minio]
 address={MINIO_HOST}
@@ -166,22 +166,20 @@ access_key={MINIO_ACCESS_KEY}
 secret_key={MINIO_SECRET_KEY}
 EOF""")
 
-            # Import snapshot
-            assert SNAPSHOT_VERSION is not None
-            ssh.run(f"draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full")
+        # Import snapshot
+        assert SNAPSHOT_VERSION is not None
+        ssh.run(f"draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full")
 
-            # Restore original config
-            ssh.run("cp /etc/drakrun/config.ini.bak /etc/drakrun/config.ini")
+        # Restore original config
+        ssh.run("cp /etc/drakrun/config.ini.bak /etc/drakrun/config.ini")
 
-            # Shut up QEMU
-            ssh.run("ln -s /dev/null /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO")
+        # Shut up QEMU
+        ssh.run("ln -s /dev/null /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO")
 
-            ssh.run("systemctl start drakrun@1")
+        ssh.run("systemctl start drakrun@1")
 
-        yield drakvuf_vm
-    finally:
-        logging.info("Tests finished, destroying VM")
-        drakvuf_vm.destroy()
+    logging.info("VM provisioned, starting tests...")
+    return drakvuf_vm
 
 
 @pytest.fixture(scope="session")
