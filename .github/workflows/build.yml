@@ -171,4 +171,4 @@ jobs:
           DRAKVUF_DEBS_PATH: "/debs"
           BASE_IMAGE: "debian-10-generic-amd64"
           SNAPSHOT_VERSION: "win7-20230213"
-          MINIO_HOST: "192.168.100.1"
+          MINIO_HOST: "192.168.100.1:8181"
