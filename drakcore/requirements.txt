@@ -1,5 +1,5 @@
 requests==2.27.1
-Flask==2.0.3
+Flask==2.3.2
 karton-core==4.3.0
 redis==3.5.3
 uwsgi==2.0.20
