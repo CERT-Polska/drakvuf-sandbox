@@ -1,7 +1,7 @@
 requests==2.27.1
 Flask==2.0.3
 karton-core==4.3.0
-redis==3.5.3
+redis==4.4.4
 uwsgi==2.0.20
 minio==5.0.7
 colorama==0.4.4
