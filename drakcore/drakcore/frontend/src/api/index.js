@@ -3,7 +3,7 @@ import axios from "axios";
 // Set REACT_APP_API_SERVER env to override default API server URL
 axios.defaults.baseURL = process.env.REACT_APP_API_SERVER;
 
-export default {
+const Api = {
   async getList() {
     return axios.get("/list");
   },
@@ -57,3 +57,5 @@ export default {
     });
   },
 };
+
+export default Api;
