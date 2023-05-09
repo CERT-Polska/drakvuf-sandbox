@@ -606,13 +606,24 @@ class DrakrunKarton(Karton):
             self.log.info("Using command: %s", start_command)
 
             if self.net_enable:
-                self.log.info("Setting up network...")
-                injector.create_process(
-                    "cmd /C ipconfig /release >nul", wait=True, timeout=120
-                )
-                injector.create_process(
-                    "cmd /C ipconfig /renew >nul", wait=True, timeout=120
-                )
+                max_attempts = 3
+                for i in range(max_attempts):
+                    try:
+                        self.log.info(
+                            f"Trying to setup network (attempt {i + 1}/{max_attempts})"
+                        )
+                        injector.create_process(
+                            "cmd /C ipconfig /release >nul", wait=True, timeout=120
+                        )
+                        injector.create_process(
+                            "cmd /C ipconfig /renew >nul", wait=True, timeout=120
+                        )
+                        break
+                    except Exception:
+                        self.log.exception("Analysis attempt failed. Retrying...")
+                else:
+                    self.log.warning(f"Giving up after {max_attempts} failures...")
+                    raise RuntimeError("Failed to setup VM network after 3 attempts")
 
             task_quality = self.current_task.headers.get("quality", "high")
             requested_plugins = self.current_task.payload.get(
