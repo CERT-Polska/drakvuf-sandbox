@@ -52,6 +52,9 @@ def test_sample_analysis(drakmon_vm, drakcore):
             break
         time.sleep(10.0)
 
+    # give it a bit more time?
+    time.sleep(10.0)
+
     # check logs if our binary was ran
     response = drakcore.analysis_log(task_uuid, "filetracer")
     for line in response.iter_lines():
