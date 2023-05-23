@@ -16,3 +16,4 @@ regex==2020.7.14
 ipython==7.31.1
 malduck==4.1.0
 mwdblib==3.4.1
+yara-python<4.3.0
