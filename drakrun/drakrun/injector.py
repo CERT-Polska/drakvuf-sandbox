@@ -34,6 +34,9 @@ class Injector:
                 proc.terminate()
                 proc.wait(timeout)
                 raise
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
             retcode = proc.poll()
             if check and retcode:
                 raise subprocess.CalledProcessError(
