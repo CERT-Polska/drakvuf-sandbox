@@ -88,7 +88,9 @@ class Injector:
         Copy local file to the VM
         """
         injector_cmd = self._get_cmdline_writefile(local_path, remote_path)
-        return self._run_with_timeout(injector_cmd, timeout=timeout, check=True)
+        return self._run_with_timeout(
+            injector_cmd, timeout=timeout, check=True, capture_output=True
+        )
 
     def read_file(
         self, remote_path: str, local_path: str, timeout: int = 60
