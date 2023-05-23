@@ -26,10 +26,10 @@ class Injector:
             str(self.runtime_info.inject_pid),
             "-k",
             hex(self.runtime_info.vmi_offsets.kpgd),
-            "-m",
-            method,
             "-j",
             str(timeout),
+            "-m",
+            method,
         ]
 
     def _get_cmdline_writefile(
