@@ -68,6 +68,7 @@ class Injector:
         injector_cmd = self._get_cmdline_writefile(
             local_path, remote_path, timeout=drakvuf_timeout
         )
+        print(injector_cmd)
         return subprocess.run(
             injector_cmd, stdout=subprocess.PIPE, timeout=timeout, check=True
         )
@@ -83,6 +84,7 @@ class Injector:
         injector_cmd = self._get_cmdline_readfile(
             remote_path, local_path, timeout=drakvuf_timeout
         )
+        print(injector_cmd)
         return subprocess.run(injector_cmd, timeout=timeout, capture_output=True)
 
     def create_process(
@@ -96,4 +98,5 @@ class Injector:
         injector_cmd = self._get_cmdline_createproc(
             cmdline, wait=wait, timeout=drakvuf_timeout
         )
+        print(injector_cmd)
         return subprocess.run(injector_cmd, check=True)
