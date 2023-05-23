@@ -27,7 +27,7 @@ class Injector:
         if capture_output:
             kwargs["stdout"] = subprocess.PIPE
             kwargs["stderr"] = subprocess.PIPE
-        with subprocess.Popen(args, *kwargs) as proc:
+        with subprocess.Popen(args, **kwargs) as proc:
             try:
                 outs, errs = proc.communicate(timeout=timeout)
             except subprocess.TimeoutExpired:
