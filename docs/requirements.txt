@@ -21,7 +21,7 @@ pickleshare==0.7.5
 prompt-toolkit==3.0.36
 ptyprocess==0.7.0
 pure-eval==0.2.2
-Pygments==2.14.0
+Pygments==2.15.0
 pytz==2022.7.1
 requests==2.31.0
 six==1.16.0
