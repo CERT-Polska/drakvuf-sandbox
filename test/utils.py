@@ -1,14 +1,25 @@
 import io
-import requests
+import logging
+import os
+
+
+def getenv_list(key, default):
+    """Get list separated by spaces"""
+    items = os.getenv(key)
+    if items:
+        return items.split()
+    return default
 
 
 def apt_install(c, packages):
     deps = " ".join(packages)
-    c.run(f"apt-get install -y {deps}", hide="stdout")
+    logging.info(f"Installing {packages}")
+    c.run(f"DEBIAN_FRONTEND=noninteractive apt-get install -y {deps}", in_stream=False)
 
 
 def dpkg_install(c, deb_file):
-    c.run(f"dpkg -i {deb_file}", hide="stdout")
+    logging.info(f"Installing {deb_file}")
+    c.run(f"DEBIAN_FRONTEND=noninteractive dpkg -i {deb_file}", in_stream=False)
 
 
 def get_file(c, path):
@@ -26,36 +37,28 @@ def get_service_info(c, service):
     return dict(map(lambda l: l.split("=", maxsplit=1), lines))
 
 
-class VMRunner:
-    def __init__(self, host):
-        self.host = host
-
-    def rebuild_vm(self, ssh_key):
-        response = requests.post(f"{self.host}/vm/build", json={
-            "image": "debian-10-generic-amd64",
-            "volume_size": 100,
-            "ssh_key": ssh_key,
-        })
-        response.raise_for_status()
-        return response.json()
-
-
-
 class Drakcore:
-    def __init__(self, host):
-        self.host = host
+    def __init__(self, drakvuf_vm):
+        self.host = f"http://{drakvuf_vm.vm_ip}:6300/"
+        self.session = drakvuf_vm.connect_http()
+
+    def get(self, endpoint, *args, **kwargs):
+        return self.session.get(f"{self.host}{endpoint}", *args, **kwargs)
+
+    def post(self, endpoint, *args, **kwargs):
+        return self.session.post(f"{self.host}{endpoint}", *args, **kwargs)
 
     def upload(self, sample, timeout):
-        response = requests.post(f"{self.host}/upload", files={"file": sample}, data={"timeout": timeout})
+        response = self.post(f"upload", files={"file": sample}, data={"timeout": timeout})
         response.raise_for_status()
         return response.json()["task_uid"]
 
     def check_status(self, task_uuid):
-        response = requests.get(f"{self.host}/status/{task_uuid}")
+        response = self.get(f"status/{task_uuid}")
         response.raise_for_status()
         return response.json()
 
     def analysis_log(self, task_uuid, log_name):
-        response = requests.get(f"{self.host}/logs/{task_uuid}/{log_name}", stream=True)
+        response = self.get(f"logs/{task_uuid}/{log_name}", stream=True)
         response.raise_for_status()
         return response

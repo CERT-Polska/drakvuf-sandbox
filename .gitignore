@@ -1,4 +1,5 @@
 /configs/
 /venv/
 /*.sav
+.idea/
 .vscode/

@@ -7,13 +7,18 @@ from utils import get_hypervisor_type, get_service_info, Drakcore
 from conftest import DRAKMON_SERVICES
 
 
-def test_running_on_xen(drakmon_vm):
-    assert get_hypervisor_type(drakmon_vm) == "xen"
+@pytest.fixture
+def drakcore(drakmon_vm):
+    return Drakcore(drakmon_vm)
 
 
-def test_services_running(drakmon_vm):
+def test_running_on_xen(drakmon_ssh):
+    assert get_hypervisor_type(drakmon_ssh) == "xen"
+
+
+def test_services_running(drakmon_ssh):
     def check_status():
-        infos = [get_service_info(drakmon_vm, service) for service in DRAKMON_SERVICES]
+        infos = [get_service_info(drakmon_ssh, service) for service in DRAKMON_SERVICES]
 
         for info in infos:
             assert info["LoadState"] == "loaded"
@@ -32,17 +37,12 @@ def test_services_running(drakmon_vm):
         raise Exception("Services down")
 
 
-def test_web_ui_reachable(drakcore, vm_host):
-    response = requests.get(f"http://{vm_host}:6300/")
+def test_web_ui_reachable(drakcore):
+    response = drakcore.get("/")
     response.raise_for_status()
 
 
-@pytest.fixture
-def drakcore(karton_bucket, vm_host):
-    return Drakcore(f"http://{vm_host}:6300")
-
-
-def test_sample_analysis(drakmon_vm, drakcore):
+def test_sample_analysis(drakcore):
     task_uuid = drakcore.upload(open("test.exe", "rb"), timeout=120)
 
     # wait until end of analysis

@@ -1,0 +1,186 @@
+name: "Build and test Drakvuf Sandbox"
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+jobs:
+  build_docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        working-directory: docs
+        run: pip install -r requirements.txt
+      - name: Build docs
+        working-directory: docs
+        run: make html
+  lint_drakcore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      - run: pip3 install black==22.6.0 isort==5.9.3 flake8
+      - name: Check with black
+        run: black --check --diff drakcore/
+      - name: Check with isort
+        run: isort --profile black --check drakcore/
+      - run: pip3 install -r drakcore/requirements.txt
+      - name: Check with flake8
+        run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakcore/
+  lint_drakcore_frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install web dependencies
+        working-directory: drakcore/drakcore/frontend
+        run: npm ci
+      - name: Check with prettier
+        working-directory: drakcore/drakcore/frontend
+        run: npx prettier --check src/
+  lint_drakrun:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      - run: pip3 install black==22.6.0 isort==5.9.3 flake8
+      - name: Check with black
+        run: black --check --diff drakrun/
+      - name: Check with isort
+        run: isort --profile black --check drakrun/
+      - run: pip3 install -r drakrun/requirements.txt
+      - name: Check with flake8
+        run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakrun/
+  package_drakcore:
+    needs: [lint_drakcore, lint_drakcore_frontend]
+    runs-on: ubuntu-latest
+    container: debian:buster
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build drakcore
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y wget curl python3 python3-venv python3-pip dh-virtualenv debhelper devscripts
+          curl -sL https://deb.nodesource.com/setup_14.x | bash -
+          apt-get install -y nodejs
+          cd drakcore
+          package/find-python.sh
+          dpkg-buildpackage -us -uc -b
+      - uses: actions/upload-artifact@v3
+        with:
+          name: drakcore-debs
+          path: ./drakcore_*_amd64.deb
+  package_drakrun:
+    needs: [ lint_drakrun ]
+    runs-on: ubuntu-latest
+    container: debian:buster
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build drakrun
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y wget python2.7 python3 python3-pip python3-venv dh-virtualenv debhelper devscripts libpixman-1-0 libpng16-16 libfdt1 libglib2.0-dev libjson-c3 libyajl2 libaio1 libc6-dev-i386 systemd
+          wget -O drakvuf.deb https://github.com/CERT-Polska/drakvuf-sandbox/releases/download/v0.18.1/debian_buster_drakvuf-bundle-0.8-git20210921114837+5575888-1-generic.deb
+          dpkg -i drakvuf.deb
+          sh -c "cd /opt && git clone https://xenbits.xen.org/git-http/xtf.git && cd xtf && git checkout 8ab15139728a8efd3ebbb60beb16a958a6a93fa1 && make PYTHON=python2 -j4"
+          cd drakrun
+          package/find-python.sh
+          dpkg-buildpackage -us -uc -b
+      - uses: actions/upload-artifact@v3
+        with:
+          name: drakrun-debs
+          path: ./drakrun_*_amd64.deb
+  package_drakvuf_bundle:
+    needs: [lint_drakcore, lint_drakcore_frontend, lint_drakrun]
+    runs-on: ubuntu-latest
+    container: debian:buster
+    steps:
+      - name: Install git and wget
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update && apt-get install -y -q git wget
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Get Drakvuf commit id
+        run: |
+          # Workaround for fatal: detected dubious ownership
+          # https://git-scm.com/docs/git-config/2.35.2#Documentation/git-config.txt-safedirectory
+          git config --global --add safe.directory "$(pwd)"
+          export DRAKVUF_COMMIT=$(git ls-tree HEAD drakvuf | awk '{ print $3 }')
+          echo "Drakvuf commit is ${DRAKVUF_COMMIT}"
+          echo "DRAKVUF_COMMIT=$DRAKVUF_COMMIT" >> $GITHUB_ENV
+      - name: Cache Drakvuf bundle
+        id: cache-drakvuf-bundle
+        uses: actions/cache@v3
+        with:
+          path: |
+            /out/drakvuf-bundle*.deb 
+            /out/xen-hypervisor*.deb
+          key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}
+      - if: ${{ steps.cache-drakvuf-bundle.outputs.cache-hit != 'true' }}
+        name: Build Drakvuf bundle
+        run: |
+          cp -ra . /build
+          cd /build
+          sh drakvuf/package/depends.sh
+          bash ci/build_bundle.sh
+      - uses: actions/upload-artifact@v3
+        with:
+          name: drakvuf-bundle-debs
+          path: |
+            /out/drakvuf-bundle*.deb 
+            /out/xen-hypervisor*.deb
+  test_e2e:
+    needs: [ package_drakcore, package_drakrun, package_drakvuf_bundle ]
+    runs-on: ubuntu-latest
+    container: python:3.8-buster
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Download debs from artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: /debs
+      - name: Install git
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update && apt-get install -y -q git
+      - name: Start tests
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+          cd test
+          pip install -r requirements.txt
+          pytest -v --capture=no
+          python -m vm_runner_client destroy
+        env:
+          DRAKVUF_DEBS_PATH: "/debs"
+          BASE_IMAGE: "debian-10-generic-amd64"
+          SNAPSHOT_VERSION: "win7-20230213"
+          MINIO_HOST: "192.168.100.1:8181"
+          VM_RUNNER_API_KEY: ${{ secrets.VM_RUNNER_API_KEY }}
+          VM_RUNNER_SOCKS_USERNAME: ${{ secrets.VM_RUNNER_SOCKS_USERNAME }}
+          VM_RUNNER_SOCKS_PASSWORD: ${{ secrets.VM_RUNNER_SOCKS_PASSWORD }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+      - name: Job failed - suspending VM (if possible)
+        if: ${{ failure() }}
+        run: |
+          python -m vm_runner_client suspend
+        env:
+          VM_RUNNER_API_KEY: ${{ secrets.VM_RUNNER_API_KEY }}

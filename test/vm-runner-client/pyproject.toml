@@ -1,0 +1,19 @@
+[build-system]
+requires = [
+  "setuptools >= 40.9.0",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vm-runner-client"
+description = "Drakvuf Sandbox VM runner client for E2E testing purposes"
+dependencies = [
+  "fabric==2.5.0",
+  "python-socks==2.2.0",
+  "requests==2.28.2",
+  "urllib3==1.26.15"
+]
+version = "0.1.0"
+
+[tool.setuptools]
+packages = ["vm_runner_client"]
