@@ -176,7 +176,11 @@ jobs:
           VM_RUNNER_API_KEY: ${{ secrets.VM_RUNNER_API_KEY }}
           VM_RUNNER_SOCKS_USERNAME: ${{ secrets.VM_RUNNER_SOCKS_USERNAME }}
           VM_RUNNER_SOCKS_PASSWORD: ${{ secrets.VM_RUNNER_SOCKS_PASSWORD }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
       - name: Job failed - suspending VM (if possible)
         if: ${{ failure() }}
         run: |
           python -m vm_runner_client suspend
+        env:
+          VM_RUNNER_API_KEY: ${{ secrets.VM_RUNNER_API_KEY }}
