@@ -173,6 +173,9 @@ jobs:
           BASE_IMAGE: "debian-10-generic-amd64"
           SNAPSHOT_VERSION: "win7-20230213"
           MINIO_HOST: "192.168.100.1:8181"
+          VM_RUNNER_API_KEY: ${{ secrets.VM_RUNNER_API_KEY }}
+          VM_RUNNER_SOCKS_USERNAME: ${{ secrets.VM_RUNNER_SOCKS_USERNAME }}
+          VM_RUNNER_SOCKS_PASSWORD: ${{ secrets.VM_RUNNER_SOCKS_PASSWORD }}
       - name: Job failed - suspending VM (if possible)
         if: ${{ failure() }}
         run: |
