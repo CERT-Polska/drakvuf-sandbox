@@ -2,7 +2,7 @@ alabaster==0.7.13
 asttokens==2.2.1
 Babel==2.11.0
 backcall==0.2.0
-certifi==2022.12.7
+certifi==2023.7.22
 charset-normalizer==3.0.1
 decorator==5.1.1
 docutils==0.18.1
@@ -21,9 +21,9 @@ pickleshare==0.7.5
 prompt-toolkit==3.0.36
 ptyprocess==0.7.0
 pure-eval==0.2.2
-Pygments==2.14.0
+Pygments==2.15.0
 pytz==2022.7.1
-requests==2.28.2
+requests==2.31.0
 six==1.16.0
 snowballstemmer==2.2.0
 Sphinx==6.1.3
