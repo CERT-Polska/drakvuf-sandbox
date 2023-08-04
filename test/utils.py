@@ -1,5 +1,14 @@
 import io
 import logging
+import os
+
+
+def getenv_list(key, default):
+    """Get list separated by spaces"""
+    items = os.getenv(key)
+    if items:
+        return items.split()
+    return default
 
 
 def apt_install(c, packages):

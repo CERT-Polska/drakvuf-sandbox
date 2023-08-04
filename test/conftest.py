@@ -8,7 +8,7 @@ from pathlib import Path
 from invoke.exceptions import UnexpectedExit
 from vm_runner_client import DrakvufVM
 
-from utils import apt_install, dpkg_install
+from utils import apt_install, dpkg_install, getenv_list
 
 logging.basicConfig(level=logging.INFO)
 
@@ -24,7 +24,7 @@ MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
 # VM_RUNNER_SOCKS_USERNAME
 # VM_RUNNER_SOCKS_PASSWORD
 
-DRAKMON_DEPS = [
+DRAKMON_DEPS = getenv_list("DRAKMON_DEPS", [
     "python3.7",
     "libpython3.7",
     "python3-distutils",
@@ -35,9 +35,9 @@ DRAKMON_DEPS = [
     "dnsmasq",
     "libmagic1",
     "lvm2",
-]
+])
 
-DRAKVUF_DEPS = [
+DRAKVUF_DEPS = getenv_list("DRAKVUF_DEPS", [
     "libpixman-1-0",
     "libpng16-16",
     "libnettle6",
@@ -51,7 +51,7 @@ DRAKVUF_DEPS = [
     "libx11-6",
     "lvm2",
     "libgnutls28-dev",
-]
+])
 
 DRAKMON_SERVICES = [
     "drak-system.service",
