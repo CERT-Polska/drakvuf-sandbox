@@ -21,19 +21,12 @@ from io import StringIO
 from itertools import chain
 from pathlib import Path
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import magic
 from karton.core import Config, Karton, LocalResource, Resource, Task
 
 import drakrun.sample_startup as sample_startup
-from drakrun.config import (
-    APISCOUT_PROFILE_DIR,
-    ETC_DIR,
-    PROFILE_DIR,
-    VOLUME_DIR,
-    InstallInfo,
-)
 from drakrun.drakpdb import dll_file_list
 from drakrun.injector import Injector
 from drakrun.networking import setup_vm_network, start_dnsmasq, start_tcpdump_collector
@@ -46,8 +39,17 @@ from drakrun.util import (
     graceful_exit,
     patch_config,
 )
-from drakrun.version import __version__ as DRAKRUN_VERSION
 from drakrun.vm import VirtualMachine, generate_vm_conf
+
+from .config import (
+    APISCOUT_PROFILE_DIR,
+    DEFAULT_DRAKVUF_PLUGINS,
+    ETC_DIR,
+    PROFILE_DIR,
+    VOLUME_DIR,
+    InstallInfo,
+)
+from .__version__ import __version__
 
 
 class LocalLogBuffer(logging.Handler):
@@ -110,21 +112,23 @@ def with_logs(object_name):
     return decorator
 
 
-class DrakrunKarton(Karton):
-    version = DRAKRUN_VERSION
-    # Karton configuration defaults, may be overriden by config file
-    DEFAULT_IDENTITY = "karton.drakrun-prod"
-    DEFAULT_FILTERS = [
+class Drakrun(Karton):
+    """
+    Drakvuf Sandbox analysis runner
+    """
+    identity = "karton.drakrun-prod"
+    version = __version__
+    filters = [
         {"type": "sample", "stage": "recognized", "platform": "win32"},
         {"type": "sample", "stage": "recognized", "platform": "win64"},
     ]
-    DEFAULT_HEADERS = {
+    output_headers = {
         "type": "analysis-raw",
         "kind": "drakrun-internal",
     }
 
     # Filters and headers used for testing sample analysis
-    DEFAULT_TEST_FILTERS = [
+    test_filters: List[Dict[str, str]] = [
         {
             "type": "sample-test",
             "platform": "win32",
@@ -134,56 +138,83 @@ class DrakrunKarton(Karton):
             "platform": "win64",
         },
     ]
-    DEFAULT_TEST_HEADERS = {
+    test_output_headers: Dict[str, str] = {
         "type": "analysis-test",
         "kind": "drakrun-internal",
     }
 
-    def __init__(self, config: Config, instance_id: int):
-        super().__init__(config)
+    def __init__(self, *args, instance_id: int, **kwargs):
+        super().__init__(*args, **kwargs)
 
         # Now that karton is set up we can plug in our logger
         logger = logging.getLogger("drakrun")
         for handler in self.log.handlers:
             logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
+        logger.setLevel(self.log.level)
 
         self.instance_id = instance_id
         self.install_info = InstallInfo.load()
-        self.default_timeout = int(
-            self.config.config["drakrun"].get("analysis_timeout") or 60 * 10
+        self.runtime_info = RuntimeInfo.load()
+
+        self.default_timeout = self.config.getint("drakrun", "analysis_timeout", fallback=60 * 10)
+        self.net_enable = self.config.getboolean("drakrun", "net_enable", fallback=False)
+        self.sample_testing = self.config.getboolean("drakrun", "sample_testing", fallback=False)
+        self.out_interface = self.config.get("drakrun", "out_interface", fallback="")
+        self.dns_server = self.config.get("drakrun", "dns_server", fallback="")
+        self.attach_profiles = self.config.getboolean("drakrun", "attach_profiles", fallback=False)
+        self.attach_apiscout_profile = self.config.getboolean(
+            "drakrun", "attach_apiscout_profile", fallback=False
         )
-        with open(os.path.join(PROFILE_DIR, "runtime.json"), "r") as runtime_f:
-            self.runtime_info = RuntimeInfo.load(runtime_f)
+        self.use_root_uid = self.config.getboolean("drakrun", "use_root_uid", fallback=False)
+        self.anti_hammering_threshold = self.config.getint(
+            "drakrun", "anti_hammering_threshold", fallback=None
+        )
+        self.syscall_filter = self.config.get("drakrun", "syscall_filter", None)
+        self.raw_memory_dump = self.config.getboolean(
+            "drakrun", "raw_memory_dump", fallback=False
+        )
 
-        self.active_plugins = {}
-        self.active_plugins["_all_"] = [
-            "apimon",
-            "bsodmon",
-            "clipboardmon",
-            "cpuidmon",
-            "crashmon",
-            "debugmon",
-            "delaymon",
-            "exmon",
-            "filedelete",
-            "filetracer",
-            "librarymon",
-            "memdump",
-            "procdump",
-            "procmon",
-            "regmon",
-            "rpcmon",
-            "ssdtmon",
-            "syscalls",
-            "tlsmon",
-            "windowmon",
-            "wmimon",
-        ]
+        # Preferred plugins for specific feed quality
+        # [drakvuf_plugins]
+        # low = apimon,procmon...
+        self.active_plugins = {
+            "_all_": DEFAULT_DRAKVUF_PLUGINS
+        }
+        if self.config.has_section("drakvuf_plugins"):
+            for quality, list_str in self.config["drakvuf_plugins"].items():
+                plugins = [x for x in list_str.split(",") if x.strip()]
+                self.active_plugins[quality] = plugins
 
-        for quality, list_str in self.config.config.items("drakvuf_plugins"):
-            plugins = [x for x in list_str.split(",") if x.strip()]
-            self.active_plugins[quality] = plugins
+        if self.sample_testing:
+            self.filters.extend(self.test_filters)
+
+    @classmethod
+    def args_parser(cls):
+        """
+        KartonBase.args_parser override
+        """
+        parser = super().args_parser()
+        parser.add_argument("instance", type=int, help="Instance identifier")
+        return parser
+
+    @classmethod
+    def karton_from_args(cls, args: Optional[argparse.Namespace] = None):
+        """
+        KartonBase.karton_from_args override
+        Used by KartonServiceBase.main method
+        """
+        if args is None:
+            parser = cls.args_parser()
+            args = parser.parse_args()
+        config = Config(path=args.config_file)
+        cls.config_from_args(config, args)
+        return cls(instance_id=args.instance, config=config)
+
+    @classmethod
+    def main(cls):
+        service = cls.karton_from_args()
+        service.init_drakrun()
+        service.loop()
 
     def generate_plugin_cmdline(self, plugin_list):
         if len(plugin_list) == 0:
@@ -212,39 +243,11 @@ class DrakrunKarton(Karton):
             plugin_list.append("codemon")
         return plugin_list
 
-    @classmethod
-    def reconfigure(cls, config: Dict[str, str]):
-        """Reconfigure DrakrunKarton class"""
-
-        def load_json(config, key):
-            try:
-                return json.loads(config.get(key)) if key in config else None
-            except json.JSONDecodeError:
-                raise RuntimeError(
-                    f"Key '{key}' in section [drakrun] is not valid JSON"
-                )
-
-        cls.identity = config.get("identity", cls.DEFAULT_IDENTITY)
-        cls.filters = load_json(config, "filters") or cls.DEFAULT_FILTERS
-        cls.headers = load_json(config, "headers") or cls.DEFAULT_HEADERS
-        cls.test_headers = load_json(config, "test_headers") or cls.DEFAULT_TEST_HEADERS
-        cls.test_filters = load_json(config, "test_filters") or cls.DEFAULT_TEST_FILTERS
-
-        # If testing is enabled, add additional test filters from the configuration
-        # or fall back to hardcoded
-        if config.getboolean("sample_testing", fallback=False):
-            cls.filters.extend(cls.test_filters)
-
-    @property
-    def net_enable(self) -> bool:
-        return self.config.config["drakrun"].getboolean("net_enable", fallback=False)
 
     @property
     def test_run(self) -> bool:
         # If testing is disabled, it's not a test run
-        if not self.config.config["drakrun"].getboolean(
-            "sample_testing", fallback=False
-        ):
+        if not self.sample_testing:
             return False
 
         return self.current_task.matches_filters(self.test_filters)
@@ -254,16 +257,12 @@ class DrakrunKarton(Karton):
         return f"vm-{self.instance_id}"
 
     def init_drakrun(self):
-
         generate_vm_conf(self.install_info, self.instance_id)
 
         if not self.backend.minio.bucket_exists("drakrun"):
             self.backend.minio.make_bucket(bucket_name="drakrun")
 
-        out_interface = self.config.config["drakrun"].get("out_interface", "")
-        dns_server = self.config.config["drakrun"].get("dns_server", "")
-
-        setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
+        setup_vm_network(self.instance_id, self.net_enable, self.out_interface, self.dns_server)
 
         self.log.info("Calculating snapshot hash...")
         self.snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
@@ -393,9 +392,9 @@ class DrakrunKarton(Karton):
         """
 
         if self.test_run:
-            headers = dict(self.test_headers)
+            headers = dict(self.test_output_headers)
         else:
-            headers = dict(self.headers)
+            headers = dict(self.output_headers)
 
         headers["quality"] = quality
 
@@ -406,13 +405,11 @@ class DrakrunKarton(Karton):
         if self.test_run:
             task.add_payload("testcase", self.current_task.payload["testcase"])
 
-        if self.config.config.getboolean("drakrun", "attach_profiles", fallback=False):
+        if self.attach_profiles:
             self.log.info("Uploading profiles...")
             task.add_payload("profiles", self.build_profile_payload())
 
-        if self.config.config.getboolean(
-            "drakrun", "attach_apiscout_profile", fallback=False
-        ):
+        if self.attach_apiscout_profile:
             self.log.info("Uploading static ApiScout profile...")
             task.add_payload(
                 "static_apiscout_profile.json",
@@ -473,7 +470,7 @@ class DrakrunKarton(Karton):
         if override_uid:
             return override_uid
 
-        if self.config.config.getboolean("drakrun", "use_root_uid", fallback=False):
+        if self.use_root_uid:
             return self.current_task.root_uid
 
         return self.current_task.uid
@@ -540,18 +537,13 @@ class DrakrunKarton(Karton):
             ]
         )
 
-        anti_hammering_threshold = self.config.config["drakrun"].getint(
-            "anti_hammering_threshold", fallback=None
-        )
-
-        if anti_hammering_threshold:
-            drakvuf_cmd.extend(["--traps-ttl", str(anti_hammering_threshold)])
+        if self.anti_hammering_threshold:
+            drakvuf_cmd.extend(["--traps-ttl", str(self.anti_hammering_threshold)])
 
         drakvuf_cmd.extend(self.get_profile_list())
 
-        syscall_filter = self.config.config["drakrun"].get("syscall_filter", None)
-        if syscall_filter:
-            drakvuf_cmd.extend(["-S", syscall_filter])
+        if self.syscall_filter:
+            drakvuf_cmd.extend(["-S", self.syscall_filter])
 
         return drakvuf_cmd
 
@@ -569,11 +561,8 @@ class DrakrunKarton(Karton):
     def analyze_sample(self, sample_path, workdir, outdir, start_command, timeout):
         analysis_info = dict()
 
-        dns_server = self.config.config["drakrun"].get("dns_server", "8.8.8.8")
+        dns_server = self.dns_server or "8.8.8.8"
         drakmon_log_fp = os.path.join(outdir, "drakmon.log")
-        raw_memory_dump = self.config.config["drakrun"].getboolean(
-            "raw_memory_dump", fallback=False
-        )
 
         with self.run_vm() as vm, graceful_exit(
             start_dnsmasq(self.instance_id, dns_server)
@@ -660,7 +649,7 @@ class DrakrunKarton(Karton):
                 self.log.exception("DRAKVUF timeout expired")
                 raise e
 
-            if raw_memory_dump:
+            if self.raw_memory_dump:
                 vm.memory_dump(os.path.join(outdir, "post_sample.raw_memdump.gz"))
 
         return analysis_info
@@ -807,14 +796,6 @@ def validate_xen_commandline():
     return unrecommended
 
 
-def cmdline_main():
-    parser = argparse.ArgumentParser(description="Kartonized drakrun <3")
-    parser.add_argument("instance", type=int, help="Instance identifier")
-    args = parser.parse_args()
-
-    main(args)
-
-
 def main(args):
     conf_path = os.path.join(ETC_DIR, "config.ini")
     conf = patch_config(Config(conf_path))
@@ -870,9 +851,9 @@ def main(args):
 
     # Apply Karton configuration overrides
     drakrun_conf = conf.config["drakrun"] if conf.config.has_section("drakrun") else {}
-    DrakrunKarton.reconfigure(drakrun_conf)
+    Drakrun.reconfigure(drakrun_conf)
 
-    c = DrakrunKarton(conf, args.instance)
+    c = Drakrun(conf, args.instance)
     c.init_drakrun()
     c.loop()
 

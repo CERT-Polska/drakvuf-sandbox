@@ -33,6 +33,8 @@ from drakrun.config import (
     VM_CONFIG_DIR,
     VOLUME_DIR,
     InstallInfo,
+    RuntimeInfo,
+    VmiOffsets,
 )
 from drakrun.drakpdb import (
     DLL,
@@ -56,9 +58,7 @@ from drakrun.storage import (
     get_storage_backend,
 )
 from drakrun.util import (
-    RuntimeInfo,
     VmiGuidInfo,
-    VmiOffsets,
     file_sha256,
     safe_delete,
     vmi_win_guid,
@@ -839,8 +839,7 @@ def create_missing_profiles():
     """
 
     # Prepare injector
-    with open(os.path.join(PROFILE_DIR, "runtime.json"), "r") as runtime_f:
-        runtime_info = RuntimeInfo.load(runtime_f)
+    runtime_info = RuntimeInfo.load()
     kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
     injector = Injector("vm-1", runtime_info, kernel_profile)
 
