@@ -13,7 +13,7 @@ build:
 	cp drakcore/config.dist.ini drakcore/config.ini
 	cp drakcore/uwsgi.dist.ini drakcore/uwsgi.ini
 	# Download minio
-	if [ ! -f drakcore/systemd/minio ] ; then wget -O drakcore/systemd/minio https://minio.drakvuf.cert.pl/static/minio ; fi
+	if [ ! -f drakcore/systemd/minio ] ; then wget -O drakcore/systemd/minio https://dl.min.io/server/minio/release/linux-amd64/archive/minio.RELEASE.2021-08-05T22-01-19Z ; fi
 	chmod +x drakcore/systemd/minio
 
 override_dh_virtualenv:

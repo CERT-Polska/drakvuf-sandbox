@@ -17,7 +17,7 @@ RUN apt-get update && \
 RUN echo -ne '#!/bin/sh\nexit 0\n' > /bin/systemctl && chmod +x /bin/systemctl
 
 # Install drakvuf bundle for libvmi headers
-RUN wget -O drakvuf.deb "https://minio.drakvuf.cert.pl/static/bundle/$(lsb_release -cs)/drakvuf-bundle-0.8-git20210807130654+d74df17-1-generic.deb" && \
+RUN wget -O drakvuf.deb "https://github.com/tklengyel/drakvuf/releases/download/1.0/debian_10-slim_drakvuf-bundle-1.0-git20221220221439+068b10f-1-generic.deb" && \
     dpkg -i ./drakvuf.deb && \
     cd /opt && \
     git clone https://xenbits.xen.org/git-http/xtf.git && \

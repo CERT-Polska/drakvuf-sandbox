@@ -1,5 +1,7 @@
+import logging
 import os
 import re
+import time
 import uuid
 
 import requests
@@ -73,13 +75,14 @@ class DrakvufVM:
         })
         response.raise_for_status()
 
-    def is_alive(self):
-        try:
-            # I'm not sure how we should close that
-            self.connect_tcp(22)
-            return True
-        except (OSError, ProxyError):
-            return False
+    def wait_alive(self):
+        for tries in range(30):
+            try:
+                self.connect_tcp(22).close()
+                return True
+            except (OSError, ProxyError) as e:
+                logging.info(f"Try [{tries+1}/30]: {str(e)}")
+                time.sleep(1)
 
     @staticmethod
     def get_vm_identity():
