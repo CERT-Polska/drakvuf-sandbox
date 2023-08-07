@@ -94,7 +94,7 @@ class DrakvufVM:
             if self.is_alive() == alive:
                 return
             logging.info(f"Try {tries}/30: Machine still {'not ' if alive else ''}alive")
-            time.sleep(1)
+            time.sleep(3)
         raise RuntimeError("Machine not reached in expected time")
 
     @staticmethod
