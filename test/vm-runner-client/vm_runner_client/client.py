@@ -90,11 +90,12 @@ class DrakvufVM:
                 raise
 
     def wait_for_state(self, alive: bool):
-        for tries in range(30):
-            if self.is_alive() == alive:
-                return
-            logging.info(f"Try {tries}/30: Machine still {'not ' if alive else ''}alive")
-            time.sleep(3)
+        for tries in range(12):
+            for _ in range(10):
+                if self.is_alive() == alive:
+                    return
+                time.sleep(0.5)
+            logging.info(f"Try {tries+1}/12: Machine still {'not ' if alive else ''}alive")
         raise RuntimeError("Machine not reached in expected time")
 
     @staticmethod
