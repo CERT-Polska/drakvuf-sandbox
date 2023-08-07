@@ -113,7 +113,7 @@ def drakmon_setup():
     logging.info(f"VM {drakvuf_vm.identity} created.")
 
     logging.info("Waiting for VM to be alive...")
-    drakvuf_vm.wait_alive()
+    drakvuf_vm.wait_for_state(alive=True)
 
     with drakvuf_vm.connect_ssh() as ssh:
         for deb in (drakvuf_sandbox_debs + drakvuf_debs):
@@ -135,11 +135,11 @@ def drakmon_setup():
     logging.info("Rebooting...")
 
     # Wait until VM reboots
-    drakvuf_vm.wait_alive()
+    drakvuf_vm.wait_for_state(alive=False)
 
     logging.info("VM went down")
 
-    drakvuf_vm.wait_alive()
+    drakvuf_vm.wait_for_state(alive=True)
 
     logging.info("VM back up")
 

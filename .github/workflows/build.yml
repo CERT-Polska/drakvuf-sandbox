@@ -149,6 +149,8 @@ jobs:
     needs: [ package_drakcore, package_drakrun, package_drakvuf_bundle ]
     runs-on: ubuntu-latest
     container: python:3.8-buster
+    # Prevent concurrent jobs trying to reach the same VM
+    concurrency: ci-${{ github.ref }}
     steps:
       - uses: actions/checkout@v3
         with:

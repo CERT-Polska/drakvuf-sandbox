@@ -10,6 +10,7 @@ from fabric import Connection
 from .sockstls import create_connection
 from .sockstls_requests import make_session
 from python_socks import ProxyError
+from python_socks._proto.socks5 import ReplyCode
 
 
 class VMRunnerConfig:
@@ -75,14 +76,27 @@ class DrakvufVM:
         })
         response.raise_for_status()
 
-    def wait_alive(self):
-        for tries in range(30):
-            try:
-                self.connect_tcp(22).close()
-                return True
-            except (OSError, ProxyError) as e:
-                logging.info(f"Try [{tries+1}/30]: {str(e)}")
-                time.sleep(1)
+    def is_alive(self):
+        try:
+            self.connect_tcp(22).close()
+            return True
+        except ProxyError as e:
+            if e.error_code in [
+                ReplyCode.CONNECTION_REFUSED,
+                ReplyCode.HOST_UNREACHABLE
+            ]:
+                return False
+            else:
+                raise
+
+    def wait_for_state(self, alive: bool):
+        for tries in range(12):
+            for _ in range(10):
+                if self.is_alive() == alive:
+                    return
+                time.sleep(0.5)
+            logging.info(f"Try {tries+1}/12: Machine still {'not ' if alive else ''}alive")
+        raise RuntimeError("Machine not reached in expected time")
 
     @staticmethod
     def get_vm_identity():
