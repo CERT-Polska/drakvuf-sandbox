@@ -123,7 +123,7 @@ class Drakrun(Karton):
         {"type": "sample", "stage": "recognized", "platform": "win32"},
         {"type": "sample", "stage": "recognized", "platform": "win64"},
     ]
-    output_headers = {
+    output_headers: Dict[str, str] = {
         "type": "analysis-raw",
         "kind": "drakrun-internal",
     }
