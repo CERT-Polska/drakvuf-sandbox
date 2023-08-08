@@ -6,14 +6,14 @@ import shlex
 import shutil
 import subprocess
 import time
-from abc import ABC, abstractmethod
 from typing import Tuple
 
-from drakrun.config import VOLUME_DIR, InstallInfo
-from drakrun.util import safe_delete
+from ..config import InstallInfo
+from ..paths import VOLUME_DIR
+from ..util import safe_delete
 
 
-class StorageBackendBase(ABC):
+class StorageBackendBase:
     """Base class for all storage backends
 
     Defines interface that has to be implemented in order to be
@@ -30,7 +30,6 @@ class StorageBackendBase(ABC):
     def __init__(self, install_info: InstallInfo):
         self._install_info = install_info
 
-    @abstractmethod
     def initialize_vm0_volume(self, disk_size: str):
         """Create base volume for vm-0 with given size
 
@@ -38,37 +37,30 @@ class StorageBackendBase(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def snapshot_vm0_volume(self):
         """Saves or snapshots base vm-0 volume for later use by other VMs"""
         raise NotImplementedError
 
-    @abstractmethod
     def get_vm_disk_path(self, vm_id: int) -> str:
         """Returns disk path for given VM as defined by XL configuration"""
         raise NotImplementedError
 
-    @abstractmethod
     def rollback_vm_storage(self, vm_id: int):
         """Rolls back changes and prepares fresh storage for new run of this VM"""
         raise NotImplementedError
 
-    @abstractmethod
     def get_vm0_snapshot_time(self):
         """Get UNIX timestamp of when vm-0 snapshot was last modified"""
         raise NotImplementedError
 
-    @abstractmethod
     def export_vm0(self, file):
         """Export vm-0 disk into a file (symmetric to import_vm0)"""
         raise NotImplementedError
 
-    @abstractmethod
     def import_vm0(self, file):
         """Import vm-0 disk from a file (symmetric to export_vm0)"""
         raise NotImplementedError
 
-    @abstractmethod
     def delete_vm_volume(self, vm_id: int):
         """Delete vm_id disk volume"""
         raise NotImplementedError
@@ -79,9 +71,9 @@ class ZfsStorageBackend(StorageBackendBase):
 
     def __init__(self, install_info: InstallInfo):
         super().__init__(install_info)
-        self.zfs_tank_name = install_info.zfs_tank_name
-        if self.zfs_tank_name is None:
+        if install_info.zfs_tank_name is None:
             raise RuntimeError("zfs_tank_name is missing from InstallInfo")
+        self.zfs_tank_name: str = install_info.zfs_tank_name
         self.check_tools()
 
     @staticmethod
@@ -284,7 +276,7 @@ class Qcow2StorageBackend(StorageBackendBase):
     def import_vm0(self, path: str):
         shutil.copy(path, os.path.join(VOLUME_DIR, "vm-0.img"))
 
-    def delete_vm_volume(self, vm_id: str):
+    def delete_vm_volume(self, vm_id: int):
         # unmount can be done here
         disk_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
         if not safe_delete(disk_path):
@@ -296,6 +288,8 @@ class LvmStorageBackend(StorageBackendBase):
 
     def __init__(self, install_info: InstallInfo):
         super().__init__(install_info)
+        if install_info.lvm_volume_group is None:
+            raise RuntimeError("lvm_volume_group is missing from InstallInfo")
         self.lvm_volume_group = install_info.lvm_volume_group
         self.install_info = install_info
         self.check_tools()
@@ -310,7 +304,8 @@ class LvmStorageBackend(StorageBackendBase):
         except subprocess.CalledProcessError:
             raise RuntimeError(
                 "Failed to execute vgs command"
-                f"Make sure you have LVM support installed with {self.lvm_volume_group} as a volume group"
+                "Make sure you have LVM support installed with "
+                f"{self.lvm_volume_group} as a volume group"
             )
 
     def initialize_vm0_volume(self, disk_size: str):
@@ -355,7 +350,8 @@ class LvmStorageBackend(StorageBackendBase):
     def snapshot_vm0_volume(self):
         """Saves or snapshots base vm-0 volume for later use by other VMs"""
         # vm-0 is the original disk being treated as a snapshot
-        # vm-0-snap is being created just for the access time of the change in vm snapshot
+        # vm-0-snap is being created just for the access time
+        # of the change in vm snapshot
         subprocess.run(
             ["lvremove", f"{self.lvm_volume_group}/vm-0-snap"],
             stderr=subprocess.DEVNULL,
@@ -404,7 +400,8 @@ class LvmStorageBackend(StorageBackendBase):
             except subprocess.CalledProcessError as exc:
                 logging.debug(exc.output)
                 raise RuntimeError(
-                    f"Failed to discard previous logical volume {self.lvm_volume_group}/vm-{vm_id}"
+                    "Failed to discard previous logical volume "
+                    f"{self.lvm_volume_group}/vm-{vm_id}"
                 )
 
         try:
@@ -475,7 +472,7 @@ class LvmStorageBackend(StorageBackendBase):
             check=True,
         )
 
-    def delete_vm_volume(self, vm_id: str):
+    def delete_vm_volume(self, vm_id: int):
         try:
             subprocess.check_output(
                 [
@@ -498,7 +495,7 @@ REGISTERED_BACKENDS = {
     "lvm": LvmStorageBackend,
 }
 
-REGISTERED_BACKEND_NAMES: Tuple[str] = tuple(REGISTERED_BACKENDS.keys())
+REGISTERED_BACKEND_NAMES: Tuple[str, ...] = tuple(REGISTERED_BACKENDS.keys())
 
 
 class InvalidStorageBackend(Exception):

@@ -2,19 +2,18 @@ import argparse
 import logging
 import subprocess
 import tempfile
-from pathlib import Path
-from pathlib import PureWindowsPath as WinPath
+from pathlib import Path, PureWindowsPath
 from textwrap import dedent
 
 from IPython import embed
 
-from drakrun.config import ETC_DIR, PROFILE_DIR, InstallInfo
-from drakrun.utilities.draksetup import find_default_interface, insert_cd
-from drakrun.machinery.injector import Injector
-from drakrun.machinery.networking import delete_vm_network, setup_vm_network, start_dnsmasq
-from drakrun.machinery.storage import get_storage_backend
-from drakrun.util import RuntimeInfo, graceful_exit
-from drakrun.machinery.vm import FIRST_CDROM_DRIVE, VirtualMachine, generate_vm_conf
+from ..config import ETC_DIR, PROFILE_DIR, InstallInfo, RuntimeInfo
+from ..machinery.injector import Injector
+from ..machinery.networking import delete_vm_network, setup_vm_network, start_dnsmasq
+from ..machinery.storage import get_storage_backend
+from ..machinery.vm import FIRST_CDROM_DRIVE, VirtualMachine, generate_vm_conf
+from ..util import graceful_exit
+from .draksetup import find_default_interface, insert_cd
 
 
 class DrakmonShell:
@@ -29,20 +28,18 @@ class DrakmonShell:
         self.vm = VirtualMachine(backend, vm_id)
         self._dns = dns
 
-        with open(Path(PROFILE_DIR) / "runtime.json", "r") as f:
-            self.runtime_info = RuntimeInfo.load(f)
-        self.desktop = WinPath(r"%USERPROFILE%") / "Desktop"
+        self.runtime_info = RuntimeInfo.load()
+        self.desktop = PureWindowsPath(r"%USERPROFILE%") / "Desktop"
 
         self.kernel_profile = Path(PROFILE_DIR) / "kernel.json"
         self.injector = Injector(
             self.vm.vm_name,
             self.runtime_info,
-            self.kernel_profile,
+            str(self.kernel_profile),
         )
         setup_vm_network(vm_id, True, find_default_interface(), dns)
 
     def cleanup(self, vm_id: int):
-
         logging.info(f"Ensuring that drakrun@{vm_id} service is stopped...")
         try:
             subprocess.run(
@@ -114,7 +111,7 @@ class DrakmonShell:
 
     def copy(self, local):
         local = Path(local)
-        self.injector.write_file(local, self.desktop / local.name)
+        self.injector.write_file(str(local), str(self.desktop / local.name))
 
     def mount(self, local_iso_path, drive=FIRST_CDROM_DRIVE):
         local_iso_path = Path(local_iso_path)
@@ -158,11 +155,12 @@ def main():
         }
         banner = dedent(
             """
-        *** Welcome to drakrun playground ***
-        Your VM is now ready and running with internet connection.
-        You can connect to it using VNC (password can be found in /etc/drakrun/scripts/cfg.template)
-        Run help() to list available commands.
-        """
+            *** Welcome to drakrun playground ***
+            Your VM is now ready and running with internet connection.
+            You can connect to it using VNC (password can be found in
+            /etc/drakrun/scripts/cfg.template)
+            Run help() to list available commands.
+            """
         )
         embed(banner1=banner, user_ns=helpers, colors="neutral")
 

@@ -95,7 +95,8 @@ def vba_extract_functions(vba_content_lines):
     """Seperates the input VBA code into functions
 
     Args:
-        vba_content_lines (string[]): VBA code lines without comments, metadata or spaces
+        vba_content_lines (string[]): VBA code lines without comments,
+        metadata or spaces
 
     Returns:
         dict[func_name]=func_code: Dictionary of VBA functions found
@@ -110,9 +111,11 @@ def vba_extract_functions(vba_content_lines):
         # Create dummpy empty function with func_name:
         # mcvWGqJifEVHwB (URLDownloadToFileA)
         # Examples:
-        #   Private Declare Function NyKQpQhtmrFfWX Lib "kernel32" Alias "lstrcmpA" (ByVal pCaller As Long,..
+        #   Private Declare Function NyKQpQhtmrFfWX Lib "kernel32"
+        #   Alias "lstrcmpA" (ByVal pCaller As Long,..
         #   - would become: NyKQpQhtmrFfWX (lstrcmpA) (External)
-        #   Private Declare PtrSafe Function mcvWGqJifEVHwB Lib "urlmon" Alias "URLDownloadToFileA" (ByVal pfsseerwseer As Long,...
+        #   Private Declare PtrSafe Function mcvWGqJifEVHwB Lib "urlmon"
+        #   Alias "URLDownloadToFileA" (ByVal pfsseerwseer As Long,...
         #   - would become: mcvWGqJifEVHwB (URLDownloadToFileA) (External)
         if " Lib " in vba_line and " Alias " in vba_line and not inside_function:
             if " Function " in vba_line:
@@ -141,9 +144,11 @@ def vba_extract_functions(vba_content_lines):
 
         # Create dummy empty function with func_name that do not have Alias:
         # Examples:
-        #   Public Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As LongPtr)
+        #   Public Declare PtrSafe Sub Sleep Lib "kernel32"
+        #   (ByVal dwMilliseconds As LongPtr)
         #   - would become: Sleep
-        #   Public Declare Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
+        #   Public Declare Sub Sleep Lib "kernel32"
+        #   (ByVal dwMilliseconds As Long)
         #   - would become: Sleep
         if " Lib " in vba_line and not inside_function:
             if " Function " in vba_line:
@@ -223,7 +228,8 @@ def vba_extract_properties(vba_content_lines):
     """Find and extract the use of VBA Properties, in order to obfuscate macros
 
     Args:
-        vba_content_lines (string[]): VBA code lines without comments, metadata or spaces
+        vba_content_lines (string[]): VBA code lines without comments,
+        metadata or spaces
 
     Returns:
         dict[property_name]=property_code: Dictionary of VBA Properties found

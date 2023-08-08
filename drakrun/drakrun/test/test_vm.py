@@ -6,11 +6,12 @@ import tempfile
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
-from common_utils import remove_files, tool_exists
 
 from drakrun.config import InstallInfo
-from drakrun.util import safe_delete
 from drakrun.machinery.vm import VirtualMachine
+from drakrun.util import safe_delete
+
+from .common_utils import remove_files, tool_exists
 
 
 @pytest.fixture(scope="session")
@@ -89,7 +90,7 @@ def get_vm_state(vm_name: str) -> str:
         return state
 
 
-def destroy_vm(vm_name: str) -> str:
+def destroy_vm(vm_name: str) -> None:
     if (
         subprocess.run(
             f"xl list {vm_name}",
@@ -180,9 +181,13 @@ class TestVM:
     def test_vm_save(self, test_vm, snapshot_file):
         # test-hvm64-example VM can't be snapshotted in unpaused state
         """
-        root@debian:/home/user/drakvuf-sandbox/drakrun/drakrun/test# xl create /tmp/tmpjyoganif && xl save -c test-hvm64-example /tmp/test.sav
+        root@debian:/home/user/drakvuf-sandbox/drakrun/drakrun/test#
+            xl create /tmp/tmpjyoganif &&
+            xl save -c test-hvm64-example /tmp/test.sav
         Parsing config from /tmp/tmpjyoganif
-        libxl: error: libxl_qmp.c:1334:qmp_ev_lock_aquired: Domain 122:Failed to connect to QMP socket /var/run/xen/qmp-libxl-122: No such file or directory
+        libxl: error: libxl_qmp.c:1334:qmp_ev_lock_aquired:
+        Domain 122:Failed to connect to QMP socket /var/run/xen/qmp-libxl-122:
+        No such file or directory
         unable to retrieve domain configuration
         """
 
@@ -213,14 +218,16 @@ class TestVM:
 
         assert get_vm_state(test_vm.vm_name) != "p"
 
-        # test-hvm64-example goes to shutdown immediately, we get `--ps--` state during assertion
+        # test-hvm64-example goes to shutdown immediately,
+        # we get `--ps--` state during assertion
 
         # logging.info("testing pause on VM")
         # test_vm.pause()
         # assert get_vm_state(test_vm.vm_name) == 'p'
 
-        # manual test shows, xl pause on a paused VM doesn't give any errors but pauses the VM again
-        # requiring the VM be unpaused twice for reaching running state
+        # manual test shows, xl pause on a paused VM doesn't give any errors
+        # but pauses the VM again requiring the VM be unpaused twice
+        # for reaching running state
 
         # logging.info("testing pause on a paused vm VM")
         # with pytest.raises(Exception):

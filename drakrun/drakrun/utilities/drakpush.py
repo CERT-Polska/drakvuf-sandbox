@@ -3,8 +3,7 @@ import os
 
 from karton.core import Config, Producer, Resource, Task
 
-from drakrun.config import ETC_DIR
-from drakrun.util import patch_config
+from ..paths import DRAKRUN_CONFIG_PATH
 
 
 def main():
@@ -24,7 +23,7 @@ def main():
     )
     args = parser.parse_args()
 
-    conf = patch_config(Config(os.path.join(ETC_DIR, "config.ini")))
+    conf = Config(DRAKRUN_CONFIG_PATH)
     producer = Producer(conf)
 
     task = Task({"type": "sample", "stage": "recognized", "platform": "win32"})

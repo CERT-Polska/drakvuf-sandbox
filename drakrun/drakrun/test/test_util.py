@@ -2,7 +2,7 @@ from io import StringIO
 
 import pytest
 
-from drakrun.util import RuntimeInfo, VmiOffsets
+from drakrun.config import RuntimeInfo, VmiOffsets
 
 win_offsets_output = """
 win_ntoskrnl:0x2618000

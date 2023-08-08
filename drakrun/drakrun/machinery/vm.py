@@ -3,13 +3,12 @@ import os
 import re
 import subprocess
 import tempfile
-
 from dataclasses import dataclass
 from pathlib import Path
 
-from drakrun.config import ETC_DIR, LIB_DIR, VM_CONFIG_DIR, VOLUME_DIR, InstallInfo
-from drakrun.util import safe_delete, try_run
-
+from ..config import InstallInfo
+from ..paths import ETC_DIR, LIB_DIR, VM_CONFIG_DIR, VOLUME_DIR
+from ..util import safe_delete, try_run
 from .storage import StorageBackendBase, get_storage_backend
 
 log = logging.getLogger("drakrun")
@@ -34,10 +33,10 @@ def generate_vm_conf(install_info: InstallInfo, vm_id: int):
         unattended_iso_path = os.path.join(LIB_DIR, "volumes", "unattended.iso")
         disks.append(f"file:{unattended_iso_path},{SECOND_CDROM_DRIVE}:cdrom,r")
 
-    disks = ", ".join(['"{}"'.format(disk) for disk in disks])
+    disk_list = ", ".join(['"{}"'.format(disk) for disk in disks])
 
     template = template.replace("{{ VM_ID }}", str(vm_id))
-    template = template.replace("{{ DISKS }}", disks)
+    template = template.replace("{{ DISKS }}", disk_list)
     template = template.replace("{{ VNC_PORT }}", str(6400 + vm_id))
     template = template.replace("{{ VCPUS }}", str(install_info.vcpus))
     template = template.replace("{{ MEMORY }}", str(install_info.memory))
@@ -163,7 +162,7 @@ class VirtualMachine:
         if self.vm_id != 0 and self.backend is not None and self.vm_id is not None:
             self.backend.rollback_vm_storage(self.vm_id)
 
-        args += [self._cfg_path, snapshot_path]
+        args += [str(self._cfg_path), str(snapshot_path)]
         logging.info(f"Restoring VM {self.vm_name}")
         try_run(args, msg=f"Failed to restore VM {self.vm_name}", **kwargs)
 
@@ -243,6 +242,7 @@ def get_xen_commandline(parsed_xl_info):
 
     return cfg
 
+
 def validate_xen_commandline():
     required_cmdline = {
         "sched": "credit",
@@ -266,6 +266,7 @@ def validate_xen_commandline():
             unrecommended.append((k, v, actual_v))
 
     return unrecommended
+
 
 @dataclass
 class VmiGuidInfo:

@@ -3,43 +3,10 @@ import hashlib
 import logging
 import os
 import subprocess
-import sys
 import traceback
+from typing import Optional
 
 log = logging.getLogger("drakrun")
-
-
-def patch_config(cfg):
-    try:
-        access_key = cfg.config["minio"]["access_key"]
-        secret_key = cfg.config["minio"]["secret_key"]
-    except KeyError:
-        sys.stderr.write(
-            "WARNING! Misconfiguration: section [minio] of config.ini doesn't contain access_key or secret_key.\n"
-        )
-        return cfg
-
-    if not access_key and not secret_key:
-        if not os.path.exists("/etc/drakcore/minio.env"):
-            raise RuntimeError(
-                "ERROR! MinIO access credentials are not configured (and can not be auto-detected), unable to start.\n"
-            )
-
-        with open("/etc/drakcore/minio.env", "r") as f:
-            minio_cfg = [
-                line.strip().split("=", 1) for line in f if line.strip() and "=" in line
-            ]
-            minio_cfg = {k: v for k, v in minio_cfg}
-
-        try:
-            cfg.config["minio"]["access_key"] = minio_cfg["MINIO_ACCESS_KEY"]
-            cfg.config["minio"]["secret_key"] = minio_cfg["MINIO_SECRET_KEY"]
-        except KeyError:
-            sys.stderr.write(
-                "WARNING! Misconfiguration: minio.env doesn't contain MINIO_ACCESS_KEY or MINIO_SECRET_KEY.\n"
-            )
-
-    return cfg
 
 
 def safe_delete(file_path) -> bool:
@@ -57,28 +24,29 @@ def safe_delete(file_path) -> bool:
 
 def try_run(
     list_args: list, msg: str, reraise=True, **kwargs
-) -> subprocess.CompletedProcess:
+) -> Optional[subprocess.CompletedProcess]:
     """
-    Runs subprocess.run in a try except with some default arguments ( which can be overriden by supplying kwargs )
+    Runs subprocess.run in a try except with some default arguments
+    ( which can be overriden by supplying kwargs )
 
-            Parameters:
-                    list_args (list): Subprocess list which will be passed to subprocess.run
-                    msg (str): A meaningful error message to be raised during non-zero exit code
-                    reraise (bool):
-                        True: will raise an Exception with traceback on error
-                        False: will log a warning on error
-                    **kwargs: additional parameters to be passed to subprocess.run
+    Parameters:
+        list_args (list): Subprocess list which will be passed to subprocess.run
+        msg (str): A meaningful error message to be raised during non-zero exit code
+        reraise (bool):
+            True: will raise an Exception with traceback on error
+            False: will log a warning on error
+        **kwargs: additional parameters to be passed to subprocess.run
 
-            Defaults:
-                    subprocess.run is called with the following arguments by default
-                    stderr = subprocess.PIPE
-                    stdout = subprocess.PIPE # to print to console, pass kwargs ( stdout = None )
-                    check = True
+    Defaults:
+        subprocess.run is called with the following arguments by default
+        stderr = subprocess.PIPE
+        stdout = subprocess.PIPE # to print to console, pass kwargs ( stdout = None )
+        check = True
 
-            Returns:
-                    sub (subprocess.CompletedProcess): Object with the completed process
-                        or
-                    None: if the subprocess failed and reraise=False
+    Returns:
+        sub (subprocess.CompletedProcess): Object with the completed process
+            or
+        None: if the subprocess failed and reraise=False
     """
 
     try:

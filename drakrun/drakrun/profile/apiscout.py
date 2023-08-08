@@ -2,26 +2,27 @@ import json
 import logging
 from operator import attrgetter
 from pathlib import Path, PureWindowsPath
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pefile
 
 log = logging.getLogger(__name__)
 
 
-def get_bitness(pe: pefile.PE) -> int:
+def get_bitness(pe: pefile.PE) -> Optional[int]:
     if pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE["IMAGE_FILE_MACHINE_AMD64"]:
         return 64
     elif pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE["IMAGE_FILE_MACHINE_I386"]:
         return 32
     else:
         log.error(
-            f"Unsupported machine_type: {pe.FILE_HEADER.Machine} -> {pefile.MACHINE_TYPE[pe.FILE_HEADER.Machine]}"
+            f"Unsupported machine_type: {pe.FILE_HEADER.Machine} -> "
+            f"{pefile.MACHINE_TYPE[pe.FILE_HEADER.Machine]}"
         )
         return None
 
 
-def get_product_version(pe: pefile.PE) -> str:
+def get_product_version(pe: pefile.PE) -> Optional[str]:
     """
     Based on https://stackoverflow.com/a/16076661/12452744
     """
@@ -46,7 +47,7 @@ def get_product_version(pe: pefile.PE) -> str:
 
 def make_static_apiscout_profile_for_dll(filepath: str) -> Dict[str, Any]:
     """
-    Based on https://github.com/danielplohmann/apiscout/blob/0fca2eefa5b557b05eb77ab7a3246825f7aa71c3/apiscout/db_builder/DatabaseBuilder.py#L99-L127
+    Based on https://github.com/danielplohmann/apiscout/blob/0fca2eefa5b557b05eb77ab7a3246825f7aa71c3/apiscout/db_builder/DatabaseBuilder.py#L99-L127 # noqa: E501
     """
     pe = pefile.PE(filepath, fast_load=True)
     pe.parse_data_directories(
@@ -83,7 +84,7 @@ def make_static_apiscout_profile_for_dll(filepath: str) -> Dict[str, Any]:
 
 def build_apiscout_dll_key(dll_info: Dict[str, Any]) -> str:
     """
-    From https://github.com/danielplohmann/apiscout/blob/0fca2eefa5b557b05eb77ab7a3246825f7aa71c3/apiscout/db_builder/DatabaseBuilder.py#L129-L131
+    From https://github.com/danielplohmann/apiscout/blob/0fca2eefa5b557b05eb77ab7a3246825f7aa71c3/apiscout/db_builder/DatabaseBuilder.py#L129-L131 # noqa: E501
     """
     filename = PureWindowsPath(dll_info["filepath"]).name
     return "{}_{}_{}_0x{:x}".format(

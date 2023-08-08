@@ -21,22 +21,42 @@ from minio.error import NoSuchKey
 from requests import RequestException
 from tqdm import tqdm
 
-from drakrun.profile.apiscout import (
-    build_static_apiscout_profile,
-    make_static_apiscout_profile_for_dll,
+from ..config import InstallInfo, RuntimeInfo, VmiOffsets
+from ..machinery.injector import Injector
+from ..machinery.networking import (
+    delete_vm_network,
+    setup_vm_network,
+    start_dnsmasq,
+    stop_dnsmasq,
 )
-from drakrun.config import (
+from ..machinery.storage import (
+    REGISTERED_BACKEND_NAMES,
+    StorageBackendBase,
+    get_storage_backend,
+)
+from ..machinery.vm import (
+    FIRST_CDROM_DRIVE,
+    SECOND_CDROM_DRIVE,
+    VirtualMachine,
+    VmiGuidInfo,
+    delete_vm_conf,
+    generate_vm_conf,
+    get_all_vm_conf,
+    vmi_win_guid,
+)
+from ..paths import (
     APISCOUT_PROFILE_DIR,
     ETC_DIR,
     LIB_DIR,
     PROFILE_DIR,
     VM_CONFIG_DIR,
     VOLUME_DIR,
-    InstallInfo,
-    RuntimeInfo,
-    VmiOffsets,
 )
-from drakrun.profile.drakpdb import (
+from ..profile.apiscout import (
+    build_static_apiscout_profile,
+    make_static_apiscout_profile_for_dll,
+)
+from ..profile.drakpdb import (
     DLL,
     dll_file_list,
     fetch_pdb,
@@ -45,32 +65,7 @@ from drakrun.profile.drakpdb import (
     required_dll_file_list,
     unrequired_dll_file_list,
 )
-from drakrun.machinery.injector import Injector
-from drakrun.machinery.networking import (
-    delete_vm_network,
-    setup_vm_network,
-    start_dnsmasq,
-    stop_dnsmasq,
-)
-from drakrun.machinery.storage import (
-    REGISTERED_BACKEND_NAMES,
-    StorageBackendBase,
-    get_storage_backend,
-)
-from drakrun.util import (
-    file_sha256,
-    safe_delete,
-)
-from drakrun.machinery.vm import (
-    FIRST_CDROM_DRIVE,
-    SECOND_CDROM_DRIVE,
-    VirtualMachine,
-    delete_vm_conf,
-    generate_vm_conf,
-    get_all_vm_conf,
-    VmiGuidInfo,
-    vmi_win_guid,
-)
+from ..util import file_sha256, safe_delete
 
 log = logging.getLogger(__name__)
 
@@ -227,7 +222,8 @@ def sanity_check():
 
     if proc.returncode != 1:
         logging.error(
-            "It looks like the system is not running on Xen. Please reboot your machine into Xen hypervisor."
+            "It looks like the system is not running on Xen. "
+            "Please reboot your machine into Xen hypervisor."
         )
         return False
 
@@ -243,7 +239,8 @@ def sanity_check():
         )
     except subprocess.CalledProcessError:
         logging.exception(
-            "Failed to test xl info command. There might be some dependency problem (please execute 'xl info' manually to find out)."
+            "Failed to test xl info command. There might be some dependency problem "
+            "(please execute 'xl info' manually to find out)."
         )
         return False
 
@@ -258,7 +255,9 @@ def sanity_check():
         )
     except subprocess.SubprocessError:
         logging.exception(
-            "Failed to test xl list command. There might be a problem with xen services (check 'systemctl status xenstored', 'systemctl status xenconsoled')."
+            "Failed to test xl list command. There might be a problem "
+            "with xen services (check 'systemctl status xenstored', "
+            "'systemctl status xenconsoled')."
         )
         return False
 
@@ -304,7 +303,8 @@ def perform_xtf():
         except subprocess.CalledProcessError as e:
             output = e.output.decode("utf-8", "replace")
             logging.error(
-                f"Failed to enable altp2m on domain. Your hardware might not support Extended Page Tables. Logs:\n{output}"
+                f"Failed to enable altp2m on domain. Your hardware might not support "
+                f"Extended Page Tables. Logs:\n{output}"
             )
             test_hvm64.destroy()
             return False
@@ -324,12 +324,13 @@ def perform_xtf():
         for line in stdout:
             if line == "Test result: SUCCESS":
                 logging.info(
-                    "All tests passed. Your Xen installation seems to work properly."
+                    "All tests passed. Your Xen installation seems to work " "properly."
                 )
                 return True
 
     logging.error(
-        f"Preflight check with Xen Test Framework doesn't pass. Your hardware might not support VT-x. Logs: \n{stdout_text}"
+        f"Preflight check with Xen Test Framework doesn't pass. Your hardware "
+        f"might not support VT-x. Logs: \n{stdout_text}"
     )
     return False
 
@@ -424,7 +425,8 @@ def install(
 
     if memory < 1536:
         logging.warning(
-            "Using less than 1.5 GB RAM per VM is not recommended for any supported system."
+            "Using less than 1.5 GB RAM per VM is not recommended for any supported "
+            "system."
         )
 
     if unattended_xml:
@@ -515,7 +517,8 @@ def install(
     logging.info("-" * 80)
     logging.info("Initial VM setup is complete and the vm-0 was launched.")
     logging.info(
-        "Please now VNC to the port 5900 on this machine to perform Windows installation."
+        "Please now VNC to the port 5900 on this machine "
+        "to perform Windows installation."
     )
     logging.info(
         "After you have installed Windows and booted it to the desktop, please execute:"
@@ -534,7 +537,8 @@ def install(
             logging.info(passwd)
 
     logging.info(
-        "Please note that on some machines, system installer may boot for up to 10 minutes"
+        "Please note that on some machines, system installer "
+        "may boot for up to 10 minutes"
     )
     logging.info("and may look unresponsive during the process. Please be patient.")
     logging.info("-" * 80)
@@ -575,15 +579,13 @@ def on_create_rekall_profile_failure(
 
 def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
     pdb_tmp_filepath = None
-    cmd = None
-    out = None
+    logging.info(f"Fetching rekall profile for {file.path}")
+
+    local_dll_path = os.path.join(PROFILE_DIR, file.dest)
+    guest_dll_path = str(PureWindowsPath("C:/", file.path))
+
+    cmd = injector.read_file(guest_dll_path, local_dll_path)
     try:
-        logging.info(f"Fetching rekall profile for {file.path}")
-
-        local_dll_path = os.path.join(PROFILE_DIR, file.dest)
-        guest_dll_path = str(PureWindowsPath("C:/", file.path))
-
-        cmd = injector.read_file(guest_dll_path, local_dll_path)
         out = json.loads(cmd.stdout.decode())
         if out["Status"] == "Error" and out["Error"] in [
             "ERROR_FILE_NOT_FOUND",
@@ -857,7 +859,8 @@ def create_missing_profiles():
     vm.restore()
 
     # Ensure that all declared usermode profiles exist
-    # This is important when upgrade defines new entries in required_dll_file_list and unrequired_dll_file_list
+    # This is important when upgrade defines new entries
+    # in required_dll_file_list and unrequired_dll_file_list
     for profile in required_dll_file_list:
         if not profiles_exist(profile.dest):
             create_rekall_profile(injector, profile, True)
@@ -1237,7 +1240,9 @@ def do_export_minimal(mc, bucket, name):
 
     logging.info("Uploading VM template")
     mc.fput_object(
-        bucket, f"{name}/cfg.template", os.path.join(ETC_DIR, "../scripts", "cfg.template")
+        bucket,
+        f"{name}/cfg.template",
+        os.path.join(ETC_DIR, "../scripts", "cfg.template"),
     )
 
     with tempfile.NamedTemporaryFile() as disk_image:
@@ -1260,7 +1265,9 @@ def do_import_minimal(mc, name, bucket, zpool):
 
     logging.info("Downloading VM config")
     mc.fget_object(
-        bucket, f"{name}/cfg.template", os.path.join(ETC_DIR, "../scripts", "cfg.template")
+        bucket,
+        f"{name}/cfg.template",
+        os.path.join(ETC_DIR, "../scripts", "cfg.template"),
     )
 
     # Now we have imported InstallInfo object

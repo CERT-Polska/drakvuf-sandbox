@@ -6,18 +6,25 @@ import sys
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, cast
 
-from dataclasses_json import dataclass_json
-from karton.core import Config, Karton, LocalResource, Producer, Resource, Task
+from dataclasses_json import DataClassJsonMixin
+from karton.core import (
+    Config,
+    Karton,
+    LocalResource,
+    Producer,
+    RemoteResource,
+    Resource,
+    Task,
+)
 from karton.core.task import TaskState
 from malduck.extractor import ExtractManager, ExtractorModules
 from mwdblib import MWDB
 from tqdm import tqdm
 
-from drakrun.config import ETC_DIR
-from drakrun.util import patch_config
-from ..__version__ import __version__ as DRAKRUN_VERSION
+from ..__version__ import __version__
+from ..paths import DRAKRUN_CONFIG_PATH
 
 
 @contextmanager
@@ -28,34 +35,9 @@ def changedLogLevel(logger, level):
     logger.setLevel(old_level)
 
 
-@dataclass_json
-@dataclass
-class TestCase:
-    sha256: str
-    extension: str
-    ripped: str
-    path: Optional[str] = None
-
-    def get_sample(self) -> bytes:
-        # If user provided file path for the sample
-        if self.path:
-            data = open(self.path, "rb").read()
-
-            h = hashlib.sha256()
-            h.update(data)
-            if h.hexdigest() != self.sha256.lower():
-                raise RuntimeError(f"Expected {self.sha256}, got {h.hexdigest()}")
-            return data
-
-        # Otherwise try to fetch the sample from MWDB
-        mwdb = MWDB(api_key=os.getenv("MWDB_API_KEY"))
-        sample = mwdb.query_file(self.sha256)
-        return sample.download()
-
-
 class RegressionTester(Karton):
     identity = "karton.drakrun.regression-tester"
-    version = DRAKRUN_VERSION
+    version = __version__
     persistent = False
 
     # Must be kept in sync with DEFAULT_TEST_HEADERS from drakrun.main
@@ -65,9 +47,6 @@ class RegressionTester(Karton):
             "kind": "drakrun-internal",
         },
     ]
-
-    def __init__(self, config: Config):
-        super().__init__(config)
 
     def analyze_dumps(self, sample, dump_dir, dumps_metadata):
         manager = ExtractManager(
@@ -84,9 +63,9 @@ class RegressionTester(Karton):
         return family
 
     def process(self, task: Task):
-        dumps = task.get_resource("dumps.zip")
+        dumps = cast(RemoteResource, task.get_resource("dumps.zip"))
         dumps_metadata = task.get_payload("dumps_metadata")
-        sample = task.get_resource("sample")
+        sample = cast(RemoteResource, task.get_resource("sample"))
 
         with dumps.extract_temporary() as temp:
             family = self.analyze_dumps(sample, temp, dumps_metadata)
@@ -96,7 +75,8 @@ class RegressionTester(Karton):
 
             if family is None or expected_family != family:
                 self.log.error(
-                    f"Failed to rip {sample.sha256}. Expected {expected_family}, ripped {family}"
+                    f"Failed to rip {sample.sha256}. Expected {expected_family}, "
+                    f"ripped {family}"
                 )
                 result = "FAIL"
             else:
@@ -111,13 +91,11 @@ class RegressionTester(Karton):
                 }
             )
 
-            task = Task({"type": "analysis-test-result", "kind": "drakrun"})
-            res = LocalResource(
-                name=self.current_task.root_uid, bucket="draktestd", content=out_res
-            )
+            result_task = Task({"type": "analysis-test-result", "kind": "drakrun"})
+            res = LocalResource(name=task.root_uid, bucket="draktestd", content=out_res)
             res._uid = res.name
-            task.add_payload("result", res)
-            self.send_task(task)
+            result_task.add_payload("result", res)
+            self.send_task(result_task)
 
     @classmethod
     def args_parser(cls):
@@ -128,9 +106,7 @@ class RegressionTester(Karton):
 
     @classmethod
     def main(cls):
-        conf_path = os.path.join(ETC_DIR, "config.ini")
-        config = patch_config(Config(conf_path))
-
+        config = Config(DRAKRUN_CONFIG_PATH)
         consumer = RegressionTester(config)
 
         if not consumer.backend.minio.bucket_exists("draktestd"):
@@ -157,8 +133,7 @@ class RegressionTester(Karton):
         parser = cls.args_parser()
         args = parser.parse_args()
 
-        conf_path = os.path.join(ETC_DIR, "config.ini")
-        config = patch_config(Config(conf_path))
+        config = Config(DRAKRUN_CONFIG_PATH)
 
         with open(args.tests) as tests:
             testcases = [TestCase(**case) for case in json.load(tests)]
@@ -197,6 +172,32 @@ class RegressionTester(Karton):
                 time.sleep(1)
 
         print(json.dumps(list(results.values())))
+
+
+@dataclass
+class TestCase(DataClassJsonMixin):
+    sha256: str
+    extension: str
+    ripped: str
+    path: Optional[str] = None
+
+    def get_sample(self) -> bytes:
+        # If user provided file path for the sample
+        if self.path:
+            data = open(self.path, "rb").read()
+
+            h = hashlib.sha256()
+            h.update(data)
+            if h.hexdigest() != self.sha256.lower():
+                raise RuntimeError(f"Expected {self.sha256}, got {h.hexdigest()}")
+            return data
+
+        # Otherwise try to fetch the sample from MWDB
+        mwdb = MWDB(api_key=os.getenv("MWDB_API_KEY"))
+        sample = mwdb.query_file(self.sha256)
+        if sample is None:
+            raise RuntimeError(f"Sample {self.sha256} not found")
+        return sample.download()
 
 
 if __name__ == "__main__":

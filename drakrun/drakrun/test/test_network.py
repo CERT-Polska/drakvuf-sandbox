@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 from pytest_steps import depends_on, test_steps
 
-from drakrun.utilities.draksetup import find_default_interface
 from drakrun.machinery.networking import (
     add_iptable_rule,
     del_iptable_rule,
@@ -15,7 +14,9 @@ from drakrun.machinery.networking import (
     start_dnsmasq,
     stop_dnsmasq,
 )
-from drakrun.test.common_utils import tool_exists
+from drakrun.utilities.draksetup import find_default_interface
+
+from .common_utils import tool_exists
 
 
 def count_num_rules(rule_to_check):
@@ -55,7 +56,8 @@ def iptables_test():
 
     # if somehow added due to unknown issues
 
-    # this call is adding the rule again to test if del_iptable_rule does delete multiple similar rules or not
+    # this call is adding the rule again to test if del_iptable_rule
+    # does delete multiple similar rules or not
     subprocess.check_output(f"iptables -A {rule}", shell=True)
 
     # the clear should delete all the same rules

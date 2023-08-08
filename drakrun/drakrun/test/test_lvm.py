@@ -6,11 +6,12 @@ import tempfile
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
-from common_utils import tool_exists
 
 from drakrun.config import InstallInfo
 from drakrun.machinery.storage import LvmStorageBackend
 from drakrun.util import safe_delete
+
+from .common_utils import tool_exists
 
 
 @pytest.fixture(scope="session")
@@ -117,9 +118,8 @@ class TestLVM:
 
     def test_disk_path(self, backend):
         """
-        A very straight forward test but, if a path will change it future, this test will fail
-        telling about changed paths
-
+        A very straight forward test but, if a path will change it future,
+        this test will fail telling about changed paths
         """
         install_info = InstallInfo.load()
         for vm_id in range(5):

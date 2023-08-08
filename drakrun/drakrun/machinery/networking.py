@@ -77,7 +77,7 @@ def start_dnsmasq(
                 log.info("Starting dnsmasq in background")
             else:
                 log.info("Already running dnsmasq in background")
-                return
+                return None
 
     return subprocess.Popen(
         [

@@ -21,36 +21,32 @@ from io import StringIO
 from itertools import chain
 from pathlib import Path
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, cast
 
 import magic
-from karton.core import Config, Karton, LocalResource, Resource, Task
+from karton.core import Config, Karton, LocalResource, RemoteResource, Resource, Task
 
 import drakrun.sample_startup as sample_startup
 from drakrun.profile.drakpdb import dll_file_list
-from drakrun.util import (
-    RuntimeInfo,
-    file_sha256,
-    graceful_exit,
-    patch_config,
-)
+from drakrun.util import file_sha256, graceful_exit
 
+from .__version__ import __version__
 from .config import (
     DEFAULT_DRAKVUF_PLUGINS,
     ETC_DIR,
     PROFILE_DIR,
     InstallInfo,
-)
-from .paths import (
-    APISCOUT_PROFILE_DIR,
-    DRAKRUN_CONFIG_PATH,
-    VOLUME_DIR,
+    RuntimeInfo,
 )
 from .machinery.injector import Injector
-from .machinery.networking import setup_vm_network, start_dnsmasq, start_tcpdump_collector
+from .machinery.networking import (
+    setup_vm_network,
+    start_dnsmasq,
+    start_tcpdump_collector,
+)
 from .machinery.storage import get_storage_backend
-from .machinery.vm import VirtualMachine, validate_xen_commandline, generate_vm_conf
-from .__version__ import __version__
+from .machinery.vm import VirtualMachine, generate_vm_conf, validate_xen_commandline
+from .paths import APISCOUT_PROFILE_DIR, DRAKRUN_CONFIG_PATH, VOLUME_DIR
 
 
 class LocalLogBuffer(logging.Handler):
@@ -95,14 +91,14 @@ def with_logs(object_name):
                     res = LocalResource(
                         object_name, buffer.getvalue(), bucket="drakrun"
                     )
-                    task_uid = (
-                        self.current_task.payload.get("override_uid")
-                        or self.current_task.uid
-                    )
+                    # It's not Optional[Task]
+                    task = cast(Task, self.current_task)
+                    task_uid = task.payload.get("override_uid") or task.uid
                     res._uid = f"{task_uid}/{res.name}"
 
                     # Karton rejects empty resources
-                    # Ensure that we upload it only when some data was actually generated
+                    # Ensure that we upload it only when some data
+                    # was actually generated
                     if buffer.tell() > 0:
                         res.upload(self.backend)
                 except Exception:
@@ -117,6 +113,7 @@ class Drakrun(Karton):
     """
     Drakvuf Sandbox analysis runner
     """
+
     identity = "karton.drakrun-prod"
     version = __version__
     filters = [
@@ -157,18 +154,28 @@ class Drakrun(Karton):
         self.install_info = InstallInfo.load()
         self.runtime_info = RuntimeInfo.load()
 
-        self.default_timeout = self.config.getint("drakrun", "analysis_timeout", fallback=60 * 10)
-        self.net_enable = self.config.getboolean("drakrun", "net_enable", fallback=False)
-        self.sample_testing = self.config.getboolean("drakrun", "sample_testing", fallback=False)
+        self.default_timeout = self.config.getint(
+            "drakrun", "analysis_timeout", fallback=60 * 10
+        )
+        self.net_enable = self.config.getboolean(
+            "drakrun", "net_enable", fallback=False
+        )
+        self.sample_testing = self.config.getboolean(
+            "drakrun", "sample_testing", fallback=False
+        )
         self.out_interface = self.config.get("drakrun", "out_interface", fallback="")
         self.dns_server = self.config.get("drakrun", "dns_server", fallback="")
-        self.attach_profiles = self.config.getboolean("drakrun", "attach_profiles", fallback=False)
+        self.attach_profiles = self.config.getboolean(
+            "drakrun", "attach_profiles", fallback=False
+        )
         self.attach_apiscout_profile = self.config.getboolean(
             "drakrun", "attach_apiscout_profile", fallback=False
         )
-        self.use_root_uid = self.config.getboolean("drakrun", "use_root_uid", fallback=False)
+        self.use_root_uid = self.config.getboolean(
+            "drakrun", "use_root_uid", fallback=False
+        )
         self.anti_hammering_threshold = self.config.getint(
-            "drakrun", "anti_hammering_threshold", fallback=None
+            "drakrun", "anti_hammering_threshold"
         )
         self.syscall_filter = self.config.get("drakrun", "syscall_filter", None)
         self.raw_memory_dump = self.config.getboolean(
@@ -178,9 +185,7 @@ class Drakrun(Karton):
         # Preferred plugins for specific feed quality
         # [drakvuf_plugins]
         # low = apimon,procmon...
-        self.active_plugins = {
-            "_all_": DEFAULT_DRAKVUF_PLUGINS
-        }
+        self.active_plugins = {"_all_": DEFAULT_DRAKVUF_PLUGINS}
         if self.config.has_section("drakvuf_plugins"):
             for quality, list_str in self.config["drakvuf_plugins"].items():
                 plugins = [x.strip() for x in list_str.split(",") if x.strip()]
@@ -251,7 +256,8 @@ class Drakrun(Karton):
         # If testing is disabled, it's not a test run
         if not self.sample_testing:
             return False
-
+        if not self.current_task:
+            return False
         return self.current_task.matches_filters(self.test_filters)
 
     @property
@@ -264,7 +270,9 @@ class Drakrun(Karton):
         if not self.backend.minio.bucket_exists("drakrun"):
             self.backend.minio.make_bucket(bucket_name="drakrun")
 
-        setup_vm_network(self.instance_id, self.net_enable, self.out_interface, self.dns_server)
+        setup_vm_network(
+            self.instance_id, self.net_enable, self.out_interface, self.dns_server
+        )
 
         self.log.info("Calculating snapshot hash...")
         self.snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
@@ -278,7 +286,8 @@ class Drakrun(Karton):
                 "You don't have the recommended settings in your Xen's command line."
             )
             logging.warning(
-                "Please amend settings in your GRUB_CMDLINE_XEN_DEFAULT in /etc/default/grub.d/xen.cfg file."
+                "Please amend settings in your GRUB_CMDLINE_XEN_DEFAULT "
+                "in /etc/default/grub.d/xen.cfg file."
             )
 
             for k, v, actual_v in unrecommended:
@@ -288,14 +297,17 @@ class Drakrun(Karton):
                     logging.warning(f"- Set {k}={v} ({k} is not set right now)")
 
             logging.warning(
-                "Then, please execute the following commands as root: update-grub && reboot"
+                "Then, please execute the following commands as root: "
+                "update-grub && reboot"
             )
             logging.warning("-" * 80)
             logging.warning(
-                "This check can be skipped by adding xen_cmdline_check=ignore in [drakrun] section of drakrun's config."
+                "This check can be skipped by adding xen_cmdline_check=ignore in "
+                "[drakrun] section of drakrun's config."
             )
             logging.warning(
-                "Please be aware that some bugs may arise when using unrecommended settings."
+                "Please be aware that some bugs may arise when using "
+                "unrecommended settings."
             )
 
             try:
@@ -305,11 +317,13 @@ class Drakrun(Karton):
 
             if xen_cmdline_check == "ignore":
                 logging.warning(
-                    "ATTENTION! Configuration specified that check result should be ignored, continuing anyway..."
+                    "ATTENTION! Configuration specified that check result "
+                    "should be ignored, continuing anyway..."
                 )
             else:
                 logging.error(
-                    "Exitting due to above warnings. Please ensure that you are using recommended Xen's command line."
+                    "Exitting due to above warnings. Please ensure that you are "
+                    "using recommended Xen's command line."
                 )
                 sys.exit(1)
 
@@ -354,7 +368,8 @@ class Drakrun(Karton):
 
         if current_size > max_total_size:
             self.log.warning(
-                "Some dumps were deleted, because the configured size threshold was exceeded."
+                "Some dumps were deleted, because the configured size "
+                "threshold was exceeded."
             )
         return dumps_metadata
 
@@ -411,7 +426,7 @@ class Drakrun(Karton):
                     analysis_uid, outdir, os.path.join(subdir, fn)
                 )
 
-    def build_profile_payload(self) -> Dict[str, LocalResource]:
+    def build_profile_payload(self) -> LocalResource:
         with tempfile.TemporaryDirectory() as tmp_path:
             tmp_dir = Path(tmp_path)
 
@@ -420,7 +435,7 @@ class Drakrun(Karton):
                 if fpath.is_file():
                     shutil.copy(fpath, tmp_dir / fpath.name)
 
-            return Resource.from_directory(name="profiles", directory_path=tmp_dir)
+            return Resource.from_directory(name="profiles", directory_path=str(tmp_dir))
 
     def send_raw_analysis(self, sample, outdir, metadata, dumps_metadata, quality):
         """
@@ -694,7 +709,8 @@ class Drakrun(Karton):
     @with_logs("drakrun.log")
     def process(self, task: Task):
         # Gather basic facts
-        sample = task.get_resource("sample")
+        # Actually, Karton should return RemoteResource type here
+        sample: RemoteResource = cast(RemoteResource, task.get_resource("sample"))
         magic_output = magic.from_buffer(sample.content)
         sha256sum = hashlib.sha256(sample.content).hexdigest()
 

@@ -1,11 +1,10 @@
 import json
 import os
 import re
-
 from dataclasses import dataclass, field
 from typing import Optional
 
-from dataclasses_json import config, dataclass_json, DataClassJsonMixin
+from dataclasses_json import DataClassJsonMixin, config, dataclass_json
 
 from .paths import ETC_DIR, PROFILE_DIR
 from .util import safe_delete
@@ -38,6 +37,7 @@ DEFAULT_DRAKVUF_PLUGINS = [
     "windowmon",
     "wmimon",
 ]
+
 
 @dataclass
 class InstallInfo(DataClassJsonMixin):

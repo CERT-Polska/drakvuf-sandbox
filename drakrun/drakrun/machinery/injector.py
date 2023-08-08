@@ -1,5 +1,5 @@
 import subprocess
-from typing import List, Optional
+from typing import List
 
 from ..config import RuntimeInfo
 
@@ -49,7 +49,7 @@ class Injector:
         return cmd
 
     def _get_cmdline_createproc(
-        self, exec_cmd: str, wait: bool = False, timeout: Optional[int] = None
+        self, exec_cmd: str, wait: bool = False, timeout: int = 60
     ) -> List[str]:
         cmd = self._get_cmdline_generic("createproc", timeout=timeout)
         cmd.extend(["-e", exec_cmd])

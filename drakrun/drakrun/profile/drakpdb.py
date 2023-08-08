@@ -59,12 +59,12 @@ unrequired_dll_file_list = [
         "--json-mscorwks",
     ),
     DLL(
-        "Windows/winsxs/amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll",
+        "Windows/winsxs/amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll",  # noqa: E501
         "amd64_gdiplus_profile",
         None,
     ),
     DLL(
-        "Windows/winsxs/x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll",
+        "Windows/winsxs/x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll",  # noqa: E501
         "x86_gdiplus_profile",
         None,
     ),
@@ -361,7 +361,8 @@ def make_symstore_hash(
     codeview_struct: Union[Container, pdbparse.PDBInfoStream]
 ) -> str:
     """
-    If `codeview_struct` is an instance of Container, it should be returned from `CV_RSDS_HEADER.parse()`.
+    If `codeview_struct` is an instance of Container,
+    it should be returned from `CV_RSDS_HEADER.parse()`.
     """
     guid = codeview_struct.GUID
     guid_str = "%08x%04x%04x%s" % (
@@ -523,7 +524,8 @@ def main():
     parser.add_argument(
         "action",
         type=str,
-        help="one of: fetch_pdb (requires --pdb-name and --guid_age), parse_pdb (requires --pdb-name), pe_codeview_data (requires --file)",
+        help="one of: fetch_pdb (requires --pdb-name and --guid_age), "
+        "parse_pdb (requires --pdb-name), pe_codeview_data (requires --file)",
     )
     parser.add_argument(
         "--pdb_name",
