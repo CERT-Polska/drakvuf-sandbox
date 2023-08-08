@@ -3,11 +3,14 @@ import os
 import re
 import subprocess
 import tempfile
+
+from dataclasses import dataclass
 from pathlib import Path
 
 from drakrun.config import ETC_DIR, LIB_DIR, VM_CONFIG_DIR, VOLUME_DIR, InstallInfo
-from drakrun.storage import StorageBackendBase, get_storage_backend
 from drakrun.util import safe_delete, try_run
+
+from .storage import StorageBackendBase, get_storage_backend
 
 log = logging.getLogger("drakrun")
 
@@ -16,7 +19,7 @@ SECOND_CDROM_DRIVE = "hdd"
 
 
 def generate_vm_conf(install_info: InstallInfo, vm_id: int):
-    with open(os.path.join(ETC_DIR, "scripts", "cfg.template"), "r") as f:
+    with open(os.path.join(ETC_DIR, "../scripts", "cfg.template"), "r") as f:
         template = f.read()
 
     storage_backend = get_storage_backend(install_info)
@@ -202,3 +205,89 @@ class VirtualMachine:
             except subprocess.CalledProcessError as e:
                 log.error(f"Compressing raw memory from {self.vm_name} failed.")
                 raise e
+
+
+def get_domid_from_instance_id(instance_id: int) -> int:
+    output = subprocess.check_output(["xl", "domid", f"vm-{instance_id}"])
+    return int(output.decode("utf-8").strip())
+
+
+def get_xl_info():
+    xl_info_out = subprocess.check_output(["xl", "info"]).decode("utf-8", "replace")
+    xl_info_lines = xl_info_out.strip().split("\n")
+
+    cfg = {}
+
+    for line in xl_info_lines:
+        k, v = line.split(":", 1)
+        k, v = k.strip(), v.strip()
+        cfg[k] = v
+
+    return cfg
+
+
+def get_xen_commandline(parsed_xl_info):
+    opts = parsed_xl_info["xen_commandline"].split(" ")
+
+    cfg = {}
+
+    for opt in opts:
+        if not opt.strip():
+            continue
+
+        if "=" not in opt:
+            cfg[opt] = "1"
+        else:
+            k, v = opt.split("=", 1)
+            cfg[k] = v
+
+    return cfg
+
+def validate_xen_commandline():
+    required_cmdline = {
+        "sched": "credit",
+        "force-ept": "1",
+        "ept": "ad=0",
+        "hap_1gb": "0",
+        "hap_2mb": "0",
+        "altp2m": "1",
+        "hpet": "legacy-replacement",
+    }
+
+    parsed_xl_info = get_xl_info()
+    xen_cmdline = get_xen_commandline(parsed_xl_info)
+
+    unrecommended = []
+
+    for k, v in required_cmdline.items():
+        actual_v = xen_cmdline.get(k)
+
+        if actual_v != v:
+            unrecommended.append((k, v, actual_v))
+
+    return unrecommended
+
+@dataclass
+class VmiGuidInfo:
+    version: str
+    guid: str
+    filename: str
+
+
+def vmi_win_guid(vm_name: str) -> VmiGuidInfo:
+    result = subprocess.run(
+        ["vmi-win-guid", "name", vm_name],
+        timeout=30,
+        capture_output=True,
+    )
+
+    output = result.stdout.decode()
+
+    version = re.search(r"Version: (.*)", output)
+    pdb_guid = re.search(r"PDB GUID: ([0-9a-f]+)", output)
+    kernel_filename = re.search(r"Kernel filename: ([a-z]+\.[a-z]+)", output)
+
+    if version is None or pdb_guid is None or kernel_filename is None:
+        raise RuntimeError("Invalid vmi-win-guid output")
+
+    return VmiGuidInfo(version.group(1), pdb_guid.group(1), kernel_filename.group(1))

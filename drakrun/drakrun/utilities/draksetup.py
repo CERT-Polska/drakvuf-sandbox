@@ -21,7 +21,7 @@ from minio.error import NoSuchKey
 from requests import RequestException
 from tqdm import tqdm
 
-from drakrun.apiscout import (
+from drakrun.profile.apiscout import (
     build_static_apiscout_profile,
     make_static_apiscout_profile_for_dll,
 )
@@ -36,7 +36,7 @@ from drakrun.config import (
     RuntimeInfo,
     VmiOffsets,
 )
-from drakrun.drakpdb import (
+from drakrun.profile.drakpdb import (
     DLL,
     dll_file_list,
     fetch_pdb,
@@ -45,31 +45,31 @@ from drakrun.drakpdb import (
     required_dll_file_list,
     unrequired_dll_file_list,
 )
-from drakrun.injector import Injector
-from drakrun.networking import (
+from drakrun.machinery.injector import Injector
+from drakrun.machinery.networking import (
     delete_vm_network,
     setup_vm_network,
     start_dnsmasq,
     stop_dnsmasq,
 )
-from drakrun.storage import (
+from drakrun.machinery.storage import (
     REGISTERED_BACKEND_NAMES,
     StorageBackendBase,
     get_storage_backend,
 )
 from drakrun.util import (
-    VmiGuidInfo,
     file_sha256,
     safe_delete,
-    vmi_win_guid,
 )
-from drakrun.vm import (
+from drakrun.machinery.vm import (
     FIRST_CDROM_DRIVE,
     SECOND_CDROM_DRIVE,
     VirtualMachine,
     delete_vm_conf,
     generate_vm_conf,
     get_all_vm_conf,
+    VmiGuidInfo,
+    vmi_win_guid,
 )
 
 log = logging.getLogger(__name__)
@@ -272,8 +272,8 @@ def sanity_check():
 def perform_xtf():
     logging.info("Testing your Xen installation...")
     module_dir = os.path.dirname(os.path.realpath(__file__))
-    cfg_path = os.path.join(module_dir, "tools", "test-hvm64-example.cfg")
-    firmware_path = os.path.join(module_dir, "tools", "test-hvm64-example")
+    cfg_path = os.path.join(module_dir, "../tools", "test-hvm64-example.cfg")
+    firmware_path = os.path.join(module_dir, "../tools", "test-hvm64-example")
 
     with open(cfg_path, "r") as f:
         test_cfg = (
@@ -292,7 +292,7 @@ def perform_xtf():
         test_hvm64.create(pause=True, timeout=30)
 
         module_dir = os.path.dirname(os.path.realpath(__file__))
-        test_altp2m_tool = os.path.join(module_dir, "tools", "test-altp2m")
+        test_altp2m_tool = os.path.join(module_dir, "../tools", "test-altp2m")
 
         logging.info("Testing altp2m feature...")
         try:
@@ -661,7 +661,7 @@ def extract_explorer_pid(
 ) -> int:
     """Call get-explorer-pid helper and get its PID"""
     module_dir = os.path.dirname(os.path.realpath(__file__))
-    pid_tool = os.path.join(module_dir, "tools", "get-explorer-pid")
+    pid_tool = os.path.join(module_dir, "../tools", "get-explorer-pid")
     try:
         explorer_pid_s = subprocess.check_output(
             [pid_tool, domain, kernel_profile, hex(offsets.kpgd)], timeout=timeout
@@ -889,14 +889,14 @@ def postupgrade():
     if not check_root():
         return
 
-    with open(os.path.join(ETC_DIR, "scripts/cfg.template"), "r") as f:
+    with open(os.path.join(ETC_DIR, "../templates/cfg.template"), "r") as f:
         template = f.read()
 
     passwd_characters = string.ascii_letters + string.digits
     passwd = "".join(secrets.choice(passwd_characters) for _ in range(20))
     template = template.replace("{{ VNC_PASS }}", passwd)
 
-    with open(os.path.join(ETC_DIR, "scripts", "cfg.template"), "w") as f:
+    with open(os.path.join(ETC_DIR, "../scripts", "cfg.template"), "w") as f:
         f.write(template)
 
     detect_defaults()
@@ -1237,7 +1237,7 @@ def do_export_minimal(mc, bucket, name):
 
     logging.info("Uploading VM template")
     mc.fput_object(
-        bucket, f"{name}/cfg.template", os.path.join(ETC_DIR, "scripts", "cfg.template")
+        bucket, f"{name}/cfg.template", os.path.join(ETC_DIR, "../scripts", "cfg.template")
     )
 
     with tempfile.NamedTemporaryFile() as disk_image:
@@ -1260,7 +1260,7 @@ def do_import_minimal(mc, name, bucket, zpool):
 
     logging.info("Downloading VM config")
     mc.fget_object(
-        bucket, f"{name}/cfg.template", os.path.join(ETC_DIR, "scripts", "cfg.template")
+        bucket, f"{name}/cfg.template", os.path.join(ETC_DIR, "../scripts", "cfg.template")
     )
 
     # Now we have imported InstallInfo object

@@ -1,5 +1,0 @@
-#!/usr/bin/env python
-
-import drakrun.main as dm
-
-dm.cmdline_main()

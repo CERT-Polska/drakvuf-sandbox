@@ -7,21 +7,13 @@ from typing import Optional
 
 from dataclasses_json import config, dataclass_json, DataClassJsonMixin
 
+from .paths import ETC_DIR, PROFILE_DIR
 from .util import safe_delete
 
 hexstring = config(
     encoder=lambda v: hex(v),
     decoder=lambda v: int(v, 16),
 )
-
-ETC_DIR = os.getenv("DRAKRUN_ETC_DIR") or "/etc/drakrun"
-VM_CONFIG_DIR = os.path.join(ETC_DIR, "configs")
-
-
-LIB_DIR = os.getenv("DRAKRUN_LIB_DIR") or "/var/lib/drakrun"
-PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
-APISCOUT_PROFILE_DIR = os.path.join(LIB_DIR, "apiscout_profile")
-VOLUME_DIR = os.path.join(LIB_DIR, "volumes")
 
 DEFAULT_DRAKVUF_PLUGINS = [
     "apimon",

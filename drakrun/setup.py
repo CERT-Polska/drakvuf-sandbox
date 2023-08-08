@@ -1,9 +1,5 @@
 #!/usr/bin/env python
-
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup, find_packages
 
 import os
 
@@ -15,20 +11,22 @@ with open(version_path) as f:
 setup(
     name="drakrun",
     version=version_info["__version__"],
-    description="DRAKRUN",
+    description="Drakvuf Sandbox analysis runner",
     package_dir={"drakrun": "drakrun"},
-    packages=["drakrun", "drakrun.test"],
+    packages=find_packages(),
     include_package_data=True,
     install_requires=open("requirements.txt").read().splitlines(),
-    scripts=[
-        "drakrun/py-scripts/drakrun",
-        "drakrun/py-scripts/draksetup",
-        "drakrun/py-scripts/drakpush",
-        "drakrun/py-scripts/drakpdb",
-        "drakrun/py-scripts/drakplayground",
-        "drakrun/py-scripts/draktestd",
-        "drakrun/py-scripts/draktest",
-    ],
+    entry_points={
+        'console_scripts': [
+            'drakrun=drakrun.drakrun:Drakrun.main',
+            'draksetup=drakrun.utilities.draksetup:main',
+            'drakpush=drakrun.utiltities.drakpush:main',
+            'drakplayground=drakrun.utilities.playground:main',
+            'draktestd=drakrun.utilities.regression:RegressionTester.main',
+            'draktest=drakrun.utilities.regression:RegressionTester.submit_main',
+            'drakpdb=drakrun.profile.drakpdb:main',
+        ]
+    },
     classifiers=[
         "Programming Language :: Python",
         "Operating System :: OS Independent",

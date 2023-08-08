@@ -9,7 +9,7 @@ from _pytest.monkeypatch import MonkeyPatch
 from common_utils import tool_exists
 
 from drakrun.config import InstallInfo
-from drakrun.storage import LvmStorageBackend
+from drakrun.machinery.storage import LvmStorageBackend
 from drakrun.util import safe_delete
 
 

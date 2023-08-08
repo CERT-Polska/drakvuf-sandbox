@@ -17,7 +17,7 @@ from tqdm import tqdm
 
 from drakrun.config import ETC_DIR
 from drakrun.util import patch_config
-from drakrun.version import __version__ as DRAKRUN_VERSION
+from ..__version__ import __version__ as DRAKRUN_VERSION
 
 
 @contextmanager

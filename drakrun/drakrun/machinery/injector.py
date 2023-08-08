@@ -1,7 +1,7 @@
 import subprocess
 from typing import List, Optional
 
-from drakrun.util import RuntimeInfo
+from ..config import RuntimeInfo
 
 
 class Injector:

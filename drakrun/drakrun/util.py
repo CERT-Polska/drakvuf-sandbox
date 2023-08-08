@@ -2,7 +2,6 @@ import contextlib
 import hashlib
 import logging
 import os
-import re
 import subprocess
 import sys
 import traceback
@@ -39,43 +38,6 @@ def patch_config(cfg):
             sys.stderr.write(
                 "WARNING! Misconfiguration: minio.env doesn't contain MINIO_ACCESS_KEY or MINIO_SECRET_KEY.\n"
             )
-
-    return cfg
-
-
-def get_domid_from_instance_id(instance_id: int) -> int:
-    output = subprocess.check_output(["xl", "domid", f"vm-{instance_id}"])
-    return int(output.decode("utf-8").strip())
-
-
-def get_xl_info():
-    xl_info_out = subprocess.check_output(["xl", "info"]).decode("utf-8", "replace")
-    xl_info_lines = xl_info_out.strip().split("\n")
-
-    cfg = {}
-
-    for line in xl_info_lines:
-        k, v = line.split(":", 1)
-        k, v = k.strip(), v.strip()
-        cfg[k] = v
-
-    return cfg
-
-
-def get_xen_commandline(parsed_xl_info):
-    opts = parsed_xl_info["xen_commandline"].split(" ")
-
-    cfg = {}
-
-    for opt in opts:
-        if not opt.strip():
-            continue
-
-        if "=" not in opt:
-            cfg[opt] = "1"
-        else:
-            k, v = opt.split("=", 1)
-            cfg[k] = v
 
     return cfg
 
@@ -173,29 +135,3 @@ def file_sha256(filename, blocksize=65536) -> str:
         for block in iter(lambda: f.read(blocksize), b""):
             file_hash.update(block)
     return file_hash.hexdigest()
-
-
-@dataclass
-class VmiGuidInfo:
-    version: str
-    guid: str
-    filename: str
-
-
-def vmi_win_guid(vm_name: str) -> VmiGuidInfo:
-    result = subprocess.run(
-        ["vmi-win-guid", "name", vm_name],
-        timeout=30,
-        capture_output=True,
-    )
-
-    output = result.stdout.decode()
-
-    version = re.search(r"Version: (.*)", output)
-    pdb_guid = re.search(r"PDB GUID: ([0-9a-f]+)", output)
-    kernel_filename = re.search(r"Kernel filename: ([a-z]+\.[a-z]+)", output)
-
-    if version is None or pdb_guid is None or kernel_filename is None:
-        raise RuntimeError("Invalid vmi-win-guid output")
-
-    return VmiGuidInfo(version.group(1), pdb_guid.group(1), kernel_filename.group(1))

@@ -27,28 +27,29 @@ import magic
 from karton.core import Config, Karton, LocalResource, Resource, Task
 
 import drakrun.sample_startup as sample_startup
-from drakrun.drakpdb import dll_file_list
-from drakrun.injector import Injector
-from drakrun.networking import setup_vm_network, start_dnsmasq, start_tcpdump_collector
-from drakrun.storage import get_storage_backend
+from drakrun.profile.drakpdb import dll_file_list
 from drakrun.util import (
     RuntimeInfo,
     file_sha256,
-    get_xen_commandline,
-    get_xl_info,
     graceful_exit,
     patch_config,
 )
-from drakrun.vm import VirtualMachine, generate_vm_conf
 
 from .config import (
-    APISCOUT_PROFILE_DIR,
     DEFAULT_DRAKVUF_PLUGINS,
     ETC_DIR,
     PROFILE_DIR,
-    VOLUME_DIR,
     InstallInfo,
 )
+from .paths import (
+    APISCOUT_PROFILE_DIR,
+    DRAKRUN_CONFIG_PATH,
+    VOLUME_DIR,
+)
+from .machinery.injector import Injector
+from .machinery.networking import setup_vm_network, start_dnsmasq, start_tcpdump_collector
+from .machinery.storage import get_storage_backend
+from .machinery.vm import VirtualMachine, validate_xen_commandline, generate_vm_conf
 from .__version__ import __version__
 
 
@@ -206,13 +207,15 @@ class Drakrun(Karton):
         if args is None:
             parser = cls.args_parser()
             args = parser.parse_args()
-        config = Config(path=args.config_file)
+        config_path = args.config_file or DRAKRUN_CONFIG_PATH
+        config = Config(path=config_path)
         cls.config_from_args(config, args)
         return cls(instance_id=args.instance, config=config)
 
     @classmethod
     def main(cls):
         service = cls.karton_from_args()
+        service.validate_xen_commandline()
         service.init_drakrun()
         service.loop()
 
@@ -243,7 +246,6 @@ class Drakrun(Karton):
             plugin_list.append("codemon")
         return plugin_list
 
-
     @property
     def test_run(self) -> bool:
         # If testing is disabled, it's not a test run
@@ -267,14 +269,49 @@ class Drakrun(Karton):
         self.log.info("Calculating snapshot hash...")
         self.snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
 
-    def _karton_safe_get_headers(self, task, key, fallback):
-        ret = task.headers.get(key, fallback)
-        # intentional workaround due to a bug in karton
-        if ret is None:
-            self.log.warning(f"Could not get {key}, falling back to {fallback}")
-            ret = fallback
+    def validate_xen_commandline(self):
+        unrecommended = validate_xen_commandline()
 
-        return ret
+        if unrecommended:
+            logging.warning("-" * 80)
+            logging.warning(
+                "You don't have the recommended settings in your Xen's command line."
+            )
+            logging.warning(
+                "Please amend settings in your GRUB_CMDLINE_XEN_DEFAULT in /etc/default/grub.d/xen.cfg file."
+            )
+
+            for k, v, actual_v in unrecommended:
+                if actual_v is not None:
+                    logging.warning(f"- Set {k}={v} (instead of {k}={actual_v})")
+                else:
+                    logging.warning(f"- Set {k}={v} ({k} is not set right now)")
+
+            logging.warning(
+                "Then, please execute the following commands as root: update-grub && reboot"
+            )
+            logging.warning("-" * 80)
+            logging.warning(
+                "This check can be skipped by adding xen_cmdline_check=ignore in [drakrun] section of drakrun's config."
+            )
+            logging.warning(
+                "Please be aware that some bugs may arise when using unrecommended settings."
+            )
+
+            try:
+                xen_cmdline_check = self.config.get("drakrun", "xen_cmdline_check")
+            except NoOptionError:
+                xen_cmdline_check = "fail"
+
+            if xen_cmdline_check == "ignore":
+                logging.warning(
+                    "ATTENTION! Configuration specified that check result should be ignored, continuing anyway..."
+                )
+            else:
+                logging.error(
+                    "Exitting due to above warnings. Please ensure that you are using recommended Xen's command line."
+                )
+                sys.exit(1)
 
     def crop_dumps(self, dirpath, target_zip):
         zipf = zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED)
@@ -679,7 +716,7 @@ class Drakrun(Karton):
         self.update_vnc_info()
 
         # Get sample extension. If none set, fall back to exe/dll
-        extension = self._karton_safe_get_headers(task, "extension", "exe").lower()
+        extension = (task.headers.get("extension") or "exe").lower()
 
         if "(DLL)" in magic_output:
             extension = "dll"
@@ -767,96 +804,9 @@ class Drakrun(Karton):
         with open(os.path.join(outdir, "metadata.json"), "w") as f:
             f.write(json.dumps(metadata))
 
-        quality = self._karton_safe_get_headers(task, "quality", "high")
+        quality = task.headers.get("quality") or "high"
         self.send_raw_analysis(sample, outdir, metadata, dumps_metadata, quality)
 
 
-def validate_xen_commandline():
-    required_cmdline = {
-        "sched": "credit",
-        "force-ept": "1",
-        "ept": "ad=0",
-        "hap_1gb": "0",
-        "hap_2mb": "0",
-        "altp2m": "1",
-        "hpet": "legacy-replacement",
-    }
-
-    parsed_xl_info = get_xl_info()
-    xen_cmdline = get_xen_commandline(parsed_xl_info)
-
-    unrecommended = []
-
-    for k, v in required_cmdline.items():
-        actual_v = xen_cmdline.get(k)
-
-        if actual_v != v:
-            unrecommended.append((k, v, actual_v))
-
-    return unrecommended
-
-
-def main(args):
-    conf_path = os.path.join(ETC_DIR, "config.ini")
-    conf = patch_config(Config(conf_path))
-
-    if not conf.config.get("minio", "access_key").strip():
-        logging.warning(
-            f"Detected blank value for minio access_key in {conf_path}. "
-            "This service may not work properly."
-        )
-
-    unrecommended = validate_xen_commandline()
-
-    if unrecommended:
-        logging.warning("-" * 80)
-        logging.warning(
-            "You don't have the recommended settings in your Xen's command line."
-        )
-        logging.warning(
-            "Please amend settings in your GRUB_CMDLINE_XEN_DEFAULT in /etc/default/grub.d/xen.cfg file."
-        )
-
-        for k, v, actual_v in unrecommended:
-            if actual_v is not None:
-                logging.warning(f"- Set {k}={v} (instead of {k}={actual_v})")
-            else:
-                logging.warning(f"- Set {k}={v} ({k} is not set right now)")
-
-        logging.warning(
-            "Then, please execute the following commands as root: update-grub && reboot"
-        )
-        logging.warning("-" * 80)
-        logging.warning(
-            "This check can be skipped by adding xen_cmdline_check=ignore in [drakrun] section of drakrun's config."
-        )
-        logging.warning(
-            "Please be aware that some bugs may arise when using unrecommended settings."
-        )
-
-        try:
-            xen_cmdline_check = conf.config.get("drakrun", "xen_cmdline_check")
-        except NoOptionError:
-            xen_cmdline_check = "fail"
-
-        if xen_cmdline_check == "ignore":
-            logging.warning(
-                "ATTENTION! Configuration specified that check result should be ignored, continuing anyway..."
-            )
-        else:
-            logging.error(
-                "Exitting due to above warnings. Please ensure that you are using recommended Xen's command line."
-            )
-            sys.exit(1)
-
-    # Apply Karton configuration overrides
-    drakrun_conf = conf.config["drakrun"] if conf.config.has_section("drakrun") else {}
-    Drakrun.reconfigure(drakrun_conf)
-
-    c = Drakrun(conf, args.instance)
-    c.init_drakrun()
-    c.loop()
-
-
 if __name__ == "__main__":
-    cmdline_main()
+    Drakrun.main()

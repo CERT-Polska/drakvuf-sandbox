@@ -9,12 +9,12 @@ from textwrap import dedent
 from IPython import embed
 
 from drakrun.config import ETC_DIR, PROFILE_DIR, InstallInfo
-from drakrun.draksetup import find_default_interface, insert_cd
-from drakrun.injector import Injector
-from drakrun.networking import delete_vm_network, setup_vm_network, start_dnsmasq
-from drakrun.storage import get_storage_backend
+from drakrun.utilities.draksetup import find_default_interface, insert_cd
+from drakrun.machinery.injector import Injector
+from drakrun.machinery.networking import delete_vm_network, setup_vm_network, start_dnsmasq
+from drakrun.machinery.storage import get_storage_backend
 from drakrun.util import RuntimeInfo, graceful_exit
-from drakrun.vm import FIRST_CDROM_DRIVE, VirtualMachine, generate_vm_conf
+from drakrun.machinery.vm import FIRST_CDROM_DRIVE, VirtualMachine, generate_vm_conf
 
 
 class DrakmonShell:

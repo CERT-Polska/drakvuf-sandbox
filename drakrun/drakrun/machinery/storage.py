@@ -6,13 +6,14 @@ import shlex
 import shutil
 import subprocess
 import time
+from abc import ABC, abstractmethod
 from typing import Tuple
 
 from drakrun.config import VOLUME_DIR, InstallInfo
 from drakrun.util import safe_delete
 
 
-class StorageBackendBase:
+class StorageBackendBase(ABC):
     """Base class for all storage backends
 
     Defines interface that has to be implemented in order to be
@@ -29,6 +30,7 @@ class StorageBackendBase:
     def __init__(self, install_info: InstallInfo):
         self._install_info = install_info
 
+    @abstractmethod
     def initialize_vm0_volume(self, disk_size: str):
         """Create base volume for vm-0 with given size
 
@@ -36,30 +38,37 @@ class StorageBackendBase:
         """
         raise NotImplementedError
 
+    @abstractmethod
     def snapshot_vm0_volume(self):
         """Saves or snapshots base vm-0 volume for later use by other VMs"""
         raise NotImplementedError
 
+    @abstractmethod
     def get_vm_disk_path(self, vm_id: int) -> str:
         """Returns disk path for given VM as defined by XL configuration"""
         raise NotImplementedError
 
+    @abstractmethod
     def rollback_vm_storage(self, vm_id: int):
         """Rolls back changes and prepares fresh storage for new run of this VM"""
         raise NotImplementedError
 
+    @abstractmethod
     def get_vm0_snapshot_time(self):
         """Get UNIX timestamp of when vm-0 snapshot was last modified"""
         raise NotImplementedError
 
+    @abstractmethod
     def export_vm0(self, file):
         """Export vm-0 disk into a file (symmetric to import_vm0)"""
         raise NotImplementedError
 
+    @abstractmethod
     def import_vm0(self, file):
         """Import vm-0 disk from a file (symmetric to export_vm0)"""
         raise NotImplementedError
 
+    @abstractmethod
     def delete_vm_volume(self, vm_id: int):
         """Delete vm_id disk volume"""
         raise NotImplementedError
