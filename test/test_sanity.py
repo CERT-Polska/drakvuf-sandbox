@@ -1,6 +1,5 @@
 import time
 import json
-import requests
 import pytest
 
 from utils import get_hypervisor_type, get_service_info, Drakcore

@@ -8,7 +8,7 @@ from pathlib import Path
 from invoke.exceptions import UnexpectedExit
 from vm_runner_client import DrakvufVM
 
-from utils import apt_install, dpkg_install, getenv_list
+from utils import apt_install
 
 logging.basicConfig(level=logging.INFO)
 
@@ -23,35 +23,6 @@ MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
 # VM_RUNNER_API_KEY
 # VM_RUNNER_SOCKS_USERNAME
 # VM_RUNNER_SOCKS_PASSWORD
-
-DRAKMON_DEPS = getenv_list("DRAKMON_DEPS", [
-    "python3.7",
-    "libpython3.7",
-    "python3-distutils",
-    "tcpdump",
-    "genisoimage",
-    "qemu-utils",
-    "bridge-utils",
-    "dnsmasq",
-    "libmagic1",
-    "lvm2",
-])
-
-DRAKVUF_DEPS = getenv_list("DRAKVUF_DEPS", [
-    "libpixman-1-0",
-    "libpng16-16",
-    "libnettle6",
-    "libgnutls30",
-    "libfdt1",
-    "libglib2.0-0",
-    "libglib2.0-dev",
-    "libjson-c3",
-    "libyajl2",
-    "libaio1",
-    "libx11-6",
-    "lvm2",
-    "libgnutls28-dev",
-])
 
 DRAKMON_SERVICES = [
     "drak-system.service",
@@ -122,12 +93,10 @@ def drakmon_setup():
 
         logging.info("Upload finished")
         ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
-        logging.info("Install apt")
-        apt_install(ssh, DRAKVUF_DEPS)
-
+        logging.info("Install DRAKVUF")
         # Install DRAKVUF
         for d in drakvuf_debs:
-            dpkg_install(ssh, d.name)
+            apt_install(ssh, ["./" + d.name])
 
         # Reboot into Xen
         ssh.run("systemctl reboot", disown=True)
@@ -146,10 +115,8 @@ def drakmon_setup():
     with drakvuf_vm.connect_ssh() as ssh:
         ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
         apt_install(ssh, ["redis-server"])
-        apt_install(ssh, DRAKMON_DEPS)
-
         for d in drakvuf_sandbox_debs:
-            dpkg_install(ssh, d.name)
+            apt_install(ssh, ["./" + d.name])
 
         # Save default config
         ssh.run("cp /etc/drakrun/config.ini /etc/drakrun/config.ini.bak")
