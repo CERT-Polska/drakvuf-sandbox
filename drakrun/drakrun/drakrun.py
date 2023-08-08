@@ -183,7 +183,7 @@ class Drakrun(Karton):
         }
         if self.config.has_section("drakvuf_plugins"):
             for quality, list_str in self.config["drakvuf_plugins"].items():
-                plugins = [x for x in list_str.split(",") if x.strip()]
+                plugins = [x.strip() for x in list_str.split(",") if x.strip()]
                 self.active_plugins[quality] = plugins
 
         if self.sample_testing:
