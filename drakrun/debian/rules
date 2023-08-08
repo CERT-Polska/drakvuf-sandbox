@@ -1,15 +1,12 @@
 #!/usr/bin/make -f
-
-PYTHON_BIN := "$(shell cat 'package/python-bin')"
+export DH_VIRTUALENV_INSTALL_ROOT=/usr/share/drakvuf-sandbox
 
 %:
 	dh $@ --with python-virtualenv
 
 build:
-	$(MAKE) -C drakrun/tools
-	cp /opt/xtf/tests/example/test-hvm64-example drakrun/tools/test-hvm64-example
-	cp drakrun/config.dist.ini drakrun/config.ini
-	cp drakrun/hooks.dist.txt drakrun/hooks.txt
+	$(MAKE) -C drakrun/utilities/draksetup/tools
+	cp /opt/xtf/tests/example/test-hvm64-example drakrun/utilities/draksetup/tools/test-hvm64-example
 
 override_dh_virtualenv:
 	dh_virtualenv --python ${PYTHON_BIN}

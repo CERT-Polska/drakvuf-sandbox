@@ -50,19 +50,10 @@ jobs:
   lint_drakrun:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
+      - uses: CERT-Polska/lint-python-action@v2
         with:
-          python-version: 3.8
-      - run: pip3 install black==22.6.0 isort==5.9.3 flake8
-      - name: Check with black
-        run: black --check --diff drakrun/
-      - name: Check with isort
-        run: isort --profile black --check drakrun/
-      - run: pip3 install -r drakrun/requirements.txt
-      - name: Check with flake8
-        run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakrun/
+          python-version: 3.7
+          source: drakrun/
   package_drakcore:
     needs: [lint_drakcore, lint_drakcore_frontend]
     runs-on: ubuntu-latest
@@ -93,12 +84,11 @@ jobs:
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
-          apt-get install -y wget python2.7 python3 python3-pip python3-venv dh-virtualenv debhelper devscripts libpixman-1-0 libpng16-16 libfdt1 libglib2.0-dev libjson-c3 libyajl2 libaio1 libc6-dev-i386 systemd
+          apt-get install -y wget python2.7 python3 python3-pip python3-venv dh-virtualenv debhelper devscripts libpixman-1-0 libpng16-16 libfdt1 libglib2.0-dev libjson-c3 libyajl2 libaio1 libc6-dev-i386
           wget -O drakvuf.deb https://github.com/CERT-Polska/drakvuf-sandbox/releases/download/v0.18.1/debian_buster_drakvuf-bundle-0.8-git20210921114837+5575888-1-generic.deb
           dpkg -i drakvuf.deb
           sh -c "cd /opt && git clone https://xenbits.xen.org/git-http/xtf.git && cd xtf && git checkout 8ab15139728a8efd3ebbb60beb16a958a6a93fa1 && make PYTHON=python2 -j4"
           cd drakrun
-          package/find-python.sh
           dpkg-buildpackage -us -uc -b
       - uses: actions/upload-artifact@v3
         with:

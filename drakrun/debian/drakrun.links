@@ -1,7 +1,7 @@
-opt/venvs/drakrun/bin/draksetup usr/bin/draksetup
-opt/venvs/drakrun/bin/drakrun usr/bin/drakrun
-opt/venvs/drakrun/bin/drakpush usr/bin/drakpush
-opt/venvs/drakrun/bin/drakpdb usr/bin/drakpdb
-opt/venvs/drakrun/bin/drakplayground usr/bin/drakplayground
-opt/venvs/drakrun/bin/draktestd usr/bin/draktestd
-opt/venvs/drakrun/bin/draktest usr/bin/draktest
+usr/share/drakvuf-sandbox/drakrun/bin/draksetup usr/bin/draksetup
+usr/share/drakvuf-sandbox/drakrun/bin/drakrun usr/bin/drakrun
+usr/share/drakvuf-sandbox/drakrun/bin/drakpush usr/bin/drakpush
+usr/share/drakvuf-sandbox/drakrun/bin/drakpdb usr/bin/drakpdb
+usr/share/drakvuf-sandbox/drakrun/bin/drakplayground usr/bin/drakplayground
+usr/share/drakvuf-sandbox/drakrun/bin/draktestd usr/bin/draktestd
+usr/share/drakvuf-sandbox/drakrun/bin/draktest usr/bin/draktest

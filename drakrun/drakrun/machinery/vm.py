@@ -70,6 +70,14 @@ def delete_vm_conf(vm_id: int) -> bool:
     return safe_delete(os.path.join(VM_CONFIG_DIR, f"vm-{vm_id}.cfg"))
 
 
+def eject_cd(domain, drive):
+    subprocess.run(["xl", "cd-eject", domain, drive], check=True)
+
+
+def insert_cd(domain, drive, iso):
+    subprocess.run(["xl", "cd-insert", domain, drive, iso], check=True)
+
+
 class VirtualMachine:
     def __init__(
         self, backend: StorageBackendBase, vm_id: int, fmt: str = "vm-{}", cfg_path=None

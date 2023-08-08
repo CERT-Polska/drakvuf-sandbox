@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import signal
 import subprocess
 from typing import Optional
@@ -190,3 +191,22 @@ def delete_vm_network(vm_id, net_enable, out_interface, dns_server):
         )
         del_iptable_rule(f"FORWARD -i drak{vm_id} -o {out_interface} -j ACCEPT")
         del_iptable_rule(f"FORWARD -i {out_interface} -o drak{vm_id} -j ACCEPT")
+
+
+def find_default_interface():
+    routes = (
+        subprocess.check_output(
+            "ip route show default", shell=True, stderr=subprocess.STDOUT
+        )
+        .decode("ascii")
+        .strip()
+        .split("\n")
+    )
+
+    for route in routes:
+        m = re.search(r"dev ([^ ]+)", route.strip())
+
+        if m:
+            return m.group(1)
+
+    return None
