@@ -115,11 +115,10 @@ jobs:
         name: Build Xen Test Framework
         working-directory: /opt
         run: |
-          apt install -y -q python2
           git clone https://xenbits.xen.org/git-http/xtf.git
           cd xtf
-          git checkout 8ab15139728a8efd3ebbb60beb16a958a6a93fa1
-          make PYTHON=python2 -j4
+          git checkout bf1c4eb6cb52785cf539eb83752dfcecfe66c5d1
+          make -j4
       - name: Build draksetup tools
         run: |
           make -C ./drakrun/drakrun/tools
