@@ -6,10 +6,7 @@ PYTHON_BIN := "$(shell cat 'package/python-bin')"
 	dh $@ --with python-virtualenv
 
 build:
-	if [ ! -f drakrun/tools/test-hvm64-example ] ; then
-	    cp /opt/xtf/tests/example/test-hvm64-example drakrun/tools/test-hvm64-example
-	    $(MAKE) -C drakrun/tools
-	fi
+	if [ ! -f drakrun/tools/test-hvm64-example ] ; then cp /opt/xtf/tests/example/test-hvm64-example drakrun/tools/test-hvm64-example ; $(MAKE) -C drakrun/tools ; fi
 	cp drakrun/config.dist.ini drakrun/config.ini
 	cp drakrun/hooks.dist.txt drakrun/hooks.txt
 
