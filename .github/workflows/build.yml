@@ -113,6 +113,7 @@ jobs:
         name: Build Xen Test Framework
         working-directory: /opt
         run: |
+          apt install -y -q python2
           git clone https://xenbits.xen.org/git-http/xtf.git
           cd xtf
           git checkout 8ab15139728a8efd3ebbb60beb16a958a6a93fa1
