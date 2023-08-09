@@ -102,9 +102,9 @@ class DrakvufVM:
     def get_vm_identity():
         sanitize = lambda v: re.sub(r"[^a-zA-Z0-9_\-]", "_", v)[:32]
         if os.getenv("GITLAB_CI"):
-            return sanitize(f'gitlab-{os.getenv("CI_COMMIT_REF_NAME")}')
+            return sanitize(f'gitlab-{os.getenv("CI_COMMIT_REF_NAME")}-{os.getenv("VM_SUFFIX")}')
         elif os.getenv("GITHUB_ACTIONS"):
-            return sanitize(f'github-{os.getenv("GITHUB_REF_NAME")}')
+            return sanitize(f'github-{os.getenv("GITHUB_REF_NAME")}-{os.getenv("VM_SUFFIX")}')
         return None
 
     @classmethod
