@@ -121,6 +121,7 @@ jobs:
           make -j4
       - name: Build draksetup tools
         run: |
+          apt install -y make
           make -C ./drakrun/drakrun/tools
           cp /opt/xtf/tests/example/test-hvm64-example ./drakrun/drakrun/tools/
       - uses: actions/upload-artifact@v3
