@@ -164,7 +164,7 @@ jobs:
           name: drakcore-debs-${{ matrix.distro }}-${{ matrix.version }}
           path: ./drakcore_*_amd64.deb
   package_drakrun:
-    needs: [ lint_drakrun ]
+    needs: [ package_drakvuf_bundle ]
     strategy:
       fail-fast: false
       matrix:
@@ -177,14 +177,16 @@ jobs:
     container: "${{ matrix.distro }}:${{matrix.version}}"
     steps:
       - uses: actions/checkout@v3
+      - name: Download draksetup compiled tools from artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: draksetup-tools-${{ matrix.distro }}-${{ matrix.version }}
+          path: drakrun/drakrun/tools
       - name: Build drakrun
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
-          apt-get install -y wget python2.7 python3 python3-pip python3-venv dh-virtualenv debhelper devscripts libpixman-1-0 libpng16-16 libfdt1 libglib2.0-dev libjson-c3 libyajl2 libaio1 libc6-dev-i386
-          wget -O drakvuf.deb https://github.com/CERT-Polska/drakvuf-sandbox/releases/download/v0.18.1/debian_buster_drakvuf-bundle-0.8-git20210921114837+5575888-1-generic.deb
-          dpkg -i drakvuf.deb
-          sh -c "cd /opt && git clone https://xenbits.xen.org/git-http/xtf.git && cd xtf && git checkout 8ab15139728a8efd3ebbb60beb16a958a6a93fa1 && make PYTHON=python2 -j4"
+          apt-get install -y wget  python3 python3-pip python3-venv dh-virtualenv debhelper devscripts
           cd drakrun
           package/find-python.sh
           dpkg-buildpackage -us -uc -b
