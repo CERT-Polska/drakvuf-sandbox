@@ -65,8 +65,12 @@ jobs:
         run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakrun/
   package_drakcore:
     needs: [lint_drakcore, lint_drakcore_frontend]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["debian:buster", "debian:bullseye"]
     runs-on: ubuntu-latest
-    container: debian:buster
+    container: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - name: Build drakcore
@@ -81,19 +85,23 @@ jobs:
           dpkg-buildpackage -us -uc -b
       - uses: actions/upload-artifact@v3
         with:
-          name: drakcore-debs
+          name: drakcore-debs-${{ matrix.os }}
           path: ./drakcore_*_amd64.deb
   package_drakrun:
     needs: [ lint_drakrun ]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ "debian:buster", "debian:bullseye" ]
     runs-on: ubuntu-latest
-    container: debian:buster
+    container: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - name: Build drakrun
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
-          apt-get install -y wget python2.7 python3 python3-pip python3-venv dh-virtualenv debhelper devscripts libpixman-1-0 libpng16-16 libfdt1 libglib2.0-dev libjson-c3 libyajl2 libaio1 libc6-dev-i386 systemd
+          apt-get install -y wget python2.7 python3 python3-pip python3-venv dh-virtualenv debhelper devscripts libpixman-1-0 libpng16-16 libfdt1 libglib2.0-dev libjson-c3 libyajl2 libaio1 libc6-dev-i386
           wget -O drakvuf.deb https://github.com/CERT-Polska/drakvuf-sandbox/releases/download/v0.18.1/debian_buster_drakvuf-bundle-0.8-git20210921114837+5575888-1-generic.deb
           dpkg -i drakvuf.deb
           sh -c "cd /opt && git clone https://xenbits.xen.org/git-http/xtf.git && cd xtf && git checkout 8ab15139728a8efd3ebbb60beb16a958a6a93fa1 && make PYTHON=python2 -j4"
@@ -102,12 +110,16 @@ jobs:
           dpkg-buildpackage -us -uc -b
       - uses: actions/upload-artifact@v3
         with:
-          name: drakrun-debs
+          name: drakrun-debs-${{ matrix.os }}
           path: ./drakrun_*_amd64.deb
   package_drakvuf_bundle:
     needs: [lint_drakcore, lint_drakcore_frontend, lint_drakrun]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ "debian:buster", "debian:bullseye" ]
     runs-on: ubuntu-latest
-    container: debian:buster
+    container: ${{ matrix.os }}
     steps:
       - name: Install git and wget
         run: |
@@ -131,7 +143,7 @@ jobs:
           path: |
             /out/drakvuf-bundle*.deb 
             /out/xen-hypervisor*.deb
-          key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}
+          key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}-${{ matrix.os }}
       - if: ${{ steps.cache-drakvuf-bundle.outputs.cache-hit != 'true' }}
         name: Build Drakvuf bundle
         run: |
@@ -141,7 +153,7 @@ jobs:
           bash ci/build_bundle.sh
       - uses: actions/upload-artifact@v3
         with:
-          name: drakvuf-bundle-debs
+          name: drakvuf-bundle-debs-${{ matrix.os }}
           path: |
             /out/drakvuf-bundle*.deb 
             /out/xen-hypervisor*.deb
