@@ -68,9 +68,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["debian:buster", "debian:bullseye"]
+        include:
+          - distro: debian
+            version: buster
+          - distro: debian
+            version: bullseye
     runs-on: ubuntu-latest
-    container: ${{ matrix.os }}
+    container: "${{ matrix.distro }}:${{matrix.version}}"
     steps:
       - uses: actions/checkout@v3
       - name: Build drakcore
@@ -85,16 +89,20 @@ jobs:
           dpkg-buildpackage -us -uc -b
       - uses: actions/upload-artifact@v3
         with:
-          name: drakcore-debs-${{ matrix.os }}
+          name: drakcore-debs-${{ matrix.distro }}-${{ matrix.version }}
           path: ./drakcore_*_amd64.deb
   package_drakrun:
     needs: [ lint_drakrun ]
     strategy:
       fail-fast: false
       matrix:
-        os: [ "debian:buster", "debian:bullseye" ]
+        include:
+          - distro: debian
+            version: buster
+          - distro: debian
+            version: bullseye
     runs-on: ubuntu-latest
-    container: ${{ matrix.os }}
+    container: "${{ matrix.distro }}:${{matrix.version}}"
     steps:
       - uses: actions/checkout@v3
       - name: Build drakrun
@@ -110,16 +118,20 @@ jobs:
           dpkg-buildpackage -us -uc -b
       - uses: actions/upload-artifact@v3
         with:
-          name: drakrun-debs-${{ matrix.os }}
+          name: drakrun-debs-${{ matrix.distro }}-${{ matrix.version }}
           path: ./drakrun_*_amd64.deb
   package_drakvuf_bundle:
     needs: [lint_drakcore, lint_drakcore_frontend, lint_drakrun]
     strategy:
       fail-fast: false
       matrix:
-        os: [ "debian:buster", "debian:bullseye" ]
+        include:
+          - distro: debian
+            version: buster
+          - distro: debian
+            version: bullseye
     runs-on: ubuntu-latest
-    container: ${{ matrix.os }}
+    container: "${{ matrix.distro }}:${{matrix.version}}"
     steps:
       - name: Install git and wget
         run: |
@@ -143,7 +155,7 @@ jobs:
           path: |
             /out/drakvuf-bundle*.deb 
             /out/xen-hypervisor*.deb
-          key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}-${{ matrix.os }}
+          key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}-${{ matrix.distro }}-${{ matrix.version }}
       - if: ${{ steps.cache-drakvuf-bundle.outputs.cache-hit != 'true' }}
         name: Build Drakvuf bundle
         run: |
@@ -153,7 +165,7 @@ jobs:
           bash ci/build_bundle.sh
       - uses: actions/upload-artifact@v3
         with:
-          name: drakvuf-bundle-debs-${{ matrix.os }}
+          name: drakvuf-bundle-debs-${{ matrix.distro }}-${{ matrix.version }}
           path: |
             /out/drakvuf-bundle*.deb 
             /out/xen-hypervisor*.deb
