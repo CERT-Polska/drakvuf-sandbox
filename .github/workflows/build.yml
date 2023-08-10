@@ -257,3 +257,4 @@ jobs:
           python -m vm_runner_client suspend
         env:
           VM_RUNNER_API_KEY: ${{ secrets.VM_RUNNER_API_KEY }}
+          VM_SUFFIX: "${{ matrix.distro }}-${{ matrix.version_number }}"
