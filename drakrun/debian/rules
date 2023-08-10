@@ -14,8 +14,8 @@ override_dh_virtualenv:
 	dh_virtualenv --python ${PYTHON_BIN}
 
 override_dh_fixperms:
-    dh_fixperms
-    chmod +x drakrun/tools/test-hvm64-example drakrun/tools/get-explorer-pid drakrun/tools/test-altp2m
+	dh_fixperms
+	chmod +x drakrun/tools/test-hvm64-example drakrun/tools/get-explorer-pid drakrun/tools/test-altp2m
 
 # Silence libvmi.so info errors
 override_dh_shlibdeps:
