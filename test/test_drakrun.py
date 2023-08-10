@@ -4,7 +4,9 @@ import pytest
 @pytest.fixture(scope="session")
 def pytest_installed(drakmon_ssh):
     """ Ensure that pytest is installed """
-    drakmon_ssh.run(". /opt/venvs/drakrun/bin/activate && pip install pytest==6.2.2 pytest-steps==1.7.3")
+    drakmon_ssh.run(". /opt/venvs/drakrun/bin/activate && "
+                    "python3 -m pip install -U pip && "
+                    "pip install pytest==6.2.2 pytest-steps==1.7.3")
 
 
 @pytest.fixture(scope="session")
