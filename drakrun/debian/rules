@@ -7,6 +7,7 @@ PYTHON_BIN := "$(shell cat 'package/python-bin')"
 
 build:
 	if [ ! -f drakrun/tools/test-hvm64-example ] ; then cp /opt/xtf/tests/example/test-hvm64-example drakrun/tools/test-hvm64-example ; $(MAKE) -C drakrun/tools ; fi
+	chmod +x drakrun/tools/test-hvm64-example drakrun/tools/get-explorer-pid drakrun/tools/test-altp2m
 	cp drakrun/config.dist.ini drakrun/config.ini
 	cp drakrun/hooks.dist.txt drakrun/hooks.txt
 
