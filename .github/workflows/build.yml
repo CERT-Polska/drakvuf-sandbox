@@ -7,6 +7,12 @@ on:
     branches:
     - master
 jobs:
+  test_internal_runner:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+      - name: Test connectivity
+        run: ping 192.168.100.1
   build_docs:
     runs-on: ubuntu-latest
     steps:
