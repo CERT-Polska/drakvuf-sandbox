@@ -147,7 +147,7 @@ jobs:
             /out/xen-hypervisor*.deb
   test_e2e:
     needs: [ package_drakcore, package_drakrun, package_drakvuf_bundle ]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     container: python:3.8-buster
     # Prevent concurrent jobs trying to reach the same VM
     concurrency: ci-${{ github.ref }}

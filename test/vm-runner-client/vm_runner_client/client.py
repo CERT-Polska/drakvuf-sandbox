@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import socket
 import time
 import uuid
 
@@ -15,10 +16,13 @@ from python_socks._proto.socks5 import ReplyCode
 
 class VMRunnerConfig:
     RUNNER_API_KEY = os.getenv("VM_RUNNER_API_KEY")
+    RUNNER_API_URL = os.getenv("VM_RUNNER_API_URL")
+    # Self-hosted runner can connect directly to the VM
+    RUNNER_USE_SOCKS = int(os.getenv("VM_RUNNER_USE_SOCKS", "0"))
+
     RUNNER_SOCKS_USERNAME = os.getenv("VM_RUNNER_SOCKS_USERNAME")
     RUNNER_SOCKS_PASSWORD = os.getenv("VM_RUNNER_SOCKS_PASSWORD")
-
-    RUNNER_HOST = os.getenv("VM_RUNNER_HOST", "ci.drakvuf.cert.pl")
+    RUNNER_SOCKS_HOST = os.getenv("VM_RUNNER_SOCKS_HOST")
     RUNNER_SOCKS_PORT = int(os.getenv("VM_RUNNER_SOCKS_PORT", "9000"))
 
 
@@ -34,13 +38,18 @@ class DrakvufVM:
         """
         Connects to VM TCP port and returns socket object
         """
-        return create_connection(
-            self.vm_ip, port,
-            proxy_username=self.config.RUNNER_SOCKS_USERNAME,
-            proxy_password=self.config.RUNNER_SOCKS_PASSWORD,
-            proxy_host=self.config.RUNNER_HOST,
-            proxy_port=self.config.RUNNER_SOCKS_PORT,
-        )
+        if self.config.RUNNER_USE_SOCKS:
+            return create_connection(
+                self.vm_ip, port,
+                proxy_username=self.config.RUNNER_SOCKS_USERNAME,
+                proxy_password=self.config.RUNNER_SOCKS_PASSWORD,
+                proxy_host=self.config.RUNNER_SOCKS_HOST,
+                proxy_port=self.config.RUNNER_SOCKS_PORT,
+            )
+        else:
+            sock = socket.socket()
+            sock.connect((self.vm_ip, port))
+            return sock
 
     def connect_ssh(self):
         """
@@ -56,12 +65,17 @@ class DrakvufVM:
         """
         Returns requests.Session object with proper proxy setting to access VM ports
         """
-        return make_session(f"socks5tls://"
-                            f"{self.config.RUNNER_SOCKS_USERNAME}:{self.config.RUNNER_SOCKS_PASSWORD}"
-                            f"@{self.config.RUNNER_HOST}:{self.config.RUNNER_SOCKS_PORT}")
+        if self.config.RUNNER_USE_SOCKS:
+            return make_session(f"socks5tls://"
+                                f"{self.config.RUNNER_SOCKS_USERNAME}:"
+                                f"{self.config.RUNNER_SOCKS_PASSWORD}"
+                                f"@{self.config.RUNNER_SOCKS_HOST}:"
+                                f"{self.config.RUNNER_SOCKS_PORT}")
+        else:
+            return requests.Session()
 
     def suspend(self):
-        response = requests.post(f"https://{self.config.RUNNER_HOST}/vm/suspend", json={
+        response = requests.post(f"{self.config.RUNNER_API_URL}/vm/suspend", json={
             "identity": self.identity
         }, headers={
             "Authorization": f"Bearer {self.config.RUNNER_API_KEY}"
@@ -69,7 +83,7 @@ class DrakvufVM:
         response.raise_for_status()
 
     def destroy(self):
-        response = requests.post(f"https://{self.config.RUNNER_HOST}/vm/destroy", json={
+        response = requests.post(f"{self.config.RUNNER_API_URL}/vm/destroy", json={
             "identity": self.identity
         }, headers={
             "Authorization": f"Bearer {self.config.RUNNER_API_KEY}"
@@ -113,7 +127,7 @@ class DrakvufVM:
         ssh_pub_key = "ssh-rsa " + vm_ssh_key.get_base64()
 
         identity = cls.get_vm_identity() or str(uuid.uuid4())
-        response = requests.post(f"https://{cls.config.RUNNER_HOST}/vm/build", json={
+        response = requests.post(f"{cls.config.RUNNER_API_URL}/vm/build", json={
             "identity": identity,
             "image": base_image,
             "ssh_key": ssh_pub_key,
