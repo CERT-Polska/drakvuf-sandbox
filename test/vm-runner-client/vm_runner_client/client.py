@@ -8,8 +8,7 @@ import uuid
 import requests
 from paramiko.rsakey import RSAKey
 from fabric import Connection
-from .sockstls import create_connection
-from .sockstls_requests import make_session
+from .socks import create_connection, make_session
 from python_socks import ProxyError
 from python_socks._proto.socks5 import ReplyCode
 
@@ -66,7 +65,7 @@ class DrakvufVM:
         Returns requests.Session object with proper proxy setting to access VM ports
         """
         if self.config.RUNNER_USE_SOCKS:
-            return make_session(f"socks5tls://"
+            return make_session(f"socks5://"
                                 f"{self.config.RUNNER_SOCKS_USERNAME}:"
                                 f"{self.config.RUNNER_SOCKS_PASSWORD}"
                                 f"@{self.config.RUNNER_SOCKS_HOST}:"
@@ -94,8 +93,10 @@ class DrakvufVM:
         try:
             self.connect_tcp(22).close()
             return True
-        except ProxyError as e:
-            if e.error_code in [
+        except (ConnectionError, ProxyError) as e:
+            if isinstance(e, ConnectionError):
+                return False
+            if isinstance(e, ProxyError) and e.error_code in [
                 ReplyCode.CONNECTION_REFUSED,
                 ReplyCode.HOST_UNREACHABLE
             ]:
@@ -117,7 +118,7 @@ class DrakvufVM:
         sanitize = lambda v: re.sub(r"[^a-zA-Z0-9_\-]", "_", v)[:32]
         if os.getenv("GITLAB_CI"):
             return sanitize(f'gitlab-{os.getenv("CI_COMMIT_REF_NAME")}')
-        elif os.getenv("GITHUB_ACTIONS"):
+        elif os.getenv("GITHUB_ACTION"):
             return sanitize(f'github-{os.getenv("GITHUB_REF_NAME")}')
         return None
 
