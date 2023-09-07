@@ -14,7 +14,6 @@ from python_socks._proto.socks5 import ReplyCode
 
 
 class VMRunnerConfig:
-    RUNNER_API_KEY = os.getenv("VM_RUNNER_API_KEY")
     RUNNER_API_URL = os.getenv("VM_RUNNER_API_URL")
     # Self-hosted runner can connect directly to the VM
     RUNNER_USE_SOCKS = int(os.getenv("VM_RUNNER_USE_SOCKS", "0"))
@@ -76,16 +75,12 @@ class DrakvufVM:
     def suspend(self):
         response = requests.post(f"{self.config.RUNNER_API_URL}/vm/suspend", json={
             "identity": self.identity
-        }, headers={
-            "Authorization": f"Bearer {self.config.RUNNER_API_KEY}"
         })
         response.raise_for_status()
 
     def destroy(self):
         response = requests.post(f"{self.config.RUNNER_API_URL}/vm/destroy", json={
             "identity": self.identity
-        }, headers={
-            "Authorization": f"Bearer {self.config.RUNNER_API_KEY}"
         })
         response.raise_for_status()
 
@@ -132,8 +127,6 @@ class DrakvufVM:
             "identity": identity,
             "image": base_image,
             "ssh_key": ssh_pub_key,
-        }, headers={
-            "Authorization": f"Bearer {cls.config.RUNNER_API_KEY}",
         })
         response.raise_for_status()
         vm_spec = response.json()
