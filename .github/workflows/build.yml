@@ -176,8 +176,11 @@ jobs:
           SNAPSHOT_VERSION: "win7-20230213"
           MINIO_HOST: "192.168.100.1:8181"
           VM_RUNNER_API_URL: "http://127.0.0.1:8080"
-          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
-          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          # It's local Minio readonly account accessible from local runner
+          # I don't really know how to make unauthenticated access so let's
+          # keep that dummy account
+          MINIO_ACCESS_KEY: "drakvuf-ci-user"
+          MINIO_SECRET_KEY: "Ectrj8GnJbfZu4J"
       - name: Job failed - suspending VM (if possible)
         if: ${{ failure() }}
         run: |
