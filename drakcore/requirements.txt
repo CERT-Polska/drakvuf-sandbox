@@ -2,7 +2,7 @@ requests==2.31.0
 Flask==2.2.5
 karton-core==4.3.0
 redis==4.4.4
-uwsgi==2.0.20
+uwsgi==2.0.22
 minio==5.0.7
 colorama==0.4.4
 msql==1.2.2
