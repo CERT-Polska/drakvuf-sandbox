@@ -175,7 +175,7 @@ jobs:
           BASE_IMAGE: "debian-10-generic-amd64"
           SNAPSHOT_VERSION: "win7-20230213"
           MINIO_HOST: "192.168.100.1:8181"
-          VM_RUNNER_API_URL: "http://127.0.0.1:8080/"
+          VM_RUNNER_API_URL: "http://127.0.0.1:8080"
           MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
           MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
       - name: Job failed - suspending VM (if possible)
@@ -183,4 +183,4 @@ jobs:
         run: |
           python -m vm_runner_client suspend
         env:
-          VM_RUNNER_API_URL: "http://127.0.0.1:8080/"
+          VM_RUNNER_API_URL: "http://127.0.0.1:8080"
