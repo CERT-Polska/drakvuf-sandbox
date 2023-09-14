@@ -106,7 +106,7 @@ jobs:
           cp -ra . /build
           cd /build
           sh drakvuf/package/depends.sh
-          bash ci/build_bundle.sh
+          bash ci/build_bundle.sh "${{ matrix.distro }}:${{matrix.version}}"
       - name: Install Drakvuf bundle
         run: |
           export DEBIAN_FRONTEND=noninteractive
