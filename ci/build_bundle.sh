@@ -42,5 +42,8 @@ sed -i '/volatility3/d' ./package/mkdeb
 # change drakvuf build dir
 sed -i 's/\/build/\/build\/drakvuf/g' ./package/mkdeb
 
-sh ./package/mkdeb
+DRAKVUFVERSION=$(./scripts/version.sh --dev)
+XENVERSION=$(./xen/version.sh --full ./xen/xen/Makefile)
+
+sh ./package/mkdeb "$DRAKVUFVERSION" "$XENVERSION"
 popd
