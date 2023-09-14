@@ -138,7 +138,7 @@ jobs:
           cp -ra . /build
           cd /build
           sh drakvuf/package/depends.sh
-          bash ci/build_bundle.sh
+          bash ci/build_bundle.sh "debian:buster"
       - uses: actions/upload-artifact@v3
         with:
           name: drakvuf-bundle-debs
