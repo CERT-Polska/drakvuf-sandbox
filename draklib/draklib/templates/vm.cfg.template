@@ -4,7 +4,7 @@
 # Please don't edit this file unless you know what you are doing.
 
 arch = 'x86_64'
-name = "vm-{{ VM_ID }}"
+name = "{{ VM_NAME }}"
 maxmem = {{ MEMORY }}
 memory = {{ MEMORY }}
 vcpus = {{ VCPUS }}
@@ -27,7 +27,7 @@ audio=1
 soundhw='hda'
 cpuid="host,htt=0"
 vga="stdvga"
-vif = [ 'type=ioemu,model=e1000,bridge=drak{{ VM_ID }}' ]
+vif = [ 'type=ioemu,model=e1000,bridge=drak{{ VM_NAME }}' ]
 disk = [ {{ DISKS }} ]
 # uncomment when using IPT
 # vmtrace_buf_kb = 8192
