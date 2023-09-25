@@ -4,6 +4,7 @@ import os
 import re
 
 import click
+from pathlib import Path
 from tqdm import tqdm
 
 from ..config import InstallInfo, Profile
@@ -161,7 +162,7 @@ def install(
     sha256_hash = hashlib.sha256()
 
     logging.info("Calculating hash of iso")
-    iso_path = os.path.abspath(iso_path)
+    iso_path = Path(iso_path).resolve()
     iso_file_size = os.stat(iso_path).st_size
     block_size = 128 * 1024
     with tqdm(total=iso_file_size, unit_scale=True) as pbar:
@@ -177,7 +178,7 @@ def install(
         memory=memory,
         storage_backend=storage_backend,
         disk_size=disk_size,
-        iso_path=iso_path,
+        iso_path=str(iso_path),
         zfs_tank_name=zfs_tank_name,
         lvm_volume_group=lvm_volume_group,
         enable_unattended=unattended_xml is not None,
