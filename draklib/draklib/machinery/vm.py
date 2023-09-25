@@ -116,7 +116,7 @@ class VirtualMachine:
         first_cd: Optional[Path] = None,
         second_cd: Optional[Path] = None,
     ):
-        if self.vm_id == 0:
+        if self.vm_id != 0:
             raise RuntimeError("This method can't be used for VMs other than vm-0")
         vm_config_path = self.make_vm_config(first_cd, second_cd)
         args = ["xl", "create"]

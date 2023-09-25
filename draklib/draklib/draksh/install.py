@@ -186,6 +186,9 @@ def install(
         out_interface=out_interface,
         dns_server=dns_server,
     )
+    if Profile.exists(profile_name):
+        click.confirm(f"'{profile_name}' already exists. Do you want to overwrite it?", abort=True)
+        Profile.delete(profile_name)
     profile = Profile.create(profile_name, install_info)
     backend = get_storage_backend(profile)
 

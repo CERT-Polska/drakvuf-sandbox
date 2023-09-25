@@ -120,6 +120,12 @@ class Profile:
         return profile_name
 
     @staticmethod
+    def exists(profile_name: Optional[str]) -> bool:
+        profile_name = Profile.resolve_profile_name(profile_name)
+        lib_dir = LIB_DIR / profile_name
+        return lib_dir.exists()
+
+    @staticmethod
     def load(profile_name: Optional[str]) -> "Profile":
         profile_name = Profile.resolve_profile_name(profile_name)
         lib_dir = LIB_DIR / profile_name
@@ -157,3 +163,11 @@ class Profile:
                 continue
             profiles.append(Profile.load(profile_path.name))
         return profiles
+
+    @staticmethod
+    def delete(profile_name: Optional[str]):
+        profile_name = Profile.resolve_profile_name(profile_name)
+        lib_dir = LIB_DIR / profile_name
+        shutil.rmtree(lib_dir)
+        etc_dir = ETC_DIR / profile_name
+        shutil.rmtree(etc_dir)
