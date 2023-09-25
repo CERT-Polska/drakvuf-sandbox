@@ -14,7 +14,7 @@ from ..drakvuf.profile import (
     vmi_win_guid,
 )
 from ..drakvuf.vm import DrakvufVM
-from ..machinery.vm import FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE
+from ..machinery.vm import VirtualMachine, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE
 from ..util import ensure_delete
 from .util import check_root
 
@@ -36,7 +36,14 @@ def postinstall(profile_name):
 
     profile = Profile.load(profile_name)
 
+    vm1 = DrakvufVM(profile, 1)
     vm0 = DrakvufVM(profile, 0)
+
+    if vm1.vm.is_running is True:
+        # If vm1 is running: probably we failed to make a DLL profile
+        # Let's revert it and use already made snapshot
+        vm1.vm.destroy()
+        vm0.vm.restore()
 
     if vm0.vm.is_running is False:
         raise click.ClickException("vm-0 is not running")
@@ -87,7 +94,7 @@ def postinstall(profile_name):
     for dllspec in optional_dlls:
         try:
             vm1.make_dll_profile(dllspec)
-        except InjectorError:
+        except Exception:
             log.exception("Failed to profile optional DLL")
             failed_dlls.append(dllspec)
 
