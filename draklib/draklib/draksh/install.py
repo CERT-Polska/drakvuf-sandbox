@@ -190,7 +190,8 @@ def install(
     backend = get_storage_backend(profile)
 
     vm0 = VirtualMachine(profile, 0)
-    vm0.destroy()
+    if vm0.is_running:
+        vm0.destroy()
 
     backend.initialize_vm0_volume(disk_size)
     vm0.setup_network(

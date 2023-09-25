@@ -135,8 +135,6 @@ class VirtualMachine:
         try:
             subprocess.run(
                 ["xl", "pause", self.vm_name],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
                 check=True,
             )
         except subprocess.CalledProcessError:
@@ -146,8 +144,6 @@ class VirtualMachine:
         try:
             subprocess.run(
                 ["xl", "unpause", self.vm_name],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
                 check=True,
             )
         except subprocess.CalledProcessError:
@@ -162,8 +158,6 @@ class VirtualMachine:
             # We want to keep it running after saving
             subprocess.run(
                 ["xl", "save", "-c", self.vm_name, str(self.snapshot_path)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
                 check=True,
             )
         except subprocess.CalledProcessError:
@@ -185,21 +179,21 @@ class VirtualMachine:
         try:
             # We want to keep it running after saving
             subprocess.run(
-                args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+                args, check=True
             )
         except subprocess.CalledProcessError:
             raise VMError(f"Failed to restore VM {self.vm_name}", vm_name=self.vm_name)
 
-    def destroy(self):
+    def destroy(self, allow_fail=False):
         try:
             subprocess.run(
                 ["xl", "destroy", self.vm_name],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
                 check=True,
             )
         except subprocess.CalledProcessError:
-            raise VMError(f"Failed to destroy VM {self.vm_name}", vm_name=self.vm_name)
+            raise VMError(f"Failed to destroy VM {self.vm_name}",
+                          vm_name=self.vm_name,
+                          with_qemu_logs=False)
 
     @contextmanager
     def run_vm(self):
