@@ -90,8 +90,6 @@ class DrakvufVM:
         self.vm.clean_network()
 
     def save(self, destroy_after: bool = False):
-        if self.vm_id == 0:
-            raise RuntimeError("This method can't be used for VMs other than vm-0")
         return self.vm.save(destroy_after=destroy_after)
 
     def make_dll_profile(self, dllspec: DLL, tries: int = 3):
