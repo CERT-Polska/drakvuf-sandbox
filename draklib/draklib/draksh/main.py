@@ -2,6 +2,7 @@ import logging
 
 import click
 
+
 @click.group()
 def main():
     logging.basicConfig(

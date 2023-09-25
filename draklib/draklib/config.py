@@ -1,5 +1,7 @@
 import os
+import secrets
 import shutil
+import string
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
@@ -140,7 +142,12 @@ class Profile:
         self.volumes_dir.mkdir()
         self.vm_profile_dir.mkdir()
         self.vm_config_dir.mkdir()
-        shutil.copy(TEMPLATE_DIR / "vm.cfg.template", self.vm_template_path)
+
+        template = (TEMPLATE_DIR / "vm.cfg.template").read_text()
+        passwd_characters = string.ascii_letters + string.digits
+        passwd = "".join(secrets.choice(passwd_characters) for _ in range(20))
+        template = template.replace("{{ VNC_PASS }}", passwd)
+        self.vm_template_path.write_text(template)
 
     @staticmethod
     def create(profile_name: Optional[str], install_info: InstallInfo) -> "Profile":

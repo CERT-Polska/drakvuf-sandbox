@@ -18,3 +18,11 @@ def get_xl_info():
         cfg[k] = v
 
     return cfg
+
+
+def eject_cd(domain, drive):
+    subprocess.run(["xl", "cd-eject", domain, drive], check=True)
+
+
+def insert_cd(domain, drive, iso):
+    subprocess.run(["xl", "cd-insert", domain, drive, iso], check=True)

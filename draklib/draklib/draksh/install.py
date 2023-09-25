@@ -2,14 +2,17 @@ import hashlib
 import logging
 import os
 import re
+from pathlib import Path
 
 import click
-from pathlib import Path
 from tqdm import tqdm
 
 from ..config import InstallInfo, Profile
-from ..machinery.networking import check_networking_prerequisites, find_default_interface
-from ..machinery.storage import REGISTERED_BACKEND_NAMES, get_storage_backend
+from ..machinery.networking import (
+    check_networking_prerequisites,
+    find_default_interface,
+)
+from ..machinery.storage import REGISTERED_BACKEND_NAMES
 from ..machinery.vm import VirtualMachine
 from .util import check_root
 
@@ -88,27 +91,27 @@ def ensure_lvm(ctx, param, value):
     "--subnet-addr",
     "subnet_addr",
     default=lambda: InstallInfo.get_default_subnet_addr(),
-    help="Subnet address for VM bridge with N as vm id"
+    help="Subnet address for VM bridge with N as vm id",
 )
 @click.option(
     "--out-interface",
     "out_interface",
     default=lambda: find_default_interface(),
-    help="Default interface for VM networking"
+    help="Default interface for VM networking",
 )
 @click.option(
     "--dns-server",
     "dns_server",
     default=InstallInfo.dns_server,
     help="DNS server for VM networking (or 'use-default-gateway' "
-         "if you want to use default gateway of VM network as DNS)"
+    "if you want to use default gateway of VM network as DNS)",
 )
 @click.option(
     "--disable-net",
     "disable_net",
     is_flag=True,
     default=False,
-    help="Disable network for installation"
+    help="Disable network for installation",
 )
 def install(
     profile_name,
@@ -188,21 +191,18 @@ def install(
         dns_server=dns_server,
     )
     if Profile.exists(profile_name):
-        click.confirm(f"'{profile_name}' already exists. Do you want to overwrite it?", abort=True)
+        click.confirm(
+            f"'{profile_name}' already exists. Do you want to overwrite it?", abort=True
+        )
         Profile.delete(profile_name)
     profile = Profile.create(profile_name, install_info)
-    backend = get_storage_backend(profile)
 
     vm0 = VirtualMachine(profile, 0)
     if vm0.is_running:
         vm0.destroy()
 
-    backend.initialize_vm0_volume(disk_size)
-    vm0.setup_network(
-        out_interface,
-        dns_server,
-        net_enable=not disable_net
-    )
+    vm0.storage.initialize_vm0_volume(disk_size)
+    vm0.setup_network(out_interface, dns_server, net_enable=not disable_net)
     vm0.create(first_cd=iso_path)
 
     logging.info("-" * 80)

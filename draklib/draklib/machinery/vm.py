@@ -3,13 +3,13 @@ import os
 import re
 import subprocess
 import tempfile
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 
 from ..config import Profile
 from .networking import delete_vm_network, setup_vm_network, start_dnsmasq, stop_dnsmasq
 from .storage import get_storage_backend
+from .xen import eject_cd, insert_cd
 
 log = logging.getLogger(__name__)
 
@@ -116,8 +116,6 @@ class VirtualMachine:
         first_cd: Optional[Path] = None,
         second_cd: Optional[Path] = None,
     ):
-        if self.vm_id != 0:
-            raise RuntimeError("This method can't be used for VMs other than vm-0")
         vm_config_path = self.make_vm_config(first_cd, second_cd)
         args = ["xl", "create"]
         if paused:
@@ -125,9 +123,7 @@ class VirtualMachine:
         args += [str(vm_config_path)]
         log.info(f"Creating VM {self.vm_name}")
         try:
-            subprocess.run(
-                args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-            )
+            subprocess.run(args, check=True)
         except subprocess.CalledProcessError:
             raise VMError(f"Failed to launch VM {self.vm_name}", vm_name=self.vm_name)
 
@@ -149,21 +145,25 @@ class VirtualMachine:
         except subprocess.CalledProcessError:
             raise VMError(f"Failed to unpause VM {self.vm_name}", vm_name=self.vm_name)
 
-    def save(self):
-        if self.vm_id == 0:
-            raise RuntimeError("This method can't be used for VMs other than vm-0")
+    def save(self, snapshot_path: Path = None, destroy_after=False):
+        snapshot_path = snapshot_path or self.snapshot_path
+        args = ["xl", "save"]
+        if not destroy_after:
+            args += ["-c"]
+        args += [self.vm_name, str(snapshot_path)]
 
         logging.info(f"Saving VM {self.vm_name}")
         try:
             # We want to keep it running after saving
             subprocess.run(
-                ["xl", "save", "-c", self.vm_name, str(self.snapshot_path)],
+                args,
                 check=True,
             )
         except subprocess.CalledProcessError:
             raise VMError(f"Failed to save VM {self.vm_name}", vm_name=self.vm_name)
 
-    def restore(self, paused=False):
+    def restore(self, snapshot_path=None, paused=False):
+        snapshot_path = snapshot_path or self.snapshot_path
         if self.is_running:
             self.destroy()
         self.make_vm_config()
@@ -174,38 +174,32 @@ class VirtualMachine:
         # The state of vm-0 is correct by definition.
         if self.vm_id != 0:
             self.storage.rollback_vm_storage(self.vm_id)
-        args += [str(self.vm_config_path), str(self.snapshot_path)]
+        args += [str(self.vm_config_path), str(snapshot_path)]
         logging.info(f"Restoring VM {self.vm_name}")
         try:
             # We want to keep it running after saving
-            subprocess.run(
-                args, check=True
-            )
+            subprocess.run(args, check=True)
         except subprocess.CalledProcessError:
             raise VMError(f"Failed to restore VM {self.vm_name}", vm_name=self.vm_name)
 
-    def destroy(self, allow_fail=False):
+    def destroy(self):
         try:
             subprocess.run(
                 ["xl", "destroy", self.vm_name],
                 check=True,
             )
         except subprocess.CalledProcessError:
-            raise VMError(f"Failed to destroy VM {self.vm_name}",
-                          vm_name=self.vm_name,
-                          with_qemu_logs=False)
+            raise VMError(
+                f"Failed to destroy VM {self.vm_name}",
+                vm_name=self.vm_name,
+                with_qemu_logs=False,
+            )
 
-    @contextmanager
-    def run_vm(self):
-        """
-        High-level method that restores a clean VM from snapshot
-        and ensures that it is destroyed after operation
-        """
-        self.restore()
-        try:
-            yield self
-        finally:
-            self.destroy()
+    def eject_cd(self, drive: str):
+        eject_cd(self.vm_name, drive)
+
+    def insert_cd(self, drive: str, iso_path: str):
+        insert_cd(self.vm_name, drive, iso_path)
 
 
 def make_unattended_iso(xml_path, iso_path):
