@@ -890,7 +890,7 @@ def postupgrade():
     if not check_root():
         return
 
-    with open(os.path.join(ETC_DIR, "scripts/cfg.template"), "r") as f:
+    with open(os.path.join(ETC_DIR, "../../draklib/draklib/templates/cfg.template"), "r") as f:
         template = f.read()
 
     passwd_characters = string.ascii_letters + string.digits

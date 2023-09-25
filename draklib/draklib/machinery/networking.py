@@ -1,12 +1,49 @@
 import logging
 import os
+import re
 import signal
 import subprocess
-from typing import Optional
+from pathlib import Path
+from typing import List, Optional
 
+from ..config import Profile
 from .xen import get_domid_from_name
 
 log = logging.getLogger(__name__)
+
+
+def find_default_interface():
+    routes = (
+        subprocess.check_output(
+            "ip route show default", shell=True, stderr=subprocess.STDOUT
+        )
+        .decode("ascii")
+        .strip()
+        .split("\n")
+    )
+
+    for route in routes:
+        m = re.search(r"dev ([^ ]+)", route.strip())
+
+        if m:
+            return m.group(1)
+
+    return None
+
+
+def check_networking_prerequisites() -> None:
+    try:
+        subprocess.check_output("brctl show", shell=True)
+    except subprocess.CalledProcessError:
+        raise RuntimeError(
+            "Failed to execute brctl show. Make sure you have bridge-utils installed."
+        )
+    try:
+        list_iptables_rules()
+    except subprocess.CalledProcessError:
+        raise RuntimeError(
+            "Failed to execute iptables -S. Make sure you have iptables installed."
+        )
 
 
 def iptable_rule_exists(rule: str) -> bool:
@@ -40,6 +77,10 @@ def del_iptable_rule(rule: str) -> None:
             all_cleared = True
 
 
+def list_iptables_rules() -> List[str]:
+    return subprocess.check_output("iptables -S", shell=True, text=True).split("\n")
+
+
 def vif_from_vm_name(vm_name: str) -> str:
     domid = get_domid_from_name(vm_name)
     return f"vif{domid}.0-emu"
@@ -49,36 +90,30 @@ def bridge_from_vm_name(vm_name: str) -> str:
     return f"drak{vm_name}"
 
 
-def subnet_ip_from_vm_name(vm_name: str, host_id: int) -> str:
-    """
-    vm_name is expected to end with "vm-N"
-    """
-    vm_id = int(vm_name.split("-")[-1])
-    return f"10.13.{vm_id}.{host_id}"
-
-
-def start_tcpdump_collector(vm_name: str, outdir: str) -> subprocess.Popen:
+def start_tcpdump_collector(vm_name: str, outdir: Path) -> subprocess.Popen:
     try:
         subprocess.check_output("tcpdump --version", shell=True)
     except subprocess.CalledProcessError:
         raise RuntimeError("Failed to start tcpdump")
 
     return subprocess.Popen(
-        ["tcpdump", "-i", vif_from_vm_name(vm_name), "-w", f"{outdir}/dump.pcap"]
+        ["tcpdump", "-i", vif_from_vm_name(vm_name), "-w", str(outdir / "dump.pcap")]
     )
 
 
 def start_dnsmasq(
-    vm_name: str, dns_server: str, background=False
+    profile: Profile, vm_id: int, dns_server: str, background=False
 ) -> Optional[subprocess.Popen]:
     try:
         subprocess.check_output("dnsmasq --version", shell=True)
     except subprocess.CalledProcessError:
         raise RuntimeError("Failed to start dnsmasq")
 
+    vm_name = profile.get_vm_name(vm_id)
+
     if dns_server == "use-gateway-address":
         # 10.13.N.1
-        dns_server = subnet_ip_from_vm_name(vm_name, 1)
+        dns_server = profile.ip_from_vm_id(vm_id, host_id=1)
 
     dnsmasq_pidfile = f"/var/run/dnsmasq-drak-{vm_name}.pid"
 
@@ -95,8 +130,8 @@ def start_dnsmasq(
                 log.info("Already running dnsmasq in background")
                 return None
 
-    dhcp_first_addr = subnet_ip_from_vm_name(vm_name, 100)
-    dhcp_last_addr = subnet_ip_from_vm_name(vm_name, 200)
+    dhcp_first_addr = profile.ip_from_vm_id(vm_id, host_id=100)
+    dhcp_last_addr = profile.ip_from_vm_id(vm_id, host_id=200)
 
     return subprocess.Popen(
         [
@@ -117,7 +152,8 @@ def start_dnsmasq(
     )
 
 
-def stop_dnsmasq(vm_name: str) -> None:
+def stop_dnsmasq(profile: Profile, vm_id: int) -> None:
+    vm_name = profile.get_vm_name(vm_id)
     dnsmasq_pidfile = f"/var/run/dnsmasq-drak-{vm_name}.pid"
 
     if os.path.exists(dnsmasq_pidfile):
@@ -137,8 +173,9 @@ def interface_exists(iface: str) -> bool:
 
 
 def setup_vm_network(
-    vm_name: str, out_interface: str, dns_server: str, net_enable: bool
+    profile: Profile, vm_id: int, out_interface: str, dns_server: str, net_enable: bool
 ) -> None:
+    vm_name = profile.get_vm_name(vm_id)
     bridge_name = bridge_from_vm_name(vm_name)
     try:
         subprocess.check_output(
@@ -152,7 +189,7 @@ def setup_vm_network(
             log.debug(e.output)
             raise Exception(f"Failed to create bridge {bridge_name}.")
     else:
-        gateway_ip = subnet_ip_from_vm_name(vm_name, 1)
+        gateway_ip = profile.ip_from_vm_id(vm_id, host_id=1)
         subprocess.run(
             f"ip addr add {gateway_ip}/24 dev {bridge_name}", shell=True, check=True
         )
@@ -176,7 +213,7 @@ def setup_vm_network(
         with open("/proc/sys/net/ipv4/ip_forward", "w") as f:
             f.write("1\n")
 
-        vmnet_ip = subnet_ip_from_vm_name(vm_name, 0)
+        vmnet_ip = profile.ip_from_vm_id(vm_id, host_id=0)
         add_iptable_rule(
             f"POSTROUTING -t nat -s {vmnet_ip}/24 -o {out_interface} -j MASQUERADE"
         )
@@ -184,7 +221,8 @@ def setup_vm_network(
         add_iptable_rule(f"FORWARD -i {out_interface} -o {bridge_name} -j ACCEPT")
 
 
-def delete_vm_network(vm_name: str, out_interface: str) -> None:
+def delete_vm_network(profile: Profile, vm_id: int) -> None:
+    vm_name = profile.get_vm_name(vm_id)
     bridge_name = bridge_from_vm_name(vm_name)
     try:
         subprocess.check_output(
@@ -211,10 +249,20 @@ def delete_vm_network(vm_name: str, out_interface: str) -> None:
 
     del_iptable_rule(f"INPUT -i {bridge_name} -d 0.0.0.0/0 -j DROP")
 
-    # Clean net_enable entries if they exist
-    vmnet_ip = subnet_ip_from_vm_name(vm_name, 0)
-    del_iptable_rule(
-        f"POSTROUTING -t nat -s {vmnet_ip}/24 -o {out_interface} -j MASQUERADE"
-    )
-    del_iptable_rule(f"FORWARD -i {bridge_name} -o {out_interface} -j ACCEPT")
-    del_iptable_rule(f"FORWARD -i {out_interface} -o {bridge_name} -j ACCEPT")
+    # List net_enable entries
+    iptables_rules = list_iptables_rules()
+    pattern = f"FORWARD -i {bridge_name} -o ([a-zA-Z0-9]+) -j ACCEPT"
+    out_interface = None
+    for rule in iptables_rules:
+        m = re.match(pattern, rule)
+        if m:
+            out_interface = m.group(1)
+
+    if out_interface is not None:
+        # Clean net_enable entries if they exist
+        vmnet_ip = profile.ip_from_vm_id(vm_id, host_id=0)
+        del_iptable_rule(
+            f"POSTROUTING -t nat -s {vmnet_ip}/24 -o {out_interface} -j MASQUERADE"
+        )
+        del_iptable_rule(f"FORWARD -i {bridge_name} -o {out_interface} -j ACCEPT")
+        del_iptable_rule(f"FORWARD -i {out_interface} -o {bridge_name} -j ACCEPT")

@@ -1,8 +1,15 @@
+import hashlib
 import logging
+import os
+import re
 
 import click
+from tqdm import tqdm
 
-from ..machinery.storage import REGISTERED_BACKEND_NAMES
+from ..config import InstallInfo, Profile
+from ..machinery.networking import check_networking_prerequisites, find_default_interface
+from ..machinery.storage import REGISTERED_BACKEND_NAMES, get_storage_backend
+from ..machinery.vm import VirtualMachine
 from .util import check_root
 
 
@@ -18,7 +25,9 @@ def ensure_lvm(ctx, param, value):
     return value
 
 
-@click.command(help="Install guest Virtual Machine", no_args_is_help=True)
+@click.command(
+    help="Create new VM profile and install guest Virtual Machine", no_args_is_help=True
+)
 @click.argument("iso_path", type=click.Path(exists=True))
 @click.option(
     "--profile-name",
@@ -31,7 +40,7 @@ def ensure_lvm(ctx, param, value):
 @click.option(
     "--vcpus",
     "vcpus",
-    default=2,
+    default=InstallInfo.vcpus,
     type=int,
     show_default=True,
     help="Number of vCPUs per single VM",
@@ -39,7 +48,7 @@ def ensure_lvm(ctx, param, value):
 @click.option(
     "--memory",
     "memory",
-    default=3072,
+    default=InstallInfo.memory,
     type=int,
     show_default=True,
     help="Memory per single VM (in MB)",
@@ -74,7 +83,34 @@ def ensure_lvm(ctx, param, value):
     type=click.Path(exists=True),
     help="Path to autounattend.xml for automated Windows install",
 )
+@click.option(
+    "--subnet-addr",
+    "subnet_addr",
+    default=lambda: InstallInfo.get_default_subnet_addr(),
+    help="Subnet address for VM bridge with N as vm id"
+)
+@click.option(
+    "--out-interface",
+    "out_interface",
+    default=lambda: find_default_interface(),
+    help="Default interface for VM networking"
+)
+@click.option(
+    "--dns-server",
+    "dns_server",
+    default=InstallInfo.dns_server,
+    help="DNS server for VM networking (or 'use-default-gateway' "
+         "if you want to use default gateway of VM network as DNS)"
+)
+@click.option(
+    "--disable-net",
+    "disable_net",
+    is_flag=True,
+    default=False,
+    help="Disable network for installation"
+)
 def install(
+    profile_name,
     vcpus,
     memory,
     storage_backend,
@@ -83,32 +119,29 @@ def install(
     zfs_tank_name,
     lvm_volume_group,
     unattended_xml,
+    subnet_addr,
+    out_interface,
+    dns_server,
+    disable_net,
 ):
     if not check_root():
         return
 
     if storage_backend == "lvm" and lvm_volume_group is None:
-        raise Exception("lvm storage backend requires --lvm-volume-group")
+        raise click.ClickException("lvm storage backend requires --lvm-volume-group")
     if storage_backend == "zfs" and zfs_tank_name is None:
-        raise Exception("zfs storage backend requires --zfs-tank-name")
+        raise click.ClickException("zfs storage backend requires --zfs-tank-name")
 
     # TODO
     # if not sanity_check():
     #    logging.error("Sanity check failed.")
     #    return
 
-    # TODO
-    # stop_all_drakruns()
-
-    logging.info("Performing installation...")
-
     if vcpus < 1:
-        logging.error("Your VM must have at least 1 vCPU.")
-        return
+        raise click.ClickException("Your VM must have at least 1 vCPU.")
 
     if memory < 512:
-        logging.error("Your VM must have at least 512 MB RAM.")
-        return
+        raise click.ClickException("Your VM must have at least 512 MB RAM.")
 
     if memory < 1536:
         logging.warning(
@@ -118,9 +151,17 @@ def install(
     if unattended_xml:
         logging.info("Baking unattended.iso for automated installation")
 
+    try:
+        check_networking_prerequisites()
+    except RuntimeError as e:
+        raise click.ClickException(str(e))
+
+    logging.info("Performing installation...")
+
     sha256_hash = hashlib.sha256()
 
     logging.info("Calculating hash of iso")
+    iso_path = os.path.abspath(iso_path)
     iso_file_size = os.stat(iso_path).st_size
     block_size = 128 * 1024
     with tqdm(total=iso_file_size, unit_scale=True) as pbar:
@@ -136,48 +177,28 @@ def install(
         memory=memory,
         storage_backend=storage_backend,
         disk_size=disk_size,
-        iso_path=os.path.abspath(iso_path),
+        iso_path=iso_path,
         zfs_tank_name=zfs_tank_name,
         lvm_volume_group=lvm_volume_group,
         enable_unattended=unattended_xml is not None,
         iso_sha256=iso_sha256,
-    )
-    install_info.save()
-
-    backend = get_storage_backend(install_info)
-
-    vm0 = VirtualMachine(backend, 0)
-    vm0.destroy()
-
-    generate_vm_conf(install_info, 0)
-
-    backend.initialize_vm0_volume(disk_size)
-
-    try:
-        subprocess.check_output("brctl show", shell=True)
-    except subprocess.CalledProcessError:
-        logging.exception(
-            "Failed to execute brctl show. Make sure you have bridge-utils installed."
-        )
-        return
-
-    net_enable = conf["drakrun"].getboolean("net_enable", fallback=False)
-    out_interface = conf["drakrun"].get("out_interface", "")
-    dns_server = conf["drakrun"].get("dns_server", "")
-
-    setup_vm_network(
-        vm_id=0,
-        net_enable=net_enable,
+        subnet_addr=subnet_addr,
         out_interface=out_interface,
         dns_server=dns_server,
     )
+    profile = Profile.create(profile_name, install_info)
+    backend = get_storage_backend(profile)
 
-    if net_enable:
-        start_dnsmasq(vm_id=0, dns_server=dns_server, background=True)
+    vm0 = VirtualMachine(profile, 0)
+    vm0.destroy()
 
-    cfg_path = os.path.join(VM_CONFIG_DIR, "vm-0.cfg")
-
-    vm0.create()
+    backend.initialize_vm0_volume(disk_size)
+    vm0.setup_network(
+        out_interface,
+        dns_server,
+        net_enable=not disable_net
+    )
+    vm0.create(first_cd=iso_path)
 
     logging.info("-" * 80)
     logging.info("Initial VM setup is complete and the vm-0 was launched.")
@@ -187,18 +208,17 @@ def install(
     logging.info(
         "After you have installed Windows and booted it to the desktop, please execute:"
     )
-    logging.info("# draksetup postinstall")
+    logging.info("# draksh postinstall")
 
-    with open(cfg_path, "r") as f:
-        data = f.read()
-        m = re.search(r"vncpasswd[ ]*=(.*)", data)
-        if m:
-            passwd = m.group(1).strip()
-            if passwd[0] == '"' and passwd[-1] == '"':
-                passwd = passwd[1:-1]
+    data = vm0.vm_config_path.read_text()
+    m = re.search(r"vncpasswd[ ]*=(.*)", data)
+    if m:
+        passwd = m.group(1).strip()
+        if passwd[0] == '"' and passwd[-1] == '"':
+            passwd = passwd[1:-1]
 
-            logging.info("Your configured VNC password is:")
-            logging.info(passwd)
+        logging.info("Your configured VNC password is:")
+        logging.info(passwd)
 
     logging.info(
         "Please note that on some machines, system installer may boot for up to 10 minutes"

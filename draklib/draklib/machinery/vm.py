@@ -100,13 +100,15 @@ class VirtualMachine:
         return vm_config_path
 
     def setup_network(self, out_interface: str, dns_server: str, net_enable: bool):
-        setup_vm_network(self.vm_name, out_interface, dns_server, net_enable)
+        setup_vm_network(
+            self.profile, self.vm_id, out_interface, dns_server, net_enable
+        )
         if net_enable:
-            start_dnsmasq(self.vm_name, dns_server, background=True)
+            start_dnsmasq(self.profile, self.vm_id, dns_server, background=True)
 
     def clean_network(self):
-        stop_dnsmasq(self.vm_name)
-        delete_vm_network(self.vm_name)
+        stop_dnsmasq(self.profile, self.vm_id)
+        delete_vm_network(self.profile, self.vm_id)
 
     def create(
         self,
@@ -126,7 +128,7 @@ class VirtualMachine:
             subprocess.run(
                 args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
             )
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             raise VMError(f"Failed to launch VM {self.vm_name}", vm_name=self.vm_name)
 
     def pause(self):
@@ -137,7 +139,7 @@ class VirtualMachine:
                 stderr=subprocess.PIPE,
                 check=True,
             )
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             raise VMError(f"Failed to pause VM {self.vm_name}", vm_name=self.vm_name)
 
     def unpause(self):
@@ -148,7 +150,7 @@ class VirtualMachine:
                 stderr=subprocess.PIPE,
                 check=True,
             )
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             raise VMError(f"Failed to unpause VM {self.vm_name}", vm_name=self.vm_name)
 
     def save(self):
@@ -164,13 +166,13 @@ class VirtualMachine:
                 stderr=subprocess.PIPE,
                 check=True,
             )
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             raise VMError(f"Failed to save VM {self.vm_name}", vm_name=self.vm_name)
 
     def restore(self, paused=False):
         if self.is_running:
             self.destroy()
-        vm_config_path = self.make_vm_config()
+        self.make_vm_config()
         args = ["xl", "restore"]
         if paused is True:
             args += ["-p"]
@@ -185,7 +187,7 @@ class VirtualMachine:
             subprocess.run(
                 args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
             )
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             raise VMError(f"Failed to restore VM {self.vm_name}", vm_name=self.vm_name)
 
     def destroy(self):
@@ -196,7 +198,7 @@ class VirtualMachine:
                 stderr=subprocess.PIPE,
                 check=True,
             )
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             raise VMError(f"Failed to destroy VM {self.vm_name}", vm_name=self.vm_name)
 
     @contextmanager

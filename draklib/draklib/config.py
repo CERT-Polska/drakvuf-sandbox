@@ -2,7 +2,7 @@ import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from .util import DataClassConfigMixin
 
@@ -17,6 +17,8 @@ class InstallInfo(DataClassConfigMixin):
     disk_size: str
     iso_path: str
     enable_unattended: bool
+    out_interface: str
+    dns_server: str = "8.8.8.8"
     vcpus: int = 2
     memory: int = 3072
     # This is not strictly a default
@@ -29,7 +31,7 @@ class InstallInfo(DataClassConfigMixin):
     _FILENAME = "install.json"
 
     @staticmethod
-    def adapt_default_subnet_addr():
+    def get_default_subnet_addr():
         """
         This method is required to find defaults that does not
         collide with already created profiles
@@ -37,16 +39,15 @@ class InstallInfo(DataClassConfigMixin):
         default_subnet_addr = InstallInfo.subnet_addr.split(".")
         default_next_subnet = int(default_subnet_addr[1])
 
-        for profile_path in get_available_profiles():
-            install_info = InstallInfo.load(profile_path)
-            subnet_addr = install_info.subnet_addr.split(".")
+        for profile in Profile.load_all():
+            subnet_addr = profile.install_info.subnet_addr.split(".")
             if subnet_addr[0] != default_subnet_addr[0]:
                 # Not 10.x.x.x on profile
                 continue
             if int(subnet_addr[1]) >= default_next_subnet:
                 default_next_subnet = int(subnet_addr[1]) + 1
 
-        InstallInfo.subnet_addr = ".".join(
+        return ".".join(
             [
                 default_subnet_addr[0],
                 str(default_next_subnet),
@@ -101,6 +102,10 @@ class Profile:
         else:
             return f"{self.profile_name}-vm-{vm_id}"
 
+    def ip_from_vm_id(self, vm_id: int, host_id: int):
+        subnet_ip = self.install_info.subnet_addr.replace("N", str(vm_id))
+        return ".".join(subnet_ip.split(".")[:3] + [str(host_id)])
+
     @staticmethod
     def resolve_profile_name(profile_name: Optional[str]) -> str:
         """
@@ -142,3 +147,13 @@ class Profile:
         profile = Profile(profile_name, install_info)
         profile._initialize()
         return profile
+
+    @staticmethod
+    def load_all() -> List["Profile"]:
+        profiles = []
+        for install_path in LIB_DIR.glob("*/install.json"):
+            profile_path = install_path.parent
+            if profile_path.is_symlink():
+                continue
+            profiles.append(Profile.load(profile_path.name))
+        return profiles

@@ -6,7 +6,6 @@ import shlex
 import shutil
 import subprocess
 import time
-from pathlib import Path
 from typing import Tuple
 
 from ..config import Profile
@@ -249,7 +248,7 @@ class Qcow2StorageBackend(StorageBackendBase):
 
     def rollback_vm_storage(self, vm_id: int):
         volume_path = self.volume_dir / f"vm-{vm_id}.img"
-        vm0_path = self.volume_dir / f"vm-0.img"
+        vm0_path = self.volume_dir / "vm-0.img"
         volume_path.unlink(missing_ok=True)
 
         subprocess.run(
@@ -268,15 +267,15 @@ class Qcow2StorageBackend(StorageBackendBase):
         )
 
     def get_vm0_snapshot_time(self):
-        vm0_path = self.volume_dir / f"vm-0.img"
+        vm0_path = self.volume_dir / "vm-0.img"
         return int(vm0_path.lstat().st_mtime)
 
     def export_vm0(self, path: str):
-        vm0_path = self.volume_dir / f"vm-0.img"
+        vm0_path = self.volume_dir / "vm-0.img"
         shutil.copy(vm0_path, path)
 
     def import_vm0(self, path: str):
-        vm0_path = self.volume_dir / f"vm-0.img"
+        vm0_path = self.volume_dir / "vm-0.img"
         shutil.copy(path, vm0_path)
 
     def delete_vm_volume(self, vm_id: str):
@@ -303,7 +302,8 @@ class LvmStorageBackend(StorageBackendBase):
         except subprocess.CalledProcessError:
             raise RuntimeError(
                 "Failed to execute vgs command"
-                f"Make sure you have LVM support installed with {self.lvm_volume_group} as a volume group"
+                f"Make sure you have LVM support installed with "
+                f"{self.lvm_volume_group} as a volume group"
             )
 
     def initialize_vm0_volume(self, disk_size: str):
@@ -348,7 +348,8 @@ class LvmStorageBackend(StorageBackendBase):
     def snapshot_vm0_volume(self):
         """Saves or snapshots base vm-0 volume for later use by other VMs"""
         # vm-0 is the original disk being treated as a snapshot
-        # vm-0-snap is being created just for the access time of the change in vm snapshot
+        # vm-0-snap is being created just for the access time
+        # of the change in vm snapshot
         subprocess.run(
             ["lvremove", f"{self.lvm_volume_group}/vm-0-snap"],
             stderr=subprocess.DEVNULL,
@@ -397,7 +398,8 @@ class LvmStorageBackend(StorageBackendBase):
             except subprocess.CalledProcessError as exc:
                 log.debug(exc.output)
                 raise RuntimeError(
-                    f"Failed to discard previous logical volume {self.lvm_volume_group}/vm-{vm_id}"
+                    f"Failed to discard previous logical volume "
+                    f"{self.lvm_volume_group}/vm-{vm_id}"
                 )
 
         try:
