@@ -54,6 +54,7 @@ def postinstall(profile_name):
 
     win_guid_info = vm0.get_win_guid()
 
+    logging.info(f"Determined Windows version: {win_guid_info.version}")
     logging.info(f"Determined PDB GUID: {win_guid_info.guid}")
     logging.info(f"Determined kernel filename: {win_guid_info.filename}")
 
