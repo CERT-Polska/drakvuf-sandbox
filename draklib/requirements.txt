@@ -1,0 +1,3 @@
+tqdm>=4.43.0
+click>=7.1.2
+dataclasses-json>=0.5.6
