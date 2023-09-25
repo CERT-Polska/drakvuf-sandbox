@@ -112,7 +112,7 @@ class VirtualMachine:
 
     def create(
         self,
-        paused=True,
+        paused=False,
         first_cd: Optional[Path] = None,
         second_cd: Optional[Path] = None,
     ):
