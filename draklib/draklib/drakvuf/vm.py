@@ -101,6 +101,7 @@ class DrakvufVM:
         while tries > 0:
             try:
                 self.injector.read_file(guest_dll_path, str(local_dll_path), timeout=30)
+                break
             except InjectorTimeout:
                 tries -= 1
                 if tries == 0:
