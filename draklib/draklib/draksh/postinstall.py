@@ -1,20 +1,11 @@
 import logging
-import os
 
 import click
 
-from ..config import InstallInfo, Profile
+from ..config import Profile
 from ..drakvuf.dlls import get_essential_dll_file_list, get_optional_dll_file_list
-from ..drakvuf.drakpdb import fetch_pdb, make_pdb_profile
-from ..drakvuf.injector import Injector, InjectorError
-from ..drakvuf.profile import (
-    RuntimeInfo,
-    extract_explorer_pid,
-    extract_vmi_offsets,
-    vmi_win_guid,
-)
 from ..drakvuf.vm import DrakvufVM
-from ..machinery.vm import VirtualMachine, FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE
+from ..machinery.vm import FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE
 from ..util import ensure_delete
 from .util import check_root
 
@@ -105,3 +96,9 @@ def postinstall(profile_name):
         logging.info("Profile created although not all DLLs were profiled")
         for failed_dll in failed_dlls:
             logging.info(f"- {failed_dll.path}")
+
+#####
+# TODO
+# Store output from vmi_win_guid e.g. in runtime.json
+# Make separate checkpoint for postinstall if snapshot is already there
+#
