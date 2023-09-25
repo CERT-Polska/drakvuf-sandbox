@@ -196,7 +196,11 @@ class VirtualMachine:
             )
 
     def eject_cd(self, drive: str):
-        eject_cd(self.vm_name, drive)
+        try:
+            eject_cd(self.vm_name, drive)
+        except subprocess.CalledProcessError:
+            log.exception("Failed to eject CD, probably already ejected")
+            return
 
     def insert_cd(self, drive: str, iso_path: str):
         insert_cd(self.vm_name, drive, iso_path)
