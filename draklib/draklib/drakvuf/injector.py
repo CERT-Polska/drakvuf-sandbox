@@ -53,7 +53,9 @@ class Injector:
         ] + args
         try:
             result = subprocess.check_output(cmd_args, text=True)
-            return json.loads(result)
+            parsed_result = json.loads(result)
+            if parsed_result.get("Status") != "Success":
+                self._raise_error(result)
         except subprocess.CalledProcessError as e:
             self._raise_error(e.stdout)
 
