@@ -3,6 +3,7 @@ import logging
 import click
 
 from ..config import Configuration
+from ..drakvuf.vm import DrakvufVM
 from .util import check_root
 
 log = logging.getLogger(__name__)
@@ -28,6 +29,22 @@ log = logging.getLogger(__name__)
     show_default=True,
     help="Analysis timeout",
 )
-def run(vm_id, sample_path, out_dir, config_name):
+@click.option(
+    "--disable-net",
+    "disable_net",
+    is_flag=True,
+    default=False,
+    help="Disable network for installation",
+)
+def run(vm_id, sample_path, out_dir, config_name, timeout, disable_net):
     if not check_root():
         return
+
+    config = Configuration.load(config_name)
+    vm = DrakvufVM(config, vm_id)
+    vm.restore(net_enable=not disable_net)
+    try:
+        log.info("Running guest preparation script...")
+        vm.run_prepare_script()
+    finally:
+        vm.destroy()
