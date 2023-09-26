@@ -56,12 +56,11 @@ class Injector:
             parsed_result = json.loads(result)
             if parsed_result.get("Status") != "Success":
                 self._raise_error(result)
+            return parsed_result
         except subprocess.CalledProcessError as e:
             self._raise_error(e.stdout)
 
-    def write_file(
-        self, local_path: str, remote_path: str, timeout: int = 60
-    ) -> subprocess.CompletedProcess:
+    def write_file(self, local_path: str, remote_path: str, timeout: int = 60):
         """
         Copy local file to the VM
         """
@@ -69,16 +68,12 @@ class Injector:
             "writefile", ["-e", remote_path, "-B", local_path], timeout=timeout
         )
 
-    def read_file(
-        self, remote_path: str, local_path: str, timeout: int = 60
-    ) -> subprocess.CompletedProcess:
+    def read_file(self, remote_path: str, local_path: str, timeout: int = 60):
         return self.execute(
             "readfile", ["-e", remote_path, "-B", local_path], timeout=timeout
         )
 
-    def create_process(
-        self, cmdline: str, wait: bool = False, timeout: int = 60
-    ) -> subprocess.CompletedProcess:
+    def create_process(self, cmdline: str, wait: bool = False, timeout: int = 60):
         """
         Create a process inside the VM with given command line
         we pass (timeout-5) to drakvuf to give it 5 seconds to finish it's loop

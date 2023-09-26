@@ -128,6 +128,13 @@ optional_wow64_dll_file_list = [
     DLL("Windows/SysWOW64/wtsapi32.dll", "wow64_wtsapi32_profile", None),
 ]
 
+all_dll_file_list = (
+    essential_native_dll_file_list
+    + essential_wow64_dll_file_list
+    + optional_native_dll_file_list
+    + optional_wow64_dll_file_list
+)
+
 
 def get_essential_dll_file_list(vmi_guid_info: VmiGuidInfo) -> List[DLL]:
     dlls = list(essential_native_dll_file_list)
