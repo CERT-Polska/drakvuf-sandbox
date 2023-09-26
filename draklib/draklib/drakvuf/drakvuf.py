@@ -6,6 +6,11 @@ from .profile import RuntimeInfo
 
 
 class Drakvuf:
+    BROKEN_PLUGINS = [
+        # https://github.com/tklengyel/drakvuf/issues/1613
+        "socketmon"
+    ]
+
     def __init__(
         self,
         config: Configuration,
@@ -57,4 +62,6 @@ class Drakvuf:
         ] + self.get_dll_profile_args()
         if debug:
             drakvuf_cmd.extend(["-v"])
+        for broken_plugin in self.BROKEN_PLUGINS:
+            drakvuf_cmd.extend(["-x", broken_plugin])
         return drakvuf_cmd

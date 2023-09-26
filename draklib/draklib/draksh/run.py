@@ -68,7 +68,7 @@ def run(vm_id, sample_path, out_dir, config_name, timeout, disable_net, no_prep)
         real_sample_path = result["ProcessName"]
         log.info(f"Running sample {real_sample_path}")
         drakvuf = Drakvuf(config, vm_id, vm.runtime_info, str(vm.kernel_profile_path))
-        cmdline = drakvuf.get_base_drakvuf_cmdline(timeout, guest_sample_path, "C:\\")
+        cmdline = drakvuf.get_base_drakvuf_cmdline(timeout, real_sample_path, "C:\\")
         with open("./stdout.log", "w") as stdout, open("./stderr.log", "w") as stderr:
             subprocess.run(
                 cmdline,
