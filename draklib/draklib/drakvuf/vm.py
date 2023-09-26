@@ -1,6 +1,7 @@
 """
 High-level VM interface using Drakvuf and LibVMI for introspection operations
 """
+import json
 import logging
 from pathlib import Path, PureWindowsPath
 
@@ -49,7 +50,7 @@ class DrakvufVM:
         kernel_profile = make_pdb_profile(kernel_pdb_file, win_guid.filename)
 
         log.info("Saving profile...")
-        self.kernel_profile_path.write_text(kernel_profile)
+        self.kernel_profile_path.write_text(json.dumps(kernel_profile))
         return kernel_profile
 
     def create_runtime_info(self):
@@ -121,6 +122,6 @@ class DrakvufVM:
             codeview_data["filename"],
         )
         dll_profile_path = self.profile.vm_profile_dir / f"{dllspec.dest}.json"
-        dll_profile_path.write_text(profile)
+        dll_profile_path.write_text(json.dumps(profile))
         ensure_delete(local_dll_path)
         return dll_profile_path
