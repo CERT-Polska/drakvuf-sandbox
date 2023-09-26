@@ -239,7 +239,8 @@ def make_symstore_hash(
     codeview_struct: Union[Container, pdbparse.PDBInfoStream]
 ) -> str:
     """
-    If `codeview_struct` is an instance of Container, it should be returned from `CV_RSDS_HEADER.parse()`.
+    If `codeview_struct` is an instance of Container,
+    it should be returned from `CV_RSDS_HEADER.parse()`.
     """
     guid = codeview_struct.GUID
     guid_str = "%08x%04x%04x%s" % (
@@ -401,7 +402,8 @@ def main():
     parser.add_argument(
         "action",
         type=str,
-        help="one of: fetch_pdb (requires --pdb-name and --guid_age), parse_pdb (requires --pdb-name), pe_codeview_data (requires --file)",
+        help="one of: fetch_pdb (requires --pdb-name and --guid_age), "
+        "parse_pdb (requires --pdb-name), pe_codeview_data (requires --file)",
     )
     parser.add_argument(
         "--pdb_name",

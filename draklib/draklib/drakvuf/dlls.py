@@ -49,12 +49,14 @@ optional_native_dll_file_list = [
         "--json-mscorwks",
     ),
     DLL(
-        "Windows/winsxs/amd64_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll",
+        "Windows/winsxs/amd64_microsoft.windows.gdiplus_"
+        "6595b64144ccf1df_1.1.7601.17514_none_2b24536c71ed437a/GdiPlus.dll",
         "native_gdiplus_profile",
         None,
     ),
     DLL(
-        "Windows/winsxs/x86_microsoft.windows.gdiplus_6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll",
+        "Windows/winsxs/x86_microsoft.windows.gdiplus_"
+        "6595b64144ccf1df_1.1.7601.17514_none_72d18a4386696c80/GdiPlus.dll",
         "x86_gdiplus_profile",
         None,
     ),

@@ -150,7 +150,8 @@ def install(
 
     if memory < 1536:
         logging.warning(
-            "Using less than 1.5 GB RAM per VM is not recommended for any supported system."
+            "Using less than 1.5 GB RAM per VM is not recommended "
+            "for any supported system."
         )
 
     if unattended_xml:
@@ -211,10 +212,12 @@ def install(
     logging.info("-" * 80)
     logging.info("Initial VM setup is complete and the vm-0 was launched.")
     logging.info(
-        "Please now VNC to the port 5900 on this machine to perform Windows installation."
+        "Please now VNC to the port 5900 on this machine "
+        "to perform Windows installation."
     )
     logging.info(
-        "After you have installed Windows and booted it to the desktop, please execute:"
+        "After you have installed Windows and booted it "
+        "to the desktop, please execute:"
     )
     logging.info("# draksh postinstall")
 
@@ -229,7 +232,8 @@ def install(
         logging.info(passwd)
 
     logging.info(
-        "Please note that on some machines, system installer may boot for up to 10 minutes"
+        "Please note that on some machines, system installer "
+        "may boot for up to 10 minutes"
     )
     logging.info("and may look unresponsive during the process. Please be patient.")
     logging.info("-" * 80)
