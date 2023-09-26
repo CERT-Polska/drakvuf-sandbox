@@ -140,13 +140,14 @@ class DrakvufVM:
 
     def run_prepare_script(self, tries: int = 3):
         local_path = self.profile.etc_dir / "prepare.bat"
-        guest_path = PureWindowsPath("C:/Windows/temp/prepare.bat")
+        guest_path = PureWindowsPath("C:/Users/Public/prepare.bat")
         while tries > 0:
             try:
                 self.injector.write_file(str(guest_path), str(local_path), timeout=30)
                 self.injector.create_process(
                     f"cmd /C start {str(guest_path)}", wait=True, timeout=120
                 )
+                break
             except InjectorTimeout:
                 tries -= 1
                 if tries == 0:
