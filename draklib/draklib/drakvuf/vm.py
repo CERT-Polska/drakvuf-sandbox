@@ -145,7 +145,7 @@ class DrakvufVM:
             try:
                 self.injector.write_file(str(local_path), str(guest_path), timeout=30)
                 self.injector.create_process(
-                    f"cmd /C start {str(guest_path)}", wait=True, timeout=120
+                    f"cmd /C {str(guest_path)}", wait=True, timeout=120
                 )
                 break
             except InjectorTimeout:
