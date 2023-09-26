@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 from tqdm import tqdm
 
-from ..config import InstallInfo, Profile
+from ..config import Configuration, InstallInfo, Parameters
 from ..machinery.networking import (
     check_networking_prerequisites,
     find_default_interface,
@@ -30,16 +30,17 @@ def ensure_lvm(ctx, param, value):
 
 
 @click.command(
-    help="Create new VM profile and install guest Virtual Machine", no_args_is_help=True
+    help="Create new configuration and install guest Virtual Machine",
+    no_args_is_help=True,
 )
 @click.argument("iso_path", type=click.Path(exists=True))
 @click.option(
-    "--profile-name",
-    "profile_name",
-    default="default",
+    "--config-name",
+    "config_name",
+    default=Configuration.DEFAULT_NAME,
     type=str,
     show_default=True,
-    help="Profile name",
+    help="Configuration name",
 )
 @click.option(
     "--vcpus",
@@ -90,7 +91,7 @@ def ensure_lvm(ctx, param, value):
 @click.option(
     "--subnet-addr",
     "subnet_addr",
-    default=lambda: InstallInfo.get_default_subnet_addr(),
+    default=lambda: Parameters.get_default_subnet_addr(),
     help="Subnet address for VM bridge with N as vm id",
 )
 @click.option(
@@ -102,7 +103,7 @@ def ensure_lvm(ctx, param, value):
 @click.option(
     "--dns-server",
     "dns_server",
-    default=InstallInfo.dns_server,
+    default=Parameters.dns_server,
     help="DNS server for VM networking (or 'use-default-gateway' "
     "if you want to use default gateway of VM network as DNS)",
 )
@@ -114,7 +115,7 @@ def ensure_lvm(ctx, param, value):
     help="Disable network for installation",
 )
 def install(
-    profile_name,
+    config_name,
     vcpus,
     memory,
     storage_backend,
@@ -186,18 +187,20 @@ def install(
         lvm_volume_group=lvm_volume_group,
         enable_unattended=unattended_xml is not None,
         iso_sha256=iso_sha256,
+    )
+    parameters = Parameters(
         subnet_addr=subnet_addr,
         out_interface=out_interface,
         dns_server=dns_server,
     )
-    if Profile.exists(profile_name):
+    if Configuration.exists(config_name):
         click.confirm(
-            f"'{profile_name}' already exists. Do you want to overwrite it?", abort=True
+            f"'{config_name}' already exists. Do you want to overwrite it?", abort=True
         )
-        Profile.delete(profile_name)
-    profile = Profile.create(profile_name, install_info)
+        Configuration.delete(config_name)
+    config = Configuration.create(config_name, parameters, install_info)
 
-    vm0 = VirtualMachine(profile, 0)
+    vm0 = VirtualMachine(config, 0)
     if vm0.is_running:
         vm0.destroy()
 

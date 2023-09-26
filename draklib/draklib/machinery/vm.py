@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from ..config import Profile
+from ..config import Configuration
 from .networking import delete_vm_network, setup_vm_network, start_dnsmasq, stop_dnsmasq
 from .storage import get_storage_backend
 from .xen import eject_cd, insert_cd
@@ -30,11 +30,11 @@ class VMError(RuntimeError):
 
 
 class VirtualMachine:
-    def __init__(self, profile: Profile, vm_id: int):
-        self.profile = profile
-        self.storage = get_storage_backend(self.profile)
+    def __init__(self, config: Configuration, vm_id: int):
+        self.config = config
+        self.storage = get_storage_backend(self.config)
         self.vm_id = vm_id
-        self.vm_name = profile.get_vm_name(vm_id)
+        self.vm_name = config.get_vm_name(vm_id)
 
     @property
     def is_running(self) -> bool:
@@ -47,11 +47,11 @@ class VirtualMachine:
 
     @property
     def snapshot_path(self) -> Path:
-        return self.profile.volumes_dir / "snapshot.sav"
+        return self.config.volumes_dir / "snapshot.sav"
 
     @property
     def vm_config_path(self) -> Path:
-        return self.profile.vm_config_dir / f"vm-{self.vm_id}.cfg"
+        return self.config.vm_config_dir / f"vm-{self.vm_id}.cfg"
 
     def make_vm_config(
         self, first_cd: Optional[Path] = None, second_cd: Optional[Path] = None
@@ -59,7 +59,7 @@ class VirtualMachine:
         """
         Creates configuration from template and ensures its existence
         """
-        template = self.profile.vm_template_path.read_text()
+        template = self.config.vm_template_path.read_text()
 
         disks = [self.storage.get_vm_disk_path(self.vm_id)]
 
@@ -71,7 +71,7 @@ class VirtualMachine:
                 f"file:{str(second_cd.resolve())},{SECOND_CDROM_DRIVE}:cdrom,r"
             )
 
-        install_info = self.profile.install_info
+        install_info = self.config.install_info
         vm_name = self.vm_name
         vm_id = self.vm_id
         disks_spec = ", ".join(['"{}"'.format(disk) for disk in disks])
@@ -100,15 +100,13 @@ class VirtualMachine:
         return vm_config_path
 
     def setup_network(self, out_interface: str, dns_server: str, net_enable: bool):
-        setup_vm_network(
-            self.profile, self.vm_id, out_interface, dns_server, net_enable
-        )
+        setup_vm_network(self.config, self.vm_id, out_interface, dns_server, net_enable)
         if net_enable:
-            start_dnsmasq(self.profile, self.vm_id, dns_server, background=True)
+            start_dnsmasq(self.config, self.vm_id, dns_server, background=True)
 
     def clean_network(self):
-        stop_dnsmasq(self.profile, self.vm_id)
-        delete_vm_network(self.profile, self.vm_id)
+        stop_dnsmasq(self.config, self.vm_id)
+        delete_vm_network(self.config, self.vm_id)
 
     def create(
         self,

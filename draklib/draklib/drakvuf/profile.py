@@ -5,7 +5,12 @@ from typing import IO, AnyStr
 
 from dataclasses_json import DataClassJsonMixin, config
 
-from .structs import VmiGuidInfo
+
+@dataclass
+class VmiGuidInfo:
+    version: str
+    guid: str
+    filename: str
 
 
 def vmi_win_guid(vm_name: str) -> VmiGuidInfo:
@@ -104,6 +109,7 @@ def extract_explorer_pid(domain: str, kernel_profile: str, timeout: int = 30) ->
 
 @dataclass
 class RuntimeInfo(DataClassJsonMixin):
+    win_guid: VmiGuidInfo
     vmi_offsets: VmiOffsets
     inject_pid: int
 

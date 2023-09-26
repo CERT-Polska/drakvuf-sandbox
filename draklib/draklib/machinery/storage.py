@@ -8,7 +8,7 @@ import subprocess
 import time
 from typing import Tuple
 
-from ..config import Profile
+from ..config import Configuration
 from ..util import ensure_delete
 
 log = logging.getLogger(__name__)
@@ -28,9 +28,9 @@ class StorageBackendBase:
     create vm-0 -> configure vm-0 -> snapshot vm-0 -> restore vm-0 snapshot as vm-[i]
     """
 
-    def __init__(self, profile: Profile):
-        self.volume_dir = profile.volumes_dir
-        self._install_info = profile.install_info
+    def __init__(self, config: Configuration):
+        self.volume_dir = config.volumes_dir
+        self._install_info = config.install_info
 
     def initialize_vm0_volume(self, disk_size: str):
         """Create base volume for vm-0 with given size
@@ -71,9 +71,9 @@ class StorageBackendBase:
 class ZfsStorageBackend(StorageBackendBase):
     """Implements storage backend based on ZFS zvols"""
 
-    def __init__(self, profile: Profile):
-        super().__init__(profile)
-        self.zfs_tank_name = profile.install_info.zfs_tank_name
+    def __init__(self, config: Configuration):
+        super().__init__(config)
+        self.zfs_tank_name = config.install_info.zfs_tank_name
         if self.zfs_tank_name is None:
             raise RuntimeError("zfs_tank_name is missing from InstallInfo")
         self.check_tools()
@@ -205,8 +205,8 @@ class ZfsStorageBackend(StorageBackendBase):
 class Qcow2StorageBackend(StorageBackendBase):
     """Implements storage backend based on QEMU QCOW2 image format"""
 
-    def __init__(self, profile: Profile):
-        super().__init__(profile)
+    def __init__(self, config: Configuration):
+        super().__init__(config)
         self.check_tools()
 
     @staticmethod
@@ -287,9 +287,9 @@ class Qcow2StorageBackend(StorageBackendBase):
 class LvmStorageBackend(StorageBackendBase):
     """Implements storage backend based on lvm storage"""
 
-    def __init__(self, profile: Profile):
-        super().__init__(profile)
-        self.lvm_volume_group = profile.install_info.lvm_volume_group
+    def __init__(self, config: Configuration):
+        super().__init__(config)
+        self.lvm_volume_group = config.install_info.lvm_volume_group
         self.check_tools()
         self.snapshot_disksize = "1G"
 
@@ -500,9 +500,9 @@ class InvalidStorageBackend(Exception):
     """Thrown when tried to create unsupported storage backend"""
 
 
-def get_storage_backend(profile: Profile) -> StorageBackendBase:
+def get_storage_backend(config: Configuration) -> StorageBackendBase:
     """Return installed storage backend or throw InvalidStorageBackend"""
-    if profile.install_info.storage_backend not in REGISTERED_BACKEND_NAMES:
+    if config.install_info.storage_backend not in REGISTERED_BACKEND_NAMES:
         raise InvalidStorageBackend
 
-    return REGISTERED_BACKENDS[profile.install_info.storage_backend](profile)
+    return REGISTERED_BACKENDS[config.install_info.storage_backend](config)

@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
-from ..config import Profile
+from ..config import Configuration
 from .xen import get_domid_from_name
 
 log = logging.getLogger(__name__)
@@ -102,18 +102,18 @@ def start_tcpdump_collector(vm_name: str, outdir: Path) -> subprocess.Popen:
 
 
 def start_dnsmasq(
-    profile: Profile, vm_id: int, dns_server: str, background=False
+    config: Configuration, vm_id: int, dns_server: str, background=False
 ) -> Optional[subprocess.Popen]:
     try:
         subprocess.check_output("dnsmasq --version", shell=True)
     except subprocess.CalledProcessError:
         raise RuntimeError("Failed to start dnsmasq")
 
-    vm_name = profile.get_vm_name(vm_id)
+    vm_name = config.get_vm_name(vm_id)
 
     if dns_server == "use-gateway-address":
         # 10.13.N.1
-        dns_server = profile.ip_from_vm_id(vm_id, host_id=1)
+        dns_server = config.ip_from_vm_id(vm_id, host_id=1)
 
     dnsmasq_pidfile = f"/var/run/dnsmasq-drak-{vm_name}.pid"
 
@@ -130,8 +130,8 @@ def start_dnsmasq(
                 log.info("Already running dnsmasq in background")
                 return None
 
-    dhcp_first_addr = profile.ip_from_vm_id(vm_id, host_id=100)
-    dhcp_last_addr = profile.ip_from_vm_id(vm_id, host_id=200)
+    dhcp_first_addr = config.ip_from_vm_id(vm_id, host_id=100)
+    dhcp_last_addr = config.ip_from_vm_id(vm_id, host_id=200)
 
     return subprocess.Popen(
         [
@@ -152,8 +152,8 @@ def start_dnsmasq(
     )
 
 
-def stop_dnsmasq(profile: Profile, vm_id: int) -> None:
-    vm_name = profile.get_vm_name(vm_id)
+def stop_dnsmasq(config: Configuration, vm_id: int) -> None:
+    vm_name = config.get_vm_name(vm_id)
     dnsmasq_pidfile = f"/var/run/dnsmasq-drak-{vm_name}.pid"
 
     if os.path.exists(dnsmasq_pidfile):
@@ -173,9 +173,13 @@ def interface_exists(iface: str) -> bool:
 
 
 def setup_vm_network(
-    profile: Profile, vm_id: int, out_interface: str, dns_server: str, net_enable: bool
+    config: Configuration,
+    vm_id: int,
+    out_interface: str,
+    dns_server: str,
+    net_enable: bool,
 ) -> None:
-    vm_name = profile.get_vm_name(vm_id)
+    vm_name = config.get_vm_name(vm_id)
     bridge_name = bridge_from_vm_name(vm_name)
     try:
         subprocess.check_output(
@@ -189,7 +193,7 @@ def setup_vm_network(
             log.debug(e.output)
             raise Exception(f"Failed to create bridge {bridge_name}.")
     else:
-        gateway_ip = profile.ip_from_vm_id(vm_id, host_id=1)
+        gateway_ip = config.ip_from_vm_id(vm_id, host_id=1)
         subprocess.run(
             f"ip addr add {gateway_ip}/24 dev {bridge_name}", shell=True, check=True
         )
@@ -213,7 +217,7 @@ def setup_vm_network(
         with open("/proc/sys/net/ipv4/ip_forward", "w") as f:
             f.write("1\n")
 
-        vmnet_ip = profile.ip_from_vm_id(vm_id, host_id=0)
+        vmnet_ip = config.ip_from_vm_id(vm_id, host_id=0)
         add_iptable_rule(
             f"POSTROUTING -t nat -s {vmnet_ip}/24 -o {out_interface} -j MASQUERADE"
         )
@@ -221,8 +225,8 @@ def setup_vm_network(
         add_iptable_rule(f"FORWARD -i {out_interface} -o {bridge_name} -j ACCEPT")
 
 
-def delete_vm_network(profile: Profile, vm_id: int) -> None:
-    vm_name = profile.get_vm_name(vm_id)
+def delete_vm_network(config: Configuration, vm_id: int) -> None:
+    vm_name = config.get_vm_name(vm_id)
     bridge_name = bridge_from_vm_name(vm_name)
     try:
         subprocess.check_output(
@@ -260,7 +264,7 @@ def delete_vm_network(profile: Profile, vm_id: int) -> None:
 
     if out_interface is not None:
         # Clean net_enable entries if they exist
-        vmnet_ip = profile.ip_from_vm_id(vm_id, host_id=0)
+        vmnet_ip = config.ip_from_vm_id(vm_id, host_id=0)
         del_iptable_rule(
             f"POSTROUTING -t nat -s {vmnet_ip}/24 -o {out_interface} -j MASQUERADE"
         )

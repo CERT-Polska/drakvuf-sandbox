@@ -1,11 +1,10 @@
 """
 High-level VM interface using Drakvuf and LibVMI for introspection operations
 """
-import json
 import logging
 from pathlib import Path, PureWindowsPath
 
-from ..config import Profile
+from ..config import Configuration
 from ..machinery.vm import VirtualMachine
 from ..util import ensure_delete
 from .dlls import DLL
@@ -14,20 +13,20 @@ from .drakpdbvol import make_pdb_profile as vol_make_pdb_profile
 from .injector import Injector, InjectorTimeout
 from .profile import (
     RuntimeInfo,
+    VmiGuidInfo,
     extract_explorer_pid,
     extract_vmi_offsets,
     vmi_win_guid,
 )
-from .structs import VmiGuidInfo
 
 log = logging.getLogger(__name__)
 
 
 class DrakvufVM:
-    def __init__(self, profile: Profile, vm_id: int):
-        self.profile = profile
+    def __init__(self, config: Configuration, vm_id: int):
+        self.profile = config
         self.vm_id = vm_id
-        self.vm = VirtualMachine(profile, vm_id)
+        self.vm = VirtualMachine(config, vm_id)
         self.runtime_info = None
 
     @property
@@ -38,10 +37,10 @@ class DrakvufVM:
     def runtime_profile_path(self) -> Path:
         return self.profile.vm_profile_dir / "runtime.json"
 
-    def get_win_guid(self) -> VmiGuidInfo:
+    def _get_win_guid(self) -> VmiGuidInfo:
         return vmi_win_guid(vm_name=self.vm.vm_name)
 
-    def create_kernel_profile(self, win_guid: VmiGuidInfo):
+    def _create_kernel_profile(self, win_guid: VmiGuidInfo):
         logging.info("Fetching PDB file...")
         kernel_pdb_file = fetch_pdb(
             win_guid.filename, win_guid.guid, destdir=str(self.profile.vm_profile_dir)
@@ -54,6 +53,11 @@ class DrakvufVM:
         return kernel_profile
 
     def create_runtime_info(self):
+        win_guid = self._get_win_guid()
+        log.info(f"Determined Windows version: {win_guid.version}")
+        log.info(f"Determined PDB GUID: {win_guid.guid}")
+        log.info(f"Determined kernel filename: {win_guid.filename}")
+        self._create_kernel_profile(win_guid=win_guid)
         log.info("Extracting VMI offsets...")
         vmi_offsets = extract_vmi_offsets(
             self.vm.vm_name, str(self.kernel_profile_path)
@@ -63,7 +67,7 @@ class DrakvufVM:
             self.vm.vm_name, str(self.kernel_profile_path)
         )
         self.runtime_info = RuntimeInfo(
-            vmi_offsets=vmi_offsets, inject_pid=explorer_pid
+            win_guid=win_guid, vmi_offsets=vmi_offsets, inject_pid=explorer_pid
         )
         log.info("Saving runtime profile...")
         self.runtime_profile_path.write_text(self.runtime_info.to_json(indent=4))
@@ -82,8 +86,8 @@ class DrakvufVM:
         )
 
     def restore(self, net_enable: bool = True):
-        out_interface = self.profile.install_info.out_interface
-        dns_server = self.profile.install_info.dns_server
+        out_interface = self.profile.parameters.out_interface
+        dns_server = self.profile.parameters.dns_server
         self.vm.setup_network(out_interface, dns_server, net_enable=net_enable)
         self.vm.restore()
 
@@ -119,10 +123,7 @@ class DrakvufVM:
 
         logging.debug("Parsing PDB into JSON profile...")
         try:
-            profile = vol_make_pdb_profile(
-                pdb_tmp_filepath,
-                codeview_data["filename"]
-            )
+            profile = vol_make_pdb_profile(pdb_tmp_filepath, codeview_data["filename"])
         except Exception:
             log.exception("vol_make_pdb_profile failed")
             log.warning("Falling back to lenient drakpdb.make_pdb_profile")

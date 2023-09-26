@@ -2,7 +2,7 @@ import logging
 
 import click
 
-from ..config import Profile
+from ..config import Configuration
 from ..drakvuf.dlls import get_essential_dll_file_list, get_optional_dll_file_list
 from ..drakvuf.vm import DrakvufVM
 from ..machinery.vm import FIRST_CDROM_DRIVE, SECOND_CDROM_DRIVE
@@ -14,21 +14,21 @@ log = logging.getLogger(__name__)
 
 @click.command(help="Finalize VM installation and generate profiles")
 @click.option(
-    "--profile-name",
-    "profile_name",
-    default="default",
+    "--config-name",
+    "config_name",
+    default=Configuration.DEFAULT_NAME,
     type=str,
     show_default=True,
-    help="Profile name",
+    help="Configuration name",
 )
-def postinstall(profile_name):
+def postinstall(config_name):
     if not check_root():
         return
 
-    profile = Profile.load(profile_name)
+    config = Configuration.load(config_name)
 
-    vm1 = DrakvufVM(profile, 1)
-    vm0 = DrakvufVM(profile, 0)
+    vm1 = DrakvufVM(config, 1)
+    vm0 = DrakvufVM(config, 0)
 
     if vm1.vm.is_running is True:
         # If vm1 is running: probably we failed to make a DLL profile
@@ -42,23 +42,16 @@ def postinstall(profile_name):
             raise click.ClickException("vm-0 is not running")
 
         log.info("Cleaning up leftovers (if any)")
-        for path in profile.vm_profile_dir.glob("*"):
+        for path in config.vm_profile_dir.glob("*"):
             ensure_delete(path)
 
         log.info("Ejecting installation CDs")
         vm0.vm.eject_cd(FIRST_CDROM_DRIVE)
-        if profile.install_info.enable_unattended:
+        if config.install_info.enable_unattended:
             # If unattended installation is enabled, we have an additional CD-ROM drive
             # TODO
             vm0.vm.eject_cd(SECOND_CDROM_DRIVE)
 
-        win_guid_info = vm0.get_win_guid()
-
-        log.info(f"Determined Windows version: {win_guid_info.version}")
-        log.info(f"Determined PDB GUID: {win_guid_info.guid}")
-        log.info(f"Determined kernel filename: {win_guid_info.filename}")
-
-        vm0.create_kernel_profile(win_guid_info)
         vm0.create_runtime_info()
 
         log.info("Saving VM snapshot...")
@@ -73,23 +66,21 @@ def postinstall(profile_name):
         vm0.vm.storage.snapshot_vm0_volume()
 
     # Restore a VM and create DLL profiles
-    vm1 = DrakvufVM(profile, 1)
-    vm1.load_runtime_info()
+    vm1 = DrakvufVM(config, 1)
+    runtime_info = vm1.load_runtime_info()
 
     vm1.restore()
-    win_guid_info = vm1.get_win_guid()
-
-    essential_dlls = get_essential_dll_file_list(win_guid_info)
+    essential_dlls = get_essential_dll_file_list(runtime_info.win_guid)
     for dllspec in essential_dlls:
-        if (profile.vm_profile_dir / f"{dllspec.dest}.json").exists():
+        if (config.vm_profile_dir / f"{dllspec.dest}.json").exists():
             log.info(f"DLL profile for {dllspec.dest} already exists.")
             continue
         vm1.make_dll_profile(dllspec)
 
-    optional_dlls = get_optional_dll_file_list(win_guid_info)
+    optional_dlls = get_optional_dll_file_list(runtime_info.win_guid)
     failed_dlls = []
     for dllspec in optional_dlls:
-        if (profile.vm_profile_dir / f"{dllspec.dest}.json").exists():
+        if (config.vm_profile_dir / f"{dllspec.dest}.json").exists():
             log.info(f"DLL profile for {dllspec.dest} already exists.")
             continue
         try:
