@@ -5,3 +5,7 @@ requests
 pefile
 construct
 volatility3
+jsonschema
+# Use pdbparse from master branch
+# current release - 1.5 has troubles parsing some of the PDBs
+pdbparse @ git+https://github.com/moyix/pdbparse.git@b5b61793e4a457c43a5aef7a0499b959826b2c04

@@ -9,7 +9,8 @@ from ..config import Profile
 from ..machinery.vm import VirtualMachine
 from ..util import ensure_delete
 from .dlls import DLL
-from .drakpdb2 import fetch_pdb, make_pdb_profile, pe_codeview_data
+from .drakpdb import fetch_pdb, make_pdb_profile, pe_codeview_data
+from .drakpdbvol import make_pdb_profile as vol_make_pdb_profile
 from .injector import Injector, InjectorTimeout
 from .profile import (
     RuntimeInfo,
@@ -41,16 +42,15 @@ class DrakvufVM:
         return vmi_win_guid(vm_name=self.vm.vm_name)
 
     def create_kernel_profile(self, win_guid: VmiGuidInfo):
-        log.info("Fetching PDB file...")
+        logging.info("Fetching PDB file...")
         kernel_pdb_file = fetch_pdb(
-            win_guid.filename, win_guid.guid
+            win_guid.filename, win_guid.guid, destdir=str(self.profile.vm_profile_dir)
         )
-        log.info(f"PDB downloaded to {str(kernel_pdb_file)}")
         log.info("Generating profile out of PDB file...")
-        kernel_profile = make_pdb_profile(kernel_pdb_file, win_guid.filename)
+        kernel_profile = vol_make_pdb_profile(kernel_pdb_file, win_guid.filename)
 
         log.info("Saving profile...")
-        self.kernel_profile_path.write_text(json.dumps(kernel_profile))
+        self.kernel_profile_path.write_text(kernel_profile)
         return kernel_profile
 
     def create_runtime_info(self):
@@ -96,6 +96,7 @@ class DrakvufVM:
 
     def make_dll_profile(self, dllspec: DLL, tries: int = 3):
         log.info(f"Fetching {dllspec.path} from VM")
+
         local_dll_path = self.profile.vm_profile_dir / dllspec.dest
         guest_dll_path = str(PureWindowsPath("C:/", dllspec.path))
 
@@ -109,19 +110,29 @@ class DrakvufVM:
                     raise
 
         # TODO: apiscout
-        log.info("Fetching PDB file from Microsoft Symbol Server")
         codeview_data = pe_codeview_data(local_dll_path)
         pdb_tmp_filepath = fetch_pdb(
             codeview_data["filename"],
             codeview_data["symstore_hash"],
+            str(self.profile.vm_profile_dir),
         )
-        log.info(f"PDB downloaded to {str(pdb_tmp_filepath)}")
+
         logging.debug("Parsing PDB into JSON profile...")
-        profile = make_pdb_profile(
-            pdb_tmp_filepath,
-            codeview_data["filename"],
-        )
+        try:
+            profile = vol_make_pdb_profile(
+                pdb_tmp_filepath,
+                codeview_data["filename"]
+            )
+        except Exception:
+            log.exception("vol_make_pdb_profile failed")
+            log.warning("Falling back to lenient drakpdb.make_pdb_profile")
+            profile = make_pdb_profile(
+                pdb_tmp_filepath,
+                dll_origin_path=guest_dll_path,
+                dll_path=str(local_dll_path),
+                dll_symstore_hash=codeview_data["symstore_hash"],
+            )
         dll_profile_path = self.profile.vm_profile_dir / f"{dllspec.dest}.json"
-        dll_profile_path.write_text(json.dumps(profile))
+        dll_profile_path.write_text(profile)
         ensure_delete(local_dll_path)
         return dll_profile_path
