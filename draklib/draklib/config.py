@@ -150,7 +150,7 @@ class Configuration:
 
         parameters = Parameters.load(etc_dir)
         install_info = InstallInfo.load(lib_dir)
-        return Configuration(name, install_info, parameters)
+        return Configuration(name, parameters, install_info)
 
     def _initialize(self) -> None:
         self.volumes_dir.mkdir()
@@ -164,6 +164,7 @@ class Configuration:
         self.vm_template_path.write_text(template)
 
         shutil.copyfile(STATIC_DIR / "hooks.txt", self.etc_dir / "hooks.txt")
+        shutil.copyfile(STATIC_DIR / "prepare.bat", self.etc_dir / "prepare.bat")
 
     @staticmethod
     def create(

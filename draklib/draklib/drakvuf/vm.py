@@ -137,3 +137,17 @@ class DrakvufVM:
         dll_profile_path.write_text(profile)
         ensure_delete(local_dll_path)
         return dll_profile_path
+
+    def run_prepare_script(self, tries: int = 3):
+        local_path = self.profile.etc_dir / "prepare.bat"
+        guest_path = PureWindowsPath("C:/Windows/temp/prepare.bat")
+        while tries > 0:
+            try:
+                self.injector.write_file(str(guest_path), str(local_path), timeout=30)
+                self.injector.create_process(
+                    f"cmd /C start {str(guest_path)}", wait=True, timeout=120
+                )
+            except InjectorTimeout:
+                tries -= 1
+                if tries == 0:
+                    raise
