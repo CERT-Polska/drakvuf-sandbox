@@ -1,8 +1,9 @@
 import logging
+import shutil
 import subprocess
+from pathlib import Path
 
 import click
-from pathlib import Path
 
 from ..config import Configuration
 from ..drakvuf.drakvuf import Drakvuf
@@ -60,6 +61,15 @@ def run(vm_id, sample_path, out_dir, config_name, timeout, disable_net, no_prep)
     vm.load_runtime_info()
     vm.restore(net_enable=not disable_net)
     try:
+        log.info("Preparing analysis dir...")
+
+        dll_hooks_list = out_dir / "hooks.txt"
+        shutil.copy(config.etc_dir / "hooks.txt", dll_hooks_list)
+        memdump_dir = out_dir / "memdumps"
+        memdump_dir.mkdir()
+        stdout_path = out_dir / "stdout.log"
+        stderr_path = out_dir / "stderr.log"
+
         log.info("Running guest preparation script...")
         if not no_prep:
             vm.run_prepare_script()
@@ -69,13 +79,53 @@ def run(vm_id, sample_path, out_dir, config_name, timeout, disable_net, no_prep)
         log.info(f"Running sample {real_sample_path}")
         drakvuf = Drakvuf(config, vm_id, vm.runtime_info, str(vm.kernel_profile_path))
         cmdline = drakvuf.get_base_drakvuf_cmdline(timeout, real_sample_path, "C:\\")
-        with open("./stdout.log", "w") as stdout, open("./stderr.log", "w") as stderr:
-            subprocess.run(
-                cmdline,
-                stdout=stdout,
-                stderr=stderr
-            )
+        cmdline.extend(
+            [
+                "-a",
+                "apimon",
+                "-a",
+                "bsodmon",
+                "-a",
+                "clipboardmon",
+                "-a",
+                "cpuidmon",
+                "-a",
+                "debugmon",
+                "-a",
+                "delaymon",
+                "-a",
+                "exmon",
+                "-a",
+                "filedelete",
+                "-a",
+                "librarymon",
+                "-a",
+                "memdump",
+                "-a",
+                "procdump",
+                "-a",
+                "procmon",
+                "-a",
+                "regmon",
+                "-a",
+                "rpcmon",
+                "-a",
+                "ssdtmon",
+                "-a",
+                "tlsmon",
+                "-a",
+                "windowmon",
+                "-a",
+                "wmimon",
+                "--dll-hooks-list",
+                str(dll_hooks_list),
+                "--memdump-dir",
+                str(memdump_dir),
+            ]
+        )
+        with stdout_path.open("w") as stdout, stderr_path.open("w") as stderr:
+            subprocess.run(cmdline, stdout=stdout, stderr=stderr)
         log.info("kbye")
     finally:
         pass
-        #vm.destroy()
+        # vm.destroy()

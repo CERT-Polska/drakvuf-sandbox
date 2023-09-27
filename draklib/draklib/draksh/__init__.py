@@ -9,4 +9,3 @@ from .run import run
 main.add_command(install)
 main.add_command(postinstall)
 main.add_command(run)
-
