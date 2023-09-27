@@ -55,7 +55,8 @@ def run(vm_id, sample_path, out_dir, config_name, timeout, disable_net, no_prep)
 
     guest_sample_path = "%USERPROFILE%\\Desktop\\malwar.exe"
 
-    Path(out_dir).mkdir()
+    out_dir = Path(out_dir)
+    out_dir.mkdir()
     config = Configuration.load(config_name)
     vm = DrakvufVM(config, vm_id)
     vm.load_runtime_info()
