@@ -302,7 +302,7 @@ def delete_vm_network(config: Configuration, vm_id: int) -> None:
 
     # List net_enable entries
     iptables_rules = list_iptables_rules()
-    pattern = rf"DRAKLIB_FWD -i {bridge_name} -o (\w+) -j ACCEPT"
+    pattern = rf"DRAKLIB_FWD -i {bridge_name} -o (\S+) -j ACCEPT"
     out_interface = None
     for rule in iptables_rules:
         m = re.match(pattern, rule)
