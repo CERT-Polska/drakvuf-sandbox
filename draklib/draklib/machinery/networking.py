@@ -50,7 +50,7 @@ def iptable_rule_exists(rule: str) -> bool:
         check_output(f"iptables -C {rule}", shell=True, stderr=subprocess.DEVNULL)
         return True
     except subprocess.CalledProcessError as e:
-        if e.returncode == 1:
+        if e.returncode == 1 or e.returncode == 2:
             # rule doesn't exist
             return False
         else:
