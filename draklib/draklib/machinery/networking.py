@@ -90,22 +90,23 @@ def run_on_iptables(rules: List[str], check: bool = True):
 def setup_iptables_chains():
     rules = [
         "-N DRAKLIB_INP",
-        "-A INPUT -j DRAKLIB_INP"
-        "-N DRAKLIB_FWD",
+        "-A INPUT -j DRAKLIB_INP" "-N DRAKLIB_FWD",
         "-A FORWARD -j DRAKLIB_FWD"
         "-N DRAKLIB_PRT -t nat"
-        "-A POSTROUTING -j DRAKLIB_PRT -t nat"
+        "-A POSTROUTING -j DRAKLIB_PRT -t nat",
     ]
     exists = [
         iptable_rule_exists("INPUT -j DRAKLIB_INP"),
         iptable_rule_exists("FORWARD -j DRAKLIB_FWD"),
-        iptable_rule_exists("POSTROUTING -j DRAKLIB_PRT -t nat")
+        iptable_rule_exists("POSTROUTING -j DRAKLIB_PRT -t nat"),
     ]
     if all(exists):
         log.debug("iptables chains already exist, no setup needed")
         return True
     if any(exists):
-        raise RuntimeError("Some iptables chains are missing, migration might be needed")
+        raise RuntimeError(
+            "Some iptables chains are missing, migration might be needed"
+        )
     # If above checks pass, we're free to setup everything
     log.debug("Setting up iptables chains")
     try:
@@ -116,11 +117,7 @@ def setup_iptables_chains():
 
 
 def flush_iptables_chains():
-    rules = [
-        "-F DRAKLIB_INP",
-        "-F DRAKLIB_FWD",
-        "-F DRAKLIB_PRT -t nat"
-    ]
+    rules = ["-F DRAKLIB_INP", "-F DRAKLIB_FWD", "-F DRAKLIB_PRT -t nat"]
     run_on_iptables(rules, check=False)
 
 
@@ -131,7 +128,7 @@ def delete_iptables_chains():
         "-D POSTROUTING -j DRAKLIB_PRT -t nat",
         "-X DRAKLIB_INP",
         "-X DRAKLIB_FWD",
-        "-X DRAKLIB_PRT"
+        "-X DRAKLIB_PRT",
     ]
     run_on_iptables(rules, check=False)
 
