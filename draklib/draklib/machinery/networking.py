@@ -8,13 +8,14 @@ from typing import List, Optional
 
 from ..config import Configuration
 from .xen import get_domid_from_name
+from .subprocess import check_output, run, Popen
 
 log = logging.getLogger(__name__)
 
 
 def find_default_interface():
     routes = (
-        subprocess.check_output(
+        check_output(
             "ip route show default", shell=True, stderr=subprocess.STDOUT
         )
         .decode("ascii")
@@ -33,7 +34,7 @@ def find_default_interface():
 
 def check_networking_prerequisites() -> None:
     try:
-        subprocess.check_output("brctl show", shell=True)
+        check_output("brctl show", shell=True)
     except subprocess.CalledProcessError:
         raise RuntimeError(
             "Failed to execute brctl show. Make sure you have bridge-utils installed."
@@ -48,7 +49,7 @@ def check_networking_prerequisites() -> None:
 
 def iptable_rule_exists(rule: str) -> bool:
     try:
-        subprocess.check_output(
+        check_output(
             f"iptables -C {rule}", shell=True, stderr=subprocess.DEVNULL
         )
         return True
@@ -63,7 +64,7 @@ def iptable_rule_exists(rule: str) -> bool:
 
 def add_iptable_rule(rule: str) -> None:
     if not iptable_rule_exists(rule):
-        subprocess.check_output(f"iptables -A {rule}", shell=True)
+        check_output(f"iptables -A {rule}", shell=True)
 
 
 def del_iptable_rule(rule: str) -> None:
@@ -72,13 +73,13 @@ def del_iptable_rule(rule: str) -> None:
 
     while not all_cleared:
         if iptable_rule_exists(rule):
-            subprocess.check_output(f"iptables -D {rule}", shell=True)
+            check_output(f"iptables -D {rule}", shell=True)
         else:
             all_cleared = True
 
 
 def list_iptables_rules() -> List[str]:
-    return subprocess.check_output("iptables -S", shell=True, text=True).split("\n")
+    return check_output("iptables -S", shell=True, text=True).split("\n")
 
 
 def vif_from_vm_name(vm_name: str) -> str:
@@ -92,11 +93,11 @@ def bridge_from_vm_name(vm_name: str) -> str:
 
 def start_tcpdump_collector(vm_name: str, outdir: Path) -> subprocess.Popen:
     try:
-        subprocess.check_output("tcpdump --version", shell=True)
+        check_output("tcpdump --version", shell=True)
     except subprocess.CalledProcessError:
         raise RuntimeError("Failed to start tcpdump")
 
-    return subprocess.Popen(
+    return Popen(
         ["tcpdump", "-i", vif_from_vm_name(vm_name), "-w", str(outdir / "dump.pcap")]
     )
 
@@ -105,7 +106,7 @@ def start_dnsmasq(
     config: Configuration, vm_id: int, dns_server: str, background=False
 ) -> Optional[subprocess.Popen]:
     try:
-        subprocess.check_output("dnsmasq --version", shell=True)
+        check_output("dnsmasq --version", shell=True)
     except subprocess.CalledProcessError:
         raise RuntimeError("Failed to start dnsmasq")
 
@@ -133,7 +134,7 @@ def start_dnsmasq(
     dhcp_first_addr = config.ip_from_vm_id(vm_id, host_id=100)
     dhcp_last_addr = config.ip_from_vm_id(vm_id, host_id=200)
 
-    return subprocess.Popen(
+    return Popen(
         [
             "dnsmasq",
             "--no-daemon" if not background else "",
@@ -168,7 +169,7 @@ def stop_dnsmasq(config: Configuration, vm_id: int) -> None:
 
 
 def interface_exists(iface: str) -> bool:
-    proc = subprocess.run(["ip", "link", "show", iface], capture_output=True)
+    proc = run(["ip", "link", "show", iface], capture_output=True)
     return proc.returncode == 0
 
 
@@ -182,7 +183,7 @@ def setup_vm_network(
     vm_name = config.get_vm_name(vm_id)
     bridge_name = bridge_from_vm_name(vm_name)
     try:
-        subprocess.check_output(
+        check_output(
             f"brctl addbr {bridge_name}", stderr=subprocess.STDOUT, shell=True
         )
         log.info(f"Created bridge {bridge_name}")
@@ -194,11 +195,11 @@ def setup_vm_network(
             raise Exception(f"Failed to create bridge {bridge_name}.")
     else:
         gateway_ip = config.ip_from_vm_id(vm_id, host_id=1)
-        subprocess.run(
+        run(
             f"ip addr add {gateway_ip}/24 dev {bridge_name}", shell=True, check=True
         )
 
-    subprocess.run(f"ip link set dev {bridge_name} up", shell=True, check=True)
+    run(f"ip link set dev {bridge_name} up", shell=True, check=True)
     log.info(f"Bridge {bridge_name} is up")
 
     add_iptable_rule(
@@ -229,7 +230,7 @@ def delete_vm_network(config: Configuration, vm_id: int) -> None:
     vm_name = config.get_vm_name(vm_id)
     bridge_name = bridge_from_vm_name(vm_name)
     try:
-        subprocess.check_output(
+        check_output(
             f"ip link set dev {bridge_name} down", shell=True, stderr=subprocess.STDOUT
         )
         log.info(f"Bridge {bridge_name} is down")
@@ -240,7 +241,7 @@ def delete_vm_network(config: Configuration, vm_id: int) -> None:
             log.debug(e.output)
             raise Exception(f"Couldn't deactivate {bridge_name} bridge")
     else:
-        subprocess.run(
+        run(
             f"brctl delbr {bridge_name}", stderr=subprocess.STDOUT, shell=True
         )
         log.info(f"Deleted {bridge_name} bridge")

@@ -1,13 +1,14 @@
 import subprocess
+from .subprocess import check_output, run
 
 
 def get_domid_from_name(vm_name: str) -> int:
-    output = subprocess.check_output(["xl", "domid", vm_name], text=True)
+    output = check_output(["xl", "domid", vm_name], text=True)
     return int(output.strip())
 
 
 def get_xl_info():
-    xl_info_out = subprocess.check_output(["xl", "info"], text=True)
+    xl_info_out = check_output(["xl", "info"], text=True)
     xl_info_lines = xl_info_out.strip().split("\n")
 
     cfg = {}
@@ -21,8 +22,8 @@ def get_xl_info():
 
 
 def eject_cd(domain, drive):
-    subprocess.run(["xl", "cd-eject", domain, drive], check=True)
+    run(["xl", "cd-eject", domain, drive], check=True)
 
 
 def insert_cd(domain, drive, iso):
-    subprocess.run(["xl", "cd-insert", domain, drive, iso], check=True)
+    run(["xl", "cd-insert", domain, drive, iso], check=True)

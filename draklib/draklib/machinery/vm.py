@@ -10,6 +10,8 @@ from ..config import Configuration
 from .networking import delete_vm_network, setup_vm_network, start_dnsmasq, stop_dnsmasq
 from .storage import get_storage_backend
 from .xen import eject_cd, insert_cd
+from .subprocess import check_output, run
+
 
 log = logging.getLogger(__name__)
 
@@ -121,13 +123,13 @@ class VirtualMachine:
         args += [str(vm_config_path)]
         log.info(f"Creating VM {self.vm_name}")
         try:
-            subprocess.run(args, check=True)
+            run(args, check=True)
         except subprocess.CalledProcessError:
             raise VMError(f"Failed to launch VM {self.vm_name}", vm_name=self.vm_name)
 
     def pause(self):
         try:
-            subprocess.run(
+            run(
                 ["xl", "pause", self.vm_name],
                 check=True,
             )
@@ -136,7 +138,7 @@ class VirtualMachine:
 
     def unpause(self):
         try:
-            subprocess.run(
+            run(
                 ["xl", "unpause", self.vm_name],
                 check=True,
             )
@@ -153,7 +155,7 @@ class VirtualMachine:
         logging.info(f"Saving VM {self.vm_name}")
         try:
             # We want to keep it running after saving
-            subprocess.run(
+            run(
                 args,
                 check=True,
             )
@@ -176,13 +178,13 @@ class VirtualMachine:
         logging.info(f"Restoring VM {self.vm_name}")
         try:
             # We want to keep it running after saving
-            subprocess.run(args, check=True)
+            run(args, check=True)
         except subprocess.CalledProcessError:
             raise VMError(f"Failed to restore VM {self.vm_name}", vm_name=self.vm_name)
 
     def destroy(self):
         try:
-            subprocess.run(
+            run(
                 ["xl", "destroy", self.vm_name],
                 check=True,
             )
@@ -213,7 +215,7 @@ def make_unattended_iso(xml_path, iso_path):
                 fw.write(fr.read())
 
         try:
-            subprocess.check_output(
+            check_output(
                 [
                     "genisoimage",
                     "-o",
