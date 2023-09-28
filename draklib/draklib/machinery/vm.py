@@ -9,9 +9,8 @@ from typing import Optional
 from ..config import Configuration
 from .networking import delete_vm_network, setup_vm_network, start_dnsmasq, stop_dnsmasq
 from .storage import get_storage_backend
-from .xen import eject_cd, insert_cd
 from .subprocess import check_output, run
-
+from .xen import eject_cd, insert_cd
 
 log = logging.getLogger(__name__)
 

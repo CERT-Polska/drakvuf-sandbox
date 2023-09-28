@@ -10,7 +10,6 @@ from typing import Tuple
 
 from ..config import Configuration
 from ..util import ensure_delete
-
 from .subprocess import check_output, run
 
 log = logging.getLogger(__name__)
@@ -159,9 +158,7 @@ class ZfsStorageBackend(StorageBackendBase):
 
     def get_vm0_snapshot_time(self):
         base_snap = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0@booted"))
-        out = check_output(
-            f"zfs get -H -p -o value creation {base_snap}", shell=True
-        )
+        out = check_output(f"zfs get -H -p -o value creation {base_snap}", shell=True)
         ts = int(out.decode("ascii").strip())
         return ts
 
@@ -196,9 +193,7 @@ class ZfsStorageBackend(StorageBackendBase):
     def delete_zfs_tank(self):
         try:
             log.info("Deleting zfs tank")
-            run(
-                ["zfs", "destroy", "-r", f"{self.zfs_tank_name}"], check=True
-            )
+            run(["zfs", "destroy", "-r", f"{self.zfs_tank_name}"], check=True)
         except subprocess.CalledProcessError as exc:
             log.error(exc.stdout)
             raise Exception(f"Couldn't delete {self.zfs_tank_name}")
@@ -298,9 +293,7 @@ class LvmStorageBackend(StorageBackendBase):
     def check_tools(self):
         """Verify existence of lvm command utility"""
         try:
-            run(
-                ["vgs", self.lvm_volume_group], check=True, stdout=subprocess.DEVNULL
-            )
+            run(["vgs", self.lvm_volume_group], check=True, stdout=subprocess.DEVNULL)
         except subprocess.CalledProcessError:
             raise RuntimeError(
                 "Failed to execute vgs command"

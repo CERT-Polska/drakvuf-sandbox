@@ -16,6 +16,7 @@ def decorate_with_logger(fn: F) -> F:
     def wrapper(*args, **kwargs):
         log.debug(f"Running shell command '{args[0]}'")
         return fn(*args, **kwargs)
+
     return wrapper
 
 
