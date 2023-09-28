@@ -91,8 +91,8 @@ def setup_iptables_chains():
     rules = [
         "-N DRAKLIB_INP",
         "-A INPUT -j DRAKLIB_INP" "-N DRAKLIB_FWD",
-        "-A FORWARD -j DRAKLIB_FWD"
-        "-N DRAKLIB_PRT -t nat"
+        "-A FORWARD -j DRAKLIB_FWD",
+        "-N DRAKLIB_PRT -t nat",
         "-A POSTROUTING -j DRAKLIB_PRT -t nat",
     ]
     exists = [
