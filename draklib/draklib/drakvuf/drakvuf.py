@@ -2,7 +2,7 @@ from typing import List
 
 from ..config import Configuration
 from .dlls import all_dll_file_list
-from .profile import RuntimeInfo
+from .runtime import RuntimeInfo
 
 
 class Drakvuf:

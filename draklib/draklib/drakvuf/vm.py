@@ -11,7 +11,7 @@ from .dlls import DLL
 from .drakpdb import fetch_pdb, make_pdb_profile, pe_codeview_data
 from .drakpdbvol import make_pdb_profile as vol_make_pdb_profile
 from .injector import Injector, InjectorTimeout
-from .profile import (
+from .runtime import (
     RuntimeInfo,
     VmiGuidInfo,
     extract_explorer_pid,

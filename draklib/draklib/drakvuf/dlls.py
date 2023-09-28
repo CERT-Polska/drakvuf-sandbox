@@ -1,6 +1,6 @@
 from typing import List, NamedTuple, Optional
 
-from .profile import VmiGuidInfo
+from .runtime import VmiGuidInfo
 
 DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 

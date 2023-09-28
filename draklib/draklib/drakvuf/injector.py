@@ -2,7 +2,7 @@ import json
 import subprocess
 from typing import List
 
-from .profile import RuntimeInfo
+from .runtime import RuntimeInfo
 
 
 class Injector:
