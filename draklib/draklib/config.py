@@ -18,7 +18,8 @@ def get_default_subnet_addr():
     This method is required to find defaults that does not
     collide with already created profiles
     """
-    default_subnet_addr = Parameters.subnet_addr.split(".")
+    base_subnet_addr = "10.13.N.0"
+    default_subnet_addr = base_subnet_addr.split(".")
     default_next_subnet = int(default_subnet_addr[1])
 
     for config in Configuration.load_all():
