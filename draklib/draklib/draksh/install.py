@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 from tqdm import tqdm
 
-from ..config import Configuration, InstallInfo, Parameters
+from ..config import Configuration, InstallInfo, Parameters, get_default_subnet_addr
 from ..machinery.networking import (
     check_networking_prerequisites,
     find_default_interface,
@@ -91,7 +91,7 @@ def ensure_lvm(ctx, param, value):
 @click.option(
     "--subnet-addr",
     "subnet_addr",
-    default=lambda: Parameters.get_default_subnet_addr(),
+    default=lambda: get_default_subnet_addr(),
     help="Subnet address for VM bridge with N as vm id",
 )
 @click.option(

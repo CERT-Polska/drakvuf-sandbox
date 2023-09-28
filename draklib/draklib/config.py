@@ -13,41 +13,39 @@ LIB_DIR = Path(os.getenv("DRAKLIB_LIB_DIR") or "/var/lib/draklib")
 STATIC_DIR = Path(__file__).parent / "static"
 
 
+def get_default_subnet_addr():
+    """
+    This method is required to find defaults that does not
+    collide with already created profiles
+    """
+    default_subnet_addr = Parameters.subnet_addr.split(".")
+    default_next_subnet = int(default_subnet_addr[1])
+
+    for config in Configuration.load_all():
+        subnet_addr = config.parameters.subnet_addr.split(".")
+        if subnet_addr[0] != default_subnet_addr[0]:
+            # Not 10.x.x.x on profile
+            continue
+        if int(subnet_addr[1]) >= default_next_subnet:
+            default_next_subnet = int(subnet_addr[1]) + 1
+
+    return ".".join(
+        [
+            default_subnet_addr[0],
+            str(default_next_subnet),
+            default_subnet_addr[2],
+            default_subnet_addr[3],
+        ]
+    )
+
+
 @dataclass
 class Parameters(DataClassConfigMixin):
     out_interface: str
+    subnet_addr: str
     dns_server: str = "8.8.8.8"
-    # This is not only partially a default
-    # For next profile, next range is allocated
-    subnet_addr: str = "10.13.N.0"
 
     _FILENAME = "config.json"
-
-    @staticmethod
-    def get_default_subnet_addr():
-        """
-        This method is required to find defaults that does not
-        collide with already created profiles
-        """
-        default_subnet_addr = Parameters.subnet_addr.split(".")
-        default_next_subnet = int(default_subnet_addr[1])
-
-        for config in Configuration.load_all():
-            subnet_addr = config.parameters.subnet_addr.split(".")
-            if subnet_addr[0] != default_subnet_addr[0]:
-                # Not 10.x.x.x on profile
-                continue
-            if int(subnet_addr[1]) >= default_next_subnet:
-                default_next_subnet = int(subnet_addr[1]) + 1
-
-        return ".".join(
-            [
-                default_subnet_addr[0],
-                str(default_next_subnet),
-                default_subnet_addr[2],
-                default_subnet_addr[3],
-            ]
-        )
 
 
 @dataclass
