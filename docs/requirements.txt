@@ -37,5 +37,5 @@ sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.5
 stack-data==0.6.2
 traitlets==5.9.0
-urllib3==1.26.14
+urllib3==1.26.17
 wcwidth==0.2.6
