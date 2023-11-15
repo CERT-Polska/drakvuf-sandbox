@@ -20,7 +20,7 @@ def get_sample_startup_command(extension, sample, file_path):
         start_command = "powershell.exe -executionpolicy bypass -File %f"
     elif is_office_file(extension):
         start_command = get_office_file_startup_command(extension, file_path)
-    elif extension in ["js", "jse", "vbs"]:
+    elif extension in ["js", "jse", "vbs", "vbe"]:
         start_command = "wscript.exe %f"
     elif extension in ["hta", "html", "htm"]:
         start_command = "mshta.exe %f"
