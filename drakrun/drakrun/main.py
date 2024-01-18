@@ -153,6 +153,11 @@ class DrakrunKarton(Karton):
         self.default_timeout = int(
             self.config.config["drakrun"].get("analysis_timeout") or 60 * 10
         )
+        # Default, optional timeout for 'low' quality tasks
+        self.default_low_timeout = int(
+            self.config.config["drakrun"].get("analysis_low_timeout")
+            or self.default_timeout
+        )
         with open(os.path.join(PROFILE_DIR, "runtime.json"), "r") as runtime_f:
             self.runtime_info = RuntimeInfo.load(runtime_f)
 
@@ -677,8 +682,14 @@ class DrakrunKarton(Karton):
         self.log.info(f"Analysis UID: {self.analysis_uid}")
         self.log.info(f"Snapshot SHA256: {self.snapshot_sha256}")
 
+        default_timeout = (
+            self.default_low_timeout
+            if task.headers.get("quality", "high") == "low"
+            else self.default_timeout
+        )
+
         # Timeout sanity check
-        timeout = task.payload.get("timeout") or self.default_timeout
+        timeout = task.payload.get("timeout") or default_timeout
         hard_time_limit = 60 * 20
         if timeout > hard_time_limit:
             self.log.error(
