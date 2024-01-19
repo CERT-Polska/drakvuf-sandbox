@@ -121,13 +121,14 @@ jobs:
         name: Build Xen Test Framework
         working-directory: /opt
         run: |
+          apt update
+          apt install -y make pkg-config gcc libglib2.0-dev
           git clone https://xenbits.xen.org/git-http/xtf.git
           cd xtf
           git checkout bf1c4eb6cb52785cf539eb83752dfcecfe66c5d1
           make -j4
       - name: Build draksetup tools
         run: |
-          apt install -y make pkg-config gcc libglib2.0-dev
           cp -v /build/usr/lib/libvmi* /usr/lib/
           mkdir /usr/include/libvmi
           cp -v /build/usr/include/libvmi/* /usr/include/libvmi/
