@@ -121,7 +121,6 @@ jobs:
         name: Build Xen Test Framework
         working-directory: /opt
         run: |
-          apt update
           apt install -y make pkg-config gcc libglib2.0-dev
           git clone https://xenbits.xen.org/git-http/xtf.git
           cd xtf
