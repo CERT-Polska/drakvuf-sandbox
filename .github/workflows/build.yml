@@ -91,13 +91,14 @@ jobs:
           export DRAKVUF_COMMIT=$(git ls-tree HEAD drakvuf | awk '{ print $3 }')
           echo "Drakvuf commit is ${DRAKVUF_COMMIT}"
           echo "DRAKVUF_COMMIT=$DRAKVUF_COMMIT" >> $GITHUB_ENV
-      - name: Cache Drakvuf bundle
-        id: cache-drakvuf-bundle
-        uses: actions/cache@v3
+      - name: Restored cached Drakvuf bundle
+        id: cache-drakvuf-bundle-restore
+        uses: actions/cache/restore@v3
         with:
           path: |
             /out/drakvuf-bundle*.deb 
-            /opt/xtf/tests/example/test-hvm64-example
+            /out/usr/lib/libvmi*
+            /out/usr/include/libvmi/*
           key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}-${{ matrix.distro }}-${{ matrix.version }}
       - if: ${{ steps.cache-drakvuf-bundle.outputs.cache-hit != 'true' }}
         name: Build Drakvuf bundle
@@ -106,6 +107,16 @@ jobs:
           cd /build
           sh drakvuf/package/depends.sh
           bash ci/build_bundle.sh "${{ matrix.distro }}:${{matrix.version}}"
+          ls -r /out
+      - name: Cache Drakvuf bundle
+        id: cache-drakvuf-bundle-save
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            /out/drakvuf-bundle*.deb 
+            /out/usr/lib/libvmi*
+            /out/usr/include/libvmi/*
+          key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}-${{ matrix.distro }}-${{ matrix.version }}
       - if: ${{ steps.cache-drakvuf-bundle.outputs.cache-hit != 'true' }}
         name: Build Xen Test Framework
         working-directory: /opt
