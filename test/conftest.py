@@ -39,7 +39,6 @@ DRAKVUF_SANDBOX_DEBS = [
 
 DRAKVUF_DEBS = [
     "drakvuf-bundle-*.deb",
-    "xen-hypervisor-*.deb",
 ]
 
 
