@@ -12,7 +12,39 @@ class Injector:
         self.kernel_profile = kernel_profile
         self.runtime_info = runtime_info
 
-    def _get_cmdline_generic(self, method: str, timeout: int) -> List[str]:
+    def _run_with_timeout(
+        self,
+        args: List[str],
+        timeout: int,
+        check: bool = False,
+        capture_output: bool = False,
+    ):
+        """
+        subprocess.run(timeout=...) kills process instead of sending SIGTERM after
+        reaching timeout. In our case, we want to let injector do a clean termination.
+        """
+        kwargs = {}
+        if capture_output:
+            kwargs["stdout"] = subprocess.PIPE
+            kwargs["stderr"] = subprocess.PIPE
+        with subprocess.Popen(args, **kwargs) as proc:
+            try:
+                outs, errs = proc.communicate(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                proc.terminate()
+                proc.wait(timeout)
+                raise
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
+            retcode = proc.poll()
+            if check and retcode:
+                raise subprocess.CalledProcessError(
+                    retcode, proc.args, output=outs, stderr=errs
+                )
+            return subprocess.CompletedProcess(proc.args, retcode, outs, errs)
+
+    def _get_cmdline_generic(self, method: str) -> List[str]:
         """Build base command line for all injection methods"""
         return [
             "injector",
@@ -28,30 +60,22 @@ class Injector:
             hex(self.runtime_info.vmi_offsets.kpgd),
             "-m",
             method,
-            "--timeout",
-            str(timeout),
         ]
 
-    def _get_cmdline_writefile(
-        self, local: str, remote: str, timeout: int = 60
-    ) -> List[str]:
-        cmd = self._get_cmdline_generic("writefile", timeout=timeout)
+    def _get_cmdline_writefile(self, local: str, remote: str) -> List[str]:
+        cmd = self._get_cmdline_generic("writefile")
         cmd.extend(["-e", remote])
         cmd.extend(["-B", local])
         return cmd
 
-    def _get_cmdline_readfile(
-        self, remote: str, local: str, timeout: int = 60
-    ) -> List[str]:
-        cmd = self._get_cmdline_generic("readfile", timeout=timeout)
+    def _get_cmdline_readfile(self, remote: str, local: str) -> List[str]:
+        cmd = self._get_cmdline_generic("readfile")
         cmd.extend(["-e", remote])
         cmd.extend(["-B", local])
         return cmd
 
-    def _get_cmdline_createproc(
-        self, exec_cmd: str, wait: bool = False, timeout: Optional[int] = None
-    ) -> List[str]:
-        cmd = self._get_cmdline_generic("createproc", timeout=timeout)
+    def _get_cmdline_createproc(self, exec_cmd: str, wait: bool = False) -> List[str]:
+        cmd = self._get_cmdline_generic("createproc")
         cmd.extend(["-e", exec_cmd])
         if wait:
             cmd.append("-w")
@@ -62,14 +86,10 @@ class Injector:
     ) -> subprocess.CompletedProcess:
         """
         Copy local file to the VM
-        we pass (timeout-5) to drakvuf to give it 5 seconds to finish its loop
         """
-        drakvuf_timeout = timeout - 5 if timeout > 5 else 0
-        injector_cmd = self._get_cmdline_writefile(
-            local_path, remote_path, timeout=drakvuf_timeout
-        )
-        return subprocess.run(
-            injector_cmd, stdout=subprocess.PIPE, timeout=timeout, check=True
+        injector_cmd = self._get_cmdline_writefile(local_path, remote_path)
+        return self._run_with_timeout(
+            injector_cmd, timeout=timeout, check=True, capture_output=True
         )
 
     def read_file(
@@ -77,23 +97,17 @@ class Injector:
     ) -> subprocess.CompletedProcess:
         """
         Copy VM file to local
-        we pass (timeout-5) to drakvuf to give it 5 seconds to finish its loop
         """
-        drakvuf_timeout = timeout - 5 if timeout > 5 else 0
-        injector_cmd = self._get_cmdline_readfile(
-            remote_path, local_path, timeout=drakvuf_timeout
+        injector_cmd = self._get_cmdline_readfile(remote_path, local_path)
+        return self._run_with_timeout(
+            injector_cmd, timeout=timeout, capture_output=True
         )
-        return subprocess.run(injector_cmd, timeout=timeout, capture_output=True)
 
     def create_process(
         self, cmdline: str, wait: bool = False, timeout: int = 60
     ) -> subprocess.CompletedProcess:
         """
         Create a process inside the VM with given command line
-        we pass (timeout-5) to drakvuf to give it 5 seconds to finish it's loop
         """
-        drakvuf_timeout = timeout - 5 if timeout != 0 else 0
-        injector_cmd = self._get_cmdline_createproc(
-            cmdline, wait=wait, timeout=drakvuf_timeout
-        )
-        return subprocess.run(injector_cmd, timeout=timeout, check=True)
+        injector_cmd = self._get_cmdline_createproc(cmdline, wait=wait)
+        return self._run_with_timeout(injector_cmd, timeout=timeout, check=True)
