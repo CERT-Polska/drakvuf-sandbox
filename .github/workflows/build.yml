@@ -110,7 +110,8 @@ jobs:
       - name: Install Drakvuf bundle
         run: |
           export DEBIAN_FRONTEND=noninteractive
-          apt install -y -f /out/drakvuf-bundle*.deb
+          apt update
+          apt install -y /out/drakvuf-bundle*.deb
       - if: ${{ steps.cache-drakvuf-bundle.outputs.cache-hit != 'true' }}
         name: Build Xen Test Framework
         working-directory: /opt
