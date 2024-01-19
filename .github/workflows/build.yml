@@ -129,6 +129,7 @@ jobs:
           make -j4
       - name: Build draksetup tools
         run: |
+          apt install -y libjson-c-dev
           cp -v /build/usr/lib/libvmi* /usr/lib/
           mkdir /usr/include/libvmi
           cp -v /build/usr/include/libvmi/* /usr/include/libvmi/
