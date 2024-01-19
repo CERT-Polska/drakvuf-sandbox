@@ -97,8 +97,8 @@ jobs:
         with:
           path: |
             /out/drakvuf-bundle*.deb 
-            /out/usr/lib/libvmi*
-            /out/usr/include/libvmi/*
+            /build/usr/lib/libvmi*
+            /build/usr/include/libvmi/*
           key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}-${{ matrix.distro }}-${{ matrix.version }}
       - if: ${{ steps.cache-drakvuf-bundle.outputs.cache-hit != 'true' }}
         name: Build Drakvuf bundle
@@ -114,8 +114,8 @@ jobs:
         with:
           path: |
             /out/drakvuf-bundle*.deb 
-            /out/usr/lib/libvmi*
-            /out/usr/include/libvmi/*
+            /build/usr/lib/libvmi*
+            /build/usr/include/libvmi/*
           key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}-${{ matrix.distro }}-${{ matrix.version }}
       - if: ${{ steps.cache-drakvuf-bundle.outputs.cache-hit != 'true' }}
         name: Build Xen Test Framework
@@ -128,6 +128,9 @@ jobs:
       - name: Build draksetup tools
         run: |
           apt install -y make pkg-config gcc libglib2.0-dev
+          cp -v /build/usr/lib/libvmi* /usr/lib/
+          mkdir /usr/include/libvmi
+          cp -v /build/usr/include/libvmi/* /usr/include/libvmi/
           make -C ./drakrun/drakrun/tools
           cp /opt/xtf/tests/example/test-hvm64-example ./drakrun/drakrun/tools/
       - uses: actions/upload-artifact@v3
