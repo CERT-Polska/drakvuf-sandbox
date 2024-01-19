@@ -34,10 +34,6 @@ function build_drakvuf() {
     export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig/"
     export LDFLAGS="-L$PREFIX/lib"
     export CFLAGS="-I$PREFIX/include"
-    # Use clang as compiler, otherwise stuff doesn't build
-    # with drakvuf xen_helpers breaking on -Werror-c++-compat
-    export CC=clang
-    export CXX=clang++
     autoreconf -vif
     ./configure --prefix=$PREFIX --enable-debug
     make -j$(nproc)

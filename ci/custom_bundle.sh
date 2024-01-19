@@ -63,7 +63,8 @@ function setup_repository () {
 echo "[+] Setting up repository"
 setup_repository
 
-INSTALL_PATH=/build/drakvuf/usr
+# Usage of /build as root is required by DRAKVUF's mkdeb script
+INSTALL_PATH=/build/usr
 mkdir -p $INSTALL_PATH
 
 echo "[+] Building Xen"
@@ -85,16 +86,13 @@ popd
 echo "[+] Building dwarf2json"
 pushd $SANDBOX_DIR/drakvuf/dwarf2json
 /usr/local/go/bin/go build
+mkdir -p /build/dwarf2json/
+mv dwarf2json /build/dwarf2json/
 popd
 
 echo "[+] Packaging DRAKVUF"
 mkdir -p /out
 pushd $SANDBOX_DIR/drakvuf
-
-# Remove volatility3
-sed -i '/volatility3/d' ./package/mkdeb
-# Change drakvuf build dir
-sed -i 's/\/build/\/build\/drakvuf/g' ./package/mkdeb
 
 sh ./package/mkdeb
 popd
