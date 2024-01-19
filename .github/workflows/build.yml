@@ -253,7 +253,7 @@ jobs:
         env:
           DRAKVUF_DEBS_PATH: "/debs"
           BASE_IMAGE: "${{ matrix.distro }}-${{ matrix.version_number }}-generic-amd64"
-          SNAPSHOT_VERSION: "win7-20230213"
+          SNAPSHOT_VERSION: "win7-20210922"
           MINIO_HOST: "192.168.100.1:8181"
           VM_RUNNER_API_URL: "http://127.0.0.1:8080"
           VM_SUFFIX: "${{ matrix.distro }}-${{ matrix.version_number }}"
