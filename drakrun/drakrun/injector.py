@@ -1,5 +1,5 @@
 import subprocess
-from typing import List, Optional
+from typing import List
 
 from drakrun.util import RuntimeInfo
 
