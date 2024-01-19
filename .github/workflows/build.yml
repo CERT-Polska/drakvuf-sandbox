@@ -3,9 +3,11 @@ on:
   push:
     branches:
     - master
+    - drakvuf-v1.x
   pull_request:
     branches:
     - master
+    - drakvuf-v1.x
 jobs:
   build_docs:
     runs-on: ubuntu-latest
