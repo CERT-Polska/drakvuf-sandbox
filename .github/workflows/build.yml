@@ -100,7 +100,7 @@ jobs:
             /build/usr/lib/libvmi*
             /build/usr/include/libvmi/*
           key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}-${{ matrix.distro }}-${{ matrix.version }}
-      - if: ${{ steps.cache-drakvuf-bundle.outputs.cache-hit != 'true' }}
+      - if: ${{ steps.cache-drakvuf-bundle-restore.outputs.cache-hit != 'true' }}
         name: Build Drakvuf bundle
         run: |
           cp -ra . /build
