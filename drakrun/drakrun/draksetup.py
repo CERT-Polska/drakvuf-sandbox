@@ -15,10 +15,8 @@ import traceback
 from pathlib import Path, PureWindowsPath
 
 import click
-import requests
 from minio import Minio
 from minio.error import NoSuchKey
-from requests import RequestException
 from tqdm import tqdm
 
 from drakrun.apiscout import (
