@@ -540,16 +540,6 @@ def install(
     logging.info("-" * 80)
 
 
-def send_usage_report(report):
-    try:
-        res = requests.post(
-            "https://drakvuf.cert.pl/usage/draksetup", json=report, timeout=5
-        )
-        res.raise_for_status()
-    except RequestException:
-        logging.exception("Failed to send usage report. This is not a serious problem.")
-
-
 def on_create_rekall_profile_failure(
     msg: str,
     should_raise: bool,
@@ -724,25 +714,15 @@ def build_os_info(
 
 @click.command(help="Finalize sandbox installation")
 @click.option(
-    "--report/--no-report",
-    "report",
-    default=True,
-    show_default=True,
-    help="Send anonymous usage report",
-)
-@click.option(
     "--usermode/--no-usermode",
     "generate_usermode",
     default=True,
     show_default=True,
     help="Generate user mode profiles",
 )
-def postinstall(report, generate_usermode):
+def postinstall(generate_usermode):
     if not check_root():
         return
-
-    if os.path.exists(os.path.join(ETC_DIR, "no_usage_reports")):
-        report = False
 
     install_info = InstallInfo.load()
     storage_backend = get_storage_backend(install_info)
@@ -799,18 +779,6 @@ def postinstall(report, generate_usermode):
     # Memory state is frozen, we can't do any writes to persistent storage
     logging.info("Snapshotting persistent memory...")
     storage_backend.snapshot_vm0_volume()
-
-    if report:
-        send_usage_report(
-            {
-                "kernel": {
-                    "guid": kernel_info.guid,
-                    "filename": kernel_info.filename,
-                    "version": kernel_info.version,
-                },
-                "install_iso": {"sha256": install_info.iso_sha256},
-            }
-        )
 
     if generate_usermode:
         # Restore a VM and create usermode profiles
