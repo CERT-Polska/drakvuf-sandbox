@@ -1,5 +1,4 @@
 # DRAKVUF Sandbox
-[![Slack](https://img.shields.io/badge/Slack-KVM--VMI-important)](https://kvm-vmi.slack.com) [![Join Slack](https://img.shields.io/badge/Slack-Join%20KVM--VMI-blue)](https://kvm-vmi.herokuapp.com) [![Build Status](https://ci.drakvuf.cert.pl/api/badges/CERT-Polska/drakvuf-sandbox/status.svg)](https://ci.drakvuf.cert.pl/CERT-Polska/drakvuf-sandbox) [![Documentation Status](https://readthedocs.org/projects/drakvuf-sandbox/badge/?version=latest)](https://drakvuf-sandbox.readthedocs.io/en/latest/?badge=latest)
 
 DRAKVUF Sandbox is an automated black-box malware analysis system with [DRAKVUF](https://drakvuf.com/) engine under the hood, which does not require an agent on guest OS.
 
@@ -45,11 +44,12 @@ Feel free to contact us if you have any questions or comments.
 
 This project is authored by:
 
-* Arkadiusz Wróbel ([@catsuryuu](https://github.com/catsuryuu)) - catsuryuu@cert.pl
 * Michał Leszczyński ([@icedevml](https://github.com/icedevml))
 * Adam Kliś ([@BonusPlay](https://github.com/BonusPlay))
 * Hubert Jasudowicz ([@chivay](https://github.com/chivay))
 * Konstanty Cieśliński ([@kscieslinski](https://github.com/kscieslinski))
+* Arkadiusz Wróbel ([@catsuryuu](https://github.com/catsuryuu))
+* Paweł Srokosz ([@psrok1](https://github.com/psrok1))
 
 If you have any questions about [DRAKVUF](https://drakvuf.com/) engine itself, contact tamas@tklengyel.com
 
