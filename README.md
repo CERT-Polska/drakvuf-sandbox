@@ -1,5 +1,4 @@
 # DRAKVUF Sandbox
-[![Documentation](https://readthedocs.org/projects/drakvuf-sandbox/badge/?version=latest)](https://drakvuf-sandbox.readthedocs.io/en/latest/?badge=latest)
 
 DRAKVUF Sandbox is an automated black-box malware analysis system with [DRAKVUF](https://drakvuf.com/) engine under the hood, which does not require an agent on guest OS.
 
