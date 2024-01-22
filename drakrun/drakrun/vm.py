@@ -5,9 +5,10 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from draklib.util import try_run
 from drakrun.config import ETC_DIR, LIB_DIR, VM_CONFIG_DIR, VOLUME_DIR, InstallInfo
 from drakrun.storage import StorageBackendBase, get_storage_backend
-from drakrun.util import safe_delete, try_run
+from drakrun.util import safe_delete
 
 log = logging.getLogger("drakrun")
 
