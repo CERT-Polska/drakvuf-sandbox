@@ -8,7 +8,7 @@ from pathlib import Path
 from invoke.exceptions import UnexpectedExit
 from vm_runner_client import DrakvufVM
 
-from utils import apt_install
+from utils import apt_install, pip_install
 
 logging.basicConfig(level=logging.INFO)
 
