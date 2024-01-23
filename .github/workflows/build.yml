@@ -178,11 +178,6 @@ jobs:
     container: "python:3.8"
     steps:
       - uses: actions/checkout@v3
-      - name: Download draksetup compiled tools from artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: draksetup-tools-${{ matrix.distro }}-${{ matrix.version }}
-          path: drakrun/drakrun/tools
       - name: Build drakrun
         run: |
           cd drakrun
