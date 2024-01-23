@@ -184,7 +184,7 @@ jobs:
           python3 setup.py bdist_wheel
       - uses: actions/upload-artifact@v3
         with:
-          name: drakrun-whl-${{ matrix.distro }}-${{ matrix.version }}
+          name: drakrun-whl
           path: ./drakrun/dist/drakrun-*.whl
   test_e2e:
     needs: [ package_drakcore, package_drakrun, package_drakvuf_bundle ]
@@ -209,7 +209,7 @@ jobs:
       - name: Download drakrun debs from artifacts
         uses: actions/download-artifact@v3
         with:
-          name: drakrun-debs-${{ matrix.distro }}-${{ matrix.version }}
+          name: drakrun-whl
           path: /debs
       - name: Download drakcore debs from artifacts
         uses: actions/download-artifact@v3
