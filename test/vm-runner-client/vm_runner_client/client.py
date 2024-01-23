@@ -91,12 +91,13 @@ class DrakvufVM:
         try:
             self.connect_tcp(22).close()
             return True
-        except (ConnectionError, ProxyError) as e:
-            if isinstance(e, ConnectionError):
-                return False
-            if isinstance(e, ProxyError) and e.error_code in [
+        except ConnectionError:
+            return False
+        except ProxyError as e:
+            if e.error_code in [
                 ReplyCode.CONNECTION_REFUSED,
-                ReplyCode.HOST_UNREACHABLE
+                ReplyCode.HOST_UNREACHABLE,
+                ReplyCode.TTL_EXPIRED,
             ]:
                 return False
             else:
@@ -113,7 +114,7 @@ class DrakvufVM:
 
     @staticmethod
     def get_vm_identity():
-        sanitize = lambda v: re.sub(r"[^a-zA-Z0-9_\-]", "_", v)[:32]
+        sanitize = lambda v: re.sub(r"[^a-zA-Z0-9_\-]", "_", v)[:48]
         if os.getenv("GITLAB_CI"):
             return sanitize(f'gitlab-{os.getenv("CI_COMMIT_REF_NAME")}-{os.getenv("VM_SUFFIX")}')
         elif os.getenv("GITHUB_ACTION"):
