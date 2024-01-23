@@ -266,5 +266,5 @@ jobs:
         run: |
           python -m vm_runner_client suspend
         env:
-          VM_RUNNER_API_KEY: "http://127.0.0.1:8080"
+          VM_RUNNER_API_URL: "http://127.0.0.1:8080"
           VM_SUFFIX: "${{ matrix.distro }}-${{ matrix.version_number }}"
