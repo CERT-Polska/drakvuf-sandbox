@@ -33,7 +33,7 @@ DRAKMON_SERVICES = [
 ]
 
 DRAKVUF_SANDBOX_DEBS = [
-    "drakrun_*.whl",
+    "drakrun-*.whl",
     "drakcore_*.deb",
 ]
 
@@ -115,7 +115,10 @@ def drakmon_setup():
         ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
         apt_install(ssh, ["redis-server"])
         for d in drakvuf_sandbox_debs:
-            apt_install(ssh, ["./" + d.name])
+            if str(d).endswith(".deb"):
+                apt_install(ssh, ["./" + d.name])
+            else:
+                pip_install(ssh, ["./" + d.name])
 
         # Save default config
         ssh.run("cp /etc/drakrun/config.ini /etc/drakrun/config.ini.bak")

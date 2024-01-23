@@ -4,12 +4,18 @@ import logging
 
 def apt_install(c, packages):
     deps = " ".join(packages)
-    logging.info(f"Installing {packages}")
+    logging.info(f"Installing {packages} with apt")
     c.run(f"DEBIAN_FRONTEND=noninteractive apt-get install -y {deps}", in_stream=False)
 
 
+def pip_install(c, packages):
+    deps = " ".join(packages)
+    logging.info(f"Installing {packages} with pip")
+    c.run(f"DEBIAN_FRONTEND=noninteractive pip install {deps}", in_stream=False)
+
+
 def dpkg_install(c, deb_file):
-    logging.info(f"Installing {deb_file}")
+    logging.info(f"Installing {deb_file} with dpkg")
     c.run(f"DEBIAN_FRONTEND=noninteractive dpkg -i {deb_file}", in_stream=False)
 
 
