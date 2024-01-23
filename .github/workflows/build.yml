@@ -181,7 +181,7 @@ jobs:
       - name: Build drakrun
         run: |
           cd drakrun
-          python3 drakrun/setup.py bdist_wheel
+          python3 setup.py bdist_wheel
       - uses: actions/upload-artifact@v3
         with:
           name: drakrun-whl-${{ matrix.distro }}-${{ matrix.version }}
