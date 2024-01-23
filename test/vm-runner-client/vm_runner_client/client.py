@@ -59,17 +59,17 @@ class DrakvufVM:
             "sock": sock
         })
 
-    @staticmethod
-    def http_session():
+    @classmethod
+    def http_session(cls):
         """
         Returns requests.Session object with proper proxy setting to access VM ports
         """
-        if self.config.RUNNER_USE_SOCKS:
+        if cls.config.RUNNER_USE_SOCKS:
             return make_session(f"socks5://"
-                                f"{self.config.RUNNER_SOCKS_USERNAME}:"
-                                f"{self.config.RUNNER_SOCKS_PASSWORD}"
-                                f"@{self.config.RUNNER_SOCKS_HOST}:"
-                                f"{self.config.RUNNER_SOCKS_PORT}")
+                                f"{cls.config.RUNNER_SOCKS_USERNAME}:"
+                                f"{cls.config.RUNNER_SOCKS_PASSWORD}"
+                                f"@{cls.config.RUNNER_SOCKS_HOST}:"
+                                f"{cls.config.RUNNER_SOCKS_PORT}")
         else:
             return requests.Session()
 
