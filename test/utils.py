@@ -31,7 +31,7 @@ def get_service_info(c, service):
 class Drakcore:
     def __init__(self, drakvuf_vm):
         self.host = f"http://{drakvuf_vm.vm_ip}:6300/"
-        self.session = drakvuf_vm.connect_http()
+        self.session = drakvuf_vm.http_session()
 
     def get(self, endpoint, *args, **kwargs):
         return self.session.get(f"{self.host}{endpoint}", *args, **kwargs)

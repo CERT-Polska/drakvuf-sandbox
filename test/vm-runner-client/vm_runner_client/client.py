@@ -59,7 +59,8 @@ class DrakvufVM:
             "sock": sock
         })
 
-    def connect_http(self):
+    @staticmethod
+    def http_session():
         """
         Returns requests.Session object with proper proxy setting to access VM ports
         """
@@ -73,13 +74,15 @@ class DrakvufVM:
             return requests.Session()
 
     def suspend(self):
-        response = requests.post(f"{self.config.RUNNER_API_URL}/vm/suspend", json={
+        session = self.http_session()
+        response = session.post(f"{self.config.RUNNER_API_URL}/vm/suspend", json={
             "identity": self.identity
         })
         response.raise_for_status()
 
     def destroy(self):
-        response = requests.post(f"{self.config.RUNNER_API_URL}/vm/destroy", json={
+        session = self.http_session()
+        response = session.post(f"{self.config.RUNNER_API_URL}/vm/destroy", json={
             "identity": self.identity
         })
         response.raise_for_status()
@@ -123,7 +126,8 @@ class DrakvufVM:
         ssh_pub_key = "ssh-rsa " + vm_ssh_key.get_base64()
 
         identity = cls.get_vm_identity() or str(uuid.uuid4())
-        response = requests.post(f"{cls.config.RUNNER_API_URL}/vm/build", json={
+        session = cls.http_session()
+        response = session.post(f"{cls.config.RUNNER_API_URL}/vm/build", json={
             "identity": identity,
             "image": base_image,
             "ssh_key": ssh_pub_key,
