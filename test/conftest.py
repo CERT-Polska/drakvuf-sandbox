@@ -33,7 +33,7 @@ DRAKMON_SERVICES = [
 ]
 
 DRAKVUF_SANDBOX_DEBS = [
-    "drakrun_*.deb",
+    "drakrun_*.whl",
     "drakcore_*.deb",
 ]
 
