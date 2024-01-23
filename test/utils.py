@@ -8,10 +8,10 @@ def apt_install(c, packages):
     c.run(f"DEBIAN_FRONTEND=noninteractive apt-get install -y {deps}", in_stream=False)
 
 
-def pip_install(c, packages):
+def pip_install(c, packages, flags=""):
     deps = " ".join(packages)
     logging.info(f"Installing {packages} with pip3")
-    c.run(f"DEBIAN_FRONTEND=noninteractive pip3 install {deps}", in_stream=False)
+    c.run(f"DEBIAN_FRONTEND=noninteractive pip3 install {flags} {deps}", in_stream=False)
 
 
 def dpkg_install(c, deb_file):
