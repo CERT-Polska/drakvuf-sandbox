@@ -113,7 +113,7 @@ def drakmon_setup():
 
     with drakvuf_vm.connect_ssh() as ssh:
         ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
-        apt_install(ssh, ["redis-server", "python3", "python3-pip"])
+        apt_install(ssh, ["redis-server", "python3", "python3-pip", "git"])
         for d in drakvuf_sandbox_debs:
             if str(d).endswith(".deb"):
                 apt_install(ssh, ["./" + d.name])
