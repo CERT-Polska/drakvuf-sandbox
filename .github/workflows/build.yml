@@ -141,7 +141,7 @@ jobs:
             /out/drakvuf-bundle*.deb
       - uses: actions/upload-artifact@v3
         with:
-          name: draksetup-tools-debian-buster
+          name: draksetup-tools-${{ matrix.distro }}-${{ matrix.version }}
           path: |
             drakrun/drakrun/tools/*
   package_drakcore:
@@ -177,12 +177,12 @@ jobs:
     runs-on: ubuntu-latest
     container: "python:3.8"
     steps:
+      - uses: actions/checkout@v3
       - name: Download draksetup compiled tools from artifacts
         uses: actions/download-artifact@v3
         with:
           name: draksetup-tools-debian-buster
           path: drakrun/drakrun/tools
-      - uses: actions/checkout@v3
       - name: Build drakrun
         run: |
           cd drakrun
