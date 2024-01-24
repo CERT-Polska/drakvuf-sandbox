@@ -121,9 +121,6 @@ def drakmon_setup():
             else:
                 pip_install(ssh, ["./" + d.name])
 
-        # Save default config
-        ssh.run("cp /etc/drakrun/config.ini /etc/drakrun/config.ini.bak")
-
         ssh.run(f"""
 cat > /etc/drakrun/config.ini <<EOF
 [minio]
