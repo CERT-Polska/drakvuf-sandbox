@@ -72,8 +72,10 @@ from drakrun.vm import (
 
 log = logging.getLogger(__name__)
 
+config_path = os.path.join(ETC_DIR, "config.ini")
 conf = configparser.ConfigParser()
-conf.read(os.path.join(ETC_DIR, "config.ini"))
+if os.path.isfile(config_path):
+    conf.read(config_path)
 
 
 def find_default_interface():
@@ -1311,6 +1313,18 @@ def do_import_full(mc, name, bucket, zpool):
         )
 
 
+@click.command(help="Pre-installation activities")
+def init():
+    # Simple activities handled by deb packages before
+    # In the future, consider splitting this to remove hard dependency on systemd etc
+    Path(ETC_DIR).mkdir(exist_ok=True)
+    default_config = (Path(__file__).parent / "config.dist.ini").read_text()
+    Path(config_path).write_text(default_config)
+
+    systemd_unit = (Path(__file__).parent / "systemd/drakrun@.service").read_text()
+    Path("/etc/systemd/system/drakrun@.service").write_text(systemd_unit)
+    
+
 @click.group()
 def main():
     logging.basicConfig(
@@ -1329,6 +1343,7 @@ main.add_command(scale)
 main.add_command(snapshot)
 main.add_command(memdump)
 main.add_command(cleanup)
+main.add_command(init)
 
 
 if __name__ == "__main__":

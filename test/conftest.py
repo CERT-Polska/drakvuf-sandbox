@@ -136,32 +136,7 @@ EOF""")
         # Import snapshot
         assert SNAPSHOT_VERSION is not None
         ssh.run(f"draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full")
-
-        ssh.run(f"""
-cat > /etc/drakrun/config.ini <<EOF
-[redis]
-host=localhost
-port=6379
-
-[minio]
-address=localhost:9000
-bucket=karton
-secure=0
-
-[drakrun]
-raw_memory_dump=0
-net_enable=0
-out_interface=
-dns_server=8.8.8.8
-syscall_filter=
-[drakvuf_plugins]
-_all_=apimon,bsodmon,clipboardmon,cpuidmon,crashmon,debugmon,delaymon,exmon,filedelete,filetracer,librarymon,memdump,procdump,procmon,regmon,rpcmon,ssdtmon,syscalls,tlsmon,windowmon,wmimon
-low=apimon,memdump
-
-[draktestd]
-modules=/opt/extractor-modules/
-EOF
-""")
+        ssh.run(f"draksetup init")
 
         # Shut up QEMU
         ssh.run("ln -s /dev/null /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO")

@@ -1,3 +1,5 @@
 include drakrun/cfg.template
 include drakrun/tools/*
 include drakrun/test/*
+include drakrun/config.dist.ini
+include drakrun/systemd/drakrun@.service
