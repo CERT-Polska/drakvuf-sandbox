@@ -9,7 +9,7 @@ def pytest_installed(drakmon_ssh):
     drakmon_ssh.run("wget https://bootstrap.pypa.io/get-pip.py &&"
                     "python3 get-pip.py")
     # Then we can actually try to install something
-    drakmon_ssh.run("pip install pytest==6.2.2 pytest-steps==1.7.3")
+    drakmon_ssh.run("pip3 install pytest==6.2.2 pytest-steps==1.7.3")
 
 
 @pytest.fixture(scope="session")
@@ -17,7 +17,7 @@ def drakrun_test_dir(pytest_installed, drakmon_ssh):
     """ Find location of tests """
     res = drakmon_ssh.run(
     """
-    python -c "import os; import drakrun.test.conftest; print(os.path.dirname(drakrun.test.conftest.__file__))"
+    python3 -c "import os; import drakrun.test.conftest; print(os.path.dirname(drakrun.test.conftest.__file__))"
     """)
 
     return res.stdout.strip()

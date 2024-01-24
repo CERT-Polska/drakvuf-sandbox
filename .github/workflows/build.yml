@@ -237,7 +237,7 @@ jobs:
           cd test
           pip install -r requirements.txt
           pytest -v --capture=no
-          python -m vm_runner_client destroy
+          python3 -m vm_runner_client destroy
         env:
           DRAKVUF_DEBS_PATH: "/debs"
           BASE_IMAGE: "${{ matrix.distro }}-${{ matrix.version_number }}-generic-amd64"
@@ -253,7 +253,7 @@ jobs:
       - name: Job failed - suspending VM (if possible)
         if: ${{ failure() }}
         run: |
-          python -m vm_runner_client suspend
+          python3 -m vm_runner_client suspend
         env:
           VM_RUNNER_API_URL: "http://127.0.0.1:8080"
           VM_SUFFIX: "${{ matrix.distro }}-${{ matrix.version_number }}"
