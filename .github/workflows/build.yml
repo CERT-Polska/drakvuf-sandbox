@@ -180,7 +180,7 @@ jobs:
       - name: Download draksetup compiled tools from artifacts
         uses: actions/download-artifact@v3
         with:
-          name: draksetup-tools-${{ matrix.distro }}-${{ matrix.version }}
+          name: draksetup-tools-debian-buster
           path: drakrun/drakrun/tools
       - uses: actions/checkout@v3
       - name: Build drakrun
