@@ -1323,7 +1323,7 @@ def init():
 
     systemd_unit = (Path(__file__).parent / "systemd/drakrun@.service").read_text()
     Path("/etc/systemd/system/drakrun@.service").write_text(systemd_unit)
-    
+
 
 @click.group()
 def main():
