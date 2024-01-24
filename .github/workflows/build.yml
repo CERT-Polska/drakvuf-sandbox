@@ -141,7 +141,7 @@ jobs:
             /out/drakvuf-bundle*.deb
       - uses: actions/upload-artifact@v3
         with:
-          name: draksetup-tools-${{ matrix.distro }}-${{ matrix.version }}
+          name: draksetup-tools-debian-buster
           path: |
             drakrun/drakrun/tools/*
   package_drakcore:
