@@ -221,6 +221,12 @@ jobs:
         with:
           name: drakvuf-bundle-debs-${{ matrix.distro }}-${{ matrix.version }}
           path: /debs
+      - name: Download drakvuf tools from artifacts
+        uses: actions/download-artifact@v3
+        with:
+          # Forgive me father for I have sinned
+          name: draksetup-tools-${{ matrix.distro }}-${{ matrix.version }}
+          path: /usr/local/lib/python3.7/dist-packages/drakrun/tools
       - name: Install git
         run: |
           export DEBIAN_FRONTEND=noninteractive
