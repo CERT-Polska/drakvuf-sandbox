@@ -158,13 +158,15 @@ jobs:
     container: "${{ matrix.distro }}:${{matrix.version}}"
     steps:
       - uses: actions/checkout@v3
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16'
       - name: Build drakcore
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
           apt-get install -y wget curl python3 python3-venv python3-pip dh-virtualenv debhelper devscripts
-          curl -sL https://deb.nodesource.com/setup_14.x | bash -
-          apt-get install -y nodejs
           cd drakcore
           package/find-python.sh
           dpkg-buildpackage -us -uc -b
