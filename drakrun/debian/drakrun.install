@@ -1,4 +1,0 @@
-drakrun/config.ini /etc/drakrun/
-drakrun/scripts/* /etc/drakrun/scripts/
-drakrun/hooks.txt /etc/drakrun/
-drakrun/systemd/*.service /lib/systemd/system/
