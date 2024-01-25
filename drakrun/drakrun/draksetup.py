@@ -1319,7 +1319,10 @@ def init():
     # In the future, consider splitting this to remove hard dependency on systemd etc
     Path(ETC_DIR).mkdir(exist_ok=True)
     default_config = (Path(__file__).parent / "config.dist.ini").read_text()
-    Path(config_path).write_text(default_config)
+    (Path(ETC_DIR) / "config.ini").write_text(default_config)
+
+    default_hooks = (Path(__file__).parent / "hooks.dist.txt").read_text()
+    (Path(ETC_DIR) / "hooks.txt").write_text(default_hooks)
 
     systemd_unit = (Path(__file__).parent / "systemd/drakrun@.service").read_text()
     Path("/etc/systemd/system/drakrun@.service").write_text(systemd_unit)
