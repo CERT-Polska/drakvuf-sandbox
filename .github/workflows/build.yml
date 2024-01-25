@@ -64,7 +64,6 @@ jobs:
       - name: Check with flake8
         run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakrun/
   package_drakvuf_bundle:
-    needs: [ lint_drakcore, lint_drakcore_frontend, lint_drakrun ]
     strategy:
       fail-fast: false
       matrix:
@@ -145,7 +144,6 @@ jobs:
           path: |
             drakrun/drakrun/tools/*
   package_drakcore:
-    needs: [lint_drakcore, lint_drakcore_frontend]
     strategy:
       fail-fast: false
       matrix:
