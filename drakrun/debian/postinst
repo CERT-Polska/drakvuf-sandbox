@@ -18,4 +18,4 @@ esac
 
 mkdir -p /var/lib/drakrun/{profiles,volumes}
 systemctl daemon-reload
-/opt/venvs/drakrun/bin/draksetup postupgrade
+/usr/local/bin/draksetup postupgrade
