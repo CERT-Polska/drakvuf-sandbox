@@ -1,7 +1,7 @@
+import tempfile
 from io import StringIO
 
 import pytest
-import tempfile
 
 from drakrun.util import RuntimeInfo, VmiOffsets
 
