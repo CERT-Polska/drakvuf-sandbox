@@ -7,7 +7,6 @@ import subprocess
 import sys
 import traceback
 from dataclasses import dataclass, field
-from typing import IO, AnyStr
 
 from dataclasses_json import config, dataclass_json
 
