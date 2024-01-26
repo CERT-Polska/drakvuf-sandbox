@@ -57,8 +57,9 @@ class RuntimeInfo:
     inject_pid: int
 
     @staticmethod
-    def load(file_obj: IO[AnyStr]) -> "RuntimeInfo":
-        return RuntimeInfo.from_json(file_obj.read())
+    def load(file_path: str) -> "RuntimeInfo":
+        with open(file_path) as file_obj:
+            return RuntimeInfo.from_json(file_obj.read())
 
 
 def patch_config(cfg):
