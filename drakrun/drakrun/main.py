@@ -16,7 +16,6 @@ import sys
 import tempfile
 import time
 import zipfile
-from configparser import NoOptionError
 from io import StringIO
 from itertools import chain
 from pathlib import Path
