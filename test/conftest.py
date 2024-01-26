@@ -8,7 +8,7 @@ from pathlib import Path
 from invoke.exceptions import UnexpectedExit
 from vm_runner_client import DrakvufVM
 
-from utils import apt_install
+from utils import apt_install, pip_install
 
 logging.basicConfig(level=logging.INFO)
 
@@ -33,7 +33,7 @@ DRAKMON_SERVICES = [
 ]
 
 DRAKVUF_SANDBOX_DEBS = [
-    "drakrun_*.deb",
+    "drakrun-*.whl",
     "drakcore_*.deb",
 ]
 
@@ -113,12 +113,16 @@ def drakmon_setup():
 
     with drakvuf_vm.connect_ssh() as ssh:
         ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
-        apt_install(ssh, ["redis-server"])
+        apt_install(ssh, ["redis-server", "python3", "python3-pip", "git", "dnsmasq", "bridge-utils"])
+        pip_install(ssh, ["pip"], "--upgrade")
         for d in drakvuf_sandbox_debs:
-            apt_install(ssh, ["./" + d.name])
+            if str(d).endswith(".deb"):
+                apt_install(ssh, ["./" + d.name])
+            else:
+                pip_install(ssh, ["./" + d.name])
 
         # Save default config
-        ssh.run("cp /etc/drakrun/config.ini /etc/drakrun/config.ini.bak")
+        ssh.run("mkdir /etc/drakrun/")
 
         ssh.run(f"""
 cat > /etc/drakrun/config.ini <<EOF
@@ -132,9 +136,7 @@ EOF""")
         # Import snapshot
         assert SNAPSHOT_VERSION is not None
         ssh.run(f"draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full")
-
-        # Restore original config
-        ssh.run("cp /etc/drakrun/config.ini.bak /etc/drakrun/config.ini")
+        ssh.run(f"draksetup init")
 
         # Shut up QEMU
         ssh.run("ln -s /dev/null /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO")

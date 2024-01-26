@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/venvs/drakrun/bin/drakrun %i
+ExecStart=/usr/local/bin/drakrun %i
 User=root
 Group=root
 Restart=on-failure
