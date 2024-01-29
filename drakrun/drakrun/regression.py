@@ -16,7 +16,6 @@ from mwdblib import MWDB
 from tqdm import tqdm
 
 from drakrun.config import ETC_DIR
-from drakrun.util import patch_config
 from drakrun.version import __version__ as DRAKRUN_VERSION
 
 
@@ -129,9 +128,7 @@ class RegressionTester(Karton):
     @classmethod
     def main(cls):
         conf_path = os.path.join(ETC_DIR, "config.ini")
-        config = patch_config(Config(conf_path))
-
-        consumer = RegressionTester(config)
+        consumer = RegressionTester(Config(conf_path))
 
         if not consumer.backend.minio.bucket_exists("draktestd"):
             consumer.backend.minio.make_bucket(bucket_name="draktestd")
@@ -158,7 +155,7 @@ class RegressionTester(Karton):
         args = parser.parse_args()
 
         conf_path = os.path.join(ETC_DIR, "config.ini")
-        config = patch_config(Config(conf_path))
+        config = Config(conf_path)
 
         with open(args.tests) as tests:
             testcases = [TestCase(**case) for case in json.load(tests)]

@@ -4,7 +4,6 @@ import logging
 import os
 import re
 import subprocess
-import sys
 import traceback
 from dataclasses import dataclass, field
 
@@ -59,39 +58,6 @@ class RuntimeInfo:
     def load(file_path: str) -> "RuntimeInfo":
         with open(file_path) as file_obj:
             return RuntimeInfo.from_json(file_obj.read())
-
-
-def patch_config(cfg):
-    try:
-        access_key = cfg.config["minio"]["access_key"]
-        secret_key = cfg.config["minio"]["secret_key"]
-    except KeyError:
-        sys.stderr.write(
-            "WARNING! Misconfiguration: section [minio] of config.ini doesn't contain access_key or secret_key.\n"
-        )
-        return cfg
-
-    if not access_key and not secret_key:
-        if not os.path.exists("/etc/drakcore/minio.env"):
-            raise RuntimeError(
-                "ERROR! MinIO access credentials are not configured (and can not be auto-detected), unable to start.\n"
-            )
-
-        with open("/etc/drakcore/minio.env", "r") as f:
-            minio_cfg = [
-                line.strip().split("=", 1) for line in f if line.strip() and "=" in line
-            ]
-            minio_cfg = {k: v for k, v in minio_cfg}
-
-        try:
-            cfg.config["minio"]["access_key"] = minio_cfg["MINIO_ACCESS_KEY"]
-            cfg.config["minio"]["secret_key"] = minio_cfg["MINIO_SECRET_KEY"]
-        except KeyError:
-            sys.stderr.write(
-                "WARNING! Misconfiguration: minio.env doesn't contain MINIO_ACCESS_KEY or MINIO_SECRET_KEY.\n"
-            )
-
-    return cfg
 
 
 def get_domid_from_instance_id(instance_id: int) -> int:
