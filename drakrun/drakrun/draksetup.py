@@ -1315,16 +1315,12 @@ def do_import_full(mc, name, bucket, zpool):
 
 def parse_envfile(path: str) -> Dict[str, str]:
     with open(path, "r") as f:
-        cfg = [
-            line.strip().split("=", 1) for line in f if line.strip() and "=" in line
-        ]
+        cfg = [line.strip().split("=", 1) for line in f if line.strip() and "=" in line]
     return {k: v for k, v in cfg}
 
 
 @click.command(help="Pre-installation activities")
-@click.option(
-    "--envfile", default="", help="Import s3 config from this file"
-)
+@click.option("--envfile", default="", help="Import s3 config from this file")
 def init(envfile: str):
     # Simple activities handled by deb packages before
     # In the future, consider splitting this to remove hard dependency on systemd etc
