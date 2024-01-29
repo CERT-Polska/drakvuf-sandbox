@@ -9,7 +9,7 @@ from drakrun.util import get_domid_from_instance_id
 log = logging.getLogger("drakrun")
 
 
-def iptable_rule_exists(rule):
+def iptable_rule_exists(rule) -> bool:
     try:
         subprocess.check_output(
             f"iptables -C {rule}", shell=True, stderr=subprocess.DEVNULL
@@ -24,12 +24,12 @@ def iptable_rule_exists(rule):
             raise RuntimeError(f"Failed to check for iptables rule: {rule}")
 
 
-def add_iptable_rule(rule):
+def add_iptable_rule(rule) -> None:
     if not iptable_rule_exists(rule):
         subprocess.check_output(f"iptables -A {rule}", shell=True)
 
 
-def del_iptable_rule(rule):
+def del_iptable_rule(rule) -> None:
     # For deleting multiple copies of the same rule
     all_cleared = False
 
@@ -98,7 +98,7 @@ def start_dnsmasq(
     )
 
 
-def stop_dnsmasq(vm_id: int):
+def stop_dnsmasq(vm_id: int) -> None:
     dnsmasq_pidfile = f"/var/run/dnsmasq-vm{vm_id}.pid"
 
     if os.path.exists(dnsmasq_pidfile):
@@ -160,7 +160,7 @@ def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server
         add_iptable_rule(f"FORWARD -i {out_interface} -o drak{vm_id} -j ACCEPT")
 
 
-def delete_vm_network(vm_id, net_enable, out_interface, dns_server):
+def delete_vm_network(vm_id, net_enable, out_interface, dns_server) -> None:
     try:
         subprocess.check_output(
             f"ip link set dev drak{vm_id} down", shell=True, stderr=subprocess.STDOUT

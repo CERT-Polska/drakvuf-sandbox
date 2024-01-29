@@ -36,7 +36,7 @@ class DrakmonShell:
         self.injector = Injector(
             self.vm.vm_name,
             self.runtime_info,
-            self.kernel_profile,
+            str(self.kernel_profile),
         )
         setup_vm_network(vm_id, True, find_default_interface(), dns)
 
@@ -73,23 +73,23 @@ class DrakmonShell:
                 "-k",
                 str(self.runtime_info.vmi_offsets.kpgd),
                 "-r",
-                self.kernel_profile,
+                str(self.kernel_profile),
                 "-d",
                 self.vm.vm_name,
                 "--dll-hooks-list",
-                Path(ETC_DIR) / "hooks.txt",
+                str(Path(ETC_DIR) / "hooks.txt"),
             ]
         )
 
         if "memdump" in plugins:
             dumps = workdir / "dumps"
             dumps.mkdir()
-            cmd.extend(["--memdump-dir", dumps])
+            cmd.extend(["--memdump-dir", str(dumps)])
 
         if "ipt" in plugins:
             ipt = workdir / "ipt"
             ipt.mkdir()
-            cmd.extend(["--ipt-dir", ipt])
+            cmd.extend(["--ipt-dir", str(ipt)])
 
         for chk in (["-a", plugin] for plugin in plugins):
             cmd.extend(chk)

@@ -2,14 +2,14 @@ import json
 import logging
 from operator import attrgetter
 from pathlib import Path, PureWindowsPath
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pefile
 
 log = logging.getLogger(__name__)
 
 
-def get_bitness(pe: pefile.PE) -> int:
+def get_bitness(pe: pefile.PE) -> Optional[int]:
     if pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE["IMAGE_FILE_MACHINE_AMD64"]:
         return 64
     elif pe.FILE_HEADER.Machine == pefile.MACHINE_TYPE["IMAGE_FILE_MACHINE_I386"]:
@@ -21,7 +21,7 @@ def get_bitness(pe: pefile.PE) -> int:
         return None
 
 
-def get_product_version(pe: pefile.PE) -> str:
+def get_product_version(pe: pefile.PE) -> Optional[str]:
     """
     Based on https://stackoverflow.com/a/16076661/12452744
     """

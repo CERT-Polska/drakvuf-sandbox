@@ -80,7 +80,7 @@ if os.path.isfile(config_path):
     conf.read(config_path)
 
 
-def find_default_interface():
+def find_default_interface() -> Optional[str]:
     routes = (
         subprocess.check_output(
             "ip route show default", shell=True, stderr=subprocess.STDOUT
