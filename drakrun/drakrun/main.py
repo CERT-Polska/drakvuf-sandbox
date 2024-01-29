@@ -44,7 +44,6 @@ from drakrun.util import (
     get_xen_commandline,
     get_xl_info,
     graceful_exit,
-    patch_config,
 )
 from drakrun.version import __version__ as DRAKRUN_VERSION
 from drakrun.vm import VirtualMachine, generate_vm_conf
@@ -864,7 +863,7 @@ def cmdline_main():
 
 def main(args):
     conf_path = os.path.join(ETC_DIR, "config.ini")
-    conf = patch_config(Config(conf_path))
+    conf = Config(conf_path)
 
     if not conf.config.get("minio", "access_key").strip():
         logging.warning(

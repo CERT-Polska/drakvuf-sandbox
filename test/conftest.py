@@ -136,7 +136,7 @@ EOF""")
         # Import snapshot
         assert SNAPSHOT_VERSION is not None
         ssh.run(f"draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full")
-        ssh.run(f"draksetup init")
+        ssh.run(f"draksetup init --envfile /etc/drakcore/minio.env")
 
         # Shut up QEMU
         ssh.run("ln -s /dev/null /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO")
