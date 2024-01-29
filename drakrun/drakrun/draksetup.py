@@ -28,6 +28,7 @@ from drakrun.config import (
     ETC_DIR,
     LIB_DIR,
     PROFILE_DIR,
+    RUNTIME_FILE,
     VM_CONFIG_DIR,
     VOLUME_DIR,
     InstallInfo,
@@ -807,8 +808,7 @@ def create_missing_profiles():
     """
 
     # Prepare injector
-    with open(os.path.join(PROFILE_DIR, "runtime.json"), "r") as runtime_f:
-        runtime_info = RuntimeInfo.load(runtime_f)
+    runtime_info = RuntimeInfo.load(RUNTIME_FILE)
     kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
     injector = Injector("vm-1", runtime_info, kernel_profile)
 

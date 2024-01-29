@@ -8,7 +8,7 @@ from textwrap import dedent
 
 from IPython import embed
 
-from drakrun.config import ETC_DIR, PROFILE_DIR, InstallInfo
+from drakrun.config import ETC_DIR, PROFILE_DIR, RUNTIME_FILE, InstallInfo
 from drakrun.draksetup import find_default_interface, insert_cd
 from drakrun.injector import Injector
 from drakrun.networking import delete_vm_network, setup_vm_network, start_dnsmasq
@@ -29,8 +29,7 @@ class DrakmonShell:
         self.vm = VirtualMachine(backend, vm_id)
         self._dns = dns
 
-        with open(Path(PROFILE_DIR) / "runtime.json", "r") as f:
-            self.runtime_info = RuntimeInfo.load(f)
+        self.runtime_info = RuntimeInfo.load(RUNTIME_FILE)
         self.desktop = WinPath(r"%USERPROFILE%") / "Desktop"
 
         self.kernel_profile = Path(PROFILE_DIR) / "kernel.json"

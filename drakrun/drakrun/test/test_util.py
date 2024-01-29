@@ -1,4 +1,4 @@
-from io import StringIO
+import tempfile
 
 import pytest
 
@@ -67,5 +67,7 @@ def serialized_runtime_info(runtime_info):
 
 
 def test_runtime_info_load(serialized_runtime_info):
-    stream = StringIO(serialized_runtime_info)
-    RuntimeInfo.load(stream)
+    with tempfile.NamedTemporaryFile(mode="w") as temp:
+        temp.write(serialized_runtime_info)
+        temp.flush()
+        RuntimeInfo.load(temp.name)

@@ -30,6 +30,7 @@ from drakrun.config import (
     APISCOUT_PROFILE_DIR,
     ETC_DIR,
     PROFILE_DIR,
+    RUNTIME_FILE,
     VOLUME_DIR,
     InstallInfo,
 )
@@ -157,8 +158,7 @@ class DrakrunKarton(Karton):
             self.config.config["drakrun"].get("analysis_low_timeout")
             or self.default_timeout
         )
-        with open(os.path.join(PROFILE_DIR, "runtime.json"), "r") as runtime_f:
-            self.runtime_info = RuntimeInfo.load(runtime_f)
+        self.runtime_info = RuntimeInfo.load(RUNTIME_FILE)
 
         self.active_plugins = {}
         self.active_plugins["_all_"] = [
