@@ -39,7 +39,6 @@ The DRAKVUF Sandbox distribution packages are built using Docker, in order to ma
 2. Execute:
    ```
    sh drakcore/package/build.sh
-   sh drakrun/package/build.sh
    ```
 3. The Debian packages will be produced to the `out/` directory. You can install them similarly as you would install the released packages. See ["Basic installation" section of README.md](https://github.com/CERT-Polska/drakvuf-sandbox/blob/icedevml-patch-1/README.md#basic-installation).
 

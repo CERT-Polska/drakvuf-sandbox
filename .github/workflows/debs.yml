@@ -107,20 +107,3 @@ jobs:
         asset_path: ${{ steps.build_drakcore_deb.outputs.drakcore_deb_path }}
         asset_name: ${{ steps.build_drakcore_deb.outputs.drakcore_deb_name }}
         asset_content_type: application/vnd.debian.binary-package
-    - name: Build drakrun package
-      id: build_drakrun_deb
-      run: |
-        sh -c 'cd sandbox && BASEIMAGE=${{ matrix.container }} sh drakrun/package/build.sh'
-        DRAKRUN_DEB_PATH=$(find sandbox/out/drakrun*.deb | grep -v dbgsym | head -n1)
-        DRAKRUN_DEB_NAME=$(basename "$DRAKRUN_DEB_PATH")
-        echo "::set-output name=drakrun_deb_path::${DRAKRUN_DEB_PATH}"
-        echo "::set-output name=drakrun_deb_name::${{ steps.gen_vars.outputs.artifact_prefix }}_${DRAKRUN_DEB_NAME}"
-    - name: Upload drakrun release asset
-      uses: actions/upload-release-asset@v1.0.2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.gen_vars.outputs.release_url }}
-        asset_path: ${{ steps.build_drakrun_deb.outputs.drakrun_deb_path }}
-        asset_name: ${{ steps.build_drakrun_deb.outputs.drakrun_deb_name }}
-        asset_content_type: application/vnd.debian.binary-package
