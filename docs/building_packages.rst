@@ -14,7 +14,6 @@ You may build your packages from source using following commands:
     $ git clone https://github.com/CERT-Polska/drakvuf-sandbox.git
     $ cd drakvuf-sandbox
     $ sudo ./drakcore/package/build.sh
-    $ sudo ./drakrun/package/build.sh
 
 Afterwards, you should find your installation packages produced in `out/` directory.
 
