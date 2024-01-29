@@ -1224,7 +1224,7 @@ def do_import_minimal(mc, name, bucket, zpool):
     mc.fget_object(
         bucket,
         f"{name}/install.json",
-        os.path.join(ETC_DIR, InstallInfo._INSTALL_FILENAME),
+        InstallInfo.INSTALL_FILE_PATH,
     )
 
     logging.info("Downloading VM config")
