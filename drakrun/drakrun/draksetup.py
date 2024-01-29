@@ -1326,16 +1326,16 @@ def init(envfile: str):
     # Simple activities handled by deb packages before
     # In the future, consider splitting this to remove hard dependency on systemd etc
     Path(ETC_DIR).mkdir(exist_ok=True)
-    config_data = (Path(__file__).parent / "config.dist.ini").read_text()
+    config = (Path(__file__).parent / "config.dist.ini").read_text()
 
     # This feature is provided for compatibility with minio.env files, but we plan to
     # remove it in the future.
     if envfile:
         env = parse_envfile(envfile)
-        config_data.replace("access_key=", f"access_key={env['MINIO_ACCESS_KEY']}")
-        config_data.replace("secret_key=", f"secret_key={env['MINIO_SECRET_KEY']}")
+        config = config.replace("access_key=", f"access_key={env['MINIO_ACCESS_KEY']}")
+        config = config.replace("secret_key=", f"secret_key={env['MINIO_SECRET_KEY']}")
 
-    (Path(ETC_DIR) / "config.ini").write_text(config_data)
+    (Path(ETC_DIR) / "config.ini").write_text(config)
 
     default_hooks = (Path(__file__).parent / "hooks.dist.txt").read_text()
     (Path(ETC_DIR) / "hooks.txt").write_text(default_hooks)
