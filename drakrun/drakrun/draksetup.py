@@ -13,7 +13,7 @@ import tempfile
 import time
 import traceback
 from pathlib import Path, PureWindowsPath
-from typing import Dict
+from typing import Dict, Optional
 
 import click
 from minio import Minio
