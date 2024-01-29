@@ -16,7 +16,6 @@ import sys
 import tempfile
 import time
 import zipfile
-from configparser import NoOptionError
 from io import StringIO
 from itertools import chain
 from pathlib import Path
@@ -793,7 +792,10 @@ class DrakrunKarton(Karton):
         self.send_raw_analysis(sample, outdir, metadata, dumps_metadata, quality)
 
 
-def validate_xen_commandline():
+def validate_xen_commandline(ignore_failure: bool) -> None:
+    """Validate XEN command line and print found misconfigurations.
+    Will exit process on failure, unless ignore_failure parameter is passed"""
+
     required_cmdline = {
         "sched": "credit",
         "force-ept": "1",
@@ -814,29 +816,6 @@ def validate_xen_commandline():
 
         if actual_v != v:
             unrecommended.append((k, v, actual_v))
-
-    return unrecommended
-
-
-def cmdline_main():
-    parser = argparse.ArgumentParser(description="Kartonized drakrun <3")
-    parser.add_argument("instance", type=int, help="Instance identifier")
-    args = parser.parse_args()
-
-    main(args)
-
-
-def main(args):
-    conf_path = os.path.join(ETC_DIR, "config.ini")
-    conf = patch_config(Config(conf_path))
-
-    if not conf.config.get("minio", "access_key").strip():
-        logging.warning(
-            f"Detected blank value for minio access_key in {conf_path}. "
-            "This service may not work properly."
-        )
-
-    unrecommended = validate_xen_commandline()
 
     if unrecommended:
         logging.warning("-" * 80)
@@ -864,12 +843,7 @@ def main(args):
             "Please be aware that some bugs may arise when using unrecommended settings."
         )
 
-        try:
-            xen_cmdline_check = conf.config.get("drakrun", "xen_cmdline_check")
-        except NoOptionError:
-            xen_cmdline_check = "fail"
-
-        if xen_cmdline_check == "ignore":
+        if ignore_failure:
             logging.warning(
                 "ATTENTION! Configuration specified that check result should be ignored, continuing anyway..."
             )
@@ -878,6 +852,28 @@ def main(args):
                 "Exitting due to above warnings. Please ensure that you are using recommended Xen's command line."
             )
             sys.exit(1)
+
+
+def cmdline_main():
+    parser = argparse.ArgumentParser(description="Kartonized drakrun <3")
+    parser.add_argument("instance", type=int, help="Instance identifier")
+    args = parser.parse_args()
+
+    main(args)
+
+
+def main(args):
+    conf_path = os.path.join(ETC_DIR, "config.ini")
+    conf = patch_config(Config(conf_path))
+
+    if not conf.config.get("minio", "access_key").strip():
+        logging.warning(
+            f"Detected blank value for minio access_key in {conf_path}. "
+            "This service may not work properly."
+        )
+
+    xen_cmdline_check = conf.config.get("drakrun", "xen_cmdline_check", fallback="fail")
+    validate_xen_commandline(xen_cmdline_check == "ignore")
 
     # Apply Karton configuration overrides
     drakrun_conf = conf.config["drakrun"] if conf.config.has_section("drakrun") else {}
