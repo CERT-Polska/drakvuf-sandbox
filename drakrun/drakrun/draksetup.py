@@ -1313,13 +1313,32 @@ def do_import_full(mc, name, bucket, zpool):
         )
 
 
+def parse_envfile(path: str) -> Dict[str, str]:
+    with open(path, "r") as f:
+        cfg = [
+            line.strip().split("=", 1) for line in f if line.strip() and "=" in line
+        ]
+    return {k: v for k, v in cfg}
+
+
 @click.command(help="Pre-installation activities")
-def init():
+@click.option(
+    "--envfile", default="", help="Import s3 config from this file"
+)
+def init(envfile: str):
     # Simple activities handled by deb packages before
     # In the future, consider splitting this to remove hard dependency on systemd etc
     Path(ETC_DIR).mkdir(exist_ok=True)
-    default_config = (Path(__file__).parent / "config.dist.ini").read_text()
-    (Path(ETC_DIR) / "config.ini").write_text(default_config)
+    config_data = (Path(__file__).parent / "config.dist.ini").read_text()
+
+    # This feature is provided for compatibility with minio.env files, but we plan to
+    # remove it in the future.
+    if envfile:
+        env = parse_envfile(envfile)
+        config_data.replace("access_key=", f"access_key={env['MINIO_ACCESS_KEY']}")
+        config_data.replace("secret_key=", f"secret_key={env['MINIO_SECRET_KEY']}")
+
+    (Path(ETC_DIR) / "config.ini").write_text(config_data)
 
     default_hooks = (Path(__file__).parent / "hooks.dist.txt").read_text()
     (Path(ETC_DIR) / "hooks.txt").write_text(default_hooks)
