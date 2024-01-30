@@ -262,8 +262,8 @@ class DrakrunKarton(Karton):
         if not self.backend.minio.bucket_exists("drakrun"):
             self.backend.minio.make_bucket(bucket_name="drakrun")
 
-        out_interface = self.config.get("drakrun", "out_interface", fallback="")
-        dns_server = self.config.get("drakrun", "dns_server", fallback="")
+        out_interface = self.config.config.get("drakrun", "out_interface", fallback="")
+        dns_server = self.config.config.get("drakrun", "dns_server", fallback="")
 
         setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
 
