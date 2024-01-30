@@ -20,7 +20,7 @@ from io import StringIO
 from itertools import chain
 from pathlib import Path
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import magic
 from karton.core import Config, Karton, LocalResource, Resource, Task
