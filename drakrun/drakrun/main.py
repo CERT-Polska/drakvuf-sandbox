@@ -48,6 +48,16 @@ from drakrun.util import (
 from drakrun.version import __version__ as DRAKRUN_VERSION
 from drakrun.vm import VirtualMachine, generate_vm_conf
 
+# fmt: off
+# List of default plugins, and at the same time list of all supported plugins.
+SUPPORTED_PLUGINS = [
+    "apimon", "bsodmon", "clipboardmon", "cpuidmon", "crashmon", "debugmon",
+    "delaymon", "exmon", "filedelete", "filetracer", "librarymon", "memdump",
+    "procdump", "procmon", "regmon", "rpcmon", "ssdtmon", "syscalls", "tlsmon",
+    "windowmon", "wmimon",
+]
+# fmt: on
+
 
 class LocalLogBuffer(logging.Handler):
     FIELDS = (
@@ -149,44 +159,39 @@ class DrakrunKarton(Karton):
 
         self.instance_id = instance_id
         self.install_info = InstallInfo.load()
-        self.default_timeout = int(
-            self.config.config["drakrun"].get("analysis_timeout") or 60 * 10
-        )
-        # Default, optional timeout for 'low' quality tasks
-        self.default_low_timeout = int(
-            self.config.config["drakrun"].get("analysis_low_timeout")
-            or self.default_timeout
-        )
         self.runtime_info = RuntimeInfo.load(RUNTIME_FILE)
+        self.active_plugins = self.find_active_plugins()
 
-        self.active_plugins = {}
-        self.active_plugins["_all_"] = [
-            "apimon",
-            "bsodmon",
-            "clipboardmon",
-            "cpuidmon",
-            "crashmon",
-            "debugmon",
-            "delaymon",
-            "exmon",
-            "filedelete",
-            "filetracer",
-            "librarymon",
-            "memdump",
-            "procdump",
-            "procmon",
-            "regmon",
-            "rpcmon",
-            "ssdtmon",
-            "syscalls",
-            "tlsmon",
-            "windowmon",
-            "wmimon",
-        ]
+        generate_vm_conf(self.install_info, self.instance_id)
 
+        if not self.backend.minio.bucket_exists("drakrun"):
+            self.backend.minio.make_bucket(bucket_name="drakrun")
+
+        out_interface = self.config.config.get("drakrun", "out_interface", fallback="")
+        dns_server = self.config.config.get("drakrun", "dns_server", fallback="")
+        setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
+
+        self.log.info("Calculating snapshot hash...")
+        self.snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
+
+    def find_active_plugins(self) -> Dict[str, List[str]]:
+        """Parse active plugins from config, with a default value for _all_"""
+        plugins = {"_all_": SUPPORTED_PLUGINS}
         for quality, list_str in self.config.config.items("drakvuf_plugins"):
-            plugins = [x for x in list_str.split(",") if x.strip()]
-            self.active_plugins[quality] = plugins
+            plugins[quality] = [x.strip() for x in list_str.split(",")]
+        return plugins
+
+    @property
+    def default_timeout(self) -> int:
+        """Default timeout for normal and high priority tasks."""
+        return self.config.config.get("drakrun", "analysis_timeout", fallback=60 * 10)
+
+    @property
+    def default_low_timeout(self) -> int:
+        """Default timeout for lwo priority tasks."""
+        return self.config.config.get(
+            "drakrun", "analysis_low_timeout", fallback=self.default_timeout
+        )
 
     def generate_plugin_cmdline(self, plugin_list: List[str]) -> List[str]:
         if len(plugin_list) == 0:
@@ -255,20 +260,6 @@ class DrakrunKarton(Karton):
     @property
     def vm_name(self) -> str:
         return f"vm-{self.instance_id}"
-
-    def init_drakrun(self) -> None:
-        generate_vm_conf(self.install_info, self.instance_id)
-
-        if not self.backend.minio.bucket_exists("drakrun"):
-            self.backend.minio.make_bucket(bucket_name="drakrun")
-
-        out_interface = self.config.config.get("drakrun", "out_interface", fallback="")
-        dns_server = self.config.config.get("drakrun", "dns_server", fallback="")
-
-        setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
-
-        self.log.info("Calculating snapshot hash...")
-        self.snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
 
     def _karton_safe_get_headers(self, task, key: str, fallback: str) -> str:
         ret = task.headers.get(key, fallback)
@@ -897,7 +888,6 @@ def main(args) -> None:
     DrakrunKarton.reconfigure(drakrun_conf)
 
     c = DrakrunKarton(conf, args.instance)
-    c.init_drakrun()
     c.loop()
 
 
