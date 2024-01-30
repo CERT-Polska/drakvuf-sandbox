@@ -117,7 +117,9 @@ def interface_exists(iface: str) -> bool:
     return proc.returncode == 0
 
 
-def setup_vm_network(vm_id: int, net_enable: int, out_interface: str, dns_server: str):
+def setup_vm_network(
+    vm_id: int, net_enable: int, out_interface: str, dns_server: str
+) -> None:
     try:
         subprocess.check_output(
             f"brctl addbr drak{vm_id}", stderr=subprocess.STDOUT, shell=True
