@@ -55,8 +55,3 @@ class InstallInfo(DataClassJsonMixin):
         """Serializes self and writes to install.json"""
         with open(InstallInfo.INSTALL_FILE_PATH, "w") as f:
             f.write(json.dumps(self.to_dict(), indent=4))
-
-
-def is_installed() -> bool:
-    """Returns true when install.json is present"""
-    return InstallInfo.try_load() is not None

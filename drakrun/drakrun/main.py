@@ -20,7 +20,7 @@ from io import StringIO
 from itertools import chain
 from pathlib import Path
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
-from typing import Dict, List
+from typing import Dict, List, Any, Tuple, Optional
 
 import magic
 from karton.core import Config, Karton, LocalResource, Resource, Task
@@ -138,7 +138,7 @@ class DrakrunKarton(Karton):
         "kind": "drakrun-internal",
     }
 
-    def __init__(self, config: Config, instance_id: int):
+    def __init__(self, config: Config, instance_id: int) -> None:
         super().__init__(config)
 
         # Now that karton is set up we can plug in our logger
@@ -188,7 +188,7 @@ class DrakrunKarton(Karton):
             plugins = [x for x in list_str.split(",") if x.strip()]
             self.active_plugins[quality] = plugins
 
-    def generate_plugin_cmdline(self, plugin_list):
+    def generate_plugin_cmdline(self, plugin_list: List[str]) -> List[str]:
         if len(plugin_list) == 0:
             # Disable all plugins explicitly as all plugins are enabled by default.
             return list(
@@ -201,7 +201,7 @@ class DrakrunKarton(Karton):
                 chain.from_iterable(["-a", plugin] for plugin in sorted(plugin_list))
             )
 
-    def get_plugin_list(self, quality, requested_plugins):
+    def get_plugin_list(self, quality: str, requested_plugins: List[str]) -> List[str]:
         """
         Determine final plugin list that will be used during analysis.
         """
@@ -216,10 +216,10 @@ class DrakrunKarton(Karton):
         return plugin_list
 
     @classmethod
-    def reconfigure(cls, config: Dict[str, str]):
+    def reconfigure(cls, config: Any) -> None:
         """Reconfigure DrakrunKarton class"""
 
-        def load_json(config, key):
+        def load_json(config, key: str) -> Any:
             try:
                 return json.loads(config.get(key)) if key in config else None
             except json.JSONDecodeError:
@@ -256,22 +256,21 @@ class DrakrunKarton(Karton):
     def vm_name(self) -> str:
         return f"vm-{self.instance_id}"
 
-    def init_drakrun(self):
-
+    def init_drakrun(self) -> None:
         generate_vm_conf(self.install_info, self.instance_id)
 
         if not self.backend.minio.bucket_exists("drakrun"):
             self.backend.minio.make_bucket(bucket_name="drakrun")
 
-        out_interface = self.config.config["drakrun"].get("out_interface", "")
-        dns_server = self.config.config["drakrun"].get("dns_server", "")
+        out_interface = self.config.get("drakrun", "out_interface", fallback="")
+        dns_server = self.config.get("drakrun", "dns_server", fallback="")
 
         setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
 
         self.log.info("Calculating snapshot hash...")
         self.snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
 
-    def _karton_safe_get_headers(self, task, key, fallback):
+    def _karton_safe_get_headers(self, task, key: str, fallback: str) -> str:
         ret = task.headers.get(key, fallback)
         # intentional workaround due to a bug in karton
         if ret is None:
@@ -280,7 +279,7 @@ class DrakrunKarton(Karton):
 
         return ret
 
-    def crop_dumps(self, dirpath, target_zip):
+    def crop_dumps(self, dirpath: str, target_zip: str) -> List[Dict[str, Any]]:
         zipf = zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED)
 
         entries = (os.path.join(dirpath, fn) for fn in os.listdir(dirpath))
@@ -325,7 +324,7 @@ class DrakrunKarton(Karton):
             )
         return dumps_metadata
 
-    def _get_base_from_drakrun_dump(self, dump_name):
+    def _get_base_from_drakrun_dump(self, dump_name: str) -> str:
         """
         Drakrun dumps come in form: <base>_<hash> e.g. 405000_688f58c58d798ecb,
         that can be read as a dump from address 0x405000 with a content hash
@@ -333,7 +332,7 @@ class DrakrunKarton(Karton):
         """
         return hex(int(dump_name.split("_")[0], 16))
 
-    def update_vnc_info(self):
+    def update_vnc_info(self) -> None:
         """
         Put analysis ID -> drakrun node mapping into Redis.
         Required to know where to connect VNC client
@@ -342,7 +341,10 @@ class DrakrunKarton(Karton):
             f"drakvnc:{self.analysis_uid}", self.instance_id, ex=3600  # 1h
         )
 
-    def compress_ipt(self, dirpath, target_zip):
+    def compress_ipt(self, dirpath: str, target_zip: str) -> None:
+        """
+        Compress the directory specified by dirpath to target_zip file.
+        """
         zipf = zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED)
 
         for root, dirs, files in os.walk(dirpath):
@@ -355,7 +357,7 @@ class DrakrunKarton(Karton):
                 )
                 os.unlink(os.path.join(root, file))
 
-    def upload_artifacts(self, analysis_uid, outdir, subdir=""):
+    def upload_artifacts(self, analysis_uid: str, outdir: str, subdir: str = ""):
         for fn in os.listdir(os.path.join(outdir, subdir)):
             file_path = os.path.join(outdir, subdir, fn)
 
@@ -389,7 +391,9 @@ class DrakrunKarton(Karton):
 
             return Resource.from_directory(name="profiles", directory_path=tmp_dir)
 
-    def send_raw_analysis(self, sample, outdir, metadata, dumps_metadata, quality):
+    def send_raw_analysis(
+        self, sample, outdir: str, metadata, dumps_metadata, quality: str
+    ) -> None:
         """
         Offload drakrun-prod by sending raw analysis output to be processed by
         drakrun.processor.
@@ -470,7 +474,7 @@ class DrakrunKarton(Karton):
                 self.log.exception("Failed to destroy VM")
 
     @property
-    def analysis_uid(self):
+    def analysis_uid(self) -> str:
         override_uid = self.current_task.payload.get("override_uid")
 
         if override_uid:
@@ -481,7 +485,7 @@ class DrakrunKarton(Karton):
 
         return self.current_task.uid
 
-    def _prepare_workdir(self):
+    def _prepare_workdir(self) -> Tuple[str, str]:
         workdir = os.path.join("/tmp/drakrun", self.vm_name)
 
         try:
@@ -500,8 +504,15 @@ class DrakrunKarton(Karton):
         return (workdir, outdir)
 
     def build_drakvuf_cmdline(
-        self, timeout, cwd, full_cmd, dump_dir, ipt_dir, workdir, enabled_plugins
-    ):
+        self,
+        timeout: int,
+        cwd: str,
+        full_cmd: str,
+        dump_dir: str,
+        ipt_dir: str,
+        workdir: str,
+        enabled_plugins,
+    ) -> List[str]:
         hooks_list = os.path.join(workdir, "hooks.txt")
         kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
 
@@ -558,7 +569,7 @@ class DrakrunKarton(Karton):
 
         return drakvuf_cmd
 
-    def log_startup_failure(self, log_path):
+    def log_startup_failure(self, log_path: str) -> None:
         self.log.warning("Injection succeeded but the sample didn't execute properly")
 
         with open(log_path, "r") as drakvuf_log:
@@ -569,7 +580,14 @@ class DrakrunKarton(Karton):
                     self.log.info("Injection failed with error: %s", entry["Error"])
                     break
 
-    def analyze_sample(self, sample_path, workdir, outdir, start_command, timeout):
+    def analyze_sample(
+        self,
+        sample_path: str,
+        workdir: str,
+        outdir: str,
+        start_command: str,
+        timeout: int,
+    ) -> Dict[str, Any]:
         analysis_info = dict()
 
         dns_server = self.config.config["drakrun"].get("dns_server", "8.8.8.8")
@@ -669,7 +687,7 @@ class DrakrunKarton(Karton):
         return analysis_info
 
     @with_logs("drakrun.log")
-    def process(self, task: Task):
+    def process(self, task: Task) -> None:
         # Gather basic facts
         sample = task.get_resource("sample")
         magic_output = magic.from_buffer(sample.content)
@@ -853,7 +871,7 @@ def validate_xen_commandline(ignore_failure: bool) -> None:
             sys.exit(1)
 
 
-def cmdline_main():
+def cmdline_main() -> None:
     parser = argparse.ArgumentParser(description="Kartonized drakrun <3")
     parser.add_argument("instance", type=int, help="Instance identifier")
     args = parser.parse_args()
@@ -861,7 +879,7 @@ def cmdline_main():
     main(args)
 
 
-def main(args):
+def main(args) -> None:
     conf_path = os.path.join(ETC_DIR, "config.ini")
     conf = Config(conf_path)
 
