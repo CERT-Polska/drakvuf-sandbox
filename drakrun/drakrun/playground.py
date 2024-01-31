@@ -8,13 +8,13 @@ from textwrap import dedent
 
 from IPython import embed
 
-from drakrun.config import ETC_DIR, PROFILE_DIR, RUNTIME_FILE, InstallInfo
 from drakrun.draksetup import find_default_interface, insert_cd
-from drakrun.injector import Injector
-from drakrun.networking import delete_vm_network, setup_vm_network, start_dnsmasq
-from drakrun.storage import get_storage_backend
-from drakrun.util import RuntimeInfo, graceful_exit
-from drakrun.vm import FIRST_CDROM_DRIVE, VirtualMachine, generate_vm_conf
+from drakrun.lib.config import ETC_DIR, PROFILE_DIR, RUNTIME_FILE, InstallInfo
+from drakrun.lib.injector import Injector
+from drakrun.lib.networking import delete_vm_network, setup_vm_network, start_dnsmasq
+from drakrun.lib.storage import get_storage_backend
+from drakrun.lib.util import RuntimeInfo, graceful_exit
+from drakrun.lib.vm import FIRST_CDROM_DRIVE, VirtualMachine, generate_vm_conf
 
 log = logging.getLogger(__name__)
 

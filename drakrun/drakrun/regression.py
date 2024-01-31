@@ -15,7 +15,7 @@ from malduck.extractor import ExtractManager, ExtractorModules
 from mwdblib import MWDB
 from tqdm import tqdm
 
-from drakrun.config import ETC_DIR
+from drakrun.lib.config import ETC_DIR
 from drakrun.version import __version__ as DRAKRUN_VERSION
 
 

@@ -8,8 +8,8 @@ import subprocess
 import time
 from typing import Tuple
 
-from drakrun.config import VOLUME_DIR, InstallInfo
-from drakrun.util import safe_delete
+from drakrun.lib.config import VOLUME_DIR, InstallInfo
+from drakrun.lib.util import safe_delete
 
 log = logging.getLogger(__name__)
 

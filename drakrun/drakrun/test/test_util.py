@@ -2,7 +2,7 @@ import tempfile
 
 import pytest
 
-from drakrun.util import RuntimeInfo, VmiOffsets
+from drakrun.lib.util import RuntimeInfo, VmiOffsets
 
 win_offsets_output = """
 win_ntoskrnl:0x2618000

@@ -3,7 +3,7 @@ import os
 
 from karton.core import Config, Producer, Resource, Task
 
-from drakrun.config import ETC_DIR
+from drakrun.lib.config import ETC_DIR
 
 
 def main():

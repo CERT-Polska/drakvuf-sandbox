@@ -1,2 +1,0 @@
-graft draklib
-recursive-exclude * *.pyc

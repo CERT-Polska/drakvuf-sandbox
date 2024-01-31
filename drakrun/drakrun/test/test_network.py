@@ -6,7 +6,7 @@ import pytest
 from pytest_steps import depends_on, test_steps
 
 from drakrun.draksetup import find_default_interface
-from drakrun.networking import (
+from drakrun.lib.networking import (
     add_iptable_rule,
     del_iptable_rule,
     delete_vm_network,

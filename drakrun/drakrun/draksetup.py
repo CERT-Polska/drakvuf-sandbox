@@ -24,7 +24,7 @@ from drakrun.apiscout import (
     build_static_apiscout_profile,
     make_static_apiscout_profile_for_dll,
 )
-from drakrun.config import (
+from drakrun.lib.config import (
     APISCOUT_PROFILE_DIR,
     ETC_DIR,
     LIB_DIR,
@@ -34,7 +34,7 @@ from drakrun.config import (
     VOLUME_DIR,
     InstallInfo,
 )
-from drakrun.drakpdb import (
+from drakrun.lib.drakpdb import (
     DLL,
     dll_file_list,
     fetch_pdb,
@@ -43,19 +43,19 @@ from drakrun.drakpdb import (
     required_dll_file_list,
     unrequired_dll_file_list,
 )
-from drakrun.injector import Injector
-from drakrun.networking import (
+from drakrun.lib.injector import Injector
+from drakrun.lib.networking import (
     delete_vm_network,
     setup_vm_network,
     start_dnsmasq,
     stop_dnsmasq,
 )
-from drakrun.storage import (
+from drakrun.lib.storage import (
     REGISTERED_BACKEND_NAMES,
     StorageBackendBase,
     get_storage_backend,
 )
-from drakrun.util import (
+from drakrun.lib.util import (
     RuntimeInfo,
     VmiGuidInfo,
     VmiOffsets,
@@ -63,7 +63,7 @@ from drakrun.util import (
     safe_delete,
     vmi_win_guid,
 )
-from drakrun.vm import (
+from drakrun.lib.vm import (
     FIRST_CDROM_DRIVE,
     SECOND_CDROM_DRIVE,
     VirtualMachine,

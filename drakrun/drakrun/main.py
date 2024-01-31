@@ -25,8 +25,8 @@ from typing import Any, Dict, List, Tuple
 import magic
 from karton.core import Config, Karton, LocalResource, Resource, Task
 
-import drakrun.sample_startup as sample_startup
-from drakrun.config import (
+import drakrun.lib.sample_startup as sample_startup
+from drakrun.lib.config import (
     APISCOUT_PROFILE_DIR,
     ETC_DIR,
     PROFILE_DIR,
@@ -34,19 +34,23 @@ from drakrun.config import (
     VOLUME_DIR,
     InstallInfo,
 )
-from drakrun.drakpdb import dll_file_list
-from drakrun.injector import Injector
-from drakrun.networking import setup_vm_network, start_dnsmasq, start_tcpdump_collector
-from drakrun.storage import get_storage_backend
-from drakrun.util import (
+from drakrun.lib.drakpdb import dll_file_list
+from drakrun.lib.injector import Injector
+from drakrun.lib.networking import (
+    setup_vm_network,
+    start_dnsmasq,
+    start_tcpdump_collector,
+)
+from drakrun.lib.storage import get_storage_backend
+from drakrun.lib.util import (
     RuntimeInfo,
     file_sha256,
     get_xen_commandline,
     get_xl_info,
     graceful_exit,
 )
+from drakrun.lib.vm import VirtualMachine, generate_vm_conf
 from drakrun.version import __version__ as DRAKRUN_VERSION
-from drakrun.vm import VirtualMachine, generate_vm_conf
 
 # fmt: off
 # List of default plugins, and at the same time list of all supported plugins.

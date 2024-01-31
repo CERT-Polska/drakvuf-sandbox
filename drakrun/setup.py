@@ -14,7 +14,7 @@ setup(
     version=version["__version__"],
     description="DRAKRUN",
     package_dir={"drakrun": "drakrun"},
-    packages=["drakrun", "drakrun.test"],
+    packages=["drakrun", "drakrun.lib", "drakrun.test"],
     include_package_data=True,
     install_requires=open("requirements.txt").read().splitlines(),
     scripts=[

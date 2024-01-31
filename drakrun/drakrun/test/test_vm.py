@@ -8,9 +8,9 @@ import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from common_utils import remove_files, tool_exists
 
-from drakrun.config import InstallInfo
-from drakrun.util import safe_delete
-from drakrun.vm import VirtualMachine
+from drakrun.lib.config import InstallInfo
+from drakrun.lib.util import safe_delete
+from drakrun.lib.vm import VirtualMachine
 
 
 @pytest.fixture(scope="session")
