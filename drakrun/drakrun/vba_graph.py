@@ -338,7 +338,7 @@ def get_outer_nodes_from_vba_file(filename):
         input_vba_content = vba2graph_from_vba_object(filename)
         dg = vba2graph_gen(input_vba_content)
         return find_outer_nodes(dg)
-    except Exception as ex:
+    except Exception:
         log.warning(
             "Something went wrong. Perhaps this is not an office document.",
             exc_info=True,
