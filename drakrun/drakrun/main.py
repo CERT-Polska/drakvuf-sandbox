@@ -121,32 +121,11 @@ def with_logs(object_name):
 
 class DrakrunKarton(Karton):
     version = DRAKRUN_VERSION
-    # Karton configuration defaults, may be overriden by config file
-    DEFAULT_IDENTITY = "karton.drakrun-prod"
-    DEFAULT_FILTERS = [
+    identity = "karton.drakrun-prod"
+    filters = [
         {"type": "sample", "stage": "recognized", "platform": "win32"},
         {"type": "sample", "stage": "recognized", "platform": "win64"},
     ]
-    DEFAULT_HEADERS = {
-        "type": "analysis-raw",
-        "kind": "drakrun-internal",
-    }
-
-    # Filters and headers used for testing sample analysis
-    DEFAULT_TEST_FILTERS = [
-        {
-            "type": "sample-test",
-            "platform": "win32",
-        },
-        {
-            "type": "sample-test",
-            "platform": "win64",
-        },
-    ]
-    DEFAULT_TEST_HEADERS = {
-        "type": "analysis-test",
-        "kind": "drakrun-internal",
-    }
 
     def __init__(self, config: Config, instance_id: int) -> None:
         super().__init__(config)
@@ -220,42 +199,9 @@ class DrakrunKarton(Karton):
             plugin_list.append("codemon")
         return plugin_list
 
-    @classmethod
-    def reconfigure(cls, config: Any) -> None:
-        """Reconfigure DrakrunKarton class"""
-
-        def load_json(config, key: str) -> Any:
-            try:
-                return json.loads(config.get(key)) if key in config else None
-            except json.JSONDecodeError:
-                raise RuntimeError(
-                    f"Key '{key}' in section [drakrun] is not valid JSON"
-                )
-
-        cls.identity = config.get("identity", cls.DEFAULT_IDENTITY)
-        cls.filters = load_json(config, "filters") or cls.DEFAULT_FILTERS
-        cls.headers = load_json(config, "headers") or cls.DEFAULT_HEADERS
-        cls.test_headers = load_json(config, "test_headers") or cls.DEFAULT_TEST_HEADERS
-        cls.test_filters = load_json(config, "test_filters") or cls.DEFAULT_TEST_FILTERS
-
-        # If testing is enabled, add additional test filters from the configuration
-        # or fall back to hardcoded
-        if config.getboolean("sample_testing", fallback=False):
-            cls.filters.extend(cls.test_filters)
-
     @property
     def net_enable(self) -> bool:
         return self.config.config["drakrun"].getboolean("net_enable", fallback=False)
-
-    @property
-    def test_run(self) -> bool:
-        # If testing is disabled, it's not a test run
-        if not self.config.config["drakrun"].getboolean(
-            "sample_testing", fallback=False
-        ):
-            return False
-
-        return self.current_task.matches_filters(self.test_filters)
 
     @property
     def vm_name(self) -> str:
@@ -355,16 +301,10 @@ class DrakrunKarton(Karton):
             if os.path.isfile(file_path):
                 object_name = os.path.join(analysis_uid, subdir, fn)
                 res_name = os.path.join(subdir, fn)
-                if self.test_run:
-                    # If it's a test run upload artifacts to karton-managed bucket
-                    # They'll be cleaned up by karton-system
-                    resource = LocalResource(name=res_name, path=file_path)
-                else:
-                    # If it's not a test run, put them into drakrun bucket
-                    resource = LocalResource(
-                        name=res_name, bucket="drakrun", path=file_path
-                    )
-                    resource._uid = object_name
+                resource = LocalResource(
+                    name=res_name, bucket="drakrun", path=file_path
+                )
+                resource._uid = object_name
                 yield resource
             elif os.path.isdir(file_path):
                 yield from self.upload_artifacts(
@@ -385,23 +325,21 @@ class DrakrunKarton(Karton):
     def send_raw_analysis(
         self, sample, outdir: str, metadata, dumps_metadata, quality: str
     ) -> None:
-        """
-        Offload drakrun-prod by sending raw analysis output to be processed by
+        """Offload drakrun-prod by sending raw analysis output to be processed by
         drakrun.processor.
         """
 
-        if self.test_run:
-            headers = dict(self.test_headers)
-        else:
-            headers = dict(self.headers)
-
-        headers["quality"] = quality
-
+        headers = {
+            "type": "analysis-raw",
+            "kind": "drakrun-internal",
+            "quality": quality,
+        }
         task = Task(headers, payload=metadata)
         task.add_payload("sample", sample)
         task.add_payload("dumps_metadata", dumps_metadata)
 
-        if self.test_run:
+        # Support for regression tests
+        if "testcase" in self.current_task.payload:
             task.add_payload("testcase", self.current_task.payload["testcase"])
 
         if self.config.config.getboolean("drakrun", "attach_profiles", fallback=False):
@@ -882,10 +820,6 @@ def main(args) -> None:
 
     xen_cmdline_check = conf.config.get("drakrun", "xen_cmdline_check", fallback="fail")
     validate_xen_commandline(xen_cmdline_check == "ignore")
-
-    # Apply Karton configuration overrides
-    drakrun_conf = conf.config["drakrun"] if conf.config.has_section("drakrun") else {}
-    DrakrunKarton.reconfigure(drakrun_conf)
 
     c = DrakrunKarton(conf, args.instance)
     c.loop()
