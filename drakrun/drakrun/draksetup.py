@@ -1016,9 +1016,7 @@ def memdump():
 def memdump_export(bucket, instance):
     install_info = InstallInfo.try_load()
     if install_info is None:
-        log.error(
-            "Missing installation info. Did you forget to set up the sandbox?"
-        )
+        log.error("Missing installation info. Did you forget to set up the sandbox?")
         return
 
     backend = get_storage_backend(install_info)
@@ -1089,9 +1087,7 @@ def snapshot():
 def snapshot_export(name, bucket, full, force):
     install_info = InstallInfo.try_load()
     if install_info is None:
-        log.error(
-            "Missing installation info. Did you forget to set up the sandbox?"
-        )
+        log.error("Missing installation info. Did you forget to set up the sandbox?")
         return
 
     mc = get_minio_client(conf)
@@ -1187,9 +1183,7 @@ def snapshot_import(name, bucket, full, zpool):
                 return
 
             log.info("Minimal snapshots require postinstall to work correctly")
-            log.info(
-                "Please VNC to the port 5900 to ensure the OS booted correctly"
-            )
+            log.info("Please VNC to the port 5900 to ensure the OS booted correctly")
             log.info("After that, execute this command to finish the setup")
             log.info("# draksetup postinstall")
     except NoSuchKey:
