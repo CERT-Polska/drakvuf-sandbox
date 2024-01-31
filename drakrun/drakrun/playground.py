@@ -16,6 +16,8 @@ from drakrun.storage import get_storage_backend
 from drakrun.util import RuntimeInfo, graceful_exit
 from drakrun.vm import FIRST_CDROM_DRIVE, VirtualMachine, generate_vm_conf
 
+log = logging.getLogger(__name__)
+
 
 class DrakmonShell:
     def __init__(self, vm_id: int, dns: str):
@@ -42,7 +44,7 @@ class DrakmonShell:
 
     def cleanup(self, vm_id: int):
 
-        logging.info(f"Ensuring that drakrun@{vm_id} service is stopped...")
+        log.info(f"Ensuring that drakrun@{vm_id} service is stopped...")
         try:
             subprocess.run(
                 ["systemctl", "stop", f"drakrun@{vm_id}"],

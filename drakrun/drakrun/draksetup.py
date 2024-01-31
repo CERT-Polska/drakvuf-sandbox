@@ -118,10 +118,10 @@ def detect_defaults():
         default_if = find_default_interface()
 
         if default_if:
-            logging.info(f"Detected default network interface: {default_if}")
+            log.info(f"Detected default network interface: {default_if}")
             conf["drakrun"]["out_interface"] = default_if
         else:
-            logging.warning("Unable to detect default network interface.")
+            log.warning("Unable to detect default network interface.")
 
 
 def ensure_zfs(ctx, param, value):
@@ -138,14 +138,14 @@ def ensure_lvm(ctx, param, value):
 
 def check_root():
     if os.getuid() != 0:
-        logging.error("Please run the command as root")
+        log.error("Please run the command as root")
         return False
     else:
         return True
 
 
 def stop_all_drakruns():
-    logging.info("Ensuring that drakrun@* services are stopped...")
+    log.info("Ensuring that drakrun@* services are stopped...")
     try:
         subprocess.check_output(
             "systemctl stop 'drakrun@*'", shell=True, stderr=subprocess.STDOUT
@@ -155,7 +155,7 @@ def stop_all_drakruns():
 
 
 def start_enabled_drakruns():
-    logging.info("Starting previously stopped drakruns")
+    log.info("Starting previously stopped drakruns")
     enabled_services = set(list(get_enabled_drakruns()))
     wait_processes(
         "start services",
@@ -185,7 +185,7 @@ def cleanup():
     install_info = InstallInfo.try_load()
 
     if install_info is None:
-        logging.error("The cleanup has been performed")
+        log.error("The cleanup has been performed")
         return
 
     stop_all_drakruns()
@@ -224,16 +224,16 @@ def sanity_check():
     if not check_root():
         return False
 
-    logging.info("Checking xen-detect...")
+    log.info("Checking xen-detect...")
     proc = subprocess.run("xen-detect -N", shell=True)
 
     if proc.returncode != 1:
-        logging.error(
+        log.error(
             "It looks like the system is not running on Xen. Please reboot your machine into Xen hypervisor."
         )
         return False
 
-    logging.info("Testing if xl tool is sane...")
+    log.info("Testing if xl tool is sane...")
 
     try:
         subprocess.run(
@@ -244,7 +244,7 @@ def sanity_check():
             check=True,
         )
     except subprocess.CalledProcessError:
-        logging.exception(
+        log.exception(
             "Failed to test xl info command. There might be some dependency problem (please execute 'xl info' manually to find out)."
         )
         return False
@@ -259,20 +259,20 @@ def sanity_check():
             timeout=10,
         )
     except subprocess.SubprocessError:
-        logging.exception(
+        log.exception(
             "Failed to test xl list command. There might be a problem with xen services (check 'systemctl status xenstored', 'systemctl status xenconsoled')."
         )
         return False
 
     if not perform_xtf():
-        logging.error("Your Xen installation doesn't pass the necessary tests.")
+        log.error("Your Xen installation doesn't pass the necessary tests.")
         return False
 
     return True
 
 
 def perform_xtf():
-    logging.info("Testing your Xen installation...")
+    log.info("Testing your Xen installation...")
     module_dir = os.path.dirname(os.path.realpath(__file__))
     cfg_path = os.path.join(module_dir, "tools", "test-hvm64-example.cfg")
     firmware_path = os.path.join(module_dir, "tools", "test-hvm64-example")
@@ -287,16 +287,16 @@ def perform_xtf():
         tmpf.flush()
 
         test_hvm64 = VirtualMachine(None, None, "test-hvm64-example", tmpf.name)
-        logging.info("Checking if the test domain already exists...")
+        log.info("Checking if the test domain already exists...")
         test_hvm64.destroy()
 
-        logging.info("Creating new test domain...")
+        log.info("Creating new test domain...")
         test_hvm64.create(pause=True, timeout=30)
 
         module_dir = os.path.dirname(os.path.realpath(__file__))
         test_altp2m_tool = os.path.join(module_dir, "tools", "test-altp2m")
 
-        logging.info("Testing altp2m feature...")
+        log.info("Testing altp2m feature...")
         try:
             subprocess.run(
                 [test_altp2m_tool, "test-hvm64-example"],
@@ -305,13 +305,13 @@ def perform_xtf():
             )
         except subprocess.CalledProcessError as e:
             output = e.output.decode("utf-8", "replace")
-            logging.error(
+            log.error(
                 f"Failed to enable altp2m on domain. Your hardware might not support Extended Page Tables. Logs:\n{output}"
             )
             test_hvm64.destroy()
             return False
 
-        logging.info("Performing simple XTF test...")
+        log.info("Performing simple XTF test...")
         p = subprocess.Popen(
             ["xl", "console", "test-hvm64-example"],
             stdout=subprocess.PIPE,
@@ -325,12 +325,12 @@ def perform_xtf():
 
         for line in stdout:
             if line == "Test result: SUCCESS":
-                logging.info(
+                log.info(
                     "All tests passed. Your Xen installation seems to work properly."
                 )
                 return True
 
-    logging.error(
+    log.error(
         f"Preflight check with Xen Test Framework doesn't pass. Your hardware might not support VT-x. Logs: \n{stdout_text}"
     )
     return False
@@ -409,28 +409,28 @@ def install(
         raise Exception("zfs storage backend requires --zfs-tank-name")
 
     if not sanity_check():
-        logging.error("Sanity check failed.")
+        log.error("Sanity check failed.")
         return
 
     stop_all_drakruns()
 
-    logging.info("Performing installation...")
+    log.info("Performing installation...")
 
     if vcpus < 1:
-        logging.error("Your VM must have at least 1 vCPU.")
+        log.error("Your VM must have at least 1 vCPU.")
         return
 
     if memory < 512:
-        logging.error("Your VM must have at least 512 MB RAM.")
+        log.error("Your VM must have at least 512 MB RAM.")
         return
 
     if memory < 1536:
-        logging.warning(
+        log.warning(
             "Using less than 1.5 GB RAM per VM is not recommended for any supported system."
         )
 
     if unattended_xml:
-        logging.info("Baking unattended.iso for automated installation")
+        log.info("Baking unattended.iso for automated installation")
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_xml_path = os.path.join(tmpdir, "autounattend.xml")
 
@@ -451,11 +451,11 @@ def install(
                     stderr=subprocess.STDOUT,
                 )
             except subprocess.CalledProcessError:
-                logging.exception("Failed to generate unattended.iso.")
+                log.exception("Failed to generate unattended.iso.")
 
     sha256_hash = hashlib.sha256()
 
-    logging.info("Calculating hash of iso")
+    log.info("Calculating hash of iso")
     iso_file_size = os.stat(iso_path).st_size
     block_size = 128 * 1024
     with tqdm(total=iso_file_size, unit_scale=True) as pbar:
@@ -491,7 +491,7 @@ def install(
     try:
         subprocess.check_output("brctl show", shell=True)
     except subprocess.CalledProcessError:
-        logging.exception(
+        log.exception(
             "Failed to execute brctl show. Make sure you have bridge-utils installed."
         )
         return
@@ -514,15 +514,15 @@ def install(
 
     vm0.create()
 
-    logging.info("-" * 80)
-    logging.info("Initial VM setup is complete and the vm-0 was launched.")
-    logging.info(
+    log.info("-" * 80)
+    log.info("Initial VM setup is complete and the vm-0 was launched.")
+    log.info(
         "Please now VNC to the port 5900 on this machine to perform Windows installation."
     )
-    logging.info(
+    log.info(
         "After you have installed Windows and booted it to the desktop, please execute:"
     )
-    logging.info("# draksetup postinstall")
+    log.info("# draksetup postinstall")
 
     with open(cfg_path, "r") as f:
         data = f.read()
@@ -532,14 +532,14 @@ def install(
             if passwd[0] == '"' and passwd[-1] == '"':
                 passwd = passwd[1:-1]
 
-            logging.info("Your configured VNC password is:")
-            logging.info(passwd)
+            log.info("Your configured VNC password is:")
+            log.info(passwd)
 
-    logging.info(
+    log.info(
         "Please note that on some machines, system installer may boot for up to 10 minutes"
     )
-    logging.info("and may look unresponsive during the process. Please be patient.")
-    logging.info("-" * 80)
+    log.info("and may look unresponsive during the process. Please be patient.")
+    log.info("-" * 80)
 
 
 def on_create_rekall_profile_failure(
@@ -561,8 +561,8 @@ def on_create_rekall_profile_failure(
     if should_raise:
         raise Exception(f"[REQUIRED DLL] {msg}") from exception
     else:
-        logging.warning(f"[SKIPPING DLL] {msg}")
-        logging.debug(traceback.format_exc())
+        log.warning(f"[SKIPPING DLL] {msg}")
+        log.debug(traceback.format_exc())
 
 
 def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
@@ -570,7 +570,7 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
     cmd = None
     out = None
     try:
-        logging.info(f"Fetching rekall profile for {file.path}")
+        log.info(f"Fetching rekall profile for {file.path}")
 
         local_dll_path = os.path.join(PROFILE_DIR, file.dest)
         guest_dll_path = str(PureWindowsPath("C:/", file.path))
@@ -583,8 +583,8 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
         ]:
             raise FileNotFoundError
         if out["Status"] != "Success":
-            logging.debug("stderr: " + cmd.stderr.decode())
-            logging.debug(out)
+            log.debug("stderr: " + cmd.stderr.decode())
+            log.debug(out)
             # Take care if the error message is changed
             raise Exception("Some error occurred in injector")
 
@@ -599,7 +599,7 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
             codeview_data["filename"], codeview_data["symstore_hash"], PROFILE_DIR
         )
 
-        logging.debug("Parsing PDB into JSON profile...")
+        log.debug("Parsing PDB into JSON profile...")
         profile = make_pdb_profile(
             pdb_tmp_filepath,
             dll_origin_path=guest_dll_path,
@@ -609,9 +609,9 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
         with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), "w") as f:
             f.write(profile)
     except json.JSONDecodeError:
-        logging.debug(f"stdout: {cmd.stdout}")
-        logging.debug(f"stderr: {cmd.stderr}")
-        logging.debug(traceback.format_exc())
+        log.debug(f"stdout: {cmd.stdout}")
+        log.debug(f"stderr: {cmd.stderr}")
+        log.debug(traceback.format_exc())
         raise Exception(f"Failed to parse json response on {file.path}")
     except FileNotFoundError as e:
         on_create_rekall_profile_failure(
@@ -632,10 +632,10 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
         else:
             # Can help in debugging
             if cmd:
-                logging.debug("stdout: " + cmd.stdout.decode())
-                logging.debug("stderr: " + cmd.stderr.decode())
-                logging.debug("rc: " + str(cmd.returncode))
-            logging.debug(traceback.format_exc())
+                log.debug("stdout: " + cmd.stdout.decode())
+                log.debug("stderr: " + cmd.stderr.decode())
+                log.debug("rc: " + str(cmd.returncode))
+            log.debug(traceback.format_exc())
             on_create_rekall_profile_failure(
                 f"Unexpected exception while creating rekall profile for {file.path}",
                 raise_on_error,
@@ -664,9 +664,9 @@ def extract_explorer_pid(
             return int(m.group(1))
 
     except subprocess.CalledProcessError:
-        logging.exception("get-explorer-pid exited with an error")
+        log.exception("get-explorer-pid exited with an error")
     except subprocess.TimeoutExpired:
-        logging.exception("get-explorer-pid timed out")
+        log.exception("get-explorer-pid timed out")
 
     raise RuntimeError("Extracting explorer PID failed")
 
@@ -683,11 +683,11 @@ def extract_vmi_offsets(
 
         return VmiOffsets.from_tool_output(output)
     except TypeError:
-        logging.exception("Invalid output of vmi-win-offsets")
+        log.exception("Invalid output of vmi-win-offsets")
     except subprocess.CalledProcessError:
-        logging.exception("vmi-win-offsets exited with an error")
+        log.exception("vmi-win-offsets exited with an error")
     except subprocess.TimeoutExpired:
-        logging.exception("vmi-win-offsets timed out")
+        log.exception("vmi-win-offsets timed out")
 
     raise RuntimeError("Extracting VMI offsets failed")
 
@@ -732,13 +732,13 @@ def postinstall(generate_usermode):
     vm0 = VirtualMachine(storage_backend, 0)
 
     if vm0.is_running is False:
-        logging.exception("vm-0 is not running")
+        log.exception("vm-0 is not running")
         return
 
-    logging.info("Cleaning up leftovers(if any)")
+    log.info("Cleaning up leftovers(if any)")
     cleanup_postinstall_files()
 
-    logging.info("Ejecting installation CDs")
+    log.info("Ejecting installation CDs")
     eject_cd("vm-0", FIRST_CDROM_DRIVE)
     if install_info.enable_unattended:
         # If unattended install is enabled, we have an additional CD-ROM drive
@@ -746,16 +746,16 @@ def postinstall(generate_usermode):
 
     kernel_info = vmi_win_guid("vm-0")
 
-    logging.info(f"Determined PDB GUID: {kernel_info.guid}")
-    logging.info(f"Determined kernel filename: {kernel_info.filename}")
+    log.info(f"Determined PDB GUID: {kernel_info.guid}")
+    log.info(f"Determined kernel filename: {kernel_info.filename}")
 
-    logging.info("Fetching PDB file...")
+    log.info("Fetching PDB file...")
     dest = fetch_pdb(kernel_info.filename, kernel_info.guid, destdir=PROFILE_DIR)
 
-    logging.info("Generating profile out of PDB file...")
+    log.info("Generating profile out of PDB file...")
     profile = make_pdb_profile(dest)
 
-    logging.info("Saving profile...")
+    log.info("Saving profile...")
     kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
     with open(kernel_profile, "w") as f:
         f.write(profile)
@@ -766,33 +766,33 @@ def postinstall(generate_usermode):
     explorer_pid = extract_explorer_pid("vm-0", kernel_profile, vmi_offsets)
     runtime_info = RuntimeInfo(vmi_offsets=vmi_offsets, inject_pid=explorer_pid)
 
-    logging.info("Saving runtime profile...")
+    log.info("Saving runtime profile...")
     with open(os.path.join(PROFILE_DIR, "runtime.json"), "w") as f:
         f.write(runtime_info.to_json(indent=4))
 
-    logging.info("Saving VM snapshot...")
+    log.info("Saving VM snapshot...")
 
     # Create vm-0 snapshot, and destroy it
     # WARNING: qcow2 snapshot method is a noop. fresh images are created on the fly
     # so we can't keep the vm-0 running
     vm0.save(os.path.join(VOLUME_DIR, "snapshot.sav"))
-    logging.info("Snapshot was saved succesfully.")
+    log.info("Snapshot was saved succesfully.")
 
     # Memory state is frozen, we can't do any writes to persistent storage
-    logging.info("Snapshotting persistent memory...")
+    log.info("Snapshotting persistent memory...")
     storage_backend.snapshot_vm0_volume()
 
     if generate_usermode:
         # Restore a VM and create usermode profiles
         create_missing_profiles()
 
-    logging.info("All right, drakrun setup is done.")
-    logging.info("First instance of drakrun will be enabled automatically...")
+    log.info("All right, drakrun setup is done.")
+    log.info("First instance of drakrun will be enabled automatically...")
     subprocess.check_output("systemctl enable drakrun@1", shell=True)
     subprocess.check_output("systemctl start drakrun@1", shell=True)
 
-    logging.info("If you want to have more parallel instances, execute:")
-    logging.info("  # draksetup scale <number of instances>")
+    log.info("If you want to have more parallel instances, execute:")
+    log.info("  # draksetup scale <number of instances>")
 
 
 def profiles_exist(profile_name: str) -> bool:
@@ -873,7 +873,7 @@ def postupgrade():
 
     install_info = InstallInfo.try_load()
     if not install_info:
-        logging.info("Postupgrade done. DRAKVUF Sandbox not installed.")
+        log.info("Postupgrade done. DRAKVUF Sandbox not installed.")
         return
 
     stop_all_drakruns()
@@ -1016,7 +1016,7 @@ def memdump():
 def memdump_export(bucket, instance):
     install_info = InstallInfo.try_load()
     if install_info is None:
-        logging.error(
+        log.error(
             "Missing installation info. Did you forget to set up the sandbox?"
         )
         return
@@ -1024,50 +1024,50 @@ def memdump_export(bucket, instance):
     backend = get_storage_backend(install_info)
     vm = VirtualMachine(backend, instance)
     if vm.is_running:
-        logging.exception(f"vm-{instance} is running")
+        log.exception(f"vm-{instance} is running")
         return
 
-    logging.info("Calculating snapshot hash...")
+    log.info("Calculating snapshot hash...")
     snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
     name = f"{snapshot_sha256}_pre_sample.raw_memdump.gz"
 
     mc = get_minio_client(conf)
 
     if not mc.bucket_exists(bucket):
-        logging.error("Bucket %s doesn't exist", bucket)
+        log.error("Bucket %s doesn't exist", bucket)
         return
 
     try:
         mc.stat_object(bucket, name)
-        logging.info("This file already exists in specified bucket")
+        log.info("This file already exists in specified bucket")
         return
     except NoSuchKey:
         pass
     except Exception:
-        logging.exception("Failed to check if object exists on minio")
+        log.exception("Failed to check if object exists on minio")
 
-    logging.info("Restoring VM and performing memory dump")
+    log.info("Restoring VM and performing memory dump")
 
     try:
         vm.restore(pause=True)
     except subprocess.CalledProcessError:
-        logging.exception(f"Failed to restore VM {vm.vm_name}")
+        log.exception(f"Failed to restore VM {vm.vm_name}")
         with open(f"/var/log/xen/qemu-dm-{vm.vm_name}.log", "rb") as f:
-            logging.error(f.read())
-    logging.info("VM restored")
+            log.error(f.read())
+    log.info("VM restored")
 
     with tempfile.NamedTemporaryFile() as compressed_memdump:
         vm.memory_dump(compressed_memdump.name)
 
-        logging.info(f"Uploading {name} to {bucket}")
+        log.info(f"Uploading {name} to {bucket}")
         mc.fput_object(bucket, name, compressed_memdump.name)
 
     try:
         vm.destroy()
     except Exception:
-        logging.exception("Failed to destroy VM")
+        log.exception("Failed to destroy VM")
 
-    logging.info("Done")
+    log.info("Done")
 
 
 @click.group(help="Manage VM snapshots")
@@ -1089,7 +1089,7 @@ def snapshot():
 def snapshot_export(name, bucket, full, force):
     install_info = InstallInfo.try_load()
     if install_info is None:
-        logging.error(
+        log.error(
             "Missing installation info. Did you forget to set up the sandbox?"
         )
         return
@@ -1097,19 +1097,19 @@ def snapshot_export(name, bucket, full, force):
     mc = get_minio_client(conf)
 
     if not mc.bucket_exists(bucket):
-        logging.error("Bucket %s doesn't exist", bucket)
+        log.error("Bucket %s doesn't exist", bucket)
         return
 
     if len(list(mc.list_objects(bucket, f"{name}/"))) > 0 and not force:
-        logging.error(
+        log.error(
             "There are objects in bucket %s at path %s. Aborting...", bucket, f"{name}/"
         )
         return
 
-    logging.info("Exporting snapshot as %s into %s", name, bucket)
+    log.info("Exporting snapshot as %s into %s", name, bucket)
 
     if full:
-        logging.warning(
+        log.warning(
             "Full snapshots may not work if hardware used for "
             "importing and exporting differs. You have been warned!"
         )
@@ -1117,8 +1117,8 @@ def snapshot_export(name, bucket, full, force):
     else:
         do_export_minimal(mc, bucket, name)
 
-    logging.info("Done. To use exported snapshot on other machine, execute:")
-    logging.info("# draksetup snapshot import --name %s --bucket %s", name, bucket)
+    log.info("Done. To use exported snapshot on other machine, execute:")
+    log.info("# draksetup snapshot import --name %s --bucket %s", name, bucket)
 
 
 @snapshot.command(
@@ -1144,14 +1144,14 @@ def snapshot_import(name, bucket, full, zpool):
     mc = get_minio_client(conf)
 
     if not mc.bucket_exists(bucket):
-        logging.error("Bucket %s doesn't exist", bucket)
+        log.error("Bucket %s doesn't exist", bucket)
         return
 
     ensure_dirs()
 
     try:
         if full:
-            logging.warning(
+            log.warning(
                 "Importing full snapshot. This may not work if hardware is different"
             )
             do_import_full(mc, name, bucket, zpool)
@@ -1183,52 +1183,52 @@ def snapshot_import(name, bucket, full, zpool):
             try:
                 subprocess.run(["xl", "create", cfg_path], check=True)
             except subprocess.CalledProcessError:
-                logging.exception("Failed to launch VM vm-0")
+                log.exception("Failed to launch VM vm-0")
                 return
 
-            logging.info("Minimal snapshots require postinstall to work correctly")
-            logging.info(
+            log.info("Minimal snapshots require postinstall to work correctly")
+            log.info(
                 "Please VNC to the port 5900 to ensure the OS booted correctly"
             )
-            logging.info("After that, execute this command to finish the setup")
-            logging.info("# draksetup postinstall")
+            log.info("After that, execute this command to finish the setup")
+            log.info("# draksetup postinstall")
     except NoSuchKey:
-        logging.error("Import failed. Missing files in bucket.")
+        log.error("Import failed. Missing files in bucket.")
 
 
 def do_export_minimal(mc, bucket, name):
     """Perform minimal snapshot export, symmetric to do_import_minimal"""
-    logging.info("Uploading installation info")
+    log.info("Uploading installation info")
     install_info = InstallInfo.load()
     install_data = json.dumps(install_info.to_dict()).encode()
     mc.put_object(
         bucket, f"{name}/install.json", io.BytesIO(install_data), len(install_data)
     )
 
-    logging.info("Uploading VM template")
+    log.info("Uploading VM template")
     mc.fput_object(
         bucket, f"{name}/cfg.template", os.path.join(ETC_DIR, "scripts", "cfg.template")
     )
 
     with tempfile.NamedTemporaryFile() as disk_image:
-        logging.info("Exporting VM hard drive")
+        log.info("Exporting VM hard drive")
         storage = get_storage_backend(install_info)
         storage.export_vm0(disk_image.name)
 
-        logging.info("Uploading disk.img")
+        log.info("Uploading disk.img")
         mc.fput_object(bucket, f"{name}/disk.img", disk_image.name)
 
 
 def do_import_minimal(mc, name, bucket, zpool):
     """Perform minimal snapshot import, symmetric to do_export_minimal"""
-    logging.info("Downloading installation info")
+    log.info("Downloading installation info")
     mc.fget_object(
         bucket,
         f"{name}/install.json",
         InstallInfo.INSTALL_FILE_PATH,
     )
 
-    logging.info("Downloading VM config")
+    log.info("Downloading VM config")
     mc.fget_object(
         bucket, f"{name}/cfg.template", os.path.join(ETC_DIR, "scripts", "cfg.template")
     )
@@ -1245,10 +1245,10 @@ def do_import_minimal(mc, name, bucket, zpool):
     storage = get_storage_backend(install_info)
 
     with tempfile.NamedTemporaryFile() as disk_image:
-        logging.info("Downloading VM disk image")
+        log.info("Downloading VM disk image")
         mc.fget_object(bucket, f"{name}/disk.img", disk_image.name)
 
-        logging.info("Importing VM disk")
+        log.info("Importing VM disk")
         storage.import_vm0(disk_image.name)
 
 
@@ -1258,25 +1258,25 @@ def do_export_full(mc, bucket, name):
 
     with tempfile.NamedTemporaryFile() as compressed_snapshot:
         # Compress snapshot
-        logging.info("Compressing snapshot.sav")
+        log.info("Compressing snapshot.sav")
         subprocess.check_call(
             ["gzip", "-c", os.path.join(VOLUME_DIR, "snapshot.sav")],
             stdout=compressed_snapshot,
         )
 
-        logging.info("Uploading snapshot.sav.gz")
+        log.info("Uploading snapshot.sav.gz")
         mc.fput_object(bucket, f"{name}/snapshot.sav.gz", compressed_snapshot.name)
 
     # Upload profiles
     for file in os.listdir(PROFILE_DIR):
-        logging.info("Uploading profile %s", file)
+        log.info("Uploading profile %s", file)
         mc.fput_object(
             bucket, f"{name}/profiles/{file}", os.path.join(PROFILE_DIR, file)
         )
 
     # Upload ApiScout profile
     for file in os.listdir(APISCOUT_PROFILE_DIR):
-        logging.info("Uploading file %s", file)
+        log.info("Uploading file %s", file)
         mc.fput_object(
             bucket,
             f"{name}/apiscout_profile/{file}",
@@ -1291,7 +1291,7 @@ def do_import_full(mc, name, bucket, zpool):
     with tempfile.NamedTemporaryFile() as compressed_snapshot:
         mc.fget_object(bucket, f"{name}/snapshot.sav.gz", compressed_snapshot.name)
 
-        logging.info("Decompressing VM snapshot")
+        log.info("Decompressing VM snapshot")
         with open(os.path.join(VOLUME_DIR, "snapshot.sav"), "wb") as snapshot:
             subprocess.run(
                 ["zcat", compressed_snapshot.name], stdout=snapshot, check=True

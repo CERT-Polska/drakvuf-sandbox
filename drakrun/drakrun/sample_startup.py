@@ -6,7 +6,7 @@ from oletools.olevba import VBA_Parser
 
 from drakrun.vba_graph import get_outer_nodes_from_vba_file
 
-log = logging.getLogger("drakrun")
+log = logging.getLogger(__name__)
 
 
 def get_sample_startup_command(extension, sample, file_path):

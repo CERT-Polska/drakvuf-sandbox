@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 
 from dataclasses_json import config, dataclass_json
 
-log = logging.getLogger("drakrun")
+log = logging.getLogger(__name__)
 
 hexstring = config(
     encoder=lambda v: hex(v),
@@ -101,12 +101,12 @@ def safe_delete(file_path) -> bool:
     try:
         if os.path.exists(file_path):
             os.remove(file_path)
-            logging.info(f"Deleted {file_path}")
+            log.info(f"Deleted {file_path}")
         else:
-            logging.info(f"Already deleted {file_path}")
+            log.info(f"Already deleted {file_path}")
         return True
     except OSError as e:
-        logging.warning(f"{e.filename}: {e.strerror}")
+        log.warning(f"{e.filename}: {e.strerror}")
         return False
 
 
@@ -149,22 +149,22 @@ def try_run(
     try:
         sub = subprocess.run(list_args, **kwargs)
     except (FileNotFoundError, TypeError) as e:
-        logging.debug("arguments to subprocess")
-        logging.debug(list_args)
-        logging.debug(msg)
-        logging.debug(kwargs)
+        log.debug("arguments to subprocess")
+        log.debug(list_args)
+        log.debug(msg)
+        log.debug(kwargs)
         raise Exception("Command not found") from e
     except subprocess.CalledProcessError as e:
         if e.stdout is not None:
-            logging.debug("stdout: \n{}".format(e.stdout.decode()))
+            log.debug("stdout: \n{}".format(e.stdout.decode()))
         if e.stderr is not None:
-            logging.debug("stderr: \n{}".format(e.stderr.decode()))
-        logging.debug("returncode: {}".format(e.returncode))
+            log.debug("stderr: \n{}".format(e.stderr.decode()))
+        log.debug("returncode: {}".format(e.returncode))
         if reraise:
             raise Exception(msg) from e
         else:
-            logging.warning(msg)
-            logging.debug(traceback.format_exc())
+            log.warning(msg)
+            log.debug(traceback.format_exc())
             return None
     return sub
 
