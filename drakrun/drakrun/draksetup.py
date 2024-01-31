@@ -20,7 +20,7 @@ from minio import Minio
 from minio.error import NoSuchKey
 from tqdm import tqdm
 
-from drakrun.apiscout import (
+from drakrun.lib.apiscout import (
     build_static_apiscout_profile,
     make_static_apiscout_profile_for_dll,
 )
