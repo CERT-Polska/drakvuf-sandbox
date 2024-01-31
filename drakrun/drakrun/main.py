@@ -125,8 +125,6 @@ class DrakrunKarton(Karton):
     filters = [
         {"type": "sample", "stage": "recognized", "platform": "win32"},
         {"type": "sample", "stage": "recognized", "platform": "win64"},
-        {"type": "sample-test", "platform": "win32"},
-        {"type": "sample-test", "platform": "win64"},
     ]
 
     def __init__(self, config: Config, instance_id: int) -> None:
