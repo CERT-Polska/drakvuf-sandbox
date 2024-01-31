@@ -17,6 +17,8 @@ fixes and added support for python3.
 
 LINE_SEP = "\n"
 
+log = logging.getLogger(__name__)
+
 
 class Graph:
     """Simple implementation of directed graph to minimalize number of dependencies."""
@@ -33,7 +35,7 @@ class Graph:
 
 
 def vba2graph_from_vba_object(filepath):
-    logging.info("Extracting macros from file")
+    log.info("Extracting macros from file")
     full_vba_code = ""
     vba_parser = VBA_Parser(filepath)
     for (
@@ -201,7 +203,7 @@ def vba_extract_functions(vba_content_lines):
                     (func_start_pos + len("Sub ")) : vba_line.find("(")
                 ]
             else:
-                logging.error("Error parsing function name")
+                log.error("Error parsing function name")
                 sys.exit(1)
 
         elif inside_function:
@@ -260,7 +262,7 @@ def vba_extract_properties(vba_content_lines):
                 )
 
             else:
-                logging.error("Error parsing property name")
+                log.error("Error parsing property name")
                 sys.exit(1)
 
         # Check if we are inside a property code.
@@ -336,7 +338,9 @@ def get_outer_nodes_from_vba_file(filename):
         input_vba_content = vba2graph_from_vba_object(filename)
         dg = vba2graph_gen(input_vba_content)
         return find_outer_nodes(dg)
-    except Exception as ex:
-        logging.warning("Something went wrong. Perhaps this is not an office document.")
-        logging.warning(ex)
+    except Exception:
+        log.warning(
+            "Something went wrong. Perhaps this is not an office document.",
+            exc_info=True,
+        )
         return None

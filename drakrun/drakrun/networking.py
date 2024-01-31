@@ -124,12 +124,12 @@ def setup_vm_network(
         subprocess.check_output(
             f"brctl addbr drak{vm_id}", stderr=subprocess.STDOUT, shell=True
         )
-        logging.info(f"Created bridge drak{vm_id}")
+        log.info(f"Created bridge drak{vm_id}")
     except subprocess.CalledProcessError as e:
         if b"already exists" in e.output:
             log.info(f"Bridge drak{vm_id} already exists.")
         else:
-            logging.debug(e.output)
+            log.debug(e.output)
             raise Exception(f"Failed to create bridge drak{vm_id}.")
     else:
         subprocess.run(
@@ -137,7 +137,7 @@ def setup_vm_network(
         )
 
     subprocess.run(f"ip link set dev drak{vm_id} up", shell=True, check=True)
-    logging.info(f"Bridge drak{vm_id} is up")
+    log.info(f"Bridge drak{vm_id} is up")
 
     add_iptable_rule(
         f"INPUT -i drak{vm_id} -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
@@ -167,16 +167,16 @@ def delete_vm_network(vm_id, net_enable, out_interface, dns_server) -> None:
         subprocess.check_output(
             f"ip link set dev drak{vm_id} down", shell=True, stderr=subprocess.STDOUT
         )
-        logging.info(f"Bridge drak{vm_id} is down")
+        log.info(f"Bridge drak{vm_id} is down")
     except subprocess.CalledProcessError as e:
         if b"Cannot find device" in e.output:
             log.info(f"Already deleted drak{vm_id} bridge")
         else:
-            logging.debug(e.output)
+            log.debug(e.output)
             raise Exception(f"Couldn't deactivate drak{vm_id} bridge")
     else:
         subprocess.run(f"brctl delbr drak{vm_id}", stderr=subprocess.STDOUT, shell=True)
-        logging.info(f"Deleted drak{vm_id} bridge")
+        log.info(f"Deleted drak{vm_id} bridge")
 
     del_iptable_rule(
         f"INPUT -i drak{vm_id} -p udp --dport 67:68 --sport 67:68 -j ACCEPT"

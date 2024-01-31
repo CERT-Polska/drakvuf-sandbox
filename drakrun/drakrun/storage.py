@@ -11,6 +11,8 @@ from typing import Tuple
 from drakrun.config import VOLUME_DIR, InstallInfo
 from drakrun.util import safe_delete
 
+log = logging.getLogger(__name__)
+
 
 class StorageBackendBase:
     """Base class for all storage backends
@@ -180,22 +182,22 @@ class ZfsStorageBackend(StorageBackendBase):
     def delete_vm_volume(self, vm_id: int):
         vm_id_vol = os.path.join(self.zfs_tank_name, f"vm-{vm_id}")
         try:
-            logging.info(f"Deleting zfs volume {vm_id_vol}")
+            log.info(f"Deleting zfs volume {vm_id_vol}")
             subprocess.check_output(
                 ["zfs", "destroy", "-Rfr", vm_id_vol], stderr=subprocess.STDOUT
             )
         except subprocess.CalledProcessError as exc:
-            logging.error(exc.stdout)
+            log.error(exc.stdout)
             raise Exception(f"Couldn't delete {vm_id_vol}")
 
     def delete_zfs_tank(self):
         try:
-            logging.info("Deleting zfs tank")
+            log.info("Deleting zfs tank")
             subprocess.run(
                 ["zfs", "destroy", "-r", f"{self.zfs_tank_name}"], check=True
             )
         except subprocess.CalledProcessError as exc:
-            logging.error(exc.stdout)
+            log.error(exc.stdout)
             raise Exception(f"Couldn't delete {self.zfs_tank_name}")
 
 
@@ -310,7 +312,7 @@ class LvmStorageBackend(StorageBackendBase):
         disk_size - string representing volume size with M/G/T suffix, eg. 100G
         """
         try:
-            logging.info("Deleting existing logical volume and snapshot")
+            log.info("Deleting existing logical volume and snapshot")
             subprocess.check_output(
                 [
                     "lvremove",
@@ -327,7 +329,7 @@ class LvmStorageBackend(StorageBackendBase):
                     f"Failed to destroy logical volume {self.lvm_volume_group}/vm-0"
                 )
         try:
-            logging.info("Creating new volume vm-0")
+            log.info("Creating new volume vm-0")
             subprocess.run(
                 [
                     "lvcreate",
@@ -365,7 +367,7 @@ class LvmStorageBackend(StorageBackendBase):
                 stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as exc:
-            logging.debug(exc.output)
+            log.debug(exc.output)
             raise RuntimeError("Couldn't create snapshot")
 
     def get_vm_disk_path(self, vm_id: int) -> str:
@@ -379,7 +381,7 @@ class LvmStorageBackend(StorageBackendBase):
         if vm_id == 0:
             raise Exception("vm-0 should not be rollbacked")
 
-        logging.info(f"Rolling back changes to vm-{vm_id} disk")
+        log.info(f"Rolling back changes to vm-{vm_id} disk")
         if os.path.exists(vm_id_vol):
             try:
                 subprocess.check_output(
@@ -393,7 +395,7 @@ class LvmStorageBackend(StorageBackendBase):
                     stderr=subprocess.STDOUT,
                 )
             except subprocess.CalledProcessError as exc:
-                logging.debug(exc.output)
+                log.debug(exc.output)
                 raise RuntimeError(
                     f"Failed to discard previous logical volume {self.lvm_volume_group}/vm-{vm_id}"
                 )
@@ -412,7 +414,7 @@ class LvmStorageBackend(StorageBackendBase):
                 stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as exc:
-            logging.debug(exc.output)
+            log.debug(exc.output)
             raise RuntimeError("Couldn't rollback disk")
 
     def get_vm0_snapshot_time(self):
@@ -479,7 +481,7 @@ class LvmStorageBackend(StorageBackendBase):
                 stderr=subprocess.STDOUT,
             )
         except subprocess.CalledProcessError as e:
-            logging.debug(e.output)
+            log.debug(e.output)
             raise Exception("Could not delete volume")
 
 

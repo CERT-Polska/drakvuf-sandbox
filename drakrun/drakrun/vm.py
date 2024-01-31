@@ -9,7 +9,7 @@ from drakrun.config import ETC_DIR, LIB_DIR, VM_CONFIG_DIR, VOLUME_DIR, InstallI
 from drakrun.storage import StorageBackendBase, get_storage_backend
 from drakrun.util import safe_delete, try_run
 
-log = logging.getLogger("drakrun")
+log = logging.getLogger(__name__)
 
 FIRST_CDROM_DRIVE = "hdc"
 SECOND_CDROM_DRIVE = "hdd"
@@ -95,11 +95,11 @@ class VirtualMachine:
         if pause:
             args += ["-p"]
         args += [self._cfg_path]
-        logging.info(f"Creating VM {self.vm_name}")
+        log.info(f"Creating VM {self.vm_name}")
         try_run(args, f"Failed to launch VM {self.vm_name}", **kwargs)
 
     def pause(self, **kwargs):
-        logging.info(f"Pausing VM {self.vm_name}")
+        log.info(f"Pausing VM {self.vm_name}")
         try_run(
             ["xl", "pause", self.vm_name],
             f"Failed to pause VM {self.vm_name}",
@@ -107,7 +107,7 @@ class VirtualMachine:
         )
 
     def unpause(self, **kwargs):
-        logging.info(f"Unpausing VM {self.vm_name}")
+        log.info(f"Unpausing VM {self.vm_name}")
         try_run(
             ["xl", "unpause", self.vm_name],
             f"Failed to unpause VM {self.vm_name}",
@@ -115,7 +115,7 @@ class VirtualMachine:
         )
 
     def save(self, filename, pause=False, cont=False, **kwargs):
-        logging.info(f"Saving VM {self.vm_name}")
+        log.info(f"Saving VM {self.vm_name}")
         args = ["xl", "save"]
 
         # no such args will shutdown the VM after saving
@@ -161,7 +161,7 @@ class VirtualMachine:
             self.backend.rollback_vm_storage(self.vm_id)
 
         args += [self._cfg_path, snapshot_path]
-        logging.info(f"Restoring VM {self.vm_name}")
+        log.info(f"Restoring VM {self.vm_name}")
         try_run(args, msg=f"Failed to restore VM {self.vm_name}", **kwargs)
 
     def destroy(self, **kwargs):
@@ -169,7 +169,7 @@ class VirtualMachine:
         :raises: subprocess.CalledProcessError
         """
         if self.is_running:
-            logging.info(f"Destroying {self.vm_name}")
+            log.info(f"Destroying {self.vm_name}")
             try_run(
                 ["xl", "destroy", self.vm_name],
                 f"Failed to destroy VM {self.vm_name}",

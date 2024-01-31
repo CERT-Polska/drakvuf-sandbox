@@ -58,6 +58,8 @@ SUPPORTED_PLUGINS = [
 ]
 # fmt: on
 
+log = logging.getLogger(__name__)
+
 
 class LocalLogBuffer(logging.Handler):
     FIELDS = (
@@ -131,10 +133,10 @@ class DrakrunKarton(Karton):
         super().__init__(config)
 
         # Now that karton is set up we can plug in our logger
-        logger = logging.getLogger("drakrun")
+        moduleLogger = logging.getLogger()
         for handler in self.log.handlers:
-            logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
+            moduleLogger.addHandler(handler)
+        moduleLogger.setLevel(logging.INFO)
 
         self.instance_id = instance_id
         self.install_info = InstallInfo.load()
@@ -390,7 +392,7 @@ class DrakrunKarton(Karton):
         except subprocess.CalledProcessError:
             self.log.exception(f"Failed to restore VM {self.vm_name}")
             with open(f"/var/log/xen/qemu-dm-{self.vm_name}.log", "rb") as f:
-                logging.error(f.read())
+                self.log.error(f.read())
 
         self.log.info("VM restored")
 
@@ -764,37 +766,37 @@ def validate_xen_commandline(ignore_failure: bool) -> None:
             unrecommended.append((k, v, actual_v))
 
     if unrecommended:
-        logging.warning("-" * 80)
-        logging.warning(
+        log.warning("-" * 80)
+        log.warning(
             "You don't have the recommended settings in your Xen's command line."
         )
-        logging.warning(
+        log.warning(
             "Please amend settings in your GRUB_CMDLINE_XEN_DEFAULT in /etc/default/grub.d/xen.cfg file."
         )
 
         for k, v, actual_v in unrecommended:
             if actual_v is not None:
-                logging.warning(f"- Set {k}={v} (instead of {k}={actual_v})")
+                log.warning(f"- Set {k}={v} (instead of {k}={actual_v})")
             else:
-                logging.warning(f"- Set {k}={v} ({k} is not set right now)")
+                log.warning(f"- Set {k}={v} ({k} is not set right now)")
 
-        logging.warning(
+        log.warning(
             "Then, please execute the following commands as root: update-grub && reboot"
         )
-        logging.warning("-" * 80)
-        logging.warning(
+        log.warning("-" * 80)
+        log.warning(
             "This check can be skipped by adding xen_cmdline_check=ignore in [drakrun] section of drakrun's config."
         )
-        logging.warning(
+        log.warning(
             "Please be aware that some bugs may arise when using unrecommended settings."
         )
 
         if ignore_failure:
-            logging.warning(
+            log.warning(
                 "ATTENTION! Configuration specified that check result should be ignored, continuing anyway..."
             )
         else:
-            logging.error(
+            log.error(
                 "Exitting due to above warnings. Please ensure that you are using recommended Xen's command line."
             )
             sys.exit(1)
@@ -813,7 +815,7 @@ def main(args) -> None:
     conf = Config(conf_path)
 
     if not conf.config.get("minio", "access_key").strip():
-        logging.warning(
+        log.warning(
             f"Detected blank value for minio access_key in {conf_path}. "
             "This service may not work properly."
         )
