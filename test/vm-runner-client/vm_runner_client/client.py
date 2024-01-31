@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import errno
 import socket
 import time
 import uuid
@@ -93,6 +94,11 @@ class DrakvufVM:
             return True
         except ConnectionError:
             return False
+        except OSError as e:
+            if e.errno == errno.EHOSTUNREACH:
+                return False  # no route to host yet
+            else:
+                raise
         except ProxyError as e:
             if e.error_code in [
                 ReplyCode.CONNECTION_REFUSED,
