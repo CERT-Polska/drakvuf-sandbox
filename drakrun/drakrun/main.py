@@ -169,12 +169,14 @@ class DrakrunKarton(Karton):
     @property
     def default_timeout(self) -> int:
         """Default timeout for normal and high priority tasks."""
-        return self.config.config.get("drakrun", "analysis_timeout", fallback=60 * 10)
+        return self.config.config.getint(
+            "drakrun", "analysis_timeout", fallback=60 * 10
+        )
 
     @property
     def default_low_timeout(self) -> int:
         """Default timeout for lwo priority tasks."""
-        return self.config.config.get(
+        return self.config.config.getint(
             "drakrun", "analysis_low_timeout", fallback=self.default_timeout
         )
 
