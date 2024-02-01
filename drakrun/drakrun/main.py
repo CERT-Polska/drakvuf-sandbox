@@ -62,6 +62,8 @@ SUPPORTED_PLUGINS = [
 ]
 # fmt: on
 
+MAX_TASK_TIMEOUT = 60 * 20  # Never run samples for longer than this
+
 log = logging.getLogger(__name__)
 
 
@@ -179,6 +181,33 @@ class DrakrunKarton(Karton):
         return self.config.config.getint(
             "drakrun", "analysis_low_timeout", fallback=self.default_timeout
         )
+
+    def timeout_for_task(self, task: Task) -> int:
+        """Return a timeout for task - a default for quality or specified by task."""
+        default_timeout = (
+            self.default_low_timeout
+            if task.headers.get("quality", "high") == "low"
+            else self.default_timeout
+        )
+        return task.payload.get("timeout", default_timeout)
+
+    def filename_for_task(self, task: Task, magic_output: str) -> Tuple[str, str]:
+        """Return a tuple of (filename, extension) for a given task.
+        This depends on the content magic, "extension" header and "file_name" payload.
+        """
+        extension = self._karton_safe_get_headers(task, "extension", "exe").lower()
+
+        if "(DLL)" in magic_output:
+            extension = "dll"
+        self.log.info("Running file as %s", extension)
+
+        # Prepare sample file name
+        file_name = task.payload.get("file_name", "malwar") + f".{extension}"
+        # Alphanumeric, dot, underscore, dash
+        if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
+            raise RuntimeError("Filename contains invalid characters")
+
+        return file_name, extension
 
     def generate_plugin_cmdline(self, plugin_list: List[str]) -> List[str]:
         if len(plugin_list) == 0:
@@ -630,47 +659,23 @@ class DrakrunKarton(Karton):
         if not task.headers.get("execute", True):
             return
 
-        # Gather basic facts
-        sample = task.get_resource("sample")
-        magic_output = magic.from_buffer(sample.content)
-        sha256sum = hashlib.sha256(sample.content).hexdigest()
+        timeout = self.timeout_for_task(task)
+        if timeout > MAX_TASK_TIMEOUT:
+            self.log.error(
+                "Tried to run the analysis for more than hard limit of %d seconds",
+                MAX_TASK_TIMEOUT,
+            )
+            return
 
+        sample = task.get_resource("sample")
+        sha256sum = hashlib.sha256(sample.content).hexdigest()
         self.log.info(f"Running on: {socket.gethostname()}")
         self.log.info(f"Sample SHA256: {sha256sum}")
         self.log.info(f"Analysis UID: {self.analysis_uid}")
         self.log.info(f"Snapshot SHA256: {self.snapshot_sha256}")
 
-        default_timeout = (
-            self.default_low_timeout
-            if task.headers.get("quality", "high") == "low"
-            else self.default_timeout
-        )
-
-        # Timeout sanity check
-        timeout = task.payload.get("timeout") or default_timeout
-        hard_time_limit = 60 * 20
-        if timeout > hard_time_limit:
-            self.log.error(
-                "Tried to run the analysis for more than hard limit of %d seconds",
-                hard_time_limit,
-            )
-            return
-
-        self.update_vnc_info()
-
-        # Get sample extension. If none set, fall back to exe/dll
-        extension = self._karton_safe_get_headers(task, "extension", "exe").lower()
-
-        if "(DLL)" in magic_output:
-            extension = "dll"
-        self.log.info("Running file as %s", extension)
-
-        # Prepare sample file name
-        file_name = task.payload.get("file_name", "malwar") + f".{extension}"
-        # Alphanumeric, dot, underscore, dash
-        if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
-            self.log.error("Filename contains invalid characters")
-            return
+        magic_output = magic.from_buffer(sample.content)
+        file_name, extension = self.filename_for_task(task, magic_output)
         self.log.info("Using file name %s", file_name)
 
         # workdir - configs, sample, etc.
@@ -689,8 +694,7 @@ class DrakrunKarton(Karton):
         if not start_command:
             # We should have a start up command at this point
             self.log.error(
-                "Unable to run malware sample. Could not generate any suitable"
-                " command to run it."
+                "Unable to run malware sample. Could not generate any suitable command to run it."
             )
             return
         if "%f" not in start_command:
@@ -705,6 +709,8 @@ class DrakrunKarton(Karton):
             else:
                 with open(os.path.join(ETC_DIR, "hooks.txt"), "rb") as default_hooks:
                     hooks.write(default_hooks.read())
+
+        self.update_vnc_info()
 
         metadata = {
             "analysis_uid": self.analysis_uid,
