@@ -623,6 +623,11 @@ class DrakrunKarton(Karton):
 
     @with_logs("drakrun.log")
     def process(self, task: Task) -> None:
+        # Tasks with {"execute": false} header are not scheduled for execution.
+        # When the header is missing, the default is to execute the sample.
+        if not task.headers.get("execute", True):
+            return
+
         # Gather basic facts
         sample = task.get_resource("sample")
         magic_output = magic.from_buffer(sample.content)
