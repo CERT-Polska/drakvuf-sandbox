@@ -1321,7 +1321,7 @@ def init(envfile: str):
     # In the future, consider splitting this to remove hard dependency on systemd etc
     drakrun_dir = Path(ETC_DIR)
     data_dir = Path(__file__).parent / "data"
-    
+
     drakrun_dir.mkdir(exist_ok=True)
     config = (data_dir / "config.ini").read_text()
 
