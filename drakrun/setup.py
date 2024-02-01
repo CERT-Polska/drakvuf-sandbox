@@ -17,15 +17,17 @@ setup(
     packages=["drakrun", "drakrun.lib", "drakrun.test"],
     include_package_data=True,
     install_requires=open("requirements.txt").read().splitlines(),
-    scripts=[
-        "drakrun/py-scripts/drakrun",
-        "drakrun/py-scripts/draksetup",
-        "drakrun/py-scripts/drakpush",
-        "drakrun/py-scripts/drakpdb",
-        "drakrun/py-scripts/drakplayground",
-        "drakrun/py-scripts/draktestd",
-        "drakrun/py-scripts/draktest",
-    ],
+    entry_points={
+        "console_scripts": [
+            "drakrun = drakrun.main:main",
+            "draksetup = drakrun.draksetup:main",
+            "drakpush = drakrun.drakpush:main",
+            "drakpdb = drakrun.drakpdb:main",
+            "drakplayground = drakrun.playground:main",
+            "draktestd = drakrun.regression:RegressionTester.main",
+            "draktest = drakrun.regression:RegressionTester.submit_main",
+        ]
+    },
     classifiers=[
         "Programming Language :: Python",
         "Operating System :: OS Independent",

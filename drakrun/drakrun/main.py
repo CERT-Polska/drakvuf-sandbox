@@ -806,15 +806,11 @@ def validate_xen_commandline(ignore_failure: bool) -> None:
             sys.exit(1)
 
 
-def cmdline_main() -> None:
+def main() -> None:
     parser = argparse.ArgumentParser(description="Kartonized drakrun <3")
     parser.add_argument("instance", type=int, help="Instance identifier")
     args = parser.parse_args()
 
-    main(args)
-
-
-def main(args) -> None:
     conf_path = os.path.join(ETC_DIR, "config.ini")
     conf = Config(conf_path)
 
@@ -832,4 +828,4 @@ def main(args) -> None:
 
 
 if __name__ == "__main__":
-    cmdline_main()
+    main()
