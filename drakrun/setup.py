@@ -24,8 +24,8 @@ setup(
             "drakpush = drakrun.drakpush:main",
             "drakpdb = drakrun.drakpdb:main",
             "drakplayground = drakrun.playground:main",
-            "draktestd = drakrun.regression:RegressionTester.main"
-            "draktest = drakrun.regression:RegressionTester.submit_main"
+            "draktestd = drakrun.regression:RegressionTester.main",
+            "draktest = drakrun.regression:RegressionTester.submit_main",
         ]
     },
     classifiers=[
