@@ -45,11 +45,10 @@ from drakrun.lib.storage import get_storage_backend
 from drakrun.lib.util import (
     RuntimeInfo,
     file_sha256,
-    get_xen_commandline,
-    get_xl_info,
     graceful_exit,
 )
 from drakrun.lib.vm import VirtualMachine, generate_vm_conf
+from drakrun.lib.bindings.xen import get_xen_info
 from drakrun.version import __version__ as DRAKRUN_VERSION
 
 # fmt: off
@@ -601,7 +600,7 @@ class DrakrunKarton(Karton):
 
         with self.run_vm() as vm, graceful_exit(
             start_dnsmasq(self.instance_id, self.drakconfig.dns_server)
-        ), graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), open(
+        ), graceful_exit(start_tcpdump_collector(vm.get_domid(), outdir)), open(
             drakmon_log_fp, "wb"
         ) as drakmon_log:
             analysis_info["snapshot_version"] = vm.backend.get_vm0_snapshot_time()
@@ -788,7 +787,6 @@ class DrakrunKarton(Karton):
 def validate_xen_commandline(ignore_failure: bool) -> None:
     """Validate XEN command line and print found misconfigurations.
     Will exit process on failure, unless ignore_failure parameter is passed"""
-
     required_cmdline = {
         "sched": "credit",
         "force-ept": "1",
@@ -798,17 +796,14 @@ def validate_xen_commandline(ignore_failure: bool) -> None:
         "altp2m": "1",
         "hpet": "legacy-replacement",
     }
-
-    parsed_xl_info = get_xl_info()
-    xen_cmdline = get_xen_commandline(parsed_xl_info)
+    xen_info = get_xen_info()
+    xen_cmdline = xen_info["xen_commandline"]
 
     unrecommended = []
-
-    for k, v in required_cmdline.items():
-        actual_v = xen_cmdline.get(k)
-
-        if actual_v != v:
-            unrecommended.append((k, v, actual_v))
+    for key, recommended_value in required_cmdline.items():
+        actual_value = xen_cmdline.get(key)
+        if actual_value != recommended_value:
+            unrecommended.append((key, recommended_value, actual_value))
 
     if unrecommended:
         log.warning("-" * 80)
