@@ -151,32 +151,32 @@ class DrakrunConfig(Config):
     @property
     def default_timeout(self) -> int:
         """Default timeout for normal and high priority tasks."""
-        return self.getint("analysis_timeout", 60 * 10)
+        return self.getint("analysis_timeout", fallback=60 * 10)
 
     @property
     def default_low_timeout(self) -> int:
         """Default timeout for lwo priority tasks."""
-        return self.getint("analysis_low_timeout", self.default_timeout)
+        return self.getint("analysis_low_timeout", fallback=self.default_timeout)
 
     @property
     def net_enable(self) -> bool:
         """Should network be enabled for this analysis?"""
-        return self.getboolean("net_enable", False)
+        return self.getboolean("net_enable", fallback=False)
 
     @property
     def attach_profiles(self) -> bool:
         """Should profiles payload be attached to the analysis?"""
-        return self.getboolean("attach_profiles", False)
+        return self.getboolean("attach_profiles", fallback=False)
 
     @property
     def attach_apiscout_profile(self) -> bool:
         """Should apiscout profile be attached to the analysis results?"""
-        return self.getboolean("attach_apiscout_profile", False)
+        return self.getboolean("attach_apiscout_profile", fallback=False)
 
     @property
     def use_root_uid(self) -> bool:
         """Should analysis use root UID or task UID as a s3 key for upload"""
-        return self.getboolean("use_root_uid", False)
+        return self.getboolean("use_root_uid", fallback=False)
 
     @property
     def anti_hammering_threshold(self) -> Optional[int]:
@@ -184,16 +184,16 @@ class DrakrunConfig(Config):
 
     @property
     def syscall_filter(self) -> Optional[str]:
-        return self.get("syscall_filter", None)
+        return self.get("syscall_filter", fallback=None)
 
     @property
     def dns_server(self) -> str:
         """Get a DNS server used for analysis. `use-gateway-address` is special"""
-        return self.get("dns_server", "8.8.8.8")
+        return self.get("dns_server", fallback="8.8.8.8")
 
     @property
     def raw_memory_dump(self) -> bool:
-        return self.getboolean("raw_memory_dump", False)
+        return self.getboolean("raw_memory_dump", fallback=False)
 
     def plugins(self) -> Dict[str, List[str]]:
         plugins = {}
