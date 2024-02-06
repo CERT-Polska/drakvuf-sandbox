@@ -25,7 +25,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import magic
 from karton.core import Config, Karton, LocalResource, Resource, Task
 
-from drakrun.lib.sample_startup import get_sample_startup_command
 from drakrun.lib.config import (
     APISCOUT_PROFILE_DIR,
     ETC_DIR,
@@ -41,6 +40,7 @@ from drakrun.lib.networking import (
     start_dnsmasq,
     start_tcpdump_collector,
 )
+from drakrun.lib.sample_startup import get_sample_startup_command
 from drakrun.lib.storage import get_storage_backend
 from drakrun.lib.util import (
     RuntimeInfo,
