@@ -135,13 +135,13 @@ class DrakrunConfig(Config):
     def __init__(self, config: Config) -> None:
         super().__init__(config)
 
-    def get(self, option, fallback) -> Any:
+    def get(self, option: str, fallback: Any) -> Any:
         return self.config.config.get("drakrun", option, fallback=fallback)
 
-    def getint(self, option, fallback) -> int:
+    def getint(self, option: str, fallback: int) -> int:
         return self.config.config.getint("drakrun", option, fallback=fallback)
 
-    def getboolean(self, option, fallback) -> bool:
+    def getboolean(self, option: str, fallback: bool) -> bool:
         return self.config.config.getboolean("drakrun", option, fallback=fallback)
 
     @property
