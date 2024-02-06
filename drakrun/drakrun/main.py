@@ -20,7 +20,7 @@ from io import StringIO
 from itertools import chain
 from pathlib import Path
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import magic
 from karton.core import Config, Karton, LocalResource, Resource, Task
@@ -127,6 +127,81 @@ def with_logs(object_name):
     return decorator
 
 
+class DrakrunConfig:
+    """A typed wrapper for a Drakrun config. In the future, this will be handled
+    by Karton's typedconfig more directly
+    """
+
+    def __init__(self, config: Config) -> None:
+        self.config = config
+
+    def get(self, option: str, fallback: Any) -> Any:
+        return self.config.config.get("drakrun", option, fallback=fallback)
+
+    def getint(self, option: str, fallback: int) -> int:
+        return self.config.config.getint("drakrun", option, fallback=fallback)
+
+    def getboolean(self, option: str, fallback: bool) -> bool:
+        return self.config.config.getboolean("drakrun", option, fallback=fallback)
+
+    @property
+    def out_interface(self) -> str:
+        return self.get("out_interface", fallback="")
+
+    @property
+    def default_timeout(self) -> int:
+        """Default timeout for normal and high priority tasks."""
+        return self.getint("analysis_timeout", fallback=60 * 10)
+
+    @property
+    def default_low_timeout(self) -> int:
+        """Default timeout for lwo priority tasks."""
+        return self.getint("analysis_low_timeout", fallback=self.default_timeout)
+
+    @property
+    def net_enable(self) -> bool:
+        """Should network be enabled for this analysis?"""
+        return self.getboolean("net_enable", fallback=False)
+
+    @property
+    def attach_profiles(self) -> bool:
+        """Should profiles payload be attached to the analysis?"""
+        return self.getboolean("attach_profiles", fallback=False)
+
+    @property
+    def attach_apiscout_profile(self) -> bool:
+        """Should apiscout profile be attached to the analysis results?"""
+        return self.getboolean("attach_apiscout_profile", fallback=False)
+
+    @property
+    def use_root_uid(self) -> bool:
+        """Should analysis use root UID or task UID as a s3 key for upload"""
+        return self.getboolean("use_root_uid", fallback=False)
+
+    @property
+    def anti_hammering_threshold(self) -> int:
+        return self.getint("anti_hammering_threshold", fallback=0)
+
+    @property
+    def syscall_filter(self) -> Optional[str]:
+        return self.get("syscall_filter", fallback=None)
+
+    @property
+    def dns_server(self) -> str:
+        """Get a DNS server used for analysis. `use-gateway-address` is special"""
+        return self.get("dns_server", fallback="8.8.8.8")
+
+    @property
+    def raw_memory_dump(self) -> bool:
+        return self.getboolean("raw_memory_dump", fallback=False)
+
+    def plugins(self) -> Dict[str, List[str]]:
+        plugins = {}
+        for quality, list_str in self.config.config.items("drakvuf_plugins"):
+            plugins[quality] = [x.strip() for x in list_str.split(",")]
+        return plugins
+
+
 class DrakrunKarton(Karton):
     version = DRAKRUN_VERSION
     identity = "karton.drakrun-prod"
@@ -137,6 +212,7 @@ class DrakrunKarton(Karton):
 
     def __init__(self, config: Config, instance_id: int) -> None:
         super().__init__(config)
+        self.drakconfig = DrakrunConfig(config)
 
         # Now that karton is set up we can plug in our logger
         moduleLogger = logging.getLogger()
@@ -154,40 +230,28 @@ class DrakrunKarton(Karton):
         if not self.backend.minio.bucket_exists("drakrun"):
             self.backend.minio.make_bucket(bucket_name="drakrun")
 
-        out_interface = self.config.config.get("drakrun", "out_interface", fallback="")
-        dns_server = self.config.config.get("drakrun", "dns_server", fallback="")
-        setup_vm_network(self.instance_id, self.net_enable, out_interface, dns_server)
+        setup_vm_network(
+            self.instance_id,
+            self.drakconfig.net_enable,
+            self.drakconfig.out_interface,
+            self.drakconfig.dns_server,
+        )
 
         self.log.info("Calculating snapshot hash...")
         self.snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
 
     def find_active_plugins(self) -> Dict[str, List[str]]:
         """Parse active plugins from config, with a default value for _all_"""
-        plugins = {"_all_": SUPPORTED_PLUGINS}
-        for quality, list_str in self.config.config.items("drakvuf_plugins"):
-            plugins[quality] = [x.strip() for x in list_str.split(",")]
+        plugins = self.drakconfig.plugins()
+        plugins["_all_"] = SUPPORTED_PLUGINS
         return plugins
-
-    @property
-    def default_timeout(self) -> int:
-        """Default timeout for normal and high priority tasks."""
-        return self.config.config.getint(
-            "drakrun", "analysis_timeout", fallback=60 * 10
-        )
-
-    @property
-    def default_low_timeout(self) -> int:
-        """Default timeout for lwo priority tasks."""
-        return self.config.config.getint(
-            "drakrun", "analysis_low_timeout", fallback=self.default_timeout
-        )
 
     def timeout_for_task(self, task: Task) -> int:
         """Return a timeout for task - a default for quality or specified by task."""
         default_timeout = (
-            self.default_low_timeout
+            self.drakconfig.default_low_timeout
             if task.headers.get("quality", "high") == "low"
-            else self.default_timeout
+            else self.drakconfig.default_timeout
         )
         return task.payload.get("timeout", default_timeout)
 
@@ -232,10 +296,6 @@ class DrakrunKarton(Karton):
             self.log.info("Using ipt plugin implies using codemon")
             plugin_list.append("codemon")
         return plugin_list
-
-    @property
-    def net_enable(self) -> bool:
-        return self.config.config["drakrun"].getboolean("net_enable", fallback=False)
 
     @property
     def vm_name(self) -> str:
@@ -367,13 +427,11 @@ class DrakrunKarton(Karton):
         if "testcase" in self.current_task.payload:
             task.add_payload("testcase", self.current_task.payload["testcase"])
 
-        if self.config.config.getboolean("drakrun", "attach_profiles", fallback=False):
+        if self.drakconfig.attach_profiles:
             self.log.info("Uploading profiles...")
             task.add_payload("profiles", self.build_profile_payload())
 
-        if self.config.config.getboolean(
-            "drakrun", "attach_apiscout_profile", fallback=False
-        ):
+        if self.drakconfig.attach_apiscout_profile:
             self.log.info("Uploading static ApiScout profile...")
             task.add_payload(
                 "static_apiscout_profile.json",
@@ -434,7 +492,7 @@ class DrakrunKarton(Karton):
         if override_uid:
             return override_uid
 
-        if self.config.config.getboolean("drakrun", "use_root_uid", fallback=False):
+        if self.drakconfig.use_root_uid:
             return self.current_task.root_uid
 
         return self.current_task.uid
@@ -508,18 +566,15 @@ class DrakrunKarton(Karton):
             ]
         )
 
-        anti_hammering_threshold = self.config.config["drakrun"].getint(
-            "anti_hammering_threshold", fallback=None
-        )
-
-        if anti_hammering_threshold:
-            drakvuf_cmd.extend(["--traps-ttl", str(anti_hammering_threshold)])
+        if self.drakconfig.anti_hammering_threshold:
+            drakvuf_cmd.extend(
+                ["--traps-ttl", str(self.drakconfig.anti_hammering_threshold)]
+            )
 
         drakvuf_cmd.extend(self.get_profile_list())
 
-        syscall_filter = self.config.config["drakrun"].get("syscall_filter", None)
-        if syscall_filter:
-            drakvuf_cmd.extend(["-S", syscall_filter])
+        if self.drakconfig.syscall_filter:
+            drakvuf_cmd.extend(["-S", self.drakconfig.syscall_filter])
 
         return drakvuf_cmd
 
@@ -543,15 +598,10 @@ class DrakrunKarton(Karton):
         timeout: int,
     ) -> Dict[str, Any]:
         analysis_info = dict()
-
-        dns_server = self.config.config["drakrun"].get("dns_server", "8.8.8.8")
         drakmon_log_fp = os.path.join(outdir, "drakmon.log")
-        raw_memory_dump = self.config.config["drakrun"].getboolean(
-            "raw_memory_dump", fallback=False
-        )
 
         with self.run_vm() as vm, graceful_exit(
-            start_dnsmasq(self.instance_id, dns_server)
+            start_dnsmasq(self.instance_id, self.drakconfig.dns_server)
         ), graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), open(
             drakmon_log_fp, "wb"
         ) as drakmon_log:
@@ -580,7 +630,7 @@ class DrakrunKarton(Karton):
             analysis_info["start_command"] = start_command
             self.log.info("Using command: %s", start_command)
 
-            if self.net_enable:
+            if self.drakconfig.net_enable:
                 max_attempts = 3
                 for i in range(max_attempts):
                     try:
@@ -635,7 +685,7 @@ class DrakrunKarton(Karton):
                 self.log.exception("DRAKVUF timeout expired")
                 raise e
 
-            if raw_memory_dump:
+            if self.drakconfig.raw_memory_dump:
                 vm.memory_dump(os.path.join(outdir, "post_sample.raw_memdump.gz"))
 
         return analysis_info
