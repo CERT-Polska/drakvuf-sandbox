@@ -241,15 +241,6 @@ class DrakrunKarton(Karton):
     def vm_name(self) -> str:
         return f"vm-{self.instance_id}"
 
-    def _karton_safe_get_headers(self, task, key: str, fallback: str) -> str:
-        ret = task.headers.get(key, fallback)
-        # intentional workaround due to a bug in karton
-        if ret is None:
-            self.log.warning(f"Could not get {key}, falling back to {fallback}")
-            ret = fallback
-
-        return ret
-
     def crop_dumps(self, dirpath: str, target_zip: str) -> List[Dict[str, Any]]:
         zipf = zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED)
 
@@ -750,7 +741,7 @@ class DrakrunKarton(Karton):
         with open(os.path.join(outdir, "metadata.json"), "w") as f:
             f.write(json.dumps(metadata))
 
-        quality = self._karton_safe_get_headers(task, "quality", "high")
+        quality = task.headers.get("quality", "high")
         self.send_raw_analysis(sample, outdir, metadata, dumps_metadata, quality)
 
 
