@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import magic
 from karton.core import Config, Karton, LocalResource, Resource, Task
 
-import drakrun.lib.sample_startup as sample_startup
+from drakrun.lib.sample_startup import get_sample_startup_command
 from drakrun.lib.config import (
     APISCOUT_PROFILE_DIR,
     ETC_DIR,
@@ -200,6 +200,13 @@ class DrakrunConfig:
         for quality, list_str in self.config.config.items("drakvuf_plugins"):
             plugins[quality] = [x.strip() for x in list_str.split(",")]
         return plugins
+
+
+class Drakrun:
+    """A utility class, independent of Karton (with exception of the config),
+    that can be used to analyse samples and collecting the results"""
+
+    pass
 
 
 class DrakrunKarton(Karton):
@@ -522,10 +529,9 @@ class DrakrunKarton(Karton):
         full_cmd: str,
         dump_dir: str,
         ipt_dir: str,
-        workdir: str,
+        hooks_path: str,
         enabled_plugins,
     ) -> List[str]:
-        hooks_list = os.path.join(workdir, "hooks.txt")
         kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
 
         drakvuf_cmd = (
@@ -547,7 +553,7 @@ class DrakrunKarton(Karton):
                 "-d",
                 self.vm_name,
                 "--dll-hooks-list",
-                hooks_list,
+                hooks_path,
                 "--memdump-dir",
                 dump_dir,
                 "--ipt-dir",
@@ -592,7 +598,7 @@ class DrakrunKarton(Karton):
     def analyze_sample(
         self,
         sample_path: str,
-        workdir: str,
+        hooks_path: str,
         outdir: str,
         start_command: str,
         timeout: int,
@@ -605,7 +611,6 @@ class DrakrunKarton(Karton):
         ), graceful_exit(start_tcpdump_collector(self.instance_id, outdir)), open(
             drakmon_log_fp, "wb"
         ) as drakmon_log:
-
             analysis_info["snapshot_version"] = vm.backend.get_vm0_snapshot_time()
 
             kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
@@ -664,7 +669,7 @@ class DrakrunKarton(Karton):
                 full_cmd=start_command,
                 dump_dir=os.path.join(outdir, "dumps"),
                 ipt_dir=os.path.join(outdir, "ipt"),
-                workdir=workdir,
+                hooks_path=hooks_path,
                 enabled_plugins=analysis_info["plugins"],
             )
 
@@ -716,6 +721,12 @@ class DrakrunKarton(Karton):
         file_name, extension = self.filename_for_task(task, magic_output)
         self.log.info("Using file name %s", file_name)
 
+        # Try to come up with a start command for this file
+        # or use the one provided by the sender
+        start_command = task.payload.get(
+            "start_command", get_sample_startup_command(extension, sample.content)
+        )
+
         # workdir - configs, sample, etc.
         # outdir - analysis artifacts
         workdir, outdir = self._prepare_workdir()
@@ -723,23 +734,9 @@ class DrakrunKarton(Karton):
         sample_path = os.path.join(workdir, file_name)
         sample.download_to_file(sample_path)
 
-        # Try to come up with a start command for this file
-        # or use the one provided by the sender
-        start_command = task.payload.get(
-            "start_command",
-            sample_startup.get_sample_startup_command(extension, sample, sample_path),
-        )
-        if not start_command:
-            # We should have a start up command at this point
-            self.log.error(
-                "Unable to run malware sample. Could not generate any suitable command to run it."
-            )
-            return
-        if "%f" not in start_command:
-            self.log.warning("No file name in start command")
-
         # If task contains 'custom_hooks' override local defaults
-        with open(os.path.join(workdir, "hooks.txt"), "wb") as hooks:
+        hooks_path = os.path.join(workdir, "hooks.txt")
+        with open(hooks_path, "wb") as hooks:
             if task.has_payload("custom_hooks"):
                 custom_hooks = task.get_resource("custom_hooks")
                 assert custom_hooks.content is not None
@@ -765,7 +762,7 @@ class DrakrunKarton(Karton):
                     f"Trying to analyze sample (attempt {i + 1}/{max_attempts})"
                 )
                 info = self.analyze_sample(
-                    sample_path, workdir, outdir, start_command, timeout
+                    sample_path, hooks_path, outdir, start_command, timeout
                 )
                 metadata.update(info)
                 break
