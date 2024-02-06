@@ -1319,8 +1319,11 @@ def parse_envfile(path: str) -> Dict[str, str]:
 def init(envfile: str):
     # Simple activities handled by deb packages before
     # In the future, consider splitting this to remove hard dependency on systemd etc
-    Path(ETC_DIR).mkdir(exist_ok=True)
-    config = (Path(__file__).parent / "config.dist.ini").read_text()
+    drakrun_dir = Path(ETC_DIR)
+    data_dir = Path(__file__).parent / "data"
+
+    drakrun_dir.mkdir(exist_ok=True)
+    config = (data_dir / "config.ini").read_text()
 
     # This feature is provided for compatibility with minio.env files, but we plan to
     # remove it in the future.
@@ -1329,13 +1332,16 @@ def init(envfile: str):
         config = config.replace("access_key=", f"access_key={env['MINIO_ACCESS_KEY']}")
         config = config.replace("secret_key=", f"secret_key={env['MINIO_SECRET_KEY']}")
 
-    (Path(ETC_DIR) / "config.ini").write_text(config)
+    (drakrun_dir / "config.ini").write_text(config)
 
-    default_hooks = (Path(__file__).parent / "hooks.dist.txt").read_text()
-    (Path(ETC_DIR) / "hooks.txt").write_text(default_hooks)
+    default_hooks = (data_dir / "hooks.txt").read_text()
+    (drakrun_dir / "hooks.txt").write_text(default_hooks)
 
-    systemd_unit = (Path(__file__).parent / "systemd/drakrun@.service").read_text()
+    systemd_unit = (data_dir / "drakrun@.service").read_text()
     Path("/etc/systemd/system/drakrun@.service").write_text(systemd_unit)
+
+    config_template = (data_dir / "cfg.template").read_text()
+    (drakrun_dir / "scripts" / "cfg.template").write_text(config_template)
 
 
 @click.group()
