@@ -146,7 +146,7 @@ class DrakrunConfig:
 
     @property
     def out_interface(self) -> str:
-        return self.get("out_interface", "")
+        return self.get("out_interface", fallback="")
 
     @property
     def default_timeout(self) -> int:
