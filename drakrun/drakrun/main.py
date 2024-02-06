@@ -202,13 +202,6 @@ class DrakrunConfig:
         return plugins
 
 
-class Drakrun:
-    """A utility class, independent of Karton (with exception of the config),
-    that can be used to analyse samples and collecting the results"""
-
-    pass
-
-
 class DrakrunKarton(Karton):
     version = DRAKRUN_VERSION
     identity = "karton.drakrun-prod"
