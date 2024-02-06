@@ -195,7 +195,8 @@ class DrakrunKarton(Karton):
         """Return a tuple of (filename, extension) for a given task.
         This depends on the content magic, "extension" header and "file_name" payload.
         """
-        extension = self._karton_safe_get_headers(task, "extension", "exe").lower()
+        # headers["extensions"] may exist and be None
+        extension = (task.headers.get("extension") or "exe").lower()
         if "(DLL)" in magic_output:
             extension = "dll"
 
