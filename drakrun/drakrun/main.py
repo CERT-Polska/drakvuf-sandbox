@@ -20,7 +20,7 @@ from io import StringIO
 from itertools import chain
 from pathlib import Path
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import magic
 from karton.core import Config, Karton, LocalResource, Resource, Task
@@ -135,65 +135,65 @@ class DrakrunConfig(Config):
     def __init__(self, config: Config) -> None:
         super().__init__(config)
 
-    def get(self, section, option, fallback=None) -> Any:
-        return self.config.config.get(section, option, fallback=fallback)
+    def get(self, option, fallback) -> Any:
+        return self.config.config.get("drakrun", option, fallback=fallback)
 
-    def getint(self, section, option, fallback=None) -> int:
-        return self.config.config.getint(section, option, fallback=fallback)
+    def getint(self, option, fallback) -> int:
+        return self.config.config.getint("drakrun", option, fallback=fallback)
 
-    def getboolean(self, section, option, fallback=None) -> bool:
-        return self.config.config.getboolean(section, option, fallback=fallback)
+    def getboolean(self, option, fallback) -> bool:
+        return self.config.config.getboolean("drakrun", option, fallback=fallback)
 
     @property
     def out_interface(self) -> str:
-        return self.get("drakrun", "out_interface", "")
+        return self.get("out_interface", "")
 
     @property
     def default_timeout(self) -> int:
         """Default timeout for normal and high priority tasks."""
-        return self.getint("drakrun", "analysis_timeout", 60 * 10)
+        return self.getint("analysis_timeout", 60 * 10)
 
     @property
     def default_low_timeout(self) -> int:
         """Default timeout for lwo priority tasks."""
-        return self.getint("drakrun", "analysis_low_timeout", self.default_timeout)
+        return self.getint("analysis_low_timeout", self.default_timeout)
 
     @property
     def net_enable(self) -> bool:
         """Should network be enabled for this analysis?"""
-        return self.getboolean("drakrun", "net_enable", False)
+        return self.getboolean("net_enable", False)
 
     @property
     def attach_profiles(self) -> bool:
         """Should profiles payload be attached to the analysis?"""
-        return self.getboolean("drakrun", "attach_profiles", False)
+        return self.getboolean("attach_profiles", False)
 
     @property
     def attach_apiscout_profile(self) -> bool:
         """Should apiscout profile be attached to the analysis results?"""
-        return self.getboolean("drakrun", "attach_apiscout_profile", False)
+        return self.getboolean("attach_apiscout_profile", False)
 
     @property
     def use_root_uid(self) -> bool:
         """Should analysis use root UID or task UID as a s3 key for upload"""
-        return self.getboolean("drakrun", "use_root_uid", False)
+        return self.getboolean("use_root_uid", False)
 
     @property
     def anti_hammering_threshold(self) -> Optional[int]:
-        return self.getint("drakrun", "anti_hammering_threshold", fallback=None)
+        return self.getint("anti_hammering_threshold", fallback=None)
 
     @property
     def syscall_filter(self) -> Optional[str]:
-        return self.get("drakrun", "syscall_filter", None)
+        return self.get("syscall_filter", None)
 
     @property
     def dns_server(self) -> str:
         """Get a DNS server used for analysis. `use-gateway-address` is special"""
-        return self.get("drakrun", "dns_server", "8.8.8.8")
+        return self.get("dns_server", "8.8.8.8")
 
     @property
     def raw_memory_dump(self) -> bool:
-        return self.getboolean("drakrun", "raw_memory_dump", False)
+        return self.getboolean("raw_memory_dump", False)
 
     def plugins(self) -> Dict[str, List[str]]:
         plugins = {}
