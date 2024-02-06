@@ -127,13 +127,13 @@ def with_logs(object_name):
     return decorator
 
 
-class DrakrunConfig(Config):
+class DrakrunConfig:
     """A typed wrapper for a Drakrun config. In the future, this will be handled
     by Karton's typedconfig more directly
     """
 
     def __init__(self, config: Config) -> None:
-        super().__init__(config)
+        self.config = config
 
     def get(self, option: str, fallback: Any) -> Any:
         return self.config.config.get("drakrun", option, fallback=fallback)
@@ -179,8 +179,8 @@ class DrakrunConfig(Config):
         return self.getboolean("use_root_uid", fallback=False)
 
     @property
-    def anti_hammering_threshold(self) -> Optional[int]:
-        return self.getint("anti_hammering_threshold", fallback=None)
+    def anti_hammering_threshold(self) -> int:
+        return self.getint("anti_hammering_threshold", fallback=0)
 
     @property
     def syscall_filter(self) -> Optional[str]:
@@ -211,8 +211,8 @@ class DrakrunKarton(Karton):
     ]
 
     def __init__(self, config: Config, instance_id: int) -> None:
+        super().__init__(config)
         self.drakconfig = DrakrunConfig(config)
-        super().__init__(self.drakconfig)
 
         # Now that karton is set up we can plug in our logger
         moduleLogger = logging.getLogger()
