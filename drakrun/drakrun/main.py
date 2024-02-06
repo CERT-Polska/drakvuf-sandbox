@@ -232,7 +232,7 @@ class DrakrunKarton(Karton):
 
         setup_vm_network(
             self.instance_id,
-            self.net_enable,
+            self.drakconfig.net_enable,
             self.drakconfig.out_interface,
             self.drakconfig.dns_server,
         )
