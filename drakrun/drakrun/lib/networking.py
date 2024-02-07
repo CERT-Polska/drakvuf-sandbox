@@ -4,7 +4,6 @@ import signal
 import subprocess
 from typing import Optional
 
-
 log = logging.getLogger("drakrun")
 
 

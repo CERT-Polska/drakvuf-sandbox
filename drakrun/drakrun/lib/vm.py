@@ -10,13 +10,13 @@ from drakrun.lib.storage import StorageBackendBase, get_storage_backend
 from drakrun.lib.util import safe_delete
 
 from .bindings.xen import (
-    xen_is_vm_running,
-    xen_save_vm,
-    xen_destroy_vm,
-    xen_unpause_vm,
-    xen_restore_vm,
     xen_create_vm,
+    xen_destroy_vm,
     xen_get_domid,
+    xen_is_vm_running,
+    xen_restore_vm,
+    xen_save_vm,
+    xen_unpause_vm,
 )
 
 log = logging.getLogger(__name__)
