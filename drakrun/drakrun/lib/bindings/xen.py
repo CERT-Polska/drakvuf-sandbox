@@ -6,9 +6,7 @@ log = logging.getLogger(__name__)
 
 
 def xen_is_vm_running(vm_name: str) -> bool:
-    result = subprocess.run(
-        ["xl", "list", vm_name], capture_output=True
-    )
+    result = subprocess.run(["xl", "list", vm_name], capture_output=True)
     if result.returncode == 0:
         return True
     elif b"is an invalid domain identifier" in result.stderr:
@@ -23,13 +21,12 @@ def xen_create_vm(
     pause: bool = False,
     timeout: Optional[float] = None,
 ) -> None:
-    args = [
-        "xl", "create",
-        *(["-p"] if pause else []),
-        config_path
-    ]
     try:
-        subprocess.run(args, check=True, timeout=timeout)
+        subprocess.run(
+            ["xl", "create", *(["-p"] if pause else []), config_path],
+            check=True,
+            timeout=timeout,
+        )
     except subprocess.CalledProcessError:
         raise RuntimeError(f"Failed to launch VM {vm_name}")
     except subprocess.TimeoutExpired:
@@ -51,14 +48,11 @@ def xen_restore_vm(
     snapshot_path: str,
     pause: bool = False,
 ) -> None:
-    args = [
-        "xl", "restore",
-        *(["-p"] if pause else []),
-        config_path,
-        snapshot_path
-    ]
     try:
-        subprocess.run(args, check=True)
+        subprocess.run(
+            ["xl", "restore", *(["-p"] if pause else []), config_path, snapshot_path],
+            check=True,
+        )
     except subprocess.CalledProcessError:
         raise RuntimeError(f"Failed to restore VM {vm_name}")
 
@@ -68,21 +62,16 @@ def xen_save_vm(
     snapshot_path: str,
     pause: bool = False,
 ) -> None:
-    args = [
-        "xl", "save",
-        *(["-p"] if pause else []),
-        vm_name,
-        snapshot_path
-    ]
     try:
-        subprocess.run(args, check=True)
+        subprocess.run(
+            ["xl", "save", *(["-p"] if pause else []), vm_name, snapshot_path],
+            check=True,
+        )
     except subprocess.CalledProcessError:
         raise RuntimeError(f"Failed to save VM {vm_name}")
 
 
-def xen_destroy_vm(
-    vm_name: str
-) -> None:
+def xen_destroy_vm(vm_name: str) -> None:
     try:
         subprocess.run(["xl", "destroy", vm_name], check=True)
     except subprocess.CalledProcessError:
