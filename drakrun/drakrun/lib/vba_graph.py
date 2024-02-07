@@ -34,10 +34,9 @@ class Graph:
         self.edges.add((src, dst))
 
 
-def vba2graph_from_vba_object(filepath):
+def vba2graph_from_vba_object(vba_parser):
     log.info("Extracting macros from file")
     full_vba_code = ""
-    vba_parser = VBA_Parser(filepath)
     for (
         subfilename,
         stream_path,
@@ -333,9 +332,9 @@ def find_outer_nodes(dg):
     return outer_nodes
 
 
-def get_outer_nodes_from_vba_file(filename):
+def get_outer_nodes_from_vba_file(vba_parser):
     try:
-        input_vba_content = vba2graph_from_vba_object(filename)
+        input_vba_content = vba2graph_from_vba_object(vba_parser)
         dg = vba2graph_gen(input_vba_content)
         return find_outer_nodes(dg)
     except Exception:

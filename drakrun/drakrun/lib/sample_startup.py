@@ -9,28 +9,27 @@ from drakrun.lib.vba_graph import get_outer_nodes_from_vba_file
 log = logging.getLogger(__name__)
 
 
-def get_sample_startup_command(extension, sample, file_path):
-    start_command = None
-
+def get_sample_startup_command(extension: str, content: bytes) -> str:
+    """Gets a startup command suitable for running the files with the provided
+    extension. Sometimes content is also parsed to determine the command.
+    Extension should be provided without dot, so `dll` instead of `.dll`.
+    """
     if extension == "dll":
-        start_command = get_dll_startup_command(sample.content)
-    elif extension in ["exe", "bat"]:
-        start_command = "%f"
-    elif extension == "ps1":
-        start_command = "powershell.exe -executionpolicy bypass -File %f"
-    elif is_office_file(extension):
-        start_command = get_office_file_startup_command(extension, file_path)
-    elif extension in ["js", "jse", "vbs", "vbe"]:
-        start_command = "wscript.exe %f"
-    elif extension in ["hta", "html", "htm"]:
-        start_command = "mshta.exe %f"
-    else:
-        log.warning(f"Unknown file extension {extension}.")
-        return None
-    return start_command
+        return get_dll_startup_command(content)
+    if extension in ["exe", "bat"]:
+        return "%f"
+    if extension == "ps1":
+        return "powershell.exe -executionpolicy bypass -File %f"
+    if is_office_file(extension):
+        return get_office_file_startup_command(extension, content)
+    if extension in ["js", "jse", "vbs", "vbe"]:
+        return "wscript.exe %f"
+    if extension in ["hta", "html", "htm"]:
+        return "mshta.exe %f"
+    return "cmd.exe /C start %f"
 
 
-def get_office_file_startup_command(extension, file_path):
+def get_office_file_startup_command(extension: str, content: bytes) -> str:
     start_command = ["cmd.exe", "/C", "start"]
     if is_office_word_file(extension):
         start_command.append("winword.exe")
@@ -39,14 +38,13 @@ def get_office_file_startup_command(extension, file_path):
     elif is_office_powerpoint_file(extension):
         start_command.append("powerpnt.exe")
     else:
-        log.warning(f"Unknown office file extension {extension}.")
-        return None
+        raise RuntimeError(f"Unknown office file extension {extension}.")
     start_command.extend(["/t", "%f"])
 
     if file_type_allows_macros(extension):
-        vbaparser = VBA_Parser(file_path)
+        vbaparser = VBA_Parser(f"malware.{extension}", data=content)
         if vbaparser.detect_vba_macros():
-            outer_macros = get_outer_nodes_from_vba_file(file_path)
+            outer_macros = get_outer_nodes_from_vba_file(vbaparser)
             if not outer_macros:
                 outer_macros = []
             for outer_macro in outer_macros:
@@ -55,7 +53,7 @@ def get_office_file_startup_command(extension, file_path):
     return subprocess.list2cmdline(start_command)
 
 
-def get_dll_startup_command(pe_data):
+def get_dll_startup_command(pe_data: bytes) -> str:
     d = [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]]
     pe = pefile.PE(data=pe_data, fast_load=True)
     pe.parse_data_directories(directories=d)
@@ -85,23 +83,23 @@ def get_dll_startup_command(pe_data):
     return "regsvr32 /s %f"
 
 
-def file_type_allows_macros(extension):
+def file_type_allows_macros(extension: str) -> bool:
     return extension in ["docm", "dotm", "xls", "xlsm", "xltm", "pptx"]
 
 
-def is_office_word_file(extension):
+def is_office_word_file(extension: str) -> bool:
     return extension in ["doc", "docm", "docx", "dotm", "rtf"]
 
 
-def is_office_excel_file(extension):
+def is_office_excel_file(extension: str) -> bool:
     return extension in ["xls", "xlsx", "xlsm", "xltx", "xltm"]
 
 
-def is_office_powerpoint_file(extension):
+def is_office_powerpoint_file(extension: str) -> bool:
     return extension in ["ppt", "pptx"]
 
 
-def is_office_file(extension):
+def is_office_file(extension: str) -> bool:
     return (
         is_office_word_file(extension)
         or is_office_excel_file(extension)
