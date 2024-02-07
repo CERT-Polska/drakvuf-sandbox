@@ -10,6 +10,10 @@ log = logging.getLogger(__name__)
 
 
 def get_sample_startup_command(extension: str, content: bytes) -> str:
+    """Gets a startup command suitable for running the files with the provided
+    extension. Sometimes content is also parsed to determine the command.
+    Extension should be provided without dot, so `dll` instead of `.dll`.
+    """
     if extension == "dll":
         return get_dll_startup_command(content)
     if extension in ["exe", "bat"]:
