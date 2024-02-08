@@ -40,7 +40,11 @@ Nested virtualization:
 
 Feel free to contact us if you have any questions or comments.
 
-**General contact email: drakvuf@cert.pl** (fastest response)
+**General contact email: info@cert.pl** (fastest response)
+
+You can also chat with us about this project on Discord
+
+[![](https://dcbadge.vercel.app/api/server/Q7eTsHnpn4)](https://discord.gg/Q7eTsHnpn4).
 
 This project is authored by:
 
