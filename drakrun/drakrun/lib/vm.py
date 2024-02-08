@@ -4,6 +4,7 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 from drakrun.lib.config import ETC_DIR, LIB_DIR, VM_CONFIG_DIR, VOLUME_DIR, InstallInfo
 from drakrun.lib.storage import StorageBackendBase, get_storage_backend

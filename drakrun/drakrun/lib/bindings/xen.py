@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from typing import Optional
+from typing import Dict, Optional
 
 log = logging.getLogger(__name__)
 
