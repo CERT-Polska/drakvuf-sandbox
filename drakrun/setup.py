@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import find_packages, setup
 
 version = {}
 with open("drakrun/version.py") as f:
@@ -14,7 +11,7 @@ setup(
     version=version["__version__"],
     description="DRAKRUN",
     package_dir={"drakrun": "drakrun"},
-    packages=["drakrun", "drakrun.lib", "drakrun.test"],
+    packages=find_packages(),
     include_package_data=True,
     install_requires=open("requirements.txt").read().splitlines(),
     entry_points={

@@ -4,8 +4,6 @@ import signal
 import subprocess
 from typing import Optional
 
-from drakrun.lib.util import get_domid_from_instance_id
-
 log = logging.getLogger("drakrun")
 
 
@@ -40,9 +38,7 @@ def del_iptable_rule(rule) -> None:
             all_cleared = True
 
 
-def start_tcpdump_collector(instance_id: int, outdir: str) -> subprocess.Popen:
-    domid = get_domid_from_instance_id(instance_id)
-
+def start_tcpdump_collector(domid: int, outdir: str) -> subprocess.Popen:
     try:
         subprocess.check_output("tcpdump --version", shell=True)
     except subprocess.CalledProcessError:

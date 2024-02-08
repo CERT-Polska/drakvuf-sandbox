@@ -4,10 +4,21 @@ import re
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 from drakrun.lib.config import ETC_DIR, LIB_DIR, VM_CONFIG_DIR, VOLUME_DIR, InstallInfo
 from drakrun.lib.storage import StorageBackendBase, get_storage_backend
-from drakrun.lib.util import safe_delete, try_run
+from drakrun.lib.util import safe_delete
+
+from .bindings.xen import (
+    xen_create_vm,
+    xen_destroy_vm,
+    xen_get_domid,
+    xen_is_vm_running,
+    xen_restore_vm,
+    xen_save_vm,
+    xen_unpause_vm,
+)
 
 log = logging.getLogger(__name__)
 
@@ -83,98 +94,40 @@ class VirtualMachine:
 
     @property
     def is_running(self) -> bool:
-        res = subprocess.run(
-            ["xl", "list", self.vm_name],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        return res.returncode == 0
+        return xen_is_vm_running(self.vm_name)
 
-    def create(self, pause=False, **kwargs):
-        args = ["xl", "create"]
-        if pause:
-            args += ["-p"]
-        args += [self._cfg_path]
+    def get_domid(self) -> int:
+        return xen_get_domid(self.vm_name)
+
+    def create(self, pause: bool = False, timeout: Optional[float] = None) -> None:
         log.info(f"Creating VM {self.vm_name}")
-        try_run(args, f"Failed to launch VM {self.vm_name}", **kwargs)
+        xen_create_vm(self.vm_name, self._cfg_path, pause=pause, timeout=timeout)
 
-    def pause(self, **kwargs):
-        log.info(f"Pausing VM {self.vm_name}")
-        try_run(
-            ["xl", "pause", self.vm_name],
-            f"Failed to pause VM {self.vm_name}",
-            **kwargs,
-        )
-
-    def unpause(self, **kwargs):
+    def unpause(self, timeout: Optional[float] = None) -> None:
         log.info(f"Unpausing VM {self.vm_name}")
-        try_run(
-            ["xl", "unpause", self.vm_name],
-            f"Failed to unpause VM {self.vm_name}",
-            **kwargs,
-        )
+        xen_unpause_vm(self.vm_name, timeout=timeout)
 
-    def save(self, filename, pause=False, cont=False, **kwargs):
+    def save(self, snapshot_path: str, pause: bool = False) -> None:
         log.info(f"Saving VM {self.vm_name}")
-        args = ["xl", "save"]
+        xen_save_vm(self.vm_name, snapshot_path, pause=pause)
 
-        # no such args will shutdown the VM after saving
-        if pause is True:
-            args += ["-p"]
-        elif cont is True:
-            args += ["-c"]
-
-        if kwargs.get("stderr") is None:
-            kwargs["stderr"] = subprocess.STDOUT
-
-        # we are explicitely passing stdout=None so that things can be print to terminal
-        kwargs["stdout"] = kwargs.get("stdout")
-
-        args += [self.vm_name, filename]
-
-        try_run(args, f"Failed to save VM {self.vm_name}", **kwargs)
-
-    def restore(self, snapshot_path=None, pause=False, **kwargs) -> None:
-        """Restore virtual machine from snapshot.
-        :raises: subprocess.CalledProcessError
-        """
-        if self.is_running:
-            self.destroy()
-
-        args = ["xl", "restore"]
-
+    def restore(self, snapshot_path: str = None, pause: bool = False) -> None:
         if snapshot_path is None:
             snapshot_path = Path(VOLUME_DIR) / "snapshot.sav"
-
-        if pause is True:
-            args += ["-p"]
-
-        if kwargs.get("stderr") is None:
-            kwargs["stderr"] = subprocess.STDOUT
-
-        # we are explicitely passing stdout=None so that things can be print to terminal
-        kwargs["stdout"] = kwargs.get("stdout")
-
+        # Ensure VM is destroyed
+        self.destroy()
         # No need to rollback vm-0. Since the state of vm-0
         # is correct by definition.
         if self.vm_id != 0 and self.backend is not None and self.vm_id is not None:
             self.backend.rollback_vm_storage(self.vm_id)
 
-        args += [self._cfg_path, snapshot_path]
         log.info(f"Restoring VM {self.vm_name}")
-        try_run(args, msg=f"Failed to restore VM {self.vm_name}", **kwargs)
+        xen_restore_vm(self.vm_name, self._cfg_path, snapshot_path, pause=pause)
 
-    def destroy(self, **kwargs):
-        """Destroy a running virtual machine.
-        :raises: subprocess.CalledProcessError
-        """
+    def destroy(self) -> None:
         if self.is_running:
             log.info(f"Destroying {self.vm_name}")
-            try_run(
-                ["xl", "destroy", self.vm_name],
-                f"Failed to destroy VM {self.vm_name}",
-                **kwargs,
-            )
+            xen_destroy_vm(self.vm_name)
 
     def memory_dump(self, compressed_filepath):
         """Dump raw memory from running vm using vmi-dump-memory and compress it with gzip
