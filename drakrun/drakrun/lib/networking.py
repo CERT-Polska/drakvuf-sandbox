@@ -5,7 +5,7 @@ import signal
 import subprocess
 from typing import Optional
 
-log = logging.getLogger("drakrun")
+log = logging.getLogger(__name__)
 
 
 def find_default_interface() -> Optional[str]:
