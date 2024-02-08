@@ -83,7 +83,7 @@ def xen_get_domid(vm_name: str) -> int:
     return int(output.strip())
 
 
-def _parse_xen_commandline(xen_commandline):
+def parse_xen_commandline(xen_commandline):
     opts = xen_commandline.split(" ")
     elements = {}
     for opt in opts:
@@ -109,7 +109,4 @@ def get_xen_info():
         k, v = line.split(":", 1)
         k, v = k.strip(), v.strip()
         elements[k] = v
-
-    elements["xen_commandline"] = _parse_xen_commandline(elements["xen_commandline"])
-
     return elements

@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import magic
 from karton.core import Config, Karton, LocalResource, Resource, Task
 
-from drakrun.lib.bindings.xen import get_xen_info
+from drakrun.lib.bindings.xen import get_xen_info, parse_xen_commandline
 from drakrun.lib.config import (
     APISCOUT_PROFILE_DIR,
     ETC_DIR,
@@ -793,7 +793,7 @@ def validate_xen_commandline(ignore_failure: bool) -> None:
         "hpet": "legacy-replacement",
     }
     xen_info = get_xen_info()
-    xen_cmdline = xen_info["xen_commandline"]
+    xen_cmdline = parse_xen_commandline(xen_info["xen_commandline"])
 
     unrecommended = []
     for key, recommended_value in required_cmdline.items():
