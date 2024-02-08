@@ -98,19 +98,19 @@ class VirtualMachine:
     def get_domid(self) -> int:
         return xen_get_domid(self.vm_name)
 
-    def create(self, pause=False, timeout=None):
+    def create(self, pause: bool=False, timeout: Optional[float]=None) -> None:
         log.info(f"Creating VM {self.vm_name}")
         xen_create_vm(self.vm_name, self._cfg_path, pause=pause, timeout=timeout)
 
-    def unpause(self, timeout=None):
+    def unpause(self, timeout: Optional[float]=None) -> None:
         log.info(f"Unpausing VM {self.vm_name}")
         xen_unpause_vm(self.vm_name, timeout=timeout)
 
-    def save(self, snapshot_path, pause=False):
+    def save(self, snapshot_path: str, pause: bool=False) -> None:
         log.info(f"Saving VM {self.vm_name}")
         xen_save_vm(self.vm_name, snapshot_path, pause=pause)
 
-    def restore(self, snapshot_path=None, pause=False) -> None:
+    def restore(self, snapshot_path: str=None, pause: bool=False) -> None:
         if snapshot_path is None:
             snapshot_path = Path(VOLUME_DIR) / "snapshot.sav"
         # Ensure VM is destroyed
@@ -123,7 +123,7 @@ class VirtualMachine:
         log.info(f"Restoring VM {self.vm_name}")
         xen_restore_vm(self.vm_name, self._cfg_path, snapshot_path, pause=pause)
 
-    def destroy(self):
+    def destroy(self) -> None:
         if self.is_running:
             log.info(f"Destroying {self.vm_name}")
             xen_destroy_vm(self.vm_name)

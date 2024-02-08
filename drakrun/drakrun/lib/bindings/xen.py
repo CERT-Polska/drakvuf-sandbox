@@ -39,7 +39,7 @@ def xen_unpause_vm(vm_name: str, timeout: Optional[float] = None) -> None:
     except subprocess.CalledProcessError:
         raise RuntimeError(f"Failed to unpause VM {vm_name}")
     except subprocess.TimeoutExpired:
-        raise RuntimeError(f"Failed to launch VM {vm_name} within {timeout} seconds")
+        raise RuntimeError(f"Failed to unpause VM {vm_name} within {timeout} seconds")
 
 
 def xen_restore_vm(
@@ -83,7 +83,7 @@ def xen_get_domid(vm_name: str) -> int:
     return int(output.strip())
 
 
-def parse_xen_commandline(xen_commandline):
+def parse_xen_commandline(xen_commandline: str) -> Dict[str, str]:
     opts = xen_commandline.split(" ")
     elements = {}
     for opt in opts:
@@ -99,12 +99,11 @@ def parse_xen_commandline(xen_commandline):
     return elements
 
 
-def get_xen_info():
+def get_xen_info() -> Dict[str, str]:
     xl_info_out = subprocess.check_output(["xl", "info"], text=True)
     xl_info_lines = xl_info_out.strip().split("\n")
 
     elements = {}
-
     for line in xl_info_lines:
         k, v = line.split(":", 1)
         k, v = k.strip(), v.strip()
