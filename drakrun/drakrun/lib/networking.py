@@ -7,6 +7,25 @@ from typing import Optional
 log = logging.getLogger("drakrun")
 
 
+def find_default_interface() -> Optional[str]:
+    routes = (
+        subprocess.check_output(
+            "ip route show default", shell=True, stderr=subprocess.STDOUT
+        )
+        .decode("ascii")
+        .strip()
+        .split("\n")
+    )
+
+    for route in routes:
+        m = re.search(r"dev ([^ ]+)", route.strip())
+
+        if m:
+            return m.group(1)
+
+    return None
+
+
 def iptable_rule_exists(rule) -> bool:
     try:
         subprocess.check_output(
