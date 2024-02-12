@@ -13,7 +13,7 @@ import tempfile
 import time
 import traceback
 from pathlib import Path, PureWindowsPath
-from typing import Dict, Optional
+from typing import Dict
 
 import click
 from minio import Minio
@@ -46,6 +46,7 @@ from drakrun.lib.drakpdb import (
 from drakrun.lib.injector import Injector
 from drakrun.lib.networking import (
     delete_vm_network,
+    find_default_interface,
     setup_vm_network,
     start_dnsmasq,
     stop_dnsmasq,
@@ -78,25 +79,6 @@ config_path = os.path.join(ETC_DIR, "config.ini")
 conf = configparser.ConfigParser()
 if os.path.isfile(config_path):
     conf.read(config_path)
-
-
-def find_default_interface() -> Optional[str]:
-    routes = (
-        subprocess.check_output(
-            "ip route show default", shell=True, stderr=subprocess.STDOUT
-        )
-        .decode("ascii")
-        .strip()
-        .split("\n")
-    )
-
-    for route in routes:
-        m = re.search(r"dev ([^ ]+)", route.strip())
-
-        if m:
-            return m.group(1)
-
-    return None
 
 
 def ensure_dirs():
