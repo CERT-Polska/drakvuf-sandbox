@@ -1,6 +1,7 @@
 import logging
-import subprocess
+from typing import List
 
+import mslex
 import pefile
 from oletools.olevba import VBA_Parser
 
@@ -9,38 +10,65 @@ from drakrun.lib.vba_graph import get_outer_nodes_from_vba_file
 log = logging.getLogger(__name__)
 
 
-def get_sample_startup_command(extension: str, content: bytes) -> str:
+def get_sample_startup_command(
+    target_path: str, extension: str, entrypoints: List[str]
+) -> str:
     """Gets a startup command suitable for running the files with the provided
     extension. Sometimes content is also parsed to determine the command.
     Extension should be provided without dot, so `dll` instead of `.dll`.
     """
+    argv = get_startup_argv(target_path, extension, entrypoints)
+    return mslex.join(argv, for_cmd=False)
+
+
+def get_startup_argv(
+    target_path: str, extension: str, entrypoints: List[str]
+) -> List[str]:
     if extension == "dll":
-        return get_dll_startup_command(content)
-    if extension in ["exe", "bat"]:
-        return "%f"
-    if extension == "ps1":
-        return "powershell.exe -executionpolicy bypass -File %f"
-    if is_office_file(extension):
-        return get_office_file_startup_command(extension, content)
-    if extension in ["js", "jse", "vbs", "vbe"]:
-        return "wscript.exe %f"
-    if extension in ["hta", "html", "htm"]:
-        return "mshta.exe %f"
-    return "cmd.exe /C start %f"
-
-
-def get_office_file_startup_command(extension: str, content: bytes) -> str:
-    start_command = ["cmd.exe", "/C", "start"]
-    if is_office_word_file(extension):
-        start_command.append("winword.exe")
-    elif is_office_excel_file(extension):
-        start_command.append("excel.exe")
-    elif is_office_powerpoint_file(extension):
-        start_command.append("powerpnt.exe")
+        if entrypoints == ["DllRegisterServer"]:
+            return ["regsvr32", "/s", target_path]
+        elif not entrypoints or entrypoints == ["DllMain"]:
+            return ["rundll32", target_path]
+        else:
+            return ["rundll32", target_path + "," + entrypoints[0]]
+    elif extension in ["exe", "bat"]:
+        return [target_path]
+    elif extension == "ps1":
+        return ["powershell.exe", "-executionpolicy", "bypass", "-File", target_path]
+    elif is_office_file(extension):
+        argv = []
+        if is_office_word_file(extension):
+            argv.append("winword.exe")
+        elif is_office_excel_file(extension):
+            argv.append("excel.exe")
+        elif is_office_powerpoint_file(extension):
+            argv.append("powerpnt.exe")
+        else:
+            raise RuntimeError(f"Unknown office file extension {extension}.")
+        argv.extend(["/t", target_path])
+        if entrypoints:
+            for entrypoint in entrypoints:
+                argv.append(["/m" + entrypoint])
+        return ["cmd.exe", "/C", mslex.join(["start", *argv])]
+    elif extension in ["js", "jse", "vbs", "vbe"]:
+        return ["wscript.exe", target_path]
+    elif extension in ["hta", "html", "htm"]:
+        return ["mshta.exe", target_path]
     else:
-        raise RuntimeError(f"Unknown office file extension {extension}.")
-    start_command.extend(["/t", "%f"])
+        return ["cmd.exe", "/C", mslex.join(["start", target_path])]
 
+
+def get_sample_entrypoints(extension: str, content: bytes) -> List[str]:
+    if is_office_file(extension):
+        return get_office_file_entrypoints(extension, content)
+    elif extension == "dll":
+        return [get_dll_entrypoint(content)]
+    else:
+        return []
+
+
+def get_office_file_entrypoints(extension: str, content: bytes) -> List[str]:
+    entrypoints = []
     if file_type_allows_macros(extension):
         vbaparser = VBA_Parser(f"malware.{extension}", data=content)
         if vbaparser.detect_vba_macros():
@@ -48,14 +76,13 @@ def get_office_file_startup_command(extension: str, content: bytes) -> str:
             if not outer_macros:
                 outer_macros = []
             for outer_macro in outer_macros:
-                start_command.append(f"/m{outer_macro}")
+                entrypoints.append(outer_macro)
+    return entrypoints
 
-    return subprocess.list2cmdline(start_command)
 
-
-def get_dll_startup_command(pe_data: bytes) -> str:
+def get_dll_entrypoint(content: bytes) -> str:
     d = [pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]]
-    pe = pefile.PE(data=pe_data, fast_load=True)
+    pe = pefile.PE(data=content, fast_load=True)
     pe.parse_data_directories(directories=d)
 
     try:
@@ -64,23 +91,25 @@ def get_dll_startup_command(pe_data: bytes) -> str:
             for e in pe.DIRECTORY_ENTRY_EXPORT.symbols
         ]
     except AttributeError:
-        return "regsvr32 /s %f"
+        return "DllMain"
 
     for export in exports:
         if export[1] == "DllRegisterServer":
-            return "regsvr32 /s %f"
+            return "DllRegisterServer"
 
         if "DllMain" in export[1]:
-            return "rundll32 %f,{}".format(export[1])
+            return export[1]
 
     if exports:
         export = exports[0]
         if exports[0][1]:
-            return "rundll32 %f,{}".format(export[1].split("@")[0])
+            entrypoint = export[1].split("@")[0]
+            return entrypoint
         elif exports[0][0]:
-            return "rundll32 %f,#{}".format(export[0])
+            entrypoint = "#" + str(export[0])
+            return entrypoint
 
-    return "regsvr32 /s %f"
+    return "DllMain"
 
 
 def file_type_allows_macros(extension: str) -> bool:
