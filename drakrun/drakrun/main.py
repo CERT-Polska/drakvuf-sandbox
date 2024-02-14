@@ -258,10 +258,14 @@ class DrakrunKarton(Karton):
         This depends on the content magic, "extension" header and "file_name" payload.
         """
         # headers["extensions"] may exist and be None
-        extension = (task.headers.get("extension") or "exe").lower()
-        if "(DLL)" in magic_output:
-            extension = "dll"
-
+        extension = task.headers.get("extension")
+        if not extension:
+            if "(DLL)" in magic_output:
+                extension = "dll"
+            else:
+                extension = "exe"
+        # I guess it's just to be sure
+        extension = extension.lower()
         file_name = task.payload.get("file_name", "malwar") + f".{extension}"
         if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
             raise RuntimeError("Filename contains invalid characters")
