@@ -293,7 +293,7 @@ def delete_vm_network(vm_id) -> None:
 
 def list_vm_bridges() -> List[str]:
     brctl_show_lines = subprocess.check_output(
-        f"brctl show",
+        "brctl show",
         shell=True,
         text=True,
     ).splitlines()

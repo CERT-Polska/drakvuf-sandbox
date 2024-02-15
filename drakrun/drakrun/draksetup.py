@@ -1343,6 +1343,7 @@ main.add_command(scale)
 main.add_command(snapshot)
 main.add_command(memdump)
 main.add_command(cleanup)
+main.add_command(cleanup_network)
 main.add_command(init)
 
 
