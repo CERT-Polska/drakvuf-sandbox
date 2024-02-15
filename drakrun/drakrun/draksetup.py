@@ -45,6 +45,8 @@ from drakrun.lib.drakpdb import (
 )
 from drakrun.lib.injector import Injector
 from drakrun.lib.networking import (
+    delete_all_vm_networks,
+    delete_legacy_iptables,
     delete_vm_network,
     find_default_interface,
     setup_vm_network,
@@ -175,31 +177,30 @@ def cleanup():
     backend = get_storage_backend(install_info)
     vm_ids = get_all_vm_conf()
 
-    net_enable = int(conf["drakrun"].get("net_enable", "0"))
-    out_interface = conf["drakrun"].get("out_interface", "")
-    dns_server = conf["drakrun"].get("dns_server", "")
-
     for vm_id in vm_ids:
         vm = VirtualMachine(backend, vm_id)
         vm.destroy()
 
-        delete_vm_network(
-            vm_id=vm_id,
-            net_enable=net_enable,
-            out_interface=out_interface,
-            dns_server=dns_server,
-        )
-        if net_enable:
-            stop_dnsmasq(vm_id=vm_id)
-
+        delete_vm_network(vm_id=vm_id)
+        stop_dnsmasq(vm_id=vm_id)
         backend.delete_vm_volume(vm_id)
-
         delete_vm_conf(vm_id)
+
+    delete_legacy_iptables()
+    delete_all_vm_networks()
 
     safe_delete(os.path.join(VOLUME_DIR, "snapshot.sav"))
     cleanup_postinstall_files()
 
     InstallInfo.delete()
+
+
+@click.command(help="Cleanup changes in iptables and bridges")
+def cleanup_network():
+    if not check_root():
+        return
+    delete_legacy_iptables()
+    delete_all_vm_networks()
 
 
 def sanity_check():
@@ -831,9 +832,7 @@ def create_missing_profiles():
         json.dump(static_apiscout_profile, f)
 
     vm.destroy()
-    delete_vm_network(
-        vm_id=1, net_enable=False, out_interface=out_interface, dns_server=dns_server
-    )
+    delete_vm_network(vm_id=1)
 
 
 @click.command(help="Perform tasks after drakrun upgrade")
