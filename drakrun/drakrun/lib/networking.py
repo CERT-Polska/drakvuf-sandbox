@@ -118,7 +118,7 @@ def delete_iptables_chains():
 
 def start_tcpdump_collector(domid: int, outdir: str) -> subprocess.Popen:
     try:
-        subprocess.check_output("tcpdump --version", shell=True)
+        subprocess.run("tcpdump --version", shell=True, check=True)
     except subprocess.CalledProcessError:
         raise RuntimeError("Failed to start tcpdump")
 
@@ -131,7 +131,7 @@ def start_dnsmasq(
     vm_id: int, dns_server: str, background=False
 ) -> Optional[subprocess.Popen]:
     try:
-        subprocess.check_output("dnsmasq --version", shell=True)
+        subprocess.run("dnsmasq --version", shell=True, check=True)
     except subprocess.CalledProcessError:
         raise RuntimeError("Failed to start dnsmasq")
 
@@ -200,13 +200,14 @@ def setup_vm_network(
     setup_iptables_chains()
     bridge_name = f"drak{vm_id}"
     try:
-        subprocess.check_output(f"brctl addbr {bridge_name}", shell=True)
+        subprocess.run(
+            f"brctl addbr {bridge_name}", shell=True, capture_output=True, check=True
+        )
         log.info(f"Created bridge {bridge_name}")
     except subprocess.CalledProcessError as e:
         if b"already exists" in e.stderr:
             log.info(f"Bridge {bridge_name} already exists.")
         else:
-            log.debug(e.output)
             raise Exception(f"Failed to create bridge {bridge_name}.")
     else:
         subprocess.run(
@@ -244,13 +245,17 @@ def setup_vm_network(
 
 def delete_vm_bridge(bridge_name: str) -> None:
     try:
-        subprocess.check_output(f"ip link set dev {bridge_name} down", shell=True)
+        subprocess.run(
+            f"ip link set dev {bridge_name} down",
+            shell=True,
+            capture_output=True,
+            check=True,
+        )
         log.info(f"Bridge {bridge_name} is down")
     except subprocess.CalledProcessError as e:
         if b"Cannot find device" in e.stderr:
             log.info(f"Already deleted {bridge_name } bridge")
         else:
-            log.debug(e.output)
             raise Exception(f"Couldn't deactivate {bridge_name } bridge")
     else:
         subprocess.run(f"brctl delbr {bridge_name}", shell=True)
