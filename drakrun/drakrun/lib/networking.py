@@ -203,7 +203,7 @@ def setup_vm_network(
         subprocess.check_output(f"brctl addbr {bridge_name}", shell=True)
         log.info(f"Created bridge {bridge_name}")
     except subprocess.CalledProcessError as e:
-        if b"already exists" in e.output:
+        if b"already exists" in e.stderr:
             log.info(f"Bridge {bridge_name} already exists.")
         else:
             log.debug(e.output)
@@ -247,7 +247,7 @@ def delete_vm_bridge(bridge_name: str) -> None:
         subprocess.check_output(f"ip link set dev {bridge_name} down", shell=True)
         log.info(f"Bridge {bridge_name} is down")
     except subprocess.CalledProcessError as e:
-        if b"Cannot find device" in e.output:
+        if b"Cannot find device" in e.stderr:
             log.info(f"Already deleted {bridge_name } bridge")
         else:
             log.debug(e.output)
