@@ -25,10 +25,15 @@ def get_startup_argv(
     target_path: str, extension: str, entrypoints: List[str]
 ) -> List[str]:
     if extension == "dll":
+        # If entrypoint is DllRegisterServer: let's use regsvr32
         if entrypoints == ["DllRegisterServer"]:
             return ["regsvr32", "/s", target_path]
+        # If there is no entrypoint, or it's explicitly DllMain,
+        # we're going to use rundll32 without extra entrypoints
         elif not entrypoints or entrypoints == ["DllMain"]:
             return ["rundll32", target_path]
+        # If entrypoint is defined and doesn't look standard,
+        # let's try the custom entrypoint
         else:
             return ["rundll32", target_path + "," + entrypoints[0]]
     elif extension in ["exe", "bat"]:
