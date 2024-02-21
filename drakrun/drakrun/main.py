@@ -264,7 +264,7 @@ class DrakrunKarton(Karton):
                 extension = "dll"
             else:
                 extension = "exe"
-        # I guess it's just to be sure
+        # Make sure the extension is lowercase
         extension = extension.lower()
         file_name = task.payload.get("file_name", "malwar") + f".{extension}"
         if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
@@ -597,7 +597,7 @@ class DrakrunKarton(Karton):
         sample_entrypoints: List[str],
         hooks_path: str,
         outdir: str,
-        user_start_command: str,
+        user_start_command: Optional[str],
         timeout: int,
     ) -> Dict[str, Any]:
         analysis_info = dict()
