@@ -82,11 +82,9 @@ def setup_iptables_chains() -> None:
     ]
     if all(exists):
         log.debug("iptables chains already exist, no setup needed")
+        return
     if any(exists):
-        raise RuntimeError(
-            f"Some iptables chains are missing, cleanup might be needed. "
-            f"Existing rules: {exists}"
-        )
+        raise RuntimeError("Some iptables chains are missing, cleanup might be needed.")
     # If above checks pass, we're free to setup everything
     log.debug("Setting up iptables chains")
     try:
