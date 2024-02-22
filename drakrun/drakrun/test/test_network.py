@@ -40,7 +40,7 @@ def iptables_test():
     if not tool_exists("iptables"):
         pytest.skip("iptables does not exist")
 
-    rule = "INPUT -i draktest0 -d 239.255.255.0/24 -j DROP"
+    rule = "DRAKRUN_INP -i draktest0 -d 239.255.255.0/24 -j DROP"
 
     assert not iptable_rule_exists(rule)
 
@@ -71,7 +71,7 @@ def network_setup_test():
     setup_vm_network(10, True, find_default_interface(), "8.8.8.8")
     assert (
         iptable_rule_exists(
-            "INPUT -i drak10 -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
+            "DRAKRUN_INP -i drak10 -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
         )
         is True
     )
@@ -130,13 +130,13 @@ def tcpdump_collector_test():
 
 @depends_on(network_setup_test)
 def network_delete_test():
-    delete_vm_network(10, True, find_default_interface(), "8.8.8.8")
+    delete_vm_network(10)
     assert not iptable_rule_exists(
-        "INPUT -i drak10 -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
+        "DRAKRUN_INP -i drak10 -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
     )
 
     # deleting non existant network should not raise errors but log outputs
-    delete_vm_network(10, True, find_default_interface(), "8.8.8.8")
+    delete_vm_network(10)
 
 
 @test_steps(

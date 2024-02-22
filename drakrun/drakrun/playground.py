@@ -135,7 +135,7 @@ class DrakmonShell:
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.vm.destroy()
-        delete_vm_network(self.vm.vm_id, True, find_default_interface(), self._dns)
+        delete_vm_network(self.vm.vm_id)
 
 
 def main():
