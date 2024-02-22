@@ -66,7 +66,7 @@ def list_iptables_rules(table=None) -> List[str]:
     ).splitlines()
 
 
-def setup_iptables_chains():
+def setup_iptables_chains() -> None:
     rules = [
         "-N DRAKRUN_INP",
         "-A INPUT -j DRAKRUN_INP",
@@ -82,7 +82,6 @@ def setup_iptables_chains():
     ]
     if all(exists):
         log.debug("iptables chains already exist, no setup needed")
-        return True
     if any(exists):
         raise RuntimeError(
             "Some iptables chains are missing, migration might be needed"
@@ -97,13 +96,13 @@ def setup_iptables_chains():
         delete_iptables_chains()
 
 
-def flush_iptables_chains():
+def flush_iptables_chains() -> None:
     rules = ["-F DRAKRUN_INP", "-F DRAKRUN_FWD", "-F DRAKRUN_PRT -t nat"]
     for rule in rules:
         subprocess.run(f"iptables {rule}", shell=True)
 
 
-def delete_iptables_chains():
+def delete_iptables_chains() -> None:
     rules = [
         "-D INPUT -j DRAKRUN_INP",
         "-D FORWARD -j DRAKRUN_FWD",
