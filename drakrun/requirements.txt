@@ -18,3 +18,4 @@ malduck==4.1.0
 mwdblib==3.4.1
 # Something went wrong in 4.3.0 package
 yara-python<4.3.0
+mslex==1.1.0

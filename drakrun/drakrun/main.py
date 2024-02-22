@@ -41,7 +41,10 @@ from drakrun.lib.networking import (
     start_dnsmasq,
     start_tcpdump_collector,
 )
-from drakrun.lib.sample_startup import get_sample_startup_command
+from drakrun.lib.sample_startup import (
+    get_sample_entrypoints,
+    get_sample_startup_command,
+)
 from drakrun.lib.storage import get_storage_backend
 from drakrun.lib.util import RuntimeInfo, file_sha256, graceful_exit
 from drakrun.lib.vm import VirtualMachine, generate_vm_conf
@@ -255,10 +258,14 @@ class DrakrunKarton(Karton):
         This depends on the content magic, "extension" header and "file_name" payload.
         """
         # headers["extensions"] may exist and be None
-        extension = (task.headers.get("extension") or "exe").lower()
-        if "(DLL)" in magic_output:
-            extension = "dll"
-
+        extension = task.headers.get("extension")
+        if not extension:
+            if "(DLL)" in magic_output:
+                extension = "dll"
+            else:
+                extension = "exe"
+        # Make sure the extension is lowercase
+        extension = extension.lower()
         file_name = task.payload.get("file_name", "malwar") + f".{extension}"
         if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
             raise RuntimeError("Filename contains invalid characters")
@@ -586,9 +593,11 @@ class DrakrunKarton(Karton):
     def analyze_sample(
         self,
         sample_path: str,
+        sample_extension: str,
+        sample_entrypoints: List[str],
         hooks_path: str,
         outdir: str,
-        start_command: str,
+        user_start_command: Optional[str],
         timeout: int,
     ) -> Dict[str, Any]:
         analysis_info = dict()
@@ -618,8 +627,12 @@ class DrakrunKarton(Karton):
                 self.log.error(f"Raw log line: {result.stdout}")
                 raise e
 
-            # don't include our internal maintanance commands
-            start_command = start_command.replace("%f", injected_fn)
+            if user_start_command:
+                start_command = user_start_command.replace("%f", injected_fn)
+            else:
+                start_command = get_sample_startup_command(
+                    injected_fn, sample_extension, sample_entrypoints
+                )
             analysis_info["start_command"] = start_command
             self.log.info("Using command: %s", start_command)
 
@@ -653,7 +666,7 @@ class DrakrunKarton(Karton):
 
             drakvuf_cmd = self.build_drakvuf_cmdline(
                 timeout=timeout,
-                cwd=subprocess.list2cmdline([ntpath.dirname(injected_fn)]),
+                cwd=ntpath.dirname(injected_fn),
                 full_cmd=start_command,
                 dump_dir=os.path.join(outdir, "dumps"),
                 ipt_dir=os.path.join(outdir, "ipt"),
@@ -709,11 +722,8 @@ class DrakrunKarton(Karton):
         file_name, extension = self.filename_for_task(task, magic_output)
         self.log.info("Using file name %s", file_name)
 
-        # Try to come up with a start command for this file
-        # or use the one provided by the sender
-        start_command = task.payload.get(
-            "start_command", get_sample_startup_command(extension, sample.content)
-        )
+        user_start_command = task.payload.get("start_command")
+        sample_entrypoints = get_sample_entrypoints(extension, sample.content)
 
         # workdir - configs, sample, etc.
         # outdir - analysis artifacts
@@ -750,7 +760,13 @@ class DrakrunKarton(Karton):
                     f"Trying to analyze sample (attempt {i + 1}/{max_attempts})"
                 )
                 info = self.analyze_sample(
-                    sample_path, hooks_path, outdir, start_command, timeout
+                    sample_path,
+                    extension,
+                    sample_entrypoints,
+                    hooks_path,
+                    outdir,
+                    user_start_command,
+                    timeout,
                 )
                 metadata.update(info)
                 break
