@@ -320,7 +320,8 @@ def delete_all_vm_networks() -> None:
 
 def delete_legacy_iptables() -> None:
     patterns = [
-        r"-A INPUT -i drak\d" r"-A FORWARD -i drak\d",
+        r"-A INPUT -i drak\d",
+        r"-A FORWARD -i drak\d",
         r"-A FORWARD -i \S+ -o drak\d",
     ]
     prt_pattern = r"-A POSTROUTING -s 10.13.\d+.0/24"
