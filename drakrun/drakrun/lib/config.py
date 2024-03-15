@@ -1,7 +1,7 @@
 import configparser
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
-from pydantic import BaseModel, ConfigDict, Field, BeforeValidator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, BeforeValidator, computed_field
 from typing_extensions import Annotated
 from .paths import CONFIG_PATH
 
@@ -34,23 +34,19 @@ class DrakrunConfigSection(BaseModel):
     syscall_filter: Optional[str] = Field(default=None)
     enable_ipt: bool = Field(default=False)
     analysis_timeout: int = Field(default=10*60)
-    analysis_low_timeout: int = Field(default=10*60)
     use_root_uid: bool = Field(default=False)
     anti_hammering_threshold: int = Field(default=0)
     attach_profiles: bool = Field(default=False)
     attach_apiscout_profile: bool = Field(default=False)
 
-    @model_validator(mode="before")
-    @classmethod
-    def default_low_timeout(cls, data: Dict[str, Any]) -> Dict[str, Any]:
-        # If analysis_low_timeout defined separately: leave it as is
-        if "analysis_low_timeout" in data and data["analysis_low_timeout"]:
-            return data
-        # If not defined but analysis_timeout defined: map timeout to low_timeout
-        if "analysis_timeout" in data:
-            return {"analysis_low_timeout": data["analysis_timeout"], **data}
-        # If also not defined: use defaults
-        return data
+    _analysis_low_timeout: Optional[int] = Field(validation_alias="analysis_low_timeout", default=None)
+
+    @computed_field
+    @property
+    def analysis_low_timeout(self) -> int:
+        if self._analysis_low_timeout is None:
+            return self.analysis_timeout
+        return self._analysis_low_timeout
 
 
 class DrakvufPluginsConfigSection(BaseModel):
@@ -60,7 +56,7 @@ class DrakvufPluginsConfigSection(BaseModel):
     # TODO: validate things like "codemon" must appear with "ipt"
     # TODO: let's disallow 'no plugins', it's useless and it's not easy to turn off all plugins
     # TODO: finally, let's make a method that allows to get a list to be used for given priority
-    all: CommaSeparatedStrList
+    all: CommaSeparatedStrList = Field(validation_alias="_all_")
     low: CommaSeparatedStrList
     normal: CommaSeparatedStrList
     high: CommaSeparatedStrList
