@@ -9,7 +9,7 @@ from textwrap import dedent
 from IPython import embed
 
 from drakrun.draksetup import insert_cd
-from drakrun.lib.config import ETC_DIR, PROFILE_DIR, RUNTIME_FILE, InstallInfo
+from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.injector import Injector
 from drakrun.lib.networking import (
     delete_vm_network,
@@ -17,6 +17,7 @@ from drakrun.lib.networking import (
     setup_vm_network,
     start_dnsmasq,
 )
+from drakrun.lib.paths import ETC_DIR, PROFILE_DIR, RUNTIME_FILE
 from drakrun.lib.storage import get_storage_backend
 from drakrun.lib.util import RuntimeInfo, graceful_exit
 from drakrun.lib.vm import FIRST_CDROM_DRIVE, VirtualMachine, generate_vm_conf

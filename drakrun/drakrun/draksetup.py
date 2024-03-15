@@ -24,7 +24,8 @@ from drakrun.lib.apiscout import (
     build_static_apiscout_profile,
     make_static_apiscout_profile_for_dll,
 )
-from drakrun.lib.config import (
+from drakrun.lib.install_info import InstallInfo
+from drakrun.lib.paths import (
     APISCOUT_PROFILE_DIR,
     ETC_DIR,
     LIB_DIR,
@@ -32,7 +33,6 @@ from drakrun.lib.config import (
     RUNTIME_FILE,
     VM_CONFIG_DIR,
     VOLUME_DIR,
-    InstallInfo,
 )
 from drakrun.lib.drakpdb import (
     DLL,

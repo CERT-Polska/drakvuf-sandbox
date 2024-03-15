@@ -26,13 +26,13 @@ import magic
 from karton.core import Config, Karton, LocalResource, Resource, Task
 
 from drakrun.lib.bindings.xen import get_xen_info, parse_xen_commandline
-from drakrun.lib.config import (
+from drakrun.lib.install_info import InstallInfo
+from drakrun.lib.paths import (
     APISCOUT_PROFILE_DIR,
     ETC_DIR,
     PROFILE_DIR,
     RUNTIME_FILE,
     VOLUME_DIR,
-    InstallInfo,
 )
 from drakrun.lib.drakpdb import dll_file_list
 from drakrun.lib.injector import Injector

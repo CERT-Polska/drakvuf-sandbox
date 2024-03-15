@@ -6,7 +6,8 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from drakrun.lib.config import ETC_DIR, LIB_DIR, VM_CONFIG_DIR, VOLUME_DIR, InstallInfo
+from drakrun.lib.config import InstallInfo
+from drakrun.lib.paths import ETC_DIR, LIB_DIR, VM_CONFIG_DIR, VOLUME_DIR
 from drakrun.lib.storage import StorageBackendBase, get_storage_backend
 from drakrun.lib.util import safe_delete
 
