@@ -57,20 +57,28 @@ class DrakrunConfigSection(BaseModel):
 
 
 class DrakvufPluginsConfigSection(BaseModel):
-    model_config = ConfigDict(extra='ignore')
-
-    # TODO: provide default list of plugins
-    # TODO: validate things like "codemon" must appear with "ipt"
-    # TODO: let's disallow 'no plugins', it's useless and it's not easy to turn off all plugins
-    # TODO: finally, let's make a method that allows to get a list to be used for given priority
     all: CommaSeparatedStrList = Field(validation_alias="_all_", default_factory=lambda: list(DEFAULT_PLUGINS))
     low: CommaSeparatedStrList
     normal: CommaSeparatedStrList
-    high: CommaSeparatedStrList
 
-    @field_validator("all", "low", "normal", "high", mode="after")
+    @field_validator("all", mode="after")
     def validate_plugin_list(self, plugin_list: List[str]) -> List[str]:
-        ...
+        if not plugin_list:
+            raise ValueError("_all_ plugin list must not be empty")
+        return plugin_list
+
+    def get_plugin_list(self, quality: str = "normal") -> List[str]:
+        if quality not in self.model_fields_set:
+            raise ValueError(f"'{quality}' is not a valid feed quality level")
+        priority_plugin_list = getattr(self, quality)
+        if priority_plugin_list:
+            plugin_list = list(priority_plugin_list)
+        else:
+            plugin_list = list(self.all)
+        if "ipt" in plugin_list and "codemon" not in plugin_list:
+            # Using ipt plugin implies using codemon
+            plugin_list.append("codemon")
+        return plugin_list
 
 
 class DrakrunConfig(BaseModel):
