@@ -1,13 +1,20 @@
 import configparser
 from typing import Optional, List
 
-from pydantic import BaseModel, ConfigDict, Field, BeforeValidator, computed_field
+from pydantic import BaseModel, ConfigDict, Field, BeforeValidator, computed_field, field_validator
 from typing_extensions import Annotated
 from .paths import CONFIG_PATH
 
 CommaSeparatedStrList = Annotated[
     List[str],
     BeforeValidator(lambda v: [el.strip() for el in v.split(",") if el.strip()])
+]
+
+DEFAULT_PLUGINS = [
+    "apimon", "bsodmon", "clipboardmon", "cpuidmon", "crashmon", "debugmon",
+    "delaymon", "exmon", "filedelete", "filetracer", "librarymon", "memdump",
+    "procdump", "procmon", "regmon", "rpcmon", "ssdtmon", "syscalls", "tlsmon",
+    "windowmon", "wmimon",
 ]
 
 
@@ -56,10 +63,14 @@ class DrakvufPluginsConfigSection(BaseModel):
     # TODO: validate things like "codemon" must appear with "ipt"
     # TODO: let's disallow 'no plugins', it's useless and it's not easy to turn off all plugins
     # TODO: finally, let's make a method that allows to get a list to be used for given priority
-    all: CommaSeparatedStrList = Field(validation_alias="_all_")
+    all: CommaSeparatedStrList = Field(validation_alias="_all_", default_factory=lambda: list(DEFAULT_PLUGINS))
     low: CommaSeparatedStrList
     normal: CommaSeparatedStrList
     high: CommaSeparatedStrList
+
+    @field_validator("all", "low", "normal", "high", mode="after")
+    def validate_plugin_list(self, plugin_list: List[str]) -> List[str]:
+        ...
 
 
 class DrakrunConfig(BaseModel):
