@@ -74,7 +74,8 @@ class DrakvufPluginsConfigSection(BaseModel):
     high: CommaSeparatedStrList
 
     @field_validator("all", mode="after")
-    def validate_plugin_list(self, plugin_list: List[str]) -> List[str]:
+    @classmethod
+    def validate_plugin_list(cls, plugin_list: List[str]) -> List[str]:
         if not plugin_list:
             raise ValueError("_all_ plugin list must not be empty")
         return plugin_list
