@@ -1,5 +1,8 @@
 import configparser
-from typing import List, Optional
+import os
+import re
+from collections import defaultdict
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 from typing_extensions import Annotated
@@ -103,13 +106,35 @@ class DrakrunConfig(BaseModel):
     drakvuf_plugins: DrakvufPluginsConfigSection
 
     @staticmethod
-    def load_from_file(filename: str) -> "DrakrunConfig":
+    def _file_to_dict(filename: str) -> Dict[str, Dict[str, str]]:
         config = configparser.ConfigParser()
         config.read(filename)
-        return DrakrunConfig(
-            **{section: {**config[section]} for section in config.sections()}
-        )
+        return {section: {**config[section]} for section in config.sections()}
+
+    @staticmethod
+    def _env_to_dict() -> Dict[str, Dict[str, str]]:
+        config_dict = defaultdict(dict)
+        for name, value in os.environ.items():
+            # Load env variables named DRAKRUN_[section]_[key]
+            # to match ConfigParser structure
+            result = re.fullmatch(r"DRAKRUN_([A-Z0-9-]+)_([A-Z0-9_]+)", name)
+
+            if not result:
+                continue
+
+            section, key = result.groups()
+            section = section.lower()
+            key = key.lower()
+
+            config_dict[section][key] = value
+        return dict(config_dict)
+
+    @staticmethod
+    def load(filename: str) -> "DrakrunConfig":
+        dict_from_file = DrakrunConfig._file_to_dict(filename)
+        dict_from_env = DrakrunConfig._env_to_dict()
+        return DrakrunConfig(**{**dict_from_file, **dict_from_env})
 
 
 def load_config() -> DrakrunConfig:
-    return DrakrunConfig.load_from_file(CONFIG_PATH)
+    return DrakrunConfig.load(CONFIG_PATH)

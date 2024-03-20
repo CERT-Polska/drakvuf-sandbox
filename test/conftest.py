@@ -121,22 +121,15 @@ def drakmon_setup():
             else:
                 pip_install(ssh, ["./" + d.name])
 
-        # Save default config
-        ssh.run("mkdir /etc/drakrun/")
-
-        ssh.run(f"""
-cat > /etc/drakrun/config.ini <<EOF
-[minio]
-address={MINIO_HOST}
-secure=0
-access_key={MINIO_ACCESS_KEY}
-secret_key={MINIO_SECRET_KEY}
-EOF""")
-
         # Import snapshot
         assert SNAPSHOT_VERSION is not None
-        ssh.run(f"draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full")
         ssh.run(f"draksetup init --envfile /etc/drakcore/minio.env")
+        ssh.run(f'DRAKRUN_MINIO_ADDRESS="{MINIO_HOST}" '
+                f'DRAKRUN_MINIO_SECURE=0 '
+                f'DRAKRUN_MINIO_ACCESS_KEY="{MINIO_ACCESS_KEY}" '
+                f'DRAKRUN_MINIO_SECRET_KEY="{MINIO_ACCESS_KEY}" '
+                f'draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full')
+
 
         # Shut up QEMU
         ssh.run("ln -s /dev/null /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO")

@@ -51,16 +51,6 @@ from drakrun.lib.util import RuntimeInfo, file_sha256, graceful_exit
 from drakrun.lib.vm import VirtualMachine, generate_vm_conf
 from drakrun.version import __version__ as DRAKRUN_VERSION
 
-# fmt: off
-# List of default plugins, and at the same time list of all supported plugins.
-SUPPORTED_PLUGINS = [
-    "apimon", "bsodmon", "clipboardmon", "cpuidmon", "crashmon", "debugmon",
-    "delaymon", "exmon", "filedelete", "filetracer", "librarymon", "memdump",
-    "procdump", "procmon", "regmon", "rpcmon", "ssdtmon", "syscalls", "tlsmon",
-    "windowmon", "wmimon",
-]
-# fmt: on
-
 MAX_TASK_TIMEOUT = 60 * 20  # Never run samples for longer than this
 
 log = logging.getLogger(__name__)
