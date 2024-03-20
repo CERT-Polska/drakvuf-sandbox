@@ -9,8 +9,8 @@ from textwrap import dedent
 from IPython import embed
 
 from drakrun.draksetup import insert_cd
-from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.injector import Injector
+from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.networking import (
     delete_vm_network,
     find_default_interface,

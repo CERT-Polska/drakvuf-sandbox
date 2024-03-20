@@ -23,17 +23,7 @@ from drakrun.lib.apiscout import (
     build_static_apiscout_profile,
     make_static_apiscout_profile_for_dll,
 )
-from drakrun.lib.config import load_config, DrakrunConfig
-from drakrun.lib.install_info import InstallInfo
-from drakrun.lib.paths import (
-    APISCOUT_PROFILE_DIR,
-    ETC_DIR,
-    LIB_DIR,
-    PROFILE_DIR,
-    RUNTIME_FILE,
-    VM_CONFIG_DIR,
-    VOLUME_DIR,
-)
+from drakrun.lib.config import DrakrunConfig, load_config
 from drakrun.lib.drakpdb import (
     DLL,
     dll_file_list,
@@ -44,6 +34,7 @@ from drakrun.lib.drakpdb import (
     unrequired_dll_file_list,
 )
 from drakrun.lib.injector import Injector
+from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.networking import (
     delete_all_vm_networks,
     delete_legacy_iptables,
@@ -52,6 +43,15 @@ from drakrun.lib.networking import (
     setup_vm_network,
     start_dnsmasq,
     stop_dnsmasq,
+)
+from drakrun.lib.paths import (
+    APISCOUT_PROFILE_DIR,
+    ETC_DIR,
+    LIB_DIR,
+    PROFILE_DIR,
+    RUNTIME_FILE,
+    VM_CONFIG_DIR,
+    VOLUME_DIR,
 )
 from drakrun.lib.storage import (
     REGISTERED_BACKEND_NAMES,

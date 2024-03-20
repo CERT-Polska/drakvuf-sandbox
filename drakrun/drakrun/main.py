@@ -27,20 +27,20 @@ from karton.core import Config, Karton, LocalResource, Resource, Task
 
 from drakrun.lib.bindings.xen import get_xen_info, parse_xen_commandline
 from drakrun.lib.config import load_config
+from drakrun.lib.drakpdb import dll_file_list
+from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
+from drakrun.lib.networking import (
+    setup_vm_network,
+    start_dnsmasq,
+    start_tcpdump_collector,
+)
 from drakrun.lib.paths import (
     APISCOUT_PROFILE_DIR,
     ETC_DIR,
     PROFILE_DIR,
     RUNTIME_FILE,
     VOLUME_DIR,
-)
-from drakrun.lib.drakpdb import dll_file_list
-from drakrun.lib.injector import Injector
-from drakrun.lib.networking import (
-    setup_vm_network,
-    start_dnsmasq,
-    start_tcpdump_collector,
 )
 from drakrun.lib.sample_startup import (
     get_sample_entrypoints,

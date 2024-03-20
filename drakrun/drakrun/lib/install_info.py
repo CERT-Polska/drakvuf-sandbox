@@ -4,8 +4,10 @@ from dataclasses import dataclass
 from typing import Optional
 
 from dataclasses_json import DataClassJsonMixin
+
 from .paths import ETC_DIR
 from .util import safe_delete
+
 
 @dataclass
 class InstallInfo(DataClassJsonMixin):
