@@ -165,11 +165,13 @@ class DrakrunKarton(Karton):
 
     def timeout_for_task(self, task: Task) -> int:
         """Return a timeout for task - a default for quality or specified by task."""
-        default_timeout = (
-            self.drakconfig.drakrun.default_low_timeout
-            if task.headers.get("quality", "high") == "low"
-            else self.drakconfig.drakrun.default_timeout
-        )
+        if (
+            task.headers.get("quality", "high") == "low"
+            and self.drakconfig.drakrun.analysis_low_timeout
+        ):
+            default_timeout = self.drakconfig.drakrun.analysis_low_timeout
+        else:
+            default_timeout = self.drakconfig.drakrun.analysis_timeout
         return task.payload.get("timeout", default_timeout)
 
     def filename_for_task(self, task: Task, magic_output: str) -> Tuple[str, str]:
@@ -195,14 +197,6 @@ class DrakrunKarton(Karton):
         return list(
             chain.from_iterable(["-a", plugin] for plugin in sorted(plugin_list))
         )
-
-    def get_plugin_list(self, quality: str, requested_plugins: List[str]) -> List[str]:
-        """
-        Determine final plugin list that will be used during analysis.
-        """
-        plugins_from_config = self.drakconfig.drakvuf_plugins.get_plugin_list(quality)
-        plugin_list = list(set(plugins_from_config) & set(requested_plugins))
-        return plugin_list
 
     @property
     def vm_name(self) -> str:
@@ -561,12 +555,16 @@ class DrakrunKarton(Karton):
                     self.log.warning(f"Giving up after {max_attempts} failures...")
                     raise RuntimeError("Failed to setup VM network after 3 attempts")
 
+            # You can request a subset of supported plugins in task payload
             task_quality = self.current_task.headers.get("quality", "high")
-            requested_plugins = self.current_task.payload.get(
-                "plugins", self.active_plugins["_all_"]
+            supported_plugins = self.drakconfig.drakvuf_plugins.get_plugin_list(
+                task_quality
             )
-            analysis_info["plugins"] = self.get_plugin_list(
-                task_quality, requested_plugins
+            requested_plugins = self.current_task.payload.get(
+                "plugins", self.drakconfig.drakvuf_plugins.get_plugin_list(task_quality)
+            )
+            analysis_info["plugins"] = list(
+                set(supported_plugins) & set(requested_plugins)
             )
 
             drakvuf_cmd = self.build_drakvuf_cmdline(

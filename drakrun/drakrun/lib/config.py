@@ -1,14 +1,7 @@
 import configparser
 from typing import List, Optional
 
-from pydantic import (
-    BaseModel,
-    BeforeValidator,
-    ConfigDict,
-    Field,
-    computed_field,
-    field_validator,
-)
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 from typing_extensions import Annotated
 
 from .paths import CONFIG_PATH
@@ -66,21 +59,11 @@ class DrakrunConfigSection(BaseModel):
     syscall_filter: Optional[str] = Field(default=None)
     enable_ipt: bool = Field(default=False)
     analysis_timeout: int = Field(default=10 * 60)
+    analysis_low_timeout: Optional[int] = Field(default=None)
     use_root_uid: bool = Field(default=False)
     anti_hammering_threshold: int = Field(default=0)
     attach_profiles: bool = Field(default=False)
     attach_apiscout_profile: bool = Field(default=False)
-
-    _analysis_low_timeout: Optional[int] = Field(
-        validation_alias="analysis_low_timeout", default=None
-    )
-
-    @computed_field
-    @property
-    def analysis_low_timeout(self) -> int:
-        if self._analysis_low_timeout is None:
-            return self.analysis_timeout
-        return self._analysis_low_timeout
 
 
 class DrakvufPluginsConfigSection(BaseModel):
@@ -88,7 +71,7 @@ class DrakvufPluginsConfigSection(BaseModel):
         validation_alias="_all_", default_factory=lambda: list(DEFAULT_PLUGINS)
     )
     low: CommaSeparatedStrList
-    normal: CommaSeparatedStrList
+    high: CommaSeparatedStrList
 
     @field_validator("all", mode="after")
     def validate_plugin_list(self, plugin_list: List[str]) -> List[str]:
@@ -96,7 +79,7 @@ class DrakvufPluginsConfigSection(BaseModel):
             raise ValueError("_all_ plugin list must not be empty")
         return plugin_list
 
-    def get_plugin_list(self, quality: str = "normal") -> List[str]:
+    def get_plugin_list(self, quality: str = "high") -> List[str]:
         if quality not in self.model_fields_set:
             raise ValueError(f"'{quality}' is not a valid feed quality level")
         priority_plugin_list = getattr(self, quality)
