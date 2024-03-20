@@ -39,7 +39,6 @@ from drakrun.lib.networking import (
     delete_all_vm_networks,
     delete_legacy_iptables,
     delete_vm_network,
-    find_default_interface,
     setup_vm_network,
     start_dnsmasq,
     stop_dnsmasq,
