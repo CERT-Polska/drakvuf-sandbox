@@ -84,7 +84,7 @@ class DrakvufPluginsConfigSection(BaseModel):
         return plugin_list
 
     def get_plugin_list(self, quality: str = "high") -> List[str]:
-        if quality not in self.model_fields_set:
+        if quality not in ["all", "low", "high"]:
             raise ValueError(f"'{quality}' is not a valid feed quality level")
         priority_plugin_list = getattr(self, quality)
         if priority_plugin_list:
