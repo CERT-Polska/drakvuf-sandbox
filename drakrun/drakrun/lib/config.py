@@ -46,7 +46,7 @@ class RedisConfigSection(BaseModel):
 
 class MinioConfigSection(BaseModel):
     address: str
-    bucket: str
+    bucket: Optional[str] = Field(default=None)
     secure: bool
     access_key: str
     secret_key: str
@@ -73,8 +73,8 @@ class DrakvufPluginsConfigSection(BaseModel):
     all: CommaSeparatedStrList = Field(
         validation_alias="_all_", default_factory=lambda: list(DEFAULT_PLUGINS)
     )
-    low: CommaSeparatedStrList
-    high: CommaSeparatedStrList
+    low: Optional[CommaSeparatedStrList] = Field(default=None)
+    high: Optional[CommaSeparatedStrList] = Field(default=None)
 
     @field_validator("all", mode="after")
     @classmethod
