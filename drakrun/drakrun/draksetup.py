@@ -1286,9 +1286,11 @@ def init(envfile: str):
     # Simple activities handled by deb packages before
     # In the future, consider splitting this to remove hard dependency on systemd etc
     drakrun_dir = Path(ETC_DIR)
+    scripts_dir = drakrun_dir / "scripts"
     data_dir = Path(__file__).parent / "data"
 
     drakrun_dir.mkdir(exist_ok=True)
+    scripts_dir.mkdir(exist_ok=True)
     config = (data_dir / "config.ini").read_text()
 
     # This feature is provided for compatibility with minio.env files, but we plan to
@@ -1307,7 +1309,7 @@ def init(envfile: str):
     Path("/etc/systemd/system/drakrun@.service").write_text(systemd_unit)
 
     config_template = (data_dir / "cfg.template").read_text()
-    (drakrun_dir / "scripts" / "cfg.template").write_text(config_template)
+    (scripts_dir / "cfg.template").write_text(config_template)
 
 
 @click.group()
