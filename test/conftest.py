@@ -127,7 +127,7 @@ def drakmon_setup():
         ssh.run(f'DRAKRUN_MINIO_ADDRESS="{MINIO_HOST}" '
                 f'DRAKRUN_MINIO_SECURE=0 '
                 f'DRAKRUN_MINIO_ACCESS_KEY="{MINIO_ACCESS_KEY}" '
-                f'DRAKRUN_MINIO_SECRET_KEY="{MINIO_ACCESS_KEY}" '
+                f'DRAKRUN_MINIO_SECRET_KEY="{MINIO_SECRET_KEY}" '
                 f'draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full')
 
 
