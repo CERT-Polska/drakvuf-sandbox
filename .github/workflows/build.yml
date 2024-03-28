@@ -69,8 +69,6 @@ jobs:
       matrix:
         include:
           - distro: debian
-            version: buster
-          - distro: debian
             version: bullseye
     runs-on: ubuntu-latest
     container: "${{ matrix.distro }}:${{matrix.version}}"
@@ -149,8 +147,6 @@ jobs:
       matrix:
         include:
           - distro: debian
-            version: buster
-          - distro: debian
             version: bullseye
     runs-on: ubuntu-latest
     container: "${{ matrix.distro }}:${{matrix.version}}"
@@ -181,7 +177,7 @@ jobs:
       - name: Download draksetup compiled tools from artifacts
         uses: actions/download-artifact@v3
         with:
-          name: draksetup-tools-debian-buster
+          name: draksetup-tools-debian-bullseye
           path: drakrun/drakrun/tools
       - name: Build drakrun
         run: |
@@ -199,13 +195,10 @@ jobs:
       matrix:
         include:
           - distro: debian
-            version: buster
-            version_number: 10
-          - distro: debian
             version: bullseye
             version_number: 11
     runs-on: self-hosted
-    container: python:3.8-buster
+    container: python:3.8-bullseye
     # Prevent concurrent jobs trying to reach the same VM
     concurrency: ci-${{ github.ref }}-${{ matrix.distro }}-${{ matrix.version_number }}
     steps:
