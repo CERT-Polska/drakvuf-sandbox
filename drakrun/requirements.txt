@@ -13,7 +13,7 @@ dataclasses-json==0.5.6
 click==7.1.2
 oletools==0.60
 regex==2020.7.14
-ipython==7.31.1
+ipython==8.10.0
 malduck==4.1.0
 mwdblib==3.4.1
 # Something went wrong in 4.3.0 package
