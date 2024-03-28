@@ -26,7 +26,7 @@ Basic installation
 
 This instruction assumes that you want to create a single-node installation with the default components, which is recommended for beginners.
 
-1. Download `latest release packages <https://github.com/CERT-Polska/drakvuf-sandbox/releases>`_.
+1. Download `latest release packages <https://github.com/CERT-Polska/drakvuf-sandbox/releases>`_ and `xen-hypervisopr packages <https://pkgs.org/download/xen-hypervisor>`_.
 2. Install DRAKVUF:
 
     .. code-block:: console
