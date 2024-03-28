@@ -19,3 +19,6 @@ mwdblib==3.4.1
 # Something went wrong in 4.3.0 package
 yara-python<4.3.0
 mslex==1.1.0
+pydantic==2.6.4
+# Peer dependency of Pydantic
+typing-extensions

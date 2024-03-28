@@ -8,7 +8,7 @@ import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from common_utils import tool_exists
 
-from drakrun.lib.config import InstallInfo
+from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.storage import LvmStorageBackend
 from drakrun.lib.util import safe_delete
 

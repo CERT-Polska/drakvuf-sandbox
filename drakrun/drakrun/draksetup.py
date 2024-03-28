@@ -1,4 +1,3 @@
-import configparser
 import hashlib
 import io
 import json
@@ -24,16 +23,7 @@ from drakrun.lib.apiscout import (
     build_static_apiscout_profile,
     make_static_apiscout_profile_for_dll,
 )
-from drakrun.lib.config import (
-    APISCOUT_PROFILE_DIR,
-    ETC_DIR,
-    LIB_DIR,
-    PROFILE_DIR,
-    RUNTIME_FILE,
-    VM_CONFIG_DIR,
-    VOLUME_DIR,
-    InstallInfo,
-)
+from drakrun.lib.config import DrakrunConfig, load_config
 from drakrun.lib.drakpdb import (
     DLL,
     dll_file_list,
@@ -44,14 +34,23 @@ from drakrun.lib.drakpdb import (
     unrequired_dll_file_list,
 )
 from drakrun.lib.injector import Injector
+from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.networking import (
     delete_all_vm_networks,
     delete_legacy_iptables,
     delete_vm_network,
-    find_default_interface,
     setup_vm_network,
     start_dnsmasq,
     stop_dnsmasq,
+)
+from drakrun.lib.paths import (
+    APISCOUT_PROFILE_DIR,
+    ETC_DIR,
+    LIB_DIR,
+    PROFILE_DIR,
+    RUNTIME_FILE,
+    VM_CONFIG_DIR,
+    VOLUME_DIR,
 )
 from drakrun.lib.storage import (
     REGISTERED_BACKEND_NAMES,
@@ -77,11 +76,6 @@ from drakrun.lib.vm import (
 
 log = logging.getLogger(__name__)
 
-config_path = os.path.join(ETC_DIR, "config.ini")
-conf = configparser.ConfigParser()
-if os.path.isfile(config_path):
-    conf.read(config_path)
-
 
 def ensure_dirs():
     os.makedirs(ETC_DIR, exist_ok=True)
@@ -91,21 +85,6 @@ def ensure_dirs():
     os.makedirs(PROFILE_DIR, exist_ok=True)
     os.makedirs(APISCOUT_PROFILE_DIR, exist_ok=True)
     os.makedirs(VOLUME_DIR, exist_ok=True)
-
-
-def detect_defaults():
-    ensure_dirs()
-
-    out_interface = conf.get("drakrun", "out_interface")
-
-    if not out_interface:
-        default_if = find_default_interface()
-
-        if default_if:
-            log.info(f"Detected default network interface: {default_if}")
-            conf["drakrun"]["out_interface"] = default_if
-        else:
-            log.warning("Unable to detect default network interface.")
 
 
 def ensure_zfs(ctx, param, value):
@@ -391,14 +370,6 @@ def install(
     if storage_backend == "zfs" and zfs_tank_name is None:
         raise Exception("zfs storage backend requires --zfs-tank-name")
 
-    if not sanity_check():
-        log.error("Sanity check failed.")
-        return
-
-    stop_all_drakruns()
-
-    log.info("Performing installation...")
-
     if vcpus < 1:
         log.error("Your VM must have at least 1 vCPU.")
         return
@@ -435,6 +406,16 @@ def install(
                 )
             except subprocess.CalledProcessError:
                 log.exception("Failed to generate unattended.iso.")
+
+    drakconfig = load_config()
+
+    if not sanity_check():
+        log.error("Sanity check failed.")
+        return
+
+    stop_all_drakruns()
+
+    log.info("Performing installation...")
 
     sha256_hash = hashlib.sha256()
 
@@ -479,9 +460,9 @@ def install(
         )
         return
 
-    net_enable = conf["drakrun"].getboolean("net_enable", fallback=False)
-    out_interface = conf["drakrun"].get("out_interface", "")
-    dns_server = conf["drakrun"].get("dns_server", "")
+    net_enable = drakconfig.drakrun.net_enable
+    out_interface = drakconfig.drakrun.out_interface
+    dns_server = drakconfig.drakrun.dns_server
 
     setup_vm_network(
         vm_id=0,
@@ -797,8 +778,9 @@ def create_missing_profiles():
     injector = Injector("vm-1", runtime_info, kernel_profile)
 
     # restore vm-1
-    out_interface = conf["drakrun"].get("out_interface", "")
-    dns_server = conf["drakrun"].get("dns_server", "")
+    drakconfig = load_config()
+    out_interface = drakconfig.drakrun.out_interface
+    dns_server = drakconfig.drakrun.dns_server
     install_info = InstallInfo.load()
     backend = get_storage_backend(install_info)
 
@@ -850,7 +832,7 @@ def postupgrade():
     with open(os.path.join(ETC_DIR, "scripts", "cfg.template"), "w") as f:
         f.write(template)
 
-    detect_defaults()
+    ensure_dirs()
 
     install_info = InstallInfo.try_load()
     if not install_info:
@@ -972,13 +954,13 @@ def mount(iso_path, domain_name):
     insert_cd(domain_name, FIRST_CDROM_DRIVE, iso_path_full)
 
 
-def get_minio_client(config):
-    minio_cfg = config["minio"]
+def get_minio_client(config: DrakrunConfig):
+    minio_cfg = config.minio
     return Minio(
-        endpoint=minio_cfg["address"],
-        access_key=minio_cfg["access_key"],
-        secret_key=minio_cfg["secret_key"],
-        secure=minio_cfg.getboolean("secure", fallback=True),
+        endpoint=minio_cfg.address,
+        access_key=minio_cfg.access_key,
+        secret_key=minio_cfg.secret_key,
+        secure=minio_cfg.secure,
     )
 
 
@@ -1010,7 +992,8 @@ def memdump_export(bucket, instance):
     snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
     name = f"{snapshot_sha256}_pre_sample.raw_memdump.gz"
 
-    mc = get_minio_client(conf)
+    drakconfig = load_config()
+    mc = get_minio_client(drakconfig)
 
     if not mc.bucket_exists(bucket):
         log.error("Bucket %s doesn't exist", bucket)
@@ -1071,7 +1054,8 @@ def snapshot_export(name, bucket, full, force):
         log.error("Missing installation info. Did you forget to set up the sandbox?")
         return
 
-    mc = get_minio_client(conf)
+    drakconfig = load_config()
+    mc = get_minio_client(drakconfig)
 
     if not mc.bucket_exists(bucket):
         log.error("Bucket %s doesn't exist", bucket)
@@ -1118,7 +1102,8 @@ def snapshot_import(name, bucket, full, zpool):
             "Detected local snapshot. It will be REMOVED. Continue?", abort=True
         )
 
-    mc = get_minio_client(conf)
+    drakconfig = load_config()
+    mc = get_minio_client(drakconfig)
 
     if not mc.bucket_exists(bucket):
         log.error("Bucket %s doesn't exist", bucket)
@@ -1142,9 +1127,9 @@ def snapshot_import(name, bucket, full, zpool):
             backend = get_storage_backend(install_info)
             backend.rollback_vm_storage(0)
 
-            net_enable = int(conf["drakrun"].get("net_enable", "0"))
-            out_interface = conf["drakrun"].get("out_interface", "")
-            dns_server = conf["drakrun"].get("dns_server", "")
+            net_enable = drakconfig.drakrun.net_enable
+            out_interface = drakconfig.drakrun.out_interface
+            dns_server = drakconfig.drakrun.dns_server
             setup_vm_network(
                 vm_id=0,
                 net_enable=net_enable,
@@ -1301,9 +1286,11 @@ def init(envfile: str):
     # Simple activities handled by deb packages before
     # In the future, consider splitting this to remove hard dependency on systemd etc
     drakrun_dir = Path(ETC_DIR)
+    scripts_dir = drakrun_dir / "scripts"
     data_dir = Path(__file__).parent / "data"
 
     drakrun_dir.mkdir(exist_ok=True)
+    scripts_dir.mkdir(exist_ok=True)
     config = (data_dir / "config.ini").read_text()
 
     # This feature is provided for compatibility with minio.env files, but we plan to
@@ -1322,7 +1309,7 @@ def init(envfile: str):
     Path("/etc/systemd/system/drakrun@.service").write_text(systemd_unit)
 
     config_template = (data_dir / "cfg.template").read_text()
-    (drakrun_dir / "scripts" / "cfg.template").write_text(config_template)
+    (scripts_dir / "cfg.template").write_text(config_template)
 
 
 @click.group()
