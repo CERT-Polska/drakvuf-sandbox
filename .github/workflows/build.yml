@@ -198,7 +198,7 @@ jobs:
             version: bullseye
             version_number: 11
     runs-on: self-hosted
-    container: python:3.8-buster
+    container: python:3.8-bullseye
     # Prevent concurrent jobs trying to reach the same VM
     concurrency: ci-${{ github.ref }}-${{ matrix.distro }}-${{ matrix.version_number }}
     steps:
