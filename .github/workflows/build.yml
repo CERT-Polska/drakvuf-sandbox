@@ -69,8 +69,6 @@ jobs:
       matrix:
         include:
           - distro: debian
-            version: buster
-          - distro: debian
             version: bullseye
     runs-on: ubuntu-latest
     container: "${{ matrix.distro }}:${{matrix.version}}"
@@ -149,8 +147,6 @@ jobs:
       matrix:
         include:
           - distro: debian
-            version: buster
-          - distro: debian
             version: bullseye
     runs-on: ubuntu-latest
     container: "${{ matrix.distro }}:${{matrix.version}}"
@@ -198,9 +194,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distro: debian
-            version: buster
-            version_number: 10
           - distro: debian
             version: bullseye
             version_number: 11
