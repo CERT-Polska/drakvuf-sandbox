@@ -1,0 +1,7 @@
+[tool.isort]
+profile = "black"
+
+[tool.lint-python]
+lint-version = "2"
+source = "./drakrun"
+use-mypy = false

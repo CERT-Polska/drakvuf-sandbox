@@ -25,18 +25,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
+      - uses: CERT-Polska/lint-python-action@v2
         with:
           python-version: 3.8
-      - run: pip3 install black==22.6.0 isort==5.9.3 flake8
-      - name: Check with black
-        run: black --check --diff drakcore/
-      - name: Check with isort
-        run: isort --profile black --check drakcore/
-      - run: pip3 install -r drakcore/requirements.txt
-      - name: Check with flake8
-        run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakcore/
+          working-directory: drakcore
   lint_drakcore_frontend:
     runs-on: ubuntu-latest
     steps:
@@ -51,18 +43,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
+      - uses: CERT-Polska/lint-python-action@v2
         with:
           python-version: 3.8
-      - run: pip3 install black==22.6.0 isort==5.9.3 flake8
-      - name: Check with black
-        run: black --check --diff drakrun/
-      - name: Check with isort
-        run: isort --profile black --check drakrun/
-      - run: pip3 install -r drakrun/requirements.txt
-      - name: Check with flake8
-        run: flake8 --extend-ignore=E501,E203 --max-line-length=88 drakrun/
+          working-directory: drakrun
   package_drakvuf_bundle:
     strategy:
       fail-fast: false
