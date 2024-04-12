@@ -7,7 +7,7 @@ charset-normalizer==3.0.1
 decorator==5.1.1
 docutils==0.18.1
 executing==1.2.0
-idna==3.4
+idna==3.7
 imagesize==1.4.1
 ipython==8.10.0
 jedi==0.18.2
