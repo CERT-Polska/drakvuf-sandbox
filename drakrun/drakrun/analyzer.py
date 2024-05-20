@@ -128,7 +128,7 @@ def filename_for_task(options: AnalysisOptions) -> Tuple[str, str]:
             extension = "exe"
     # Make sure the extension is lowercase
     extension = extension.lower()
-    file_name = options.sample_filename + f".{extension}"
+    file_name = (options.sample_filename or "malwar") + f".{extension}"
     if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
         raise RuntimeError("Filename contains invalid characters")
 
@@ -422,7 +422,7 @@ def main():
         description="Analyze file in Drakvuf",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument("sample-path", help="Path to the sample")
+    parser.add_argument("sample_path", help="Path to the sample")
     parser.add_argument(
         "--vm-id",
         help="Virtual machine ID to use for analysis",
@@ -501,9 +501,9 @@ def main():
 
     args = parser.parse_args()
     analysis_options = AnalysisOptions(
-        sample_path=args.sample_path,
+        sample_path=pathlib.Path(args.sample_path),
         vm_id=args.vm_id,
-        output_dir=args.output_dir,
+        output_dir=pathlib.Path(args.output_dir),
         plugins=args.plugins,
         timeout=args.timeout,
         hooks_path=(
