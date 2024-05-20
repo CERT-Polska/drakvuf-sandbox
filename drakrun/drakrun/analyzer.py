@@ -1,7 +1,6 @@
 import argparse
 import contextlib
 import dataclasses
-import hashlib
 import itertools
 import json
 import logging
@@ -9,7 +8,9 @@ import ntpath
 import os
 import pathlib
 import re
+import shutil
 import subprocess
+import time
 import zipfile
 from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
 from typing import Any, Dict, List, Optional, Tuple
@@ -77,8 +78,6 @@ def prepare_output_dir(output_dir: pathlib.Path):
     output_dir.mkdir(parents=True, exist_ok=True)
     if any(output_dir.iterdir()):
         raise RuntimeError("Output directory is not empty")
-    # TODO: Right now I use a bit different structure: in the previous
-    #       code, all things were additionally nested in 'output' dir
     (output_dir / "dumps").mkdir()
     (output_dir / "ipt").mkdir()
 
@@ -100,17 +99,6 @@ class AnalysisOptions:
     anti_hammering_threshold: int = 0
     syscall_filter: Optional[str] = None
     raw_memory_dump: bool = False
-
-
-def get_sample_sha256(sample_path: pathlib.Path) -> str:
-    sha256 = hashlib.sha256()
-    with sample_path.open("rb") as f:
-        while True:
-            block = f.read(65536)
-            if not block:
-                break
-            sha256.update(block)
-    return sha256.hexdigest()
 
 
 def filename_for_task(options: AnalysisOptions) -> Tuple[str, str]:
@@ -337,7 +325,6 @@ def analyze_sample(options: AnalysisOptions):
     prepare_output_dir(output_dir)
     vm = DrakvufVM(options.vm_id)
 
-    magic.from_file(options.sample_path)
     file_name, extension = filename_for_task(options)
     log.info("Using file name %s", file_name)
 
@@ -345,6 +332,8 @@ def analyze_sample(options: AnalysisOptions):
     # TODO: Read directly from file
     sample_content = options.sample_path.read_bytes()
     sample_entrypoints = get_sample_entrypoints(extension, sample_content)
+
+    time_started = time.time()
     with run_vm(vm, options) as vm:
         log.info("Copying sample to VM...")
         target_path = drop_sample_to_vm(vm, options.sample_path)
@@ -395,12 +384,20 @@ def analyze_sample(options: AnalysisOptions):
     # Calculate dumps_metadata as it's required by the `analysis` task format.
     dumps_path = output_dir / "dumps"
     dumps_zip_path = output_dir / "dumps.zip"
-    crop_dumps(str(dumps_path), str(dumps_zip_path))
+    dumps_metadata = crop_dumps(str(dumps_path), str(dumps_zip_path))
 
     # Compress IPT traces, they're quite large however they compress well
     ipt_path = output_dir / "ipt"
     ipt_zip_path = output_dir / "ipt.zip"
     compress_ipt(str(ipt_path), str(ipt_zip_path))
+
+    time_finished = time.time()
+    return {
+        "time_started": time_started,
+        "time_finished": time_finished,
+        "start_command": start_command,
+        "dumps_metadata": dumps_metadata,
+    }
 
 
 class PluginsArgAction(argparse.Action):
@@ -500,17 +497,33 @@ def main():
     )
 
     args = parser.parse_args()
+
+    sample_path = pathlib.Path(args.sample_path)
+    if not sample_path.exists():
+        raise RuntimeError(f"Provided file '{str(args.sample_path)}' does not exist")
+
+    output_dir = pathlib.Path(args.output_dir)
+    if output_dir.exists():
+        if input("Output directory already exists. Overwrite? (Y/n)") not in [
+            "Y",
+            "y",
+            "",
+        ]:
+            return
+        shutil.rmtree(output_dir)
+    output_dir.mkdir()
+
+    hooks_path = (
+        pathlib.Path(args.hooks_path) if args.hooks_path else AnalysisOptions.hooks_path
+    )
+
     analysis_options = AnalysisOptions(
-        sample_path=pathlib.Path(args.sample_path),
+        sample_path=sample_path,
         vm_id=args.vm_id,
-        output_dir=pathlib.Path(args.output_dir),
+        output_dir=output_dir,
         plugins=args.plugins,
         timeout=args.timeout,
-        hooks_path=(
-            pathlib.Path(args.hooks_path)
-            if args.hooks_path
-            else AnalysisOptions.hooks_path
-        ),
+        hooks_path=hooks_path,
         start_command=args.start_command,
         extension=args.extension,
         sample_filename=args.sample_filename,
@@ -522,4 +535,3 @@ def main():
         raw_memory_dump=args.raw_memory_dump,
     )
     analyze_sample(analysis_options)
-    # TODO: metadata.json
