@@ -40,7 +40,7 @@ def iptables_test():
     if not tool_exists("iptables"):
         pytest.skip("iptables does not exist")
 
-    rule = "DRAKRUN_INP -i draktest0 -d 239.255.255.0/24 -j DROP"
+    rule = "INPUT -i draktest0 -d 239.255.255.0/24 -j DROP"
 
     assert not iptable_rule_exists(rule)
 
