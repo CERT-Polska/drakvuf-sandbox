@@ -418,7 +418,10 @@ class PluginsArgAction(argparse.Action):
 def main():
     logging.basicConfig(level=logging.INFO)
     drakconfig = load_config()
-    parser = argparse.ArgumentParser(description="Analyze file in Drakvuf")
+    parser = argparse.ArgumentParser(
+        description="Analyze file in Drakvuf",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument("sample-path", help="Path to the sample")
     parser.add_argument(
         "--vm-id",
