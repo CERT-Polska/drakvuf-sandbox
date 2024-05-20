@@ -403,7 +403,7 @@ def analyze_sample(options: AnalysisOptions):
     compress_ipt(str(ipt_path), str(ipt_zip_path))
 
 
-class PluginsArgActiom(argparse.Action):
+class PluginsArgAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
         if nargs is not None:
             raise ValueError("nargs not allowed")
@@ -416,6 +416,7 @@ class PluginsArgActiom(argparse.Action):
 
 
 def main():
+    logging.basicConfig(level=logging.INFO)
     drakconfig = load_config()
     parser = argparse.ArgumentParser(description="Analyze file in Drakvuf")
     parser.add_argument("sample-path", help="Path to the sample")
@@ -434,7 +435,7 @@ def main():
         "--plugins",
         help="DRAKVUF plugins to enable during analysis",
         default=drakconfig.drakvuf_plugins.get_plugin_list(),
-        action=PluginsArgActiom,
+        action=PluginsArgAction,
     )
     parser.add_argument(
         "--timeout",
