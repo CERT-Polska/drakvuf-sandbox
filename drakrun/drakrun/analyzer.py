@@ -106,7 +106,6 @@ def filename_for_task(options: AnalysisOptions) -> Tuple[str, str]:
     Return a tuple of (filename, extension) for a given task.
     This depends on the content magic, "extension" and "file_name" options.
     """
-    # TODO: We need to change that, it's too fuzzy
     extension = options.extension
     if not extension:
         magic_output = magic.from_file(options.sample_path)
@@ -149,11 +148,13 @@ def run_tcpdump(vm: DrakvufVM, options: AnalysisOptions):
     )
 
 
-def drop_sample_to_vm(vm: DrakvufVM, sample_path: pathlib.Path) -> str:
+def drop_sample_to_vm(
+    vm: DrakvufVM, sample_path: pathlib.Path, target_filename: str
+) -> str:
     """
     Writes sample to the VM and returns expanded target path
     """
-    target_path = f"%USERPROFILE%\\Desktop\\{sample_path.name}"
+    target_path = f"%USERPROFILE%\\Desktop\\{target_filename}"
     result = vm.injector.write_file(str(sample_path), target_path)
     try:
         return json.loads(result.stdout)["ProcessName"]
@@ -336,7 +337,7 @@ def analyze_sample(options: AnalysisOptions):
     time_started = time.time()
     with run_vm(vm, options) as vm:
         log.info("Copying sample to VM...")
-        target_path = drop_sample_to_vm(vm, options.sample_path)
+        target_path = drop_sample_to_vm(vm, options.sample_path, file_name)
 
         if user_start_command:
             start_command = user_start_command.replace("%f", target_path)
