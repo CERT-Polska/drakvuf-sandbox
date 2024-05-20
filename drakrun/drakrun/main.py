@@ -197,9 +197,7 @@ class DrakrunKarton(Karton):
 
             return Resource.from_directory(name="profiles", directory_path=tmp_dir)
 
-    def send_raw_analysis(
-        self, sample, outdir: str, metadata, dumps_metadata, quality: str
-    ) -> None:
+    def send_raw_analysis(self, sample, outdir: str, metadata, quality: str) -> None:
         """Offload drakrun-prod by sending raw analysis output to be processed by
         drakrun.processor.
         """
@@ -211,7 +209,6 @@ class DrakrunKarton(Karton):
         }
         task = Task(headers, payload=metadata)
         task.add_payload("sample", sample)
-        task.add_payload("dumps_metadata", dumps_metadata)
 
         # Support for regression tests
         if "testcase" in self.current_task.payload:
@@ -258,7 +255,7 @@ class DrakrunKarton(Karton):
         return output_dir
 
     @with_logs("drakrun.log")
-    def process(self, task: Task) -> None:
+    def process_task(self, task: Task) -> None:
         # Tasks with {"execute": false} header are not scheduled for execution.
         # When the header is missing, the default is to execute the sample.
         if not task.headers.get("execute", True):
@@ -345,6 +342,15 @@ class DrakrunKarton(Karton):
             analysis_metadata["dumps_metadata"],
             quality,
         )
+
+    def process(self, task: Task) -> None:
+        # TODO: Well, drakcore doesn't know what to do
+        #       when task is crashed. We need this awful
+        #       hack for now
+        try:
+            self.process_task(task)
+        except Exception:
+            return
 
 
 def validate_xen_commandline(ignore_failure: bool) -> None:
