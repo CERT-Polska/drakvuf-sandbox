@@ -35,31 +35,6 @@ from .lib.vm import VirtualMachine
 
 log = logging.getLogger(__name__)
 
-DEFAULT_ANALYSIS_TIMEOUT = 10 * 60
-SUPPORTED_PLUGINS = [
-    "apimon",
-    "bsodmon",
-    "clipboardmon",
-    "cpuidmon",
-    "crashmon",
-    "debugmon",
-    "delaymon",
-    "exmon",
-    "filedelete",
-    "filetracer",
-    "librarymon",
-    "memdump",
-    "procdump",
-    "procmon",
-    "regmon",
-    "rpcmon",
-    "ssdtmon",
-    "syscalls",
-    "tlsmon",
-    "windowmon",
-    "wmimon",
-]
-
 
 class DrakvufVM:
     def __init__(self, vm_id: int):
@@ -115,7 +90,11 @@ def filename_for_task(options: AnalysisOptions) -> Tuple[str, str]:
             extension = "exe"
     # Make sure the extension is lowercase
     extension = extension.lower()
+    # TODO: sample_filename should already contain extension or be fixed
+    #       to the proper extension
     file_name = (options.sample_filename or "malwar") + f".{extension}"
+    # TODO: if sample_filename doesn't match regex, it should fallback
+    #       to the default name
     if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
         raise RuntimeError("Filename contains invalid characters")
 
@@ -455,8 +434,6 @@ def main():
         help="Alternative extension indicating sample format",
         required=False,
     )
-    # TODO: Right now this argument is incorrectly interpreted
-    #       See also: filename_for_task
     parser.add_argument(
         "--sample-filename", help="Target file name for sample", required=False
     )
