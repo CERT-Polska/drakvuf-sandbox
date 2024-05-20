@@ -504,11 +504,11 @@ def main():
 
     output_dir = pathlib.Path(args.output_dir)
     if output_dir.exists():
-        if input("Output directory already exists. Overwrite? (Y/n)") not in [
-            "Y",
-            "y",
-            "",
-        ]:
+        confirmation = ["Y", "y", ""]
+        if (
+            input("Output directory already exists. Overwrite? (Y/n)")
+            not in confirmation
+        ):
             return
         shutil.rmtree(output_dir)
     output_dir.mkdir()
