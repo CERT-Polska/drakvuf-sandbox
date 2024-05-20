@@ -339,7 +339,6 @@ class DrakrunKarton(Karton):
             sample,
             str(output_dir),
             metadata,
-            analysis_metadata["dumps_metadata"],
             quality,
         )
 
