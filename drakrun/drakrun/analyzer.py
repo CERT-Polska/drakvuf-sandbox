@@ -396,13 +396,13 @@ def main():
     logging.basicConfig(level=logging.INFO)
     drakconfig = load_config()
     parser = argparse.ArgumentParser(
-        description="Analyze file in Drakvuf",
+        description="Analyze a file in Drakvuf",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("sample_path", help="Path to the sample")
     parser.add_argument(
         "--vm-id",
-        help="Virtual machine ID to use for analysis",
+        help="ID of the Virtual machine to use for analysis",
         type=int,
         required=True,
     )
@@ -413,7 +413,7 @@ def main():
     )
     parser.add_argument(
         "--plugins",
-        help="DRAKVUF plugins to enable during analysis",
+        help="Comma separated DRAKVUF plugins to use",
         default=drakconfig.drakvuf_plugins.get_plugin_list(),
         action=PluginsArgAction,
     )
@@ -421,13 +421,13 @@ def main():
         "--timeout",
         default=drakconfig.drakrun.analysis_timeout,
         type=int,
-        help="Timeout in seconds for analysis",
+        help="Analysis timeout, in seconds",
     )
     parser.add_argument(
         "--hooks-path", help="Path to the custom hook list", required=False
     )
     parser.add_argument(
-        "--start-command", help="Alternative command to start analysis", required=False
+        "--start-command", help="Override the default startup command", required=False
     )
     parser.add_argument(
         "--extension",
@@ -435,7 +435,7 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--sample-filename", help="Target file name for sample", required=False
+        "--sample-filename", help="Sample filename to use in the VM", required=False
     )
     parser.add_argument(
         "--dns-server",
@@ -457,7 +457,7 @@ def main():
     )
     parser.add_argument(
         "--anti-hammering-threshold",
-        help="Threshold for API hammering detection (detection disabled if 0)",
+        help="Threshold for API hammering detection (or 0 to disable)",
         default=drakconfig.drakrun.anti_hammering_threshold,
         type=int,
     )
