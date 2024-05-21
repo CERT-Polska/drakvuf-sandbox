@@ -36,6 +36,12 @@ from .lib.vm import VirtualMachine
 log = logging.getLogger(__name__)
 
 
+class UnretryableAnalysisError(Exception):
+    """
+    Analysis error that is not intermittent and should not lead to the retry of the analysis
+    """
+
+
 class DrakvufVM:
     def __init__(self, vm_id: int):
         self.vm_id = vm_id
@@ -111,7 +117,14 @@ def run_vm(vm: DrakvufVM, options: AnalysisOptions):
     )
     try:
         with graceful_exit(start_dnsmasq(vm.vm_id, options.dns_server)):
-            vm.vm.restore()
+            try:
+                vm.vm.restore()
+            except subprocess.CalledProcessError as e:
+                with open(f"/var/log/xen/qemu-dm-{vm.vm.vm_name}.log", "rb") as f:
+                    qemu_error = f.read()
+                raise UnretryableAnalysisError(
+                    f"Failed to restore VM {vm.vm.vm_name}: {qemu_error}"
+                ) from e
             try:
                 yield vm
             finally:
@@ -300,6 +313,21 @@ def compress_ipt(dirpath: str, target_zip: str) -> None:
             os.unlink(os.path.join(root, file))
 
 
+def make_injection_error(drakmon_log_path: pathlib.Path):
+    injection_error = "<unknown error>"
+    with drakmon_log_path.open("r") as drakvuf_log:
+        # There should be only one line
+        for line in drakvuf_log:
+            entry = json.loads(line)
+            if entry["Plugin"] == "inject":
+                injection_error = entry["Error"]
+                break
+    return UnretryableAnalysisError(
+        f"Injection succeeded but sample startup failed "
+        f"with error: {injection_error}"
+    )
+
+
 def analyze_sample(options: AnalysisOptions):
     output_dir = options.output_dir
     prepare_output_dir(output_dir)
@@ -347,13 +375,14 @@ def analyze_sample(options: AnalysisOptions):
                 INJECTION_UNSUCCESSFUL = 4
 
                 if e.returncode == INJECTION_UNSUCCESSFUL:
-                    log.error("Sample startup failed")
+                    raise make_injection_error(drakmon_log_path) from e
                 else:
                     # Something bad happened
                     raise e
             except subprocess.TimeoutExpired as e:
-                log.error("DRAKVUF timeout expired")
-                raise e
+                raise UnretryableAnalysisError(
+                    "DRAKVUF process timeout expired (hang?)"
+                ) from e
 
         if options.raw_memory_dump:
             vm.vm.memory_dump(str(output_dir / "post_sample.raw_memdump.gz"))

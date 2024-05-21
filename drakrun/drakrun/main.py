@@ -18,7 +18,7 @@ from typing import Dict, Optional, Union, cast
 import magic
 from karton.core import Config, Karton, LocalResource, RemoteResource, Resource, Task
 
-from drakrun.analyzer import AnalysisOptions, analyze_sample
+from drakrun.analyzer import AnalysisOptions, UnretryableAnalysisError, analyze_sample
 from drakrun.lib.bindings.xen import get_xen_info, parse_xen_commandline
 from drakrun.lib.config import load_config
 from drakrun.lib.drakpdb import dll_file_list
@@ -254,6 +254,13 @@ class DrakrunKarton(Karton):
         output_dir.mkdir()
         return output_dir
 
+    def _ensure_clean_output_dir(self) -> pathlib.Path:
+        output_dir = self.analysis_dir / "output"
+        if output_dir.exists():
+            shutil.rmtree(output_dir)
+        output_dir.mkdir()
+        return output_dir
+
     @with_logs("drakrun.log")
     def process_task(self, task: Task) -> None:
         # Tasks with {"execute": false} header are not scheduled for execution.
@@ -329,7 +336,24 @@ class DrakrunKarton(Karton):
             syscall_filter=self.drakconfig.drakrun.syscall_filter,
             raw_memory_dump=self.drakconfig.drakrun.raw_memory_dump,
         )
-        analysis_metadata = analyze_sample(analysis_options)
+
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                self.log.info(
+                    f"Trying to analyze sample (attempt {attempt+1}/{max_attempts})"
+                )
+                analysis_metadata = analyze_sample(analysis_options)
+                break
+            except UnretryableAnalysisError:
+                self.log.exception("Analysis attempt failed with unretryable error")
+                raise
+            except Exception:
+                self.log.exception("Analysis attempt failed. Retrying...")
+            # Clean output dir before next try
+            self._ensure_clean_output_dir()
+        else:
+            raise RuntimeError(f"Giving up after {max_attempts} failures...")
 
         metadata = {**metadata, **analysis_metadata}
         (output_dir / "metadata.json").write_text(json.dumps(metadata))
