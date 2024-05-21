@@ -388,8 +388,17 @@ class PluginsArgAction(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         if option_string is None:
-            raise ValueError("Missing --plugins value")
+            raise ValueError("Value is required for --plugins option")
         setattr(namespace, self.dest, option_string.split(","))
+
+
+def confirm(prompt):
+    while True:
+        answer = input(prompt).lower()
+        if answer == "y":
+            return True
+        elif answer == "n":
+            return False
 
 
 def main():
@@ -400,6 +409,12 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("sample_path", help="Path to the sample")
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Don't ask if output directory can be deleted",
+    )
     parser.add_argument(
         "--vm-id",
         help="ID of the Virtual machine to use for analysis",
@@ -482,13 +497,8 @@ def main():
 
     output_dir = pathlib.Path(args.output_dir)
     if output_dir.exists():
-        confirmation = ["Y", "y", ""]
-        if (
-            input("Output directory already exists. Overwrite? (Y/n)")
-            not in confirmation
-        ):
-            return
-        shutil.rmtree(output_dir)
+        if args.force or confirm("Output directory already exists. Overwrite? (y/n)"):
+            shutil.rmtree(output_dir)
     output_dir.mkdir()
 
     hooks_path = (
