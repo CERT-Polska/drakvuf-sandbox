@@ -53,7 +53,7 @@ def get_startup_argv(
         argv.extend(["/t", target_path])
         if entrypoints:
             for entrypoint in entrypoints:
-                argv.append(["/m" + entrypoint])
+                argv.append("/m" + entrypoint)
         return ["cmd.exe", "/C", mslex.join(["start", *argv])]
     elif extension in ["js", "jse", "vbs", "vbe"]:
         return ["wscript.exe", target_path]
