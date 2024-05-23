@@ -1,14 +1,19 @@
 #!/usr/bin/env python
 
+import os
 from setuptools import find_packages, setup
 
-version = {}
+version_globals = {}
 with open("drakrun/version.py") as f:
-    exec(f.read(), version)
+    exec(f.read(), version_globals)
+
+version = version_globals["__version__"]
+if os.getenv("DRAKRUN_VERSION_TAG"):
+    version = version + "+" + os.getenv("DRAKRUN_VERSION_TAG")
 
 setup(
     name="drakrun",
-    version=version["__version__"],
+    version=version,
     description="DRAKRUN",
     package_dir={"drakrun": "drakrun"},
     packages=find_packages(),
