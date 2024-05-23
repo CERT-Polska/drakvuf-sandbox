@@ -23,6 +23,7 @@ setup(
     entry_points={
         "console_scripts": [
             "drakrun = drakrun.main:main",
+            "drakstart = drakrun.analyzer:main",
             "draksetup = drakrun.draksetup:main",
             "drakpush = drakrun.drakpush:main",
             "drakpdb = drakrun.drakpdb:main",
