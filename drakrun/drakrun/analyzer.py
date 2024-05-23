@@ -7,8 +7,10 @@ import logging
 import ntpath
 import os
 import pathlib
+import random
 import re
 import shutil
+import string
 import subprocess
 import time
 import zipfile
@@ -27,7 +29,7 @@ from .lib.networking import (
     start_dnsmasq,
     start_tcpdump_collector,
 )
-from .lib.paths import ETC_DIR, PROFILE_DIR, RUNTIME_FILE
+from .lib.paths import PROFILE_DIR, RUNTIME_FILE
 from .lib.sample_startup import get_sample_entrypoints, get_sample_startup_command
 from .lib.storage import get_storage_backend
 from .lib.util import RuntimeInfo, graceful_exit
@@ -69,8 +71,8 @@ class AnalysisOptions:
     vm_id: int
     output_dir: pathlib.Path
     plugins: List[str]
+    hooks_path: pathlib.Path
     timeout: int = 600
-    hooks_path: pathlib.Path = pathlib.Path(ETC_DIR) / "hooks.txt"
     start_command: Optional[str] = None
     extension: Optional[str] = None
     sample_filename: Optional[str] = None
@@ -80,6 +82,11 @@ class AnalysisOptions:
     anti_hammering_threshold: int = 0
     syscall_filter: Optional[str] = None
     raw_memory_dump: bool = False
+
+
+def random_filename() -> str:
+    chars = string.ascii_letters + string.digits
+    return "".join(random.choice(chars) for _ in range(10))
 
 
 def filename_for_task(options: AnalysisOptions) -> Tuple[str, str]:
@@ -98,7 +105,7 @@ def filename_for_task(options: AnalysisOptions) -> Tuple[str, str]:
     extension = extension.lower()
     # TODO: sample_filename should already contain extension or be fixed
     #       to the proper extension
-    file_name = (options.sample_filename or "malwar") + f".{extension}"
+    file_name = (options.sample_filename or random_filename()) + f".{extension}"
     # TODO: if sample_filename doesn't match regex, it should fallback
     #       to the default name
     if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
@@ -151,8 +158,10 @@ def drop_sample_to_vm(
     try:
         return json.loads(result.stdout)["ProcessName"]
     except ValueError as e:
-        log.error("JSON decode error occurred when tried to parse injector's logs.")
-        log.error(f"Raw log line: {result.stdout}")
+        log.error(
+            "JSON decode error occurred when tried to parse injector's logs. "
+            f"Raw log line: {result.stdout}"
+        )
         raise e
 
 
