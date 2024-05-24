@@ -108,7 +108,7 @@ def delete_iptables_chains() -> None:
         "-D POSTROUTING -j DRAKRUN_PRT -t nat",
         "-X DRAKRUN_INP",
         "-X DRAKRUN_FWD",
-        "-X DRAKRUN_PRT",
+        "-X DRAKRUN_PRT -t nat",
     ]
     for rule in rules:
         subprocess.run(f"iptables {rule}", shell=True)
