@@ -2,6 +2,8 @@ import json
 import logging
 import pathlib
 
+logger = logging.getLogger(__name__)
+
 
 def gen_key_file_from_log(tlsmon_log):
     key_file_content = ""
@@ -12,10 +14,10 @@ def gen_key_file_from_log(tlsmon_log):
             master_key = entry["master_key"]
             key_file_content += f"CLIENT_RANDOM {client_random} {master_key}\n"
         except KeyError:
-            logging.exception(f"JSON is missing a required field\n{line}")
+            logger.exception(f"JSON is missing a required field\n{line}")
             continue
         except json.JSONDecodeError as e:
-            logging.warning(f"line cannot be parsed as JSON\n{e}")
+            logger.warning(f"line cannot be parsed as JSON\n{e}")
             continue
     return key_file_content
 
