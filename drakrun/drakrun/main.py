@@ -203,9 +203,8 @@ class DrakrunKarton(Karton):
         """
 
         headers = {
-            "type": "analysis-raw",
-            "kind": "drakrun-internal",
-            "quality": quality,
+            "type": "analysis",
+            "kind": "drakrun",
         }
         task = Task(headers, payload=metadata)
         task.add_payload("sample", sample)
@@ -215,11 +214,11 @@ class DrakrunKarton(Karton):
             task.add_payload("testcase", self.current_task.payload["testcase"])
 
         if self.drakconfig.drakrun.attach_profiles:
-            self.log.info("Uploading profiles...")
+            self.log.info("Collecting profiles...")
             task.add_payload("profiles", self.build_profile_payload())
 
         if self.drakconfig.drakrun.attach_apiscout_profile:
-            self.log.info("Uploading static ApiScout profile...")
+            self.log.info("Collecting static ApiScout profile...")
             task.add_payload(
                 "static_apiscout_profile.json",
                 LocalResource(
@@ -228,10 +227,11 @@ class DrakrunKarton(Karton):
                 ),
             )
 
-        self.log.info("Uploading artifacts...")
+        self.log.info("Collecting artifacts...")
         for resource in self.upload_artifacts(self.analysis_uid, outdir):
             task.add_payload(resource.name, resource)
 
+        self.log.info("Uploading task...")
         self.send_task(task)
 
     @property

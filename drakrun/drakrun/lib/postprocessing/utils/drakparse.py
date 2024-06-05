@@ -1,11 +1,12 @@
 import json
 import logging
 from datetime import datetime
-from sys import argv, exit
 from typing import Dict, Generator, Iterable, Union
 
 # set this to False for more debugging
 void_unknown = True
+
+logger = logging.getLogger(__name__)
 
 
 class Base:
@@ -189,7 +190,7 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
         first_line = json.loads(next(lines))
         injected_pid = first_line["InjectedPid"]
     except Exception:
-        logging.exception("Failed to get InjectedPid from first line")
+        logger.exception("Failed to get InjectedPid from first line")
         injected_pid = 0
 
     # prepend prolog
@@ -204,13 +205,13 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
         try:
             line_obj = json.loads(line)
         except Exception:
-            logging.exception(f"BUG: Unparseable log entry!\n{line}")
+            logger.exception(f"BUG: Unparseable log entry!\n{line}")
             continue
 
         try:
             plugin = line_obj["Plugin"]
         except KeyError:
-            logging.warning(f"BUG: Line is missing plugin name!\n{line}")
+            logger.warning(f"BUG: Line is missing plugin name!\n{line}")
             continue
 
         if plugin in switcher:
@@ -218,21 +219,10 @@ def parse_logs(lines: Iterable[Union[bytes, str]]) -> Generator[str, None, None]
             try:
                 converted = str(plugin_obj(line_obj))
             except Exception:
-                logging.exception(f"BUG: Failed to parse log entry.\n{line}")
+                logger.exception(f"BUG: Failed to parse log entry.\n{line}")
                 continue
 
             if converted:
                 yield converted
         elif not void_unknown:
-            logging.info(f"unparsed: {line}")
-
-
-if __name__ == "__main__":
-    if len(argv) != 3:
-        logging.error("unexpected number of arguments!")
-        exit(1)
-
-    with open(argv[1], "rb") as in_f:
-        with open(argv[2], "w") as out_f:
-            for csv_line in parse_logs(in_f):
-                out_f.write(csv_line.strip() + "\n")
+            logger.info(f"unparsed: {line}")
