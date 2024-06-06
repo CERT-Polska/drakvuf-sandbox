@@ -4,27 +4,36 @@ import logging
 import pathlib
 from typing import Any, Dict
 
-from .lib.postprocessing import POSTPROCESS_PLUGINS
+from .lib.postprocessing import POSTPROCESS_PLUGINS, PostprocessPlugin
 
 logger = logging.getLogger(__name__)
+
+
+def check_plugin_requirements(
+    analysis_dir: pathlib.Path, plugin: PostprocessPlugin
+) -> bool:
+    plugin_name = plugin.function.__name__
+    for required_path in plugin.requires:
+        if not (analysis_dir / required_path).exists():
+            logger.warning(
+                f"{plugin_name} won't be run because {required_path} does not exist"
+            )
+            return False
+    for generated_path in plugin.generates:
+        if (analysis_dir / generated_path).exists():
+            logger.warning(
+                f"{plugin_name} won't be run because {generated_path} already exists"
+            )
+            return False
+    return True
 
 
 def postprocess_analysis(analysis_dir: pathlib.Path):
     extra_metadata = {}
     for plugin in POSTPROCESS_PLUGINS:
         plugin_name = plugin.function.__name__
-        for required_path in plugin.requires:
-            if not (analysis_dir / required_path).exists():
-                logger.warning(
-                    f"{plugin_name} won't be run because {required_path} does not exist"
-                )
-                continue
-        for generated_path in plugin.generates:
-            if (analysis_dir / generated_path).exists():
-                logger.warning(
-                    f"{plugin_name} won't be run because {generated_path} already exists"
-                )
-                continue
+        if not check_plugin_requirements(analysis_dir, plugin):
+            continue
         try:
             plugin_metadata = plugin.function(analysis_dir=analysis_dir)
             if plugin_metadata:
