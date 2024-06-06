@@ -51,6 +51,6 @@ def index_logs(analysis_dir: pathlib.Path) -> None:
     for log_file_path in analysis_dir.glob("*.log"):
         with log_file_path.open("rb") as log_file:
             index = generate_file_index(log_file)
-            index_path = index_dir / f"{log_file.name}.json"
+            index_path = index_dir / f"{log_file_path.name}.json"
             index_data = json.dumps(index)
             index_path.write_text(index_data)
