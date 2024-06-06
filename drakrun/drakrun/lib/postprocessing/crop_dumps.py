@@ -8,9 +8,9 @@ from typing import Any, Dict, List, Tuple
 logger = logging.getLogger(__name__)
 
 
-def crop_dumps(analysis_path: pathlib.Path) -> Dict[str, Any]:
-    dumps_path = analysis_path / "dumps"
-    target_zip = analysis_path / "dumps.zip"
+def crop_dumps(analysis_dir: pathlib.Path) -> Dict[str, Any]:
+    dumps_path = analysis_dir / "dumps"
+    target_zip = analysis_dir / "dumps.zip"
     zipf = zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED)
 
     dumps: List[Tuple[pathlib.Path, os.stat_result]] = sorted(
