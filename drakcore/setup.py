@@ -14,7 +14,7 @@ setup(
     version=version["__version__"],
     description="DRAKVUF Sandbox Core",
     package_dir={"drakcore": "drakcore"},
-    packages=["drakcore", "drakcore.postprocess"],
+    packages=["drakcore"],
     include_package_data=True,
     install_requires=open("requirements.txt").read().splitlines(),
     scripts=[
