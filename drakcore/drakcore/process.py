@@ -1,6 +1,7 @@
 from karton.core import Karton
 
 from drakcore.app import get_analysis_metadata
+from drakcore.util import get_config
 from drakcore.version import __version__ as DRAKCORE_VERSION
 
 # TODO: Why is this even needed?
@@ -22,7 +23,8 @@ class AnalysisProcessor(Karton):
 
 
 def main():
-    AnalysisProcessor().loop()
+    conf = get_config()
+    AnalysisProcessor(conf).loop()
 
 
 if __name__ == "__main__":
