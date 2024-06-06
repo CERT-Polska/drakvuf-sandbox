@@ -35,7 +35,7 @@ def postprocess_analysis(analysis_dir: pathlib.Path):
         if not check_plugin_requirements(analysis_dir, plugin):
             continue
         try:
-            plugin_metadata = plugin.function(analysis_dir=analysis_dir)
+            plugin_metadata = plugin.function(analysis_dir)
             if plugin_metadata:
                 extra_metadata.update(plugin_metadata)
         except Exception:
