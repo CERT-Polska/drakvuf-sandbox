@@ -21,6 +21,7 @@ def process_apimon_log(analysis_dir: pathlib.Path) -> None:
                 continue
             if "PID" not in entry:
                 logger.warning(f"Missing PID in {apimon_log_path}:{line_no}")
+                continue
             pid = entry["PID"]
             filtered_entry = {
                 "pid": pid,
