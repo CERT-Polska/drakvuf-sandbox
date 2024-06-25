@@ -13,9 +13,7 @@ import shutil
 import string
 import subprocess
 import time
-import zipfile
-from stat import S_ISREG, ST_CTIME, ST_MODE, ST_SIZE
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import magic
 
@@ -34,6 +32,7 @@ from .lib.sample_startup import get_sample_entrypoints, get_sample_startup_comma
 from .lib.storage import get_storage_backend
 from .lib.util import RuntimeInfo, graceful_exit
 from .lib.vm import VirtualMachine
+from .postprocess import postprocess_analysis
 
 log = logging.getLogger(__name__)
 
@@ -82,6 +81,7 @@ class AnalysisOptions:
     anti_hammering_threshold: int = 0
     syscall_filter: Optional[str] = None
     raw_memory_dump: bool = False
+    postprocess: bool = True
 
 
 def random_filename() -> str:
@@ -261,67 +261,6 @@ def build_drakvuf_cmdline(
     return drakvuf_cmd
 
 
-def crop_dumps(dirpath: str, target_zip: str) -> List[Dict[str, Any]]:
-    zipf = zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED)
-
-    entries = (os.path.join(dirpath, fn) for fn in os.listdir(dirpath))
-    entries = ((os.stat(path), path) for path in entries)
-
-    entries = (
-        (stat[ST_CTIME], path, stat[ST_SIZE])
-        for stat, path in entries
-        if S_ISREG(stat[ST_MODE])
-    )
-
-    max_total_size = 300 * 1024 * 1024  # 300 MB
-    current_size = 0
-
-    dumps_metadata = []
-    for _, path, size in sorted(entries):
-        current_size += size
-
-        if current_size <= max_total_size:
-            # Store files under dumps/
-            file_basename = os.path.basename(path)
-            if re.fullmatch(r"[a-f0-9]{4,16}_[a-f0-9]{16}", file_basename):
-                # If file is memory dump then append metadata that can be
-                # later attached as payload when creating an `analysis` task.
-                dump_base = hex(int(file_basename.split("_")[0], 16))
-                dumps_metadata.append(
-                    {
-                        "filename": os.path.join("dumps", file_basename),
-                        "base_address": dump_base,
-                    }
-                )
-            zipf.write(path, os.path.join("dumps", file_basename))
-        os.unlink(path)
-
-    # No dumps, force empty directory
-    if current_size == 0:
-        zipf.writestr(zipfile.ZipInfo("dumps/"), "")
-
-    if current_size > max_total_size:
-        log.warning(
-            "Some dumps were deleted, because the configured size threshold was exceeded."
-        )
-    return dumps_metadata
-
-
-def compress_ipt(dirpath: str, target_zip: str) -> None:
-    """
-    Compress the directory specified by dirpath to target_zip file.
-    """
-    zipf = zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED)
-
-    for root, dirs, files in os.walk(dirpath):
-        for file in files:
-            zipf.write(
-                os.path.join(root, file),
-                os.path.join("ipt", os.path.relpath(os.path.join(root, file), dirpath)),
-            )
-            os.unlink(os.path.join(root, file))
-
-
 def make_injection_error(drakmon_log_path: pathlib.Path):
     injection_error = "<unknown error>"
     with drakmon_log_path.open("r") as drakvuf_log:
@@ -396,25 +335,16 @@ def analyze_sample(options: AnalysisOptions):
         if options.raw_memory_dump:
             vm.vm.memory_dump(str(output_dir / "post_sample.raw_memdump.gz"))
 
-    log.info("Analysis done. Collecting artifacts...")
+    log.info("Analysis done. Postprocessing artifacts...")
 
-    # Make sure dumps have a reasonable size.
-    # Calculate dumps_metadata as it's required by the `analysis` task format.
-    dumps_path = output_dir / "dumps"
-    dumps_zip_path = output_dir / "dumps.zip"
-    dumps_metadata = crop_dumps(str(dumps_path), str(dumps_zip_path))
-
-    # Compress IPT traces, they're quite large however they compress well
-    ipt_path = output_dir / "ipt"
-    ipt_zip_path = output_dir / "ipt.zip"
-    compress_ipt(str(ipt_path), str(ipt_zip_path))
+    extra_metadata = postprocess_analysis(output_dir)
 
     time_finished = time.time()
     return {
         "time_started": time_started,
         "time_finished": time_finished,
         "start_command": start_command,
-        "dumps_metadata": dumps_metadata,
+        **extra_metadata,
     }
 
 
@@ -526,6 +456,12 @@ def main():
         default=drakconfig.drakrun.raw_memory_dump,
         action=argparse.BooleanOptionalAction,
     )
+    parser.add_argument(
+        "--postprocess",
+        help="Postprocess artifacts",
+        default=AnalysisOptions.postprocess,
+        action=argparse.BooleanOptionalAction,
+    )
 
     args = parser.parse_args()
 
@@ -559,5 +495,6 @@ def main():
         anti_hammering_threshold=args.anti_hammering_threshold,
         syscall_filter=args.syscall_filter,
         raw_memory_dump=args.raw_memory_dump,
+        postprocess=args.postprocess,
     )
     analyze_sample(analysis_options)

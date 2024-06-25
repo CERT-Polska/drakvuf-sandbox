@@ -24,6 +24,7 @@ setup(
         "console_scripts": [
             "drakrun = drakrun.main:main",
             "drakstart = drakrun.analyzer:main",
+            "drakpostprocess = drakrun.postprocess:main",
             "draksetup = drakrun.draksetup:main",
             "drakpush = drakrun.drakpush:main",
             "drakpdb = drakrun.drakpdb:main",

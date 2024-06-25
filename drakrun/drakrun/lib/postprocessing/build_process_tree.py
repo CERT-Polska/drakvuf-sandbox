@@ -1,12 +1,11 @@
 import json
 import logging
+import pathlib
 import shlex
 from dataclasses import dataclass, field
-from io import BytesIO
-from pathlib import PureWindowsPath
 from typing import Any, Dict, List, Optional, TextIO
 
-from karton.core import RemoteResource, Task
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -25,7 +24,7 @@ class Process:
     children: List["Process"] = field(default_factory=list)
 
     def __str__(self):
-        return f"{PureWindowsPath(self.procname).name}({self.pid}) {self.args}"
+        return f"{pathlib.PureWindowsPath(self.procname).name}({self.pid}) {self.args}"
 
 
 class ProcessTree:
@@ -134,8 +133,8 @@ def split_commandline(cmdline: str) -> [str]:
         return shlex.split(cmdline, posix=False)
     except Exception:
         # If we fail to parse cmdline, wrap it into list, so we don't
-        # loose any information.
-        logging.info("Failed to convert commandline to args")
+        # lose any information.
+        logger.info("Failed to convert commandline to args")
         return [cmdline]
 
 
@@ -228,18 +227,19 @@ def tree_from_log(file: TextIO) -> List[Dict[str, Any]]:
                 # Process has been terminated.
                 parse_mm_clean_process_address_space_entry(pstree, entry)
         except json.JSONDecodeError as e:
-            logging.warning(f"Line cannot be parsed as JSON\n{e}")
+            logger.warning(f"Line cannot be parsed as JSON\n{e}")
             continue
         except Exception as e:
-            logging.warning(f"Failed to process {entry}")
+            logger.warning(f"Failed to process {entry}")
             raise e
     return pstree.as_dict()
 
 
-def build_process_tree(task: Task, resources: Dict[str, RemoteResource], minio):
-    with resources["procmon.log"].download_temporary_file() as tmp_file:
-        data = json.dumps(tree_from_log(tmp_file)).encode()
+def build_process_tree(analysis_dir: pathlib.Path) -> None:
+    procmon_log_path = analysis_dir / "procmon.log"
+    process_tree_path = analysis_dir / "process_tree.json"
 
-    output = BytesIO(data)
-    analysis_uid = task.payload["analysis_uid"]
-    minio.put_object("drakrun", f"{analysis_uid}/process_tree.json", output, len(data))
+    with procmon_log_path.open("r") as procmon_log:
+        process_tree = tree_from_log(procmon_log)
+        data = json.dumps(process_tree)
+        process_tree_path.write_text(data)
