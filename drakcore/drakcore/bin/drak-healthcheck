@@ -28,16 +28,6 @@ def get_enabled_drakruns():
             yield fn
 
 
-def get_enabled_postprocess_workers():
-    service_path = "/etc/systemd/system/default.target.wants"
-    if not os.path.isdir(service_path):
-        return []
-
-    for fn in os.listdir(service_path):
-        if re.fullmatch(r'drak-postprocess@[0-9]+\.service', fn):
-            yield fn
-
-
 def print_status(name, is_ok):
     if is_ok:
         status = colorama.Fore.GREEN + "OK"
@@ -63,10 +53,6 @@ def main():
 
     print("Checking worker status...")
     for service in get_enabled_drakruns():
-        info = get_service_info(service)
-        print_status(service, service_runnning(info))
-
-    for service in get_enabled_postprocess_workers():
         info = get_service_info(service)
         print_status(service, service_runnning(info))
 
