@@ -10,7 +10,7 @@ description = "Drakvuf Sandbox VM runner client for E2E testing purposes"
 dependencies = [
   "fabric==2.5.0",
   "python-socks==2.2.0",
-  "requests==2.31.0",
+  "requests==2.32.2",
   "urllib3==1.26.19"
 ]
 version = "0.1.0"
