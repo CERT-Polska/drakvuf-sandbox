@@ -33,7 +33,8 @@ def create_analysis_status(
     pipeline.lpush(ANALYSES_LIST, analysis_id)
     pipeline.lrange(ANALYSES_LIST, ANALYSES_LIST_LENGTH, -1)
     _, dropped_ids = pipeline.execute()
-    rs.delete(*(ANALYSIS_KEY_PREFIX + dropped_id for dropped_id in dropped_ids))
+    if dropped_ids:
+        rs.delete(*(ANALYSIS_KEY_PREFIX + dropped_id for dropped_id in dropped_ids))
     return True
 
 
