@@ -20,10 +20,8 @@ setup(
     scripts=[
         "drakcore/bin/drak-system",
         "drakcore/bin/drak-config-setup",
-        "drakcore/bin/drak-postprocess",
         "drakcore/bin/drak-healthcheck",
         "drakcore/bin/drak-vncpasswd",
-        "drakcore/bin/drak-upgrade-db",
         "drakcore/bin/drak-ipt-disasm",
         "drakcore/bin/drak-ipt-filter",
     ],

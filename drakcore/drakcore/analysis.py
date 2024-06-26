@@ -84,10 +84,3 @@ class AnalysisProxy:
             if response is not None:
                 response.close()
                 response.release_conn()
-
-    def enumerate(self):
-        """Return iterator over all analyses stored in the bucket"""
-        return map(
-            lambda obj: AnalysisProxy(self.minio, obj.object_name.strip("/")),
-            self.minio.list_objects_v2(self.bucket),
-        )

@@ -19,6 +19,11 @@ import magic
 from karton.core import Config, Karton, LocalResource, RemoteResource, Resource, Task
 
 from drakrun.analyzer import AnalysisOptions, UnretryableAnalysisError, analyze_sample
+from drakrun.lib.analysis_status import (
+    AnalysisStatus,
+    create_or_update_analysis_status,
+    update_analysis_status,
+)
 from drakrun.lib.bindings.xen import get_xen_info, parse_xen_commandline
 from drakrun.lib.config import load_config
 from drakrun.lib.drakpdb import dll_file_list
@@ -319,6 +324,10 @@ class DrakrunKarton(Karton):
             "magic_output": magic_output,
         }
 
+        create_or_update_analysis_status(
+            self.backend.redis, self.analysis_uid, AnalysisStatus.STARTED, metadata
+        )
+
         analysis_options = AnalysisOptions(
             sample_path=sample_path,
             vm_id=self.instance_id,
@@ -366,6 +375,10 @@ class DrakrunKarton(Karton):
             quality,
         )
 
+        update_analysis_status(
+            self.backend.redis, self.analysis_uid, AnalysisStatus.FINISHED, metadata
+        )
+
     def process(self, task: Task) -> None:
         # TODO: Well, drakcore doesn't know what to do
         #       when task is crashed. We need this awful
@@ -373,6 +386,9 @@ class DrakrunKarton(Karton):
         try:
             self.process_task(task)
         except Exception:
+            update_analysis_status(
+                self.backend.redis, self.analysis_uid, AnalysisStatus.CRASHED
+            )
             return
 
 

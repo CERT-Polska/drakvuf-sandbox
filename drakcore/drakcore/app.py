@@ -1,6 +1,5 @@
 import json
 import os
-import pathlib
 import re
 from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -11,7 +10,11 @@ from karton.core.task import TaskState
 from minio.error import NoSuchKey
 
 from drakcore.analysis import AnalysisProxy
-from drakcore.database import Database
+from drakcore.analysis_status import (
+    AnalysisStatus,
+    create_analysis_status,
+    get_analysis_status_list,
+)
 from drakcore.system import SystemService
 from drakcore.util import get_config
 
@@ -20,21 +23,6 @@ conf = get_config()
 
 backend = SystemService(conf).backend
 minio = backend.minio
-db = Database(
-    conf.config["drakmon"].get("database", "sqlite:///var/lib/drakcore/drakcore.db"),
-    pathlib.Path(__file__).parent / "migrations",
-)
-
-
-@app.before_first_request
-def update_metadata_cache():
-    """Scans whole MinIO bucket and fetch missing metadata files"""
-    for analysis in AnalysisProxy(minio, None).enumerate():
-        try:
-            get_analysis_metadata(analysis.uid)
-        except NoSuchKey:
-            # Well, we tried. Too bad
-            pass
 
 
 @app.errorhandler(NoSuchKey)
@@ -99,32 +87,18 @@ def upload():
     task.add_resource("sample", sample)
 
     producer.send_task(task)
-
+    create_analysis_status(backend.redis, task.uid, AnalysisStatus.PENDING)
     return jsonify({"task_uid": task.uid})
 
 
 def get_analysis_metadata(analysis_uid):
-    db_result = db.select_metadata_by_uid(analysis_uid)
-    if db_result is not None:
-        return db_result
-
-    # Cache miss, have to ask MinIO
     analysis = AnalysisProxy(minio, analysis_uid)
-    metadata = analysis.get_metadata()
-
-    try:
-        db.insert_metadata(analysis_uid, metadata)
-    except Exception:
-        app.logger.exception("Failed to insert %s metadata", analysis_uid)
-
-    return metadata
+    return analysis.get_metadata()
 
 
 @app.route("/list")
 def route_list():
-    limit = int(request.args.get("limit", 100))
-    offset = int(request.args.get("offset", 0))
-    return jsonify(list(db.get_latest_metadata(limit, offset)))
+    return jsonify(get_analysis_status_list(backend.redis))
 
 
 @app.route("/processed/<task_uid>/<which>")
