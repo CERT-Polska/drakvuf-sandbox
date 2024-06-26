@@ -22,3 +22,4 @@ mslex==1.1.0
 pydantic==2.6.4
 # Peer dependency of Pydantic
 typing-extensions
+pathvalidate==3.2.0

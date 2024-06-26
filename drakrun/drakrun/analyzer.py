@@ -8,7 +8,6 @@ import ntpath
 import os
 import pathlib
 import random
-import re
 import shutil
 import string
 import subprocess
@@ -16,6 +15,7 @@ import time
 from typing import List, Optional, Tuple
 
 import magic
+from pathvalidate import Platform, is_valid_filename
 
 from .lib.config import load_config
 from .lib.drakpdb import dll_file_list
@@ -103,14 +103,16 @@ def filename_for_task(options: AnalysisOptions) -> Tuple[str, str]:
             extension = "exe"
     # Make sure the extension is lowercase
     extension = extension.lower()
-    # TODO: sample_filename should already contain extension or be fixed
-    #       to the proper extension
-    file_name = (options.sample_filename or random_filename()) + f".{extension}"
-    # TODO: if sample_filename doesn't match regex, it should fallback
-    #       to the default name
-    if not re.match(r"^[a-zA-Z0-9\._\-]+$", file_name):
-        raise RuntimeError("Filename contains invalid characters")
-
+    # Validate filename provided by user and append proper extension if necessary
+    if options.sample_filename and is_valid_filename(
+        options.sample_filename, platform=Platform.UNIVERSAL
+    ):
+        file_name = options.sample_filename
+        if "." not in file_name or file_name.split(".")[-1].lower() != extension:
+            file_name += f".{extension}"
+    else:
+        # Use random filename if name is invalid
+        file_name = random_filename() + f".{extension}"
     return file_name, extension
 
 
