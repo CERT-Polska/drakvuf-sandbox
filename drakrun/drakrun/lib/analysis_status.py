@@ -4,9 +4,9 @@ from typing import Any, Dict, Optional
 
 from redis import StrictRedis
 
-ANALYSES_LIST = "drakrun:analyses"
+ANALYSES_LIST = "drakrun.analyses"
 ANALYSES_LIST_LENGTH = 100
-ANALYSIS_KEY_PREFIX = "drakrun:analysis:"
+ANALYSIS_KEY_PREFIX = "drakrun.analysis:"
 
 
 class AnalysisStatus(Enum):

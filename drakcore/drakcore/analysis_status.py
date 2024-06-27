@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional
 
 from redis import StrictRedis
 
-ANALYSES_LIST = "drakrun:analyses"
+ANALYSES_LIST = "drakrun.analyses"
 ANALYSES_LIST_LENGTH = 100
-ANALYSIS_KEY_PREFIX = "drakrun:analysis:"
+ANALYSIS_KEY_PREFIX = "drakrun.analysis:"
 
 
 class AnalysisStatus(Enum):
@@ -69,7 +69,10 @@ def create_or_update_analysis_status(
 
 def get_analysis_status_list(rs: StrictRedis) -> List[Dict[str, Any]]:
     analysis_ids = rs.lrange(ANALYSES_LIST, 0, -1)
-    analysis_data = zip(analysis_ids, rs.mget(ANALYSES_LIST, *analysis_ids))
+    analysis_data = zip(
+        analysis_ids,
+        rs.mget(*(ANALYSIS_KEY_PREFIX + analysis_id for analysis_id in analysis_ids)),
+    )
     return [
         {"id": analysis_id, "meta": json.loads(metadata)}
         for analysis_id, metadata in analysis_data
