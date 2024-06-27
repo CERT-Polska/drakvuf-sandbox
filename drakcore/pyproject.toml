@@ -1,7 +1,0 @@
-[tool.isort]
-profile = "black"
-
-[tool.lint-python]
-lint-version = "2"
-source = "./drakcore"
-use-mypy = false

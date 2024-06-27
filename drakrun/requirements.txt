@@ -23,3 +23,6 @@ pydantic==2.6.4
 # Peer dependency of Pydantic
 typing-extensions
 pathvalidate==3.2.0
+# drak-web dependencies
+Flask==2.2.5
+uwsgi==2.0.22

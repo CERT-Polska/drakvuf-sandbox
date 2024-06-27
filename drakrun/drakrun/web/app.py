@@ -5,23 +5,23 @@ from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from flask import Flask, abort, jsonify, request, send_file, send_from_directory
-from karton.core import Producer, Resource, Task
+from karton.core import Producer, Resource, Task, Config
+from karton.core.backend import KartonBackend
 from karton.core.task import TaskState
 from minio.error import NoSuchKey
 
-from drakcore.analysis import AnalysisProxy
-from drakcore.analysis_status import (
+from drakrun.web.analysis import AnalysisProxy
+from drakrun.lib.analysis_status import (
     AnalysisStatus,
     create_analysis_status,
     get_analysis_status_list,
 )
-from drakcore.system import SystemService
-from drakcore.util import get_config
+from drakrun.lib.paths import ETC_DIR
 
 app = Flask(__name__, static_folder="frontend/build/static")
-conf = get_config()
-
-backend = SystemService(conf).backend
+conf_path = os.path.join(ETC_DIR, "config.ini")
+conf = Config()
+backend = KartonBackend(conf)
 minio = backend.minio
 
 
@@ -220,12 +220,3 @@ def send_assets(path):
 @app.route("/<path:path>")
 def catchall(path):
     return send_file("frontend/build/index.html")
-
-
-def main():
-    drakmon_cfg = {k: v for k, v in conf.config.items("drakmon")}
-    app.run(host=drakmon_cfg["listen_host"], port=drakmon_cfg["listen_port"])
-
-
-if __name__ == "__main__":
-    main()
