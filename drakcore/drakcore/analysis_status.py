@@ -71,10 +71,19 @@ def get_analysis_status_list(rs: StrictRedis) -> List[Dict[str, Any]]:
     analysis_ids = rs.lrange(ANALYSES_LIST, 0, -1)
     analysis_data = zip(
         analysis_ids,
-        rs.mget(*(ANALYSIS_KEY_PREFIX + analysis_id for analysis_id in analysis_ids)),
+        [
+            data and json.loads(data)
+            for data in rs.mget(
+                *(ANALYSIS_KEY_PREFIX + analysis_id for analysis_id in analysis_ids)
+            )
+        ],
     )
     return [
-        {"id": analysis_id, "meta": json.loads(metadata)}
-        for analysis_id, metadata in analysis_data
-        if metadata
+        {
+            "id": analysis_id,
+            "status": analysis_status["status"],
+            "meta": analysis_status["metadata"],
+        }
+        for analysis_id, analysis_status in analysis_data
+        if analysis_status
     ]
