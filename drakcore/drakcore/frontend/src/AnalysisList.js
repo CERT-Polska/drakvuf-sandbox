@@ -39,6 +39,8 @@ class AnalysisList extends Component {
         <table className="table table-striped table-bordered">
           <thead>
             <tr>
+              <th>Analysis ID</th>
+              <th>Status</th>
               <th>Sample SHA256</th>
               <th>File type</th>
               <th>Started</th>
@@ -52,10 +54,10 @@ class AnalysisList extends Component {
               return (
                 <tr key={val.id}>
                   <td className="text-hash">
-                    <Link to={"/analysis/" + val.id}>
-                      {val.meta.sample_sha256}
-                    </Link>
+                    <Link to={"/progress/" + val.id}>{val.id}</Link>
                   </td>
+                  <td>{val.status}</td>
+                  <td className="text-hash">{val.meta.sample_sha256}</td>
                   <td>{val.meta.magic_output}</td>
                   <td>{this.formatTimestamp(val.meta.time_started)}</td>
                   <td>{this.formatTimestamp(val.meta.time_finished)}</td>
