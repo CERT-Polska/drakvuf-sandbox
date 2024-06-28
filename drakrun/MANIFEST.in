@@ -1,4 +1,4 @@
 include drakrun/tools/*
 include drakrun/test/*
 include drakrun/data/*
-recursive-include drakcore/frontend/build *
+recursive-include drakrun/web/frontend/build *
