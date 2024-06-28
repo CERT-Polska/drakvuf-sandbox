@@ -10,7 +10,7 @@ requests==2.32.2
 tqdm==4.66.3
 python-magic==0.4.25
 dataclasses-json==0.5.6
-click==7.1.2
+click==8.1.7
 oletools==0.60
 regex==2020.7.14
 ipython==8.10.0
