@@ -26,14 +26,12 @@ MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
 
 DRAKMON_SERVICES = [
     "drak-system.service",
-    "drak-minio.service",
     "drak-web.service",
     "redis-server.service",
 ]
 
 DRAKVUF_SANDBOX_DEBS = [
     "drakrun-*.whl",
-    "drakcore_*.deb",
 ]
 
 DRAKVUF_DEBS = [

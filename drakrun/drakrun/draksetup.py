@@ -12,7 +12,7 @@ import tempfile
 import time
 import traceback
 from pathlib import Path, PureWindowsPath
-from typing import Dict
+from typing import List, Optional
 
 import click
 from minio import Minio
@@ -23,7 +23,7 @@ from drakrun.lib.apiscout import (
     build_static_apiscout_profile,
     make_static_apiscout_profile_for_dll,
 )
-from drakrun.lib.config import DrakrunConfig, load_config
+from drakrun.lib.config import DrakrunConfig, load_config, update_config
 from drakrun.lib.drakpdb import (
     DLL,
     dll_file_list,
@@ -1274,15 +1274,56 @@ def do_import_full(mc, name, bucket, zpool):
         )
 
 
-def parse_envfile(path: str) -> Dict[str, str]:
-    with open(path, "r") as f:
-        cfg = [line.strip().split("=", 1) for line in f if line.strip() and "=" in line]
-    return {k: v for k, v in cfg}
+MINIO_DOWNLOAD_URL = "https://dl.min.io/server/minio/release/linux-amd64/minio"
+
+
+@click.command(help="Install MinIO (for testing purposes)")
+@click.option(
+    "--minio-binary-path",
+    help="Path to the pre-downloaded MinIO binary (for testing purposes)",
+)
+def install_minio():
+    ...
 
 
 @click.command(help="Pre-installation activities")
-@click.option("--envfile", default="", help="Import s3 config from this file")
-def init(envfile: str):
+@click.option("--s3-address", default=None, help="S3 endpoint address")
+@click.option("--s3-access-key", default=None, help="S3 access key")
+@click.option("--s3-secret-key", default=None, help="S3 secret key")
+@click.option(
+    "--s3-secure", default=False, is_flag=True, help="S3 enable secure connection"
+)
+@click.option(
+    "--s3-make-buckets",
+    default=True,
+    is_flag=True,
+    help="Auto-create S3 buckets: karton, drakrun",
+)
+@click.option("--redis-host", default=None, help="Redis host")
+@click.option("--redis-port", default=None, help="Redis port")
+@click.option(
+    "--only",
+    type=click.Choice(["web", "system", "drakrun"]),
+    multiple=True,
+    help="Create configuration only for specific service for multi-node configuration",
+)
+@click.option(
+    "--unattended",
+    default=False,
+    is_flag=True,
+    help="Don't prompt for values, expect required parameters in arguments",
+)
+def init(
+    s3_address: Optional[str],
+    s3_access_key: Optional[str],
+    s3_secret_key: Optional[str],
+    s3_secure: bool,
+    s3_make_buckets: bool,
+    redis_host: Optional[str],
+    redis_port: Optional[str],
+    only: List[str],
+    unattended: bool,
+):
     # Simple activities handled by deb packages before
     # In the future, consider splitting this to remove hard dependency on systemd etc
     drakrun_dir = Path(ETC_DIR)
@@ -1291,25 +1332,133 @@ def init(envfile: str):
 
     drakrun_dir.mkdir(exist_ok=True)
     scripts_dir.mkdir(exist_ok=True)
-    config = (data_dir / "config.ini").read_text()
 
-    # This feature is provided for compatibility with minio.env files, but we plan to
-    # remove it in the future.
-    if envfile:
-        env = parse_envfile(envfile)
-        config = config.replace("access_key=", f"access_key={env['MINIO_ACCESS_KEY']}")
-        config = config.replace("secret_key=", f"secret_key={env['MINIO_SECRET_KEY']}")
+    def create_configuration_file(config_file_name, target_dir=drakrun_dir):
+        target_path = target_dir / config_file_name
+        if target_path.exists():
+            log.info(f"{target_path} already created.")
+            return target_path
 
-    (drakrun_dir / "config.ini").write_text(config)
+        config_data = (data_dir / config_file_name).read_text()
+        target_path.write_text(config_data)
+        log.info(f"Created {target_path}.")
+        return target_path
 
-    default_hooks = (data_dir / "hooks.txt").read_text()
-    (drakrun_dir / "hooks.txt").write_text(default_hooks)
+    drakrun_config_path = create_configuration_file("config.ini")
 
-    systemd_unit = (data_dir / "drakrun@.service").read_text()
-    Path("/etc/systemd/system/drakrun@.service").write_text(systemd_unit)
+    try:
+        config = load_config()
+    except Exception:
+        import traceback
 
-    config_template = (data_dir / "cfg.template").read_text()
-    (scripts_dir / "cfg.template").write_text(config_template)
+        traceback.print_exc()
+        click.echo(
+            "Failed to load currently installed configuration. "
+            f"Fix {drakrun_config_path.as_posix()} or remove file to reconfigure it "
+            f"from scratch and run 'draksetup init' again.",
+            err=True,
+        )
+        raise click.Abort()
+
+    def apply_setting(message, current_value, option_value, hide_input=False):
+        if option_value is not None:
+            # If option value is already provided: just return option_value
+            return option_value
+        if unattended:
+            # If unattended and no option value: just leave current value
+            return current_value
+        default_value = current_value or None
+        input_value = click.prompt(
+            message, default=default_value, hide_input=hide_input
+        )
+        if input_value is None:
+            # If input not provided and no reasonable default found: leave current value
+            return current_value
+        else:
+            # Else: provide input value
+            return input_value
+
+    config.redis.host = apply_setting(
+        "Provide redis hostname", config.redis.host, redis_host
+    )
+    config.redis.port = apply_setting(
+        "Provide redis port", config.redis.port, redis_port
+    )
+    config.minio.address = apply_setting(
+        "Provide S3 (MinIO) address", config.minio.address, s3_address
+    )
+    config.minio.access_key = apply_setting(
+        "Provide S3 (MinIO) access key", config.minio.access_key, s3_access_key
+    )
+    config.minio.secret_key = apply_setting(
+        "Provide S3 (MinIO) secret key", config.minio.secret_key, s3_secret_key
+    )
+    config.minio.secure = s3_secure
+
+    update_config(config)
+    log.info(f"Updated {drakrun_config_path.as_posix()}.")
+
+    mc = get_minio_client(config)
+
+    def check_s3_bucket(bucket_name):
+        if not mc.bucket_exists(bucket_name):
+            if s3_make_buckets:
+                log.info(f"Bucket '{bucket_name}' doesn't exist, creating one...")
+                mc.make_bucket(bucket_name)
+            else:
+                click.echo(
+                    f"Bucket '{bucket_name}' doesn't exist. "
+                    "Create proper S3 buckets to continue.",
+                    err=True,
+                )
+                raise click.Abort()
+
+    check_s3_bucket("drakrun")
+    check_s3_bucket(config.minio.bucket)
+
+    def is_component_initialized(component_name):
+        return not only or component_name in only
+
+    systemd_service_dir = Path("/etc/systemd/system")
+
+    def fix_exec_start(config_file_name):
+        """
+        This function fixes ExecStart entry to point at correct virtualenv bin directory
+
+        ExecStart=/usr/local/bin/karton-system --config-file /etc/drakrun/config.ini
+        """
+        systemd_config_path = systemd_service_dir / config_file_name
+        systemd_config = systemd_config_path.read_text()
+        current_exec_start = next(
+            line
+            for line in systemd_config.splitlines()
+            if line.startswith("ExecStart=")
+        )
+        current_exec_path_str = current_exec_start.split("=")[1].split()[0]
+        current_exec_path = Path(current_exec_path_str)
+        new_exec_path = Path(sys.executable).parent / current_exec_path.name
+        if current_exec_path != new_exec_path:
+            systemd_config.replace(current_exec_path_str, new_exec_path.as_posix())
+            systemd_config_path.write_text(systemd_config)
+            log.info(
+                f"{systemd_config_path}: Replaced {current_exec_path} with {new_exec_path}"
+            )
+        return systemd_config_path
+
+    if is_component_initialized("drakrun"):
+        create_configuration_file("hooks.txt")
+        create_configuration_file("drakrun@.service", target_dir=systemd_service_dir)
+        fix_exec_start("drakrun@.service")
+        create_configuration_file("cfg.template", target_dir=(drakrun_dir / "scripts"))
+
+    if is_component_initialized("system"):
+        create_configuration_file("drak-system.service", target_dir=systemd_service_dir)
+        fix_exec_start("drak-system.service")
+
+    if is_component_initialized("web"):
+        create_configuration_file("uwsgi.ini")
+        create_configuration_file("drak-web.service", target_dir=systemd_service_dir)
+        fix_exec_start("drak-web.service")
 
 
 @click.group()
@@ -1332,6 +1481,7 @@ main.add_command(memdump)
 main.add_command(cleanup)
 main.add_command(cleanup_network)
 main.add_command(init)
+main.add_command(install_minio)
 
 
 if __name__ == "__main__":
