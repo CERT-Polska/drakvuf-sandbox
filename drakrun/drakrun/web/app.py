@@ -5,18 +5,18 @@ from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from flask import Flask, abort, jsonify, request, send_file, send_from_directory
-from karton.core import Producer, Resource, Task, Config
+from karton.core import Config, Producer, Resource, Task
 from karton.core.backend import KartonBackend
 from karton.core.task import TaskState
 from minio.error import NoSuchKey
 
-from drakrun.web.analysis import AnalysisProxy
 from drakrun.lib.analysis_status import (
     AnalysisStatus,
     create_analysis_status,
     get_analysis_status_list,
 )
 from drakrun.lib.paths import ETC_DIR
+from drakrun.web.analysis import AnalysisProxy
 
 app = Flask(__name__, static_folder="frontend/build/static")
 conf_path = os.path.join(ETC_DIR, "config.ini")
