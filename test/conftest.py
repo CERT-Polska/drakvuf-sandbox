@@ -120,7 +120,8 @@ def drakmon_setup():
 
         # Import snapshot
         assert SNAPSHOT_VERSION is not None
-        ssh.run(f"draksetup init --envfile /etc/drakcore/minio.env")
+        ssh.run(f"draksetup install-minio")
+        ssh.run(f"draksetup init --unattended")
         ssh.run(f'DRAKRUN_MINIO_ADDRESS="{MINIO_HOST}" '
                 f'DRAKRUN_MINIO_SECURE=0 '
                 f'DRAKRUN_MINIO_ACCESS_KEY="{MINIO_ACCESS_KEY}" '
@@ -134,20 +135,3 @@ def drakmon_setup():
 
     logging.info("VM provisioned, starting tests...")
     return drakvuf_vm
-
-
-@pytest.fixture(scope="session")
-def karton_bucket(drakmon_vm):
-    """ Wait up to 30 seconds until karton bucket appears """
-    with drakmon_vm.connect_ssh() as ssh:
-        for _ in range(30):
-            try:
-                ssh.run("[[ -d /var/lib/drakcore/minio/karton ]]")
-                ssh.run("[[ -d /var/lib/drakcore/minio/drakrun ]]")
-                break
-            except UnexpectedExit:
-                time.sleep(1.0)
-        else:
-            raise RuntimeError("Buckets didn't appear!")
-
-    return None
