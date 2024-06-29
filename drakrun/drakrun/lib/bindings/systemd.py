@@ -35,7 +35,7 @@ def disable_service(service_name: str):
 
 
 def systemctl_daemon_reload():
-    return subprocess.run(["systemctl", "daemon-reload"], check=True, shell=True)
+    return subprocess.run(["systemctl", "daemon-reload"], check=True)
 
 
 def list_enabled_services(service_name_pattern: str, state: str = ""):
