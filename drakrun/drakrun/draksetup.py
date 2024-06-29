@@ -1455,14 +1455,28 @@ def init(
     config.minio.address = apply_setting(
         "Provide S3 (MinIO) address", config.minio.address, s3_address
     )
-    config.minio.access_key = apply_setting(
-        "Provide S3 (MinIO) access key", config.minio.access_key, s3_access_key
-    )
-    config.minio.secret_key = apply_setting(
-        "Provide S3 (MinIO) secret key", config.minio.secret_key, s3_secret_key
-    )
-    config.minio.secure = s3_secure
 
+    minio_env_applied = False
+    if MINIO_ENV_CONFIG_FILE.exists():
+        log.info(
+            f"Found {MINIO_ENV_CONFIG_FILE.as_posix()} file with MinIO credentials"
+        )
+        if unattended or click.confirm(
+            f"Do you want to import credentials from {MINIO_ENV_CONFIG_FILE.as_posix()} file?",
+            default=True,
+        ):
+            apply_local_minio_service_config(config)
+            minio_env_applied = True
+
+    if not minio_env_applied:
+        config.minio.access_key = apply_setting(
+            "Provide S3 (MinIO) access key", config.minio.access_key, s3_access_key
+        )
+        config.minio.secret_key = apply_setting(
+            "Provide S3 (MinIO) secret key", config.minio.secret_key, s3_secret_key
+        )
+
+    config.minio.secure = s3_secure
     update_config(config)
     log.info(f"Updated {drakrun_config_path.as_posix()}.")
 
