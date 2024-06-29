@@ -20,7 +20,7 @@ from drakrun.web.analysis import AnalysisProxy
 
 app = Flask(__name__, static_folder="frontend/build/static")
 conf_path = os.path.join(ETC_DIR, "config.ini")
-conf = Config()
+conf = Config(conf_path)
 backend = KartonBackend(conf)
 minio = backend.minio
 
