@@ -1,3 +1,4 @@
+import configparser
 import hashlib
 import io
 import json
@@ -5,16 +6,19 @@ import logging
 import os
 import re
 import secrets
+import shutil
 import string
 import subprocess
 import sys
 import tempfile
+import textwrap
 import time
 import traceback
 from pathlib import Path, PureWindowsPath
 from typing import List, Optional
 
 import click
+import requests
 from minio import Minio
 from minio.error import NoSuchKey
 from tqdm import tqdm
@@ -22,6 +26,11 @@ from tqdm import tqdm
 from drakrun.lib.apiscout import (
     build_static_apiscout_profile,
     make_static_apiscout_profile_for_dll,
+)
+from drakrun.lib.bindings.systemd import (
+    enable_service,
+    start_service,
+    systemctl_daemon_reload,
 )
 from drakrun.lib.config import DrakrunConfig, load_config, update_config
 from drakrun.lib.drakpdb import (
@@ -1275,15 +1284,74 @@ def do_import_full(mc, name, bucket, zpool):
 
 
 MINIO_DOWNLOAD_URL = "https://dl.min.io/server/minio/release/linux-amd64/minio"
+MINIO_ENV_CONFIG_FILE = Path("/etc/default/minio")
+SYSTEMD_SERVICE_PATH = Path("/etc/systemd/system")
+
+
+def generate_minio_service_config():
+    """
+    Creates /etc/default/minio with generated credentials
+    """
+    access_key = secrets.token_urlsafe(30)
+    secret_key = secrets.token_urlsafe(30)
+    minio_env = textwrap.dedent(
+        f"""\
+        MINIO_ROOT_USER={access_key}
+        MINIO_ROOT_PASSWORD={secret_key}
+        MINIO_VOLUMES="/var/lib/minio"
+        # MINIO_OPTS sets any additional commandline options to pass to the MinIO server.
+        # For example, `--console-address :9001` sets the MinIO Console listen port
+        MINIO_OPTS="--console-address :9001"
+        """
+    )
+    MINIO_ENV_CONFIG_FILE.write_text(minio_env)
+    log.info(f"Created {MINIO_ENV_CONFIG_FILE.as_posix()} with default configuration")
+
+
+def apply_local_minio_service_config(config: DrakrunConfig):
+    parser = configparser.ConfigParser(strict=False, allow_no_value=True)
+    minio_env = "[DEFAULT]\n" + MINIO_ENV_CONFIG_FILE.read_text()
+    parser.read_string(minio_env)
+    config.minio.access_key = parser.get("DEFAULT", "MINIO_ROOT_USER")
+    config.minio.secret_key = parser.get("DEFAULT", "MINIO_ROOT_PASSWORD")
+    return config
 
 
 @click.command(help="Install MinIO (for testing purposes)")
-@click.option(
-    "--minio-binary-path",
-    help="Path to the pre-downloaded MinIO binary (for testing purposes)",
-)
 def install_minio():
-    ...
+    data_dir = Path(__file__).parent / "data"
+    if minio_path := shutil.which("minio"):
+        log.info(f"MinIO already found in {minio_path}, no need to download")
+    else:
+        log.info("Downloading MinIO")
+        response = requests.get(MINIO_DOWNLOAD_URL, stream=True)
+        total_length = response.headers.get("content-length")
+        with tqdm(
+            total=total_length, unit_scale=True
+        ) as pbar, tempfile.NamedTemporaryFile(delete=False) as f:
+            try:
+                for data in response.iter_content(chunk_size=4096):
+                    f.write(data)
+                    pbar.update(len(data))
+                os.rename(f.name, "/usr/local/bin/minio")
+            except BaseException:
+                os.remove(f.name)
+        os.chmod("/usr/local/bin/minio", 0o0755)
+
+    if MINIO_ENV_CONFIG_FILE.exists():
+        log.info(f"{MINIO_ENV_CONFIG_FILE.as_posix()} already exists, no need to setup")
+    else:
+        generate_minio_service_config()
+
+    minio_service_path = SYSTEMD_SERVICE_PATH / "minio.service"
+    if minio_service_path.exists():
+        log.info(f"{minio_service_path} already exists, no need to setup")
+    else:
+        config_data = (data_dir / "minio.service").read_text()
+        minio_service_path.write_text(config_data)
+        log.info("Starting minio service")
+        enable_service("minio")
+        start_service("minio")
 
 
 @click.command(help="Pre-installation activities")
@@ -1416,10 +1484,8 @@ def init(
     check_s3_bucket("drakrun")
     check_s3_bucket(config.minio.bucket)
 
-    def is_component_initialized(component_name):
+    def is_component_to_init(component_name):
         return not only or component_name in only
-
-    systemd_service_dir = Path("/etc/systemd/system")
 
     def fix_exec_start(config_file_name):
         """
@@ -1427,7 +1493,7 @@ def init(
 
         ExecStart=/usr/local/bin/karton-system --config-file /etc/drakrun/config.ini
         """
-        systemd_config_path = systemd_service_dir / config_file_name
+        systemd_config_path = SYSTEMD_SERVICE_PATH / config_file_name
         systemd_config = systemd_config_path.read_text()
         current_exec_start = next(
             line
@@ -1445,20 +1511,34 @@ def init(
             )
         return systemd_config_path
 
-    if is_component_initialized("drakrun"):
+    if is_component_to_init("drakrun"):
         create_configuration_file("hooks.txt")
-        create_configuration_file("drakrun@.service", target_dir=systemd_service_dir)
+        create_configuration_file("drakrun@.service", target_dir=SYSTEMD_SERVICE_PATH)
         fix_exec_start("drakrun@.service")
         create_configuration_file("cfg.template", target_dir=(drakrun_dir / "scripts"))
 
-    if is_component_initialized("system"):
-        create_configuration_file("drak-system.service", target_dir=systemd_service_dir)
+    if is_component_to_init("system"):
+        create_configuration_file(
+            "drak-system.service", target_dir=SYSTEMD_SERVICE_PATH
+        )
         fix_exec_start("drak-system.service")
 
-    if is_component_initialized("web"):
+    if is_component_to_init("web"):
         create_configuration_file("uwsgi.ini")
-        create_configuration_file("drak-web.service", target_dir=systemd_service_dir)
+        create_configuration_file("drak-web.service", target_dir=SYSTEMD_SERVICE_PATH)
         fix_exec_start("drak-web.service")
+
+    systemctl_daemon_reload()
+
+    # drakrun is going to be enabled after complete install/postinstall setup
+    if is_component_to_init("system"):
+        log.info("Starting drak-system service")
+        enable_service("drak-system")
+        start_service("drak-system")
+    if is_component_to_init("web"):
+        log.info("Starting drak-web service")
+        enable_service("drak-web")
+        start_service("drak-web")
 
 
 @click.group()
