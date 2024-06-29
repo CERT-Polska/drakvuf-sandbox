@@ -252,9 +252,9 @@ def delete_vm_bridge(bridge_name: str) -> None:
         log.info(f"Bridge {bridge_name} is down")
     except subprocess.CalledProcessError as e:
         if b"Cannot find device" in e.stderr:
-            log.info(f"Already deleted {bridge_name } bridge")
+            log.info(f"Already deleted {bridge_name} bridge")
         else:
-            raise Exception(f"Couldn't deactivate {bridge_name } bridge")
+            raise Exception(f"Couldn't deactivate {bridge_name} bridge")
     else:
         subprocess.run(f"brctl delbr {bridge_name}", shell=True)
         log.info(f"Deleted {bridge_name} bridge")

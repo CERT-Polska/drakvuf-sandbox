@@ -10,7 +10,7 @@ requests==2.32.2
 tqdm==4.66.3
 python-magic==0.4.25
 dataclasses-json==0.5.6
-click==7.1.2
+click==8.1.7
 oletools==0.60
 regex==2020.7.14
 ipython==8.10.0
@@ -23,3 +23,7 @@ pydantic==2.6.4
 # Peer dependency of Pydantic
 typing-extensions
 pathvalidate==3.2.0
+configupdater==3.2
+# drak-web dependencies
+Flask==2.2.5
+uwsgi==2.0.22
