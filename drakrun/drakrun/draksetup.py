@@ -10,6 +10,7 @@ import shutil
 import string
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import textwrap
 import time
@@ -1501,6 +1502,14 @@ def init(
     def is_component_to_init(component_name):
         return not only or component_name in only
 
+    def get_scripts_bin_path():
+        scripts_path = Path(sysconfig.get_path("scripts"))
+        if scripts_path == Path("/usr/bin"):
+            # pip installs global scripts in different path than
+            # pointed by sysconfig
+            return Path("/usr/local/bin")
+        return scripts_path
+
     def fix_exec_start(config_file_name):
         """
         This function fixes ExecStart entry to point at correct virtualenv bin directory
@@ -1516,9 +1525,11 @@ def init(
         )
         current_exec_path_str = current_exec_start.split("=")[1].split()[0]
         current_exec_path = Path(current_exec_path_str)
-        new_exec_path = Path(sys.executable).parent / current_exec_path.name
+        new_exec_path = get_scripts_bin_path() / current_exec_path.name
         if current_exec_path != new_exec_path:
-            systemd_config.replace(current_exec_path_str, new_exec_path.as_posix())
+            systemd_config = systemd_config.replace(
+                current_exec_path_str, new_exec_path.as_posix()
+            )
             systemd_config_path.write_text(systemd_config)
             log.info(
                 f"{systemd_config_path}: Replaced {current_exec_path} with {new_exec_path}"
