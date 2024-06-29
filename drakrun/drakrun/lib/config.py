@@ -68,6 +68,15 @@ class DrakrunConfigSection(BaseModel):
     anti_hammering_threshold: int = Field(default=0)
     attach_profiles: bool = Field(default=False)
     attach_apiscout_profile: bool = Field(default=False)
+    xen_cmdline_check: str = Field(default="fail")
+
+    @field_validator("xen_cmdline_check", mode="after")
+    @classmethod
+    def xen_cmdline_check_validator(cls, v: str):
+        allowed_choices = ["fail", "ignore", "no"]
+        if v not in allowed_choices:
+            raise ValueError(f"must be one of: {allowed_choices}")
+        return v
 
 
 class DrakvufPluginsConfigSection(BaseModel):
