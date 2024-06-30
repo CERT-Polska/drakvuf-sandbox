@@ -20,7 +20,7 @@ jobs:
       - uses: nanoufo/action-upload-artifacts-and-release-assets@v2
         with:
           path: |
-            drakrun-*.whl
-            drakvuf-bundle*.deb
+            drakrun-whl/drakrun-*.whl
+            drakvuf-bundle-debs-debian-bullseye/drakvuf-bundle*.deb
           upload-release-files: true
           release-upload-url: ${{ github.event.release.upload_url }}
