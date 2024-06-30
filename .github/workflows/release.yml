@@ -7,6 +7,8 @@ on:
 jobs:
   release_artifacts:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Download artifact
@@ -15,9 +17,10 @@ jobs:
         with:
           workflow: build.yml
           workflow_conclusion: success
-      - name: Upload release artifacts
-        uses: alexellis/upload-assets@0.4.1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+      - uses: nanoufo/action-upload-artifacts-and-release-assets@v2
         with:
-          asset_paths: '["drakrun-*.whl", "drakvuf-bundle*.deb"]'
+          path: |
+            drakrun-*.whl
+            drakvuf-bundle*.deb
+          upload-release-files: true
+          release-upload-url: ${{ github.event.release.upload_url }}
