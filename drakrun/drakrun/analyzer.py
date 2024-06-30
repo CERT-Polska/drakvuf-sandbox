@@ -27,7 +27,7 @@ from .lib.networking import (
     start_dnsmasq,
     start_tcpdump_collector,
 )
-from .lib.paths import PROFILE_DIR, RUNTIME_FILE
+from .lib.paths import ETC_DIR, PROFILE_DIR, RUNTIME_FILE
 from .lib.sample_startup import get_sample_entrypoints, get_sample_startup_command
 from .lib.storage import get_storage_backend
 from .lib.util import RuntimeInfo, graceful_exit
@@ -70,7 +70,7 @@ class AnalysisOptions:
     vm_id: int
     output_dir: pathlib.Path
     plugins: List[str]
-    hooks_path: pathlib.Path
+    hooks_path: pathlib.Path = pathlib.Path(ETC_DIR) / "hooks.txt"
     timeout: int = 600
     start_command: Optional[str] = None
     extension: Optional[str] = None
