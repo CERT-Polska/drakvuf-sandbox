@@ -240,13 +240,14 @@ class DrakrunKarton(Karton):
                 yield
         except Exception:
             # In case of failure: upload drakrun.log artifact
-            log_resource = LocalResource(
-                name="drakrun.log",
-                path=drakrun_log_path,
-                uid=f"{self.analysis_uid}/drakrun.log",
-                bucket="drakrun",
-            )
-            log_resource.upload(self.backend)
+            if drakrun_log_path.exists():
+                log_resource = LocalResource(
+                    name="drakrun.log",
+                    path=drakrun_log_path,
+                    uid=f"{self.analysis_uid}/drakrun.log",
+                    bucket="drakrun",
+                )
+                log_resource.upload(self.backend)
             raise
 
     def process_task(self, task: Task) -> None:
