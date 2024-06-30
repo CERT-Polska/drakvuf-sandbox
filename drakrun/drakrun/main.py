@@ -232,14 +232,14 @@ class DrakrunKarton(Karton):
         return output_dir
 
     @contextlib.contextmanager
-    def persist_drakrun_log(self, output_dir: pathlib.Path):
-        drakrun_log_path = output_dir / "drakrun.log"
+    def persist_drakrun_log(self):
+        drakrun_log_path = self.analysis_dir / "drakrun.log"
 
         try:
             with scoped_file_logger(drakrun_log_path, logging.getLogger()):
                 yield
-        except Exception:
-            # In case of failure: upload drakrun.log artifact
+        finally:
+            # Always upload drakrun.log artifact if exists
             if drakrun_log_path.exists():
                 log_resource = LocalResource(
                     name="drakrun.log",
@@ -248,7 +248,6 @@ class DrakrunKarton(Karton):
                     bucket="drakrun",
                 )
                 log_resource.upload(self.backend)
-            raise
 
     def process_task(self, task: Task) -> None:
         timeout = self.timeout_for_task(task)
@@ -262,7 +261,7 @@ class DrakrunKarton(Karton):
         sample: RemoteResource = cast(RemoteResource, task.get_resource("sample"))
         output_dir = self._prepare_analysis_directory()
 
-        with self.persist_drakrun_log(output_dir):
+        with self.persist_drakrun_log(self.analysis_dir):
             sample_path = self.analysis_dir / "sample"
             sample.download_to_file(str(sample_path))
             sha256sum = get_sample_sha256(sample_path)
