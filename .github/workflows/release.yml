@@ -1,0 +1,23 @@
+name: Release new Drakvuf Sandbox version
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release_artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build.yml
+          workflow_conclusion: success
+      - name: Upload release artifacts
+        uses: alexellis/upload-assets@0.4.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          asset_paths: '["drakrun-*.whl", "drakvuf-bundle*.deb"]'
