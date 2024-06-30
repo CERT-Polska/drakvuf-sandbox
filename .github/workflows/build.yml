@@ -137,7 +137,7 @@ jobs:
           chmod +x drakrun/drakrun/tools/*  # gh artifacts don't keep file permissions
           cd drakrun
           ( cd drakrun/web/frontend ; npm install && npm run-script build )
-          DRAKRUN_VERSION_TAG=$GITHUB_SHA python3 setup.py bdist_wheel
+          python3 setup.py bdist_wheel
       - uses: actions/upload-artifact@v3
         with:
           name: drakvuf-sandbox-whl
