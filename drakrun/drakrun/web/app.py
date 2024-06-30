@@ -15,14 +15,18 @@ from drakrun.lib.analysis_status import (
     create_analysis_status,
     get_analysis_status_list,
 )
+from drakrun.lib.config import load_config
+from drakrun.lib.minio import get_minio_client
 from drakrun.lib.paths import ETC_DIR
 from drakrun.web.analysis import AnalysisProxy
 
 app = Flask(__name__, static_folder="frontend/build/static")
-conf_path = os.path.join(ETC_DIR, "config.ini")
-conf = Config(conf_path)
-backend = KartonBackend(conf)
-minio = backend.minio
+karton_conf_path = os.path.join(ETC_DIR, "config.ini")
+karton_conf = Config(karton_conf_path)
+backend = KartonBackend(karton_conf)
+
+drakrun_conf = load_config()
+minio = get_minio_client(drakrun_conf)
 
 
 @app.errorhandler(NoSuchKey)
@@ -39,7 +43,7 @@ def add_header(response):
 
 @app.route("/upload", methods=["POST"])
 def upload():
-    producer = Producer(conf)
+    producer = Producer(karton_conf)
 
     with NamedTemporaryFile() as f:
         request.files["file"].save(f.name)
