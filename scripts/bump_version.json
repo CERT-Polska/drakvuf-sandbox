@@ -1,7 +1,7 @@
 {
     "files": {
-        "drakrun/web/frontend/package.json": "\"version\": \"$VERSION\"",
-        "drakrun/web/frontend/package-lock.json": "\"version\": \"$VERSION\"",
+        "drakrun/drakrun/web/frontend/package.json": "\"version\": \"$VERSION\"",
+        "drakrun/drakrun/web/frontend/package-lock.json": "\"version\": \"$VERSION\"",
         "drakrun/drakrun/version.py": "__version__ = \"$VERSION\"",
         "docs/conf.py": "release = 'v$VERSION'"
     },
