@@ -31,7 +31,7 @@ DRAKMON_SERVICES = [
 ]
 
 DRAKVUF_SANDBOX_DEBS = [
-    "drakrun-*.whl",
+    "drakvuf_sandbox-*.whl",
 ]
 
 DRAKVUF_DEBS = [

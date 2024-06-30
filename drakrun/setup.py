@@ -12,7 +12,7 @@ if os.getenv("DRAKRUN_VERSION_TAG"):
     version = version + "+" + os.getenv("DRAKRUN_VERSION_TAG")
 
 setup(
-    name="drakrun",
+    name="drakvuf-sandbox",
     version=version,
     description="DRAKRUN",
     package_dir={"drakrun": "drakrun"},

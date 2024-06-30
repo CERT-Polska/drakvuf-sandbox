@@ -140,8 +140,8 @@ jobs:
           DRAKRUN_VERSION_TAG=$GITHUB_SHA python3 setup.py bdist_wheel
       - uses: actions/upload-artifact@v3
         with:
-          name: drakrun-whl
-          path: ./drakrun/dist/drakrun-*.whl
+          name: drakvuf-sandbox-whl
+          path: ./drakrun/dist/drakvuf_sandbox-*.whl
   test_e2e:
     needs: [ package_drakrun, package_drakvuf_bundle ]
     strategy:
@@ -162,7 +162,7 @@ jobs:
       - name: Download drakrun debs from artifacts
         uses: actions/download-artifact@v3
         with:
-          name: drakrun-whl
+          name: drakvuf-sandbox-whl
           path: /debs
       - name: Download drakvuf-bundle debs from artifacts
         uses: actions/download-artifact@v3
