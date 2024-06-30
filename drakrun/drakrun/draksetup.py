@@ -20,7 +20,6 @@ from typing import List, Optional
 
 import click
 import requests
-from minio import Minio
 from minio.error import NoSuchKey
 from tqdm import tqdm
 
@@ -45,6 +44,7 @@ from drakrun.lib.drakpdb import (
 )
 from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
+from drakrun.lib.minio import get_minio_client
 from drakrun.lib.networking import (
     delete_all_vm_networks,
     delete_legacy_iptables,
@@ -962,16 +962,6 @@ def mount(iso_path, domain_name):
     """
     iso_path_full = os.path.abspath(iso_path)
     insert_cd(domain_name, FIRST_CDROM_DRIVE, iso_path_full)
-
-
-def get_minio_client(config: DrakrunConfig):
-    minio_cfg = config.minio
-    return Minio(
-        endpoint=minio_cfg.address,
-        access_key=minio_cfg.access_key,
-        secret_key=minio_cfg.secret_key,
-        secure=minio_cfg.secure,
-    )
 
 
 @click.group(help="Manage VM raw memory pre-sample dumps")
