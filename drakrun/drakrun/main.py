@@ -261,7 +261,7 @@ class DrakrunKarton(Karton):
         sample: RemoteResource = cast(RemoteResource, task.get_resource("sample"))
         output_dir = self._prepare_analysis_directory()
 
-        with self.persist_drakrun_log(self.analysis_dir):
+        with self.persist_drakrun_log():
             sample_path = self.analysis_dir / "sample"
             sample.download_to_file(str(sample_path))
             sha256sum = get_sample_sha256(sample_path)
