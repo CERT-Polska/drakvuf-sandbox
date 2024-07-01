@@ -46,7 +46,7 @@ In order to analyze IPT data streams, you need to install ``libipt``, ``xed``, `
   cmake .
   make -j$(nproc) install
 
-  cd ../drakvuf-sandbox/drakcore/drakcore/tools/ipt
+  cd ../drakvuf-sandbox/drakrun/drakrun/tools/ipt
   cmake .
   make install
 
