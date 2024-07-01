@@ -121,6 +121,9 @@ def get_ptxed_cmdline(analysis_dir, cr3_value, vcpu, use_blocks=False):
 
     pages = []
     for addr, fname in mappings:
+        if fname == "(null)":
+            # codemon failed to save dump
+            continue
         name = Path(fname).name
         fpath = analysis_dir / "ipt" / "dumps" / name
         if fpath.stat().st_size == 0x1000:
