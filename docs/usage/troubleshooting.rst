@@ -18,8 +18,6 @@ Check service logs:
 
   # journalctl -e -u drak-web
   # journalctl -e -u drak-system
-  # journalctl -e -u drak-minio
-  # journalctl -e -u drak-postprocess@1
   # journalctl -e -u drakrun@1
 
 Debug ``device model did not start``

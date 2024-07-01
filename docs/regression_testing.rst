@@ -2,11 +2,15 @@
 Regression testing
 ==================
 
+.. warning::
+
+    This feature is deprecated. For more up-to-date information, learn more about `malduck <https://malduck.readthedocs.io/en/latest/>`_ and `karton-config-extractor <https://github.com/CERT-Polska/karton-config-extractor>`_.
+
 Introduction
 ------------
 
 Memory dumping is one of the core functionalities used for automated malware
-analysis. Unpacked or decrypted memory is saved for futher analysis with YARA
+analysis. Unpacked or decrypted memory is saved for further analysis with YARA
 rules or configuration extraction. Thus, it's important to ensure that DRAKVUF
 development does cause any regressions that would break existing sample analysis.
 
