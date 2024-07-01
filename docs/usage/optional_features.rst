@@ -34,8 +34,6 @@ If you want to install DRAKVUF Sandbox with a ZFS storage backend, you should pe
 
      --storage-backend zfs --zfs-tank-name tank/vms
 
-
-
 Networking
 ----------
 

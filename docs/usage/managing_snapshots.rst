@@ -66,7 +66,7 @@ or hit Ctrl+D.
 Importing and exporting snapshots
 =================================
 
-Current sandbox implemention allows for a single VM snapshot installed on a machine.
+Current sandbox implementation allows for a single VM snapshot installed on a machine.
 However, it is possible to export and import snapshots from a remote server.
 
 This is especially useful when running drakrun on multiple machines that should share same snapshot.
