@@ -1,3 +1,6 @@
 [submodule "drakvuf"]
 	path = drakvuf
 	url = https://github.com/CERT-Polska/drakvuf.git
+[submodule "drakrun/drakrun/lib/postprocessing/capa-plugin/capa-rules"]
+	path = drakrun/drakrun/lib/postprocessing/capa-plugin/capa-rules
+	url = https://github.com/mandiant/capa-rules/
