@@ -397,7 +397,7 @@ def capa_analysis(analysis_dir: pathlib.Path) -> None:
     rules = get_rules([capa_rules_dir])
     rules = filter_rules(
         rules,
-        filter_function=lambda rule: rule.meta.get(["att&ck"], None)
+        filter_function=lambda rule: rule.meta.get("att&ck", None)
     )  # select only rules with an att&ck entry specified
 
     # get malware-related pids if requested by configuration
@@ -422,7 +422,7 @@ def capa_analysis(analysis_dir: pathlib.Path) -> None:
 
         # write the extracted TTPs to the analysis dir
         with (analysis_dir / "ttps.json").open("w", encoding="utf8") as f:
-            for line in construct_ttp_blocks(rules, [dynamic_capabilities], filter_function=rule.meta.get(["att&ck"], None)):
+            for line in construct_ttp_blocks(rules, [dynamic_capabilities], filter_function=lambda rule: rule.meta.get("att&ck", None)):
                 json.dump(line, f)
                 f.write("\n")
 
