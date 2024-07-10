@@ -5,24 +5,28 @@ from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from flask import Flask, abort, jsonify, request, send_file, send_from_directory
-from karton.core import Producer, Resource, Task
+from karton.core import Config, Producer, Resource, Task
+from karton.core.backend import KartonBackend
 from karton.core.task import TaskState
 from minio.error import NoSuchKey
 
-from drakcore.analysis import AnalysisProxy
-from drakcore.analysis_status import (
+from drakrun.lib.analysis_status import (
     AnalysisStatus,
     create_analysis_status,
     get_analysis_status_list,
 )
-from drakcore.system import SystemService
-from drakcore.util import get_config
+from drakrun.lib.config import load_config
+from drakrun.lib.minio import get_minio_client
+from drakrun.lib.paths import ETC_DIR
+from drakrun.web.analysis import AnalysisProxy
 
 app = Flask(__name__, static_folder="frontend/build/static")
-conf = get_config()
+karton_conf_path = os.path.join(ETC_DIR, "config.ini")
+karton_conf = Config(karton_conf_path)
+backend = KartonBackend(karton_conf)
 
-backend = SystemService(conf).backend
-minio = backend.minio
+drakrun_conf = load_config()
+minio = get_minio_client(drakrun_conf)
 
 
 @app.errorhandler(NoSuchKey)
@@ -39,7 +43,7 @@ def add_header(response):
 
 @app.route("/upload", methods=["POST"])
 def upload():
-    producer = Producer(conf)
+    producer = Producer(karton_conf)
 
     with NamedTemporaryFile() as f:
         request.files["file"].save(f.name)
@@ -220,12 +224,3 @@ def send_assets(path):
 @app.route("/<path:path>")
 def catchall(path):
     return send_file("frontend/build/index.html")
-
-
-def main():
-    drakmon_cfg = {k: v for k, v in conf.config.items("drakmon")}
-    app.run(host=drakmon_cfg["listen_host"], port=drakmon_cfg["listen_port"])
-
-
-if __name__ == "__main__":
-    main()

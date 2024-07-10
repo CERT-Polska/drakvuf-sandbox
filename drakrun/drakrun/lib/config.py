@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 from typing import Dict, List, Optional
 
+from configupdater import ConfigUpdater
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 from typing_extensions import Annotated
 
@@ -67,6 +68,15 @@ class DrakrunConfigSection(BaseModel):
     anti_hammering_threshold: int = Field(default=0)
     attach_profiles: bool = Field(default=False)
     attach_apiscout_profile: bool = Field(default=False)
+    xen_cmdline_check: str = Field(default="fail")
+
+    @field_validator("xen_cmdline_check", mode="after")
+    @classmethod
+    def xen_cmdline_check_validator(cls, v: str):
+        allowed_choices = ["fail", "ignore", "no"]
+        if v not in allowed_choices:
+            raise ValueError(f"must be one of: {allowed_choices}")
+        return v
 
 
 class DrakvufPluginsConfigSection(BaseModel):
@@ -135,6 +145,25 @@ class DrakrunConfig(BaseModel):
         dict_from_env = DrakrunConfig._env_to_dict()
         return DrakrunConfig(**{**dict_from_file, **dict_from_env})
 
+    def update(self, filename: str) -> None:
+        """
+        Writes back some changes into main config file
+        """
+        updater = ConfigUpdater()
+        updater.read(filename)
+        updater["redis"]["host"] = self.redis.host
+        updater["redis"]["port"] = str(self.redis.port)
+        updater["minio"]["address"] = self.minio.address
+        updater["minio"]["access_key"] = self.minio.access_key
+        updater["minio"]["secret_key"] = self.minio.secret_key
+        updater["minio"]["secure"] = "1" if self.minio.secure else "0"
+        updater["minio"]["bucket"] = self.minio.bucket
+        updater.update_file()
+
 
 def load_config() -> DrakrunConfig:
     return DrakrunConfig.load(CONFIG_PATH)
+
+
+def update_config(config: DrakrunConfig):
+    config.update(CONFIG_PATH)

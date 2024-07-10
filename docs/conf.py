@@ -17,7 +17,6 @@ import sphinx_rtd_theme
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../drakcore'))
 sys.path.insert(0, os.path.abspath('../drakrun'))
 
 
@@ -28,7 +27,7 @@ copyright = '2021, CERT Polska'
 author = 'CERT Polska'
 
 # The full version, including alpha/beta/rc tags
-release = 'v0.19.0-dev'
+release = 'v0.19.0-alpha1'
 
 latex_engine = 'xelatex'
 

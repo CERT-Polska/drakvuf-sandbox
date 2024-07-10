@@ -1,6 +1,0 @@
-opt/venvs/drakcore/bin/drak-config-setup usr/bin/drak-config-setup
-opt/venvs/drakcore/bin/drak-system usr/bin/drak-system
-opt/venvs/drakcore/bin/drak-healthcheck usr/bin/drak-healthcheck
-opt/venvs/drakcore/bin/drak-vncpasswd usr/bin/drak-vncpasswd
-opt/venvs/drakcore/bin/drak-ipt-disasm usr/bin/drak-ipt-disasm
-opt/venvs/drakcore/bin/drak-ipt-filter usr/bin/drak-ipt-filter

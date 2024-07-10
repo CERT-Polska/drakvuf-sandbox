@@ -1,18 +1,17 @@
 [Unit]
-Description=drak-web service
+Description=drak-system service
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/venvs/drakcore/bin/uwsgi --ini /etc/drakcore/uwsgi.ini
+ExecStart=/usr/local/bin/karton-system --config-file /etc/drakrun/config.ini
 User=root
 Group=root
 Restart=on-failure
 RestartSec=5
 StartLimitInterval=60s
 StartLimitBurst=3
-KillSignal=SIGQUIT
-WorkingDirectory=/var/lib/drakcore
+WorkingDirectory=/var/lib/drakrun
 
 [Install]
 WantedBy=default.target

@@ -23,16 +23,12 @@ Install new packages and reboot:
 
 .. code-block :: console
 
-    # apt install ./xen-hypervisor*.deb
     # apt install ./drakvuf-bundle*.deb
-    # apt install ./drakrun*.deb
-    # apt install ./drakcore*.deb
+    # pip install ./drakvuf_sandbox*.whl
     # systemctl reboot
-
 
 After rebooting, make sure that all of the services are running with a command:
 
 .. code-block :: console
 
     # drak-healthcheck
-

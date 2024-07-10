@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from redis import StrictRedis
 
@@ -65,3 +65,25 @@ def create_or_update_analysis_status(
 ) -> bool:
     if not create_analysis_status(rs, analysis_id, status, metadata):
         return update_analysis_status(rs, analysis_id, status, metadata)
+
+
+def get_analysis_status_list(rs: StrictRedis) -> List[Dict[str, Any]]:
+    analysis_ids = rs.lrange(ANALYSES_LIST, 0, -1)
+    analysis_data = zip(
+        analysis_ids,
+        [
+            data and json.loads(data)
+            for data in rs.mget(
+                *(ANALYSIS_KEY_PREFIX + analysis_id for analysis_id in analysis_ids)
+            )
+        ],
+    )
+    return [
+        {
+            "id": analysis_id,
+            "status": analysis_status["status"],
+            "meta": analysis_status["metadata"],
+        }
+        for analysis_id, analysis_status in analysis_data
+        if analysis_status
+    ]

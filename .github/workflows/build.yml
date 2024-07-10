@@ -21,23 +21,15 @@ jobs:
       - name: Build docs
         working-directory: docs
         run: make html
-  lint_drakcore:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: CERT-Polska/lint-python-action@v2
-        with:
-          python-version: 3.8
-          working-directory: drakcore
-  lint_drakcore_frontend:
+  lint_drakrun_frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Install web dependencies
-        working-directory: drakcore/drakcore/frontend
+        working-directory: drakrun/drakrun/web/frontend
         run: npm ci
       - name: Check with prettier
-        working-directory: drakcore/drakcore/frontend
+        working-directory: drakrun/drakrun/web/frontend
         run: npx prettier --check src/
   lint_drakrun:
     runs-on: ubuntu-latest
@@ -125,39 +117,16 @@ jobs:
           name: draksetup-tools-${{ matrix.distro }}-${{ matrix.version }}
           path: |
             drakrun/drakrun/tools/*
-  package_drakcore:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - distro: debian
-            version: bullseye
-    runs-on: ubuntu-latest
-    container: "${{ matrix.distro }}:${{matrix.version}}"
-    steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js 16.x
-        uses: actions/setup-node@v4
-        with:
-          node-version: '16'
-      - name: Build drakcore
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          apt-get update
-          apt-get install -y wget curl python3 python3-venv python3-pip dh-virtualenv debhelper devscripts
-          cd drakcore
-          package/find-python.sh
-          dpkg-buildpackage -us -uc -b
-      - uses: actions/upload-artifact@v3
-        with:
-          name: drakcore-debs-${{ matrix.distro }}-${{ matrix.version }}
-          path: ./drakcore_*_amd64.deb
   package_drakrun:
     needs: [ package_drakvuf_bundle ]
     runs-on: ubuntu-latest
     container: "python:3.8"
     steps:
       - uses: actions/checkout@v3
+      - name: Use Node.js 16.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16'
       - name: Download draksetup compiled tools from artifacts
         uses: actions/download-artifact@v3
         with:
@@ -167,13 +136,14 @@ jobs:
         run: |
           chmod +x drakrun/drakrun/tools/*  # gh artifacts don't keep file permissions
           cd drakrun
-          DRAKRUN_VERSION_TAG=$GITHUB_SHA python3 setup.py bdist_wheel
+          ( cd drakrun/web/frontend ; npm install && npm run-script build )
+          python3 setup.py bdist_wheel
       - uses: actions/upload-artifact@v3
         with:
-          name: drakrun-whl
-          path: ./drakrun/dist/drakrun-*.whl
+          name: drakvuf-sandbox-whl
+          path: ./drakrun/dist/drakvuf_sandbox-*.whl
   test_e2e:
-    needs: [ package_drakcore, package_drakrun, package_drakvuf_bundle ]
+    needs: [ package_drakrun, package_drakvuf_bundle ]
     strategy:
       fail-fast: false
       matrix:
@@ -192,12 +162,7 @@ jobs:
       - name: Download drakrun debs from artifacts
         uses: actions/download-artifact@v3
         with:
-          name: drakrun-whl
-          path: /debs
-      - name: Download drakcore debs from artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: drakcore-debs-${{ matrix.distro }}-${{ matrix.version }}
+          name: drakvuf-sandbox-whl
           path: /debs
       - name: Download drakvuf-bundle debs from artifacts
         uses: actions/download-artifact@v3

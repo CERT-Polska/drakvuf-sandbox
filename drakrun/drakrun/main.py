@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
-import functools
+import contextlib
 import hashlib
 import json
 import logging
@@ -9,9 +9,7 @@ import os
 import pathlib
 import shutil
 import socket
-import sys
 import tempfile
-from io import StringIO
 from pathlib import Path
 from typing import Dict, Optional, Union, cast
 
@@ -44,64 +42,21 @@ MAX_TASK_TIMEOUT = 60 * 20  # Never run samples for longer than this
 log = logging.getLogger(__name__)
 
 
-class LocalLogBuffer(logging.Handler):
-    FIELDS = (
-        "levelname",
-        "message",
-        "created",
-    )
-
-    def __init__(self):
-        super().__init__()
-        self.buffer = []
-
-    def emit(self, record):
-        entry = {k: v for (k, v) in record.__dict__.items() if k in self.FIELDS}
-        self.buffer.append(entry)
+class XenCommandlineCheckError(Exception):
+    """
+    Xen command line was incorrect and drakrun was instructed to fail in that case
+    """
 
 
-# TODO: Deduplicate this, once we have shared code between drakcore and drakrun
-def with_logs(object_name):
-    def decorator(method):
-        @functools.wraps(method)
-        def wrapper(self: Karton, *args, **kwargs):
-            handler = LocalLogBuffer()
-            try:
-                # Register new log handler
-                self.log.addHandler(handler)
-                method(self, *args, **kwargs)
-            except Exception:
-                self.log.exception("Analysis failed")
-                raise
-            finally:
-                # Unregister local handler
-                self.log.removeHandler(handler)
-                try:
-                    buffer = StringIO()
-                    for idx, entry in enumerate(handler.buffer):
-                        if idx > 0:
-                            buffer.write("\n")
-                        buffer.write(json.dumps(entry))
-
-                    res = LocalResource(
-                        object_name, buffer.getvalue(), bucket="drakrun"
-                    )
-                    task_uid = (
-                        self.current_task.payload.get("override_uid")
-                        or self.current_task.uid
-                    )
-                    res._uid = f"{task_uid}/{res.name}"
-
-                    # Karton rejects empty resources
-                    # Ensure that we upload it only when some data was actually generated
-                    if buffer.tell() > 0:
-                        res.upload(self.backend)
-                except Exception:
-                    self.log.exception("Failed to upload analysis logs")
-
-        return wrapper
-
-    return decorator
+@contextlib.contextmanager
+def scoped_file_logger(filename: pathlib.Path, logger: logging.Logger):
+    handler = logging.FileHandler(filename, mode="w")
+    try:
+        logger.addHandler(handler)
+        yield
+    finally:
+        logger.removeHandler(handler)
+        handler.close()
 
 
 def get_sample_sha256(sample_path: pathlib.Path) -> str:
@@ -119,21 +74,32 @@ class DrakrunKarton(Karton):
     version = DRAKRUN_VERSION
     identity = "karton.drakrun-prod"
     filters = [
-        {"type": "sample", "stage": "recognized", "platform": "win32"},
-        {"type": "sample", "stage": "recognized", "platform": "win64"},
+        {
+            "type": "sample",
+            "stage": "recognized",
+            "platform": "win32",
+            "execute": "!False",
+        },
+        {
+            "type": "sample",
+            "stage": "recognized",
+            "platform": "win64",
+            "execute": "!False",
+        },
     ]
 
-    def __init__(self, config: Config, instance_id: int) -> None:
-        super().__init__(config)
+    def __init__(self, config: Config, instance_id: int, *args, **kwargs) -> None:
+        super().__init__(config, *args, **kwargs)
         self.drakconfig = load_config()
         self.instance_id = instance_id
         self.install_info = InstallInfo.load()
         self.runtime_info = RuntimeInfo.load(RUNTIME_FILE)
 
-        generate_vm_conf(self.install_info, self.instance_id)
+        xen_cmdline_check = self.drakconfig.drakrun.xen_cmdline_check
+        if xen_cmdline_check != "no":
+            validate_xen_commandline(xen_cmdline_check == "ignore")
 
-        if not self.backend.minio.bucket_exists("drakrun"):
-            self.backend.minio.make_bucket(bucket_name="drakrun")
+        generate_vm_conf(self.install_info, self.instance_id)
 
         self.log.info("Calculating snapshot hash...")
         self.snapshot_sha256 = file_sha256(os.path.join(VOLUME_DIR, "snapshot.sav"))
@@ -182,9 +148,8 @@ class DrakrunKarton(Karton):
                 object_name = os.path.join(analysis_uid, subdir, fn)
                 res_name = os.path.join(subdir, fn)
                 resource = LocalResource(
-                    name=res_name, bucket="drakrun", path=file_path
+                    name=res_name, bucket="drakrun", path=file_path, uid=object_name
                 )
-                resource._uid = object_name
                 yield resource
             elif os.path.isdir(file_path):
                 yield from self.upload_artifacts(
@@ -266,13 +231,25 @@ class DrakrunKarton(Karton):
         output_dir.mkdir()
         return output_dir
 
-    @with_logs("drakrun.log")
-    def process_task(self, task: Task) -> None:
-        # Tasks with {"execute": false} header are not scheduled for execution.
-        # When the header is missing, the default is to execute the sample.
-        if not task.headers.get("execute", True):
-            return
+    @contextlib.contextmanager
+    def persist_drakrun_log(self):
+        drakrun_log_path = self.analysis_dir / "drakrun.log"
 
+        try:
+            with scoped_file_logger(drakrun_log_path, logging.getLogger()):
+                yield
+        finally:
+            # Always upload drakrun.log artifact if exists
+            if drakrun_log_path.exists():
+                log_resource = LocalResource(
+                    name="drakrun.log",
+                    path=drakrun_log_path,
+                    uid=f"{self.analysis_uid}/drakrun.log",
+                    bucket="drakrun",
+                )
+                log_resource.upload(self.backend)
+
+    def process_task(self, task: Task) -> None:
         timeout = self.timeout_for_task(task)
         if timeout > MAX_TASK_TIMEOUT:
             self.log.error(
@@ -284,112 +261,126 @@ class DrakrunKarton(Karton):
         sample: RemoteResource = cast(RemoteResource, task.get_resource("sample"))
         output_dir = self._prepare_analysis_directory()
 
-        sample_path = self.analysis_dir / "sample"
-        sample.download_to_file(str(sample_path))
-        sha256sum = get_sample_sha256(sample_path)
+        with self.persist_drakrun_log():
+            sample_path = self.analysis_dir / "sample"
+            sample.download_to_file(str(sample_path))
+            sha256sum = get_sample_sha256(sample_path)
 
-        self.log.info(f"Running on: {socket.gethostname()}")
-        self.log.info(f"Sample SHA256: {sha256sum}")
-        self.log.info(f"Analysis UID: {self.analysis_uid}")
-        self.log.info(f"Snapshot SHA256: {self.snapshot_sha256}")
+            self.log.info(f"Running on: {socket.gethostname()}")
+            self.log.info(f"Sample SHA256: {sha256sum}")
+            self.log.info(f"Analysis UID: {self.analysis_uid}")
+            self.log.info(f"Snapshot SHA256: {self.snapshot_sha256}")
 
-        magic_output = magic.from_file(sample_path)
+            magic_output = magic.from_file(sample_path)
 
-        # TODO: unify this default path somewhere
-        hooks_path = pathlib.Path(ETC_DIR) / "hooks.txt"
-        # If task contains 'custom_hooks' override local defaults
-        if task.has_payload("custom_hooks"):
-            hooks_path = self.analysis_dir / "hooks.txt"
-            custom_hooks = cast(RemoteResource, task.get_resource("custom_hooks"))
-            custom_hooks.download_to_file(str(hooks_path))
+            # TODO: unify this default path somewhere
+            hooks_path = pathlib.Path(ETC_DIR) / "hooks.txt"
+            # If task contains 'custom_hooks' override local defaults
+            if task.has_payload("custom_hooks"):
+                hooks_path = self.analysis_dir / "hooks.txt"
+                custom_hooks = cast(RemoteResource, task.get_resource("custom_hooks"))
+                custom_hooks.download_to_file(str(hooks_path))
 
-        user_start_command = task.payload.get("start_command")
-        extension = task.headers.get("extension")
+            user_start_command = task.payload.get("start_command")
+            extension = task.headers.get("extension")
 
-        # You can request a subset of supported plugins in task payload
-        task_quality = self.current_task.headers.get("quality", "high")
-        supported_plugins = self.drakconfig.drakvuf_plugins.get_plugin_list(
-            task_quality
-        )
-        requested_plugins = self.current_task.payload.get(
-            "plugins", self.drakconfig.drakvuf_plugins.get_plugin_list(task_quality)
-        )
-        plugins = list(set(supported_plugins) & set(requested_plugins))
-        self.update_vnc_info()
+            # You can request a subset of supported plugins in task payload
+            task_quality = self.current_task.headers.get("quality", "high")
+            supported_plugins = self.drakconfig.drakvuf_plugins.get_plugin_list(
+                task_quality
+            )
+            requested_plugins = self.current_task.payload.get(
+                "plugins", self.drakconfig.drakvuf_plugins.get_plugin_list(task_quality)
+            )
+            plugins = list(set(supported_plugins) & set(requested_plugins))
+            self.update_vnc_info()
 
-        metadata = {
-            "analysis_uid": self.analysis_uid,
-            "sample_sha256": sha256sum,
-            "snapshot_sha256": self.snapshot_sha256,
-            "magic_output": magic_output,
-        }
+            metadata = {
+                "analysis_uid": self.analysis_uid,
+                "sample_sha256": sha256sum,
+                "snapshot_sha256": self.snapshot_sha256,
+                "magic_output": magic_output,
+            }
 
-        create_or_update_analysis_status(
-            self.backend.redis, self.analysis_uid, AnalysisStatus.STARTED, metadata
-        )
+            create_or_update_analysis_status(
+                self.backend.redis, self.analysis_uid, AnalysisStatus.STARTED, metadata
+            )
 
-        analysis_options = AnalysisOptions(
-            sample_path=sample_path,
-            vm_id=self.instance_id,
-            output_dir=output_dir,
-            plugins=plugins,
-            timeout=timeout,
-            hooks_path=hooks_path,
-            start_command=user_start_command,
-            extension=extension,
-            sample_filename=sample.name,
-            dns_server=self.drakconfig.drakrun.dns_server,
-            out_interface=self.drakconfig.drakrun.out_interface,
-            net_enable=self.drakconfig.drakrun.net_enable,
-            anti_hammering_threshold=self.drakconfig.drakrun.anti_hammering_threshold,
-            syscall_filter=self.drakconfig.drakrun.syscall_filter,
-            raw_memory_dump=self.drakconfig.drakrun.raw_memory_dump,
-        )
+            analysis_options = AnalysisOptions(
+                sample_path=sample_path,
+                vm_id=self.instance_id,
+                output_dir=output_dir,
+                plugins=plugins,
+                timeout=timeout,
+                hooks_path=hooks_path,
+                start_command=user_start_command,
+                extension=extension,
+                sample_filename=sample.name,
+                dns_server=self.drakconfig.drakrun.dns_server,
+                out_interface=self.drakconfig.drakrun.out_interface,
+                net_enable=self.drakconfig.drakrun.net_enable,
+                anti_hammering_threshold=self.drakconfig.drakrun.anti_hammering_threshold,
+                syscall_filter=self.drakconfig.drakrun.syscall_filter,
+                raw_memory_dump=self.drakconfig.drakrun.raw_memory_dump,
+            )
 
-        max_attempts = 3
-        for attempt in range(max_attempts):
-            try:
-                self.log.info(
-                    f"Trying to analyze sample (attempt {attempt+1}/{max_attempts})"
-                )
-                analysis_metadata = analyze_sample(analysis_options)
-                break
-            except UnretryableAnalysisError:
-                self.log.exception("Analysis attempt failed with unretryable error")
-                raise
-            except Exception:
-                self.log.exception("Analysis attempt failed. Retrying...")
-            # Clean output dir before next try
-            self._ensure_clean_output_dir()
-        else:
-            raise RuntimeError(f"Giving up after {max_attempts} failures...")
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                try:
+                    self.log.info(
+                        f"Trying to analyze sample (attempt {attempt+1}/{max_attempts})"
+                    )
+                    analysis_metadata = analyze_sample(analysis_options)
+                    break
+                except UnretryableAnalysisError:
+                    self.log.exception("Analysis attempt failed with unretryable error")
+                    raise
+                except Exception:
+                    self.log.exception("Analysis attempt failed. Retrying...")
+                # Clean output dir before next try
+                self._ensure_clean_output_dir()
+            else:
+                raise RuntimeError(f"Giving up after {max_attempts} failures...")
 
-        metadata = {**metadata, **analysis_metadata}
-        (output_dir / "metadata.json").write_text(json.dumps(metadata))
+            metadata = {**metadata, **analysis_metadata}
+            (output_dir / "metadata.json").write_text(json.dumps(metadata))
 
-        quality = task.headers.get("quality", "high")
-        self.send_raw_analysis(
-            sample,
-            str(output_dir),
-            metadata,
-            quality,
-        )
+            quality = task.headers.get("quality", "high")
+            self.send_raw_analysis(
+                sample,
+                str(output_dir),
+                metadata,
+                quality,
+            )
 
-        update_analysis_status(
-            self.backend.redis, self.analysis_uid, AnalysisStatus.FINISHED, metadata
-        )
+            update_analysis_status(
+                self.backend.redis, self.analysis_uid, AnalysisStatus.FINISHED, metadata
+            )
 
     def process(self, task: Task) -> None:
-        # TODO: Well, drakcore doesn't know what to do
-        #       when task is crashed. We need this awful
-        #       hack for now
         try:
             self.process_task(task)
         except Exception:
             update_analysis_status(
                 self.backend.redis, self.analysis_uid, AnalysisStatus.CRASHED
             )
-            return
+            raise
+
+    @classmethod
+    def args_parser(cls) -> argparse.ArgumentParser:
+        parser = super().args_parser()
+        parser.add_argument("instance", type=int, help="Instance identifier")
+        return parser
+
+    @classmethod
+    def karton_from_args(cls, args: Optional[argparse.Namespace] = None) -> None:
+        if args is None:
+            parser = cls.args_parser()
+            args = parser.parse_args()
+        conf_path = os.path.join(ETC_DIR, "config.ini")
+        config = Config(path=args.config_file or conf_path)
+        cls.config_from_args(config, args)
+        return cls(config=config, instance_id=args.instance)
 
 
 def validate_xen_commandline(ignore_failure: bool) -> None:
@@ -447,29 +438,8 @@ def validate_xen_commandline(ignore_failure: bool) -> None:
             log.error(
                 "Exitting due to above warnings. Please ensure that you are using recommended Xen's command line."
             )
-            sys.exit(1)
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Kartonized drakrun <3")
-    parser.add_argument("instance", type=int, help="Instance identifier")
-    args = parser.parse_args()
-
-    conf_path = os.path.join(ETC_DIR, "config.ini")
-    conf = Config(conf_path)
-
-    if not conf.config.get("minio", "access_key").strip():
-        log.warning(
-            f"Detected blank value for minio access_key in {conf_path}. "
-            "This service may not work properly."
-        )
-
-    xen_cmdline_check = conf.config.get("drakrun", "xen_cmdline_check", fallback="fail")
-    validate_xen_commandline(xen_cmdline_check == "ignore")
-
-    c = DrakrunKarton(conf, args.instance)
-    c.loop()
+            raise XenCommandlineCheckError()
 
 
 if __name__ == "__main__":
-    main()
+    DrakrunKarton.main()

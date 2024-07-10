@@ -2,7 +2,7 @@
 Karton integration
 ==================
 
-Connecting to existing karton system
+Connecting to existing Karton system
 ------------------------------------
 
 In a simple installation, DRAKVUF Sandbox relies on services provided by
@@ -11,16 +11,20 @@ It is however possible to integrate it with a larger, karton-based pipeline.
 Doing this requires only a few steps:
 
 1. Stop all ``drak-*`` services, if they're running.
-2. Open ``/etc/drakcore/config.ini`` and set ``system_disable=1`` in section
-   ``[drakmon]``.  This will disable local ``karton-system`` instance.
-3. Copy Karton configuration to appropriate sections in ``/etc/drakcore/config.ini``
-   and ``/etc/drakrun/config.ini``.
-4. Restart all stopped services.
+2. Copy Karton configuration to appropriate sections in ``/etc/drakrun/config.ini``.
+3. Restart all stopped services.
 
 .. note ::
     Karton GC removes resources when they're not referenced by any task. This is
     why analysis artifacts are stored in ``drakrun`` bucket instead of the one used by karton.
-    Karton services that depend on the sandbox will also have to be granted access to this bucket.
+    Karton services that depend on the sandbox also have to be granted access to this bucket.
+
+If you want to configure Drakvuf Sandbox to work with existing Karton configuration from the start,
+you can omit configuring ``drak-system`` by running ``draksetup init`` with these flags:
+
+.. code-block:: console
+
+    $ draksetup init --only web --only drakrun
 
 Building integrations
 ---------------------

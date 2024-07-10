@@ -1,0 +1,32 @@
+name: Release new Drakvuf Sandbox version
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release_artifacts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: build.yml
+          workflow_conclusion: success
+      - uses: nanoufo/action-upload-artifacts-and-release-assets@v2
+        with:
+          path: |
+            drakvuf-sandbox-whl/drakvuf_sandbox-*.whl
+            drakvuf-bundle-debs-debian-bullseye/drakvuf-bundle*.deb
+          upload-release-files: true
+          release-upload-url: ${{ github.event.release.upload_url }}
+      - name: Publish to PyPi
+        uses: pypa/gh-action-pypi-publish@v1.9.0
+        with:
+          user: __token__
+          password: ${{ secrets.pypi_password }}
+          packages-dir: drakvuf-sandbox-whl/
