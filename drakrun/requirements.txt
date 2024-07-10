@@ -16,6 +16,8 @@ regex==2020.7.14
 ipython==8.10.0
 malduck==4.1.0
 mwdblib==3.4.1
+capa>7.1.0
+msgspec>=0.18.6
 # Something went wrong in 4.3.0 package
 yara-python<4.3.0
 mslex==1.1.0
@@ -23,4 +25,3 @@ pydantic==2.6.4
 # Peer dependency of Pydantic
 typing-extensions
 pathvalidate==3.2.0
-msgspec>=0.18.6
