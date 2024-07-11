@@ -7,7 +7,7 @@ import pathlib
 import shutil
 import subprocess
 import zipfile
-from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Tuple
+from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Tuple, Union
 
 import capa
 import capa.capabilities
@@ -331,7 +331,8 @@ def static_memory_dumps_capa_analysis(
         )
 
 
-def format_capa_address(address: capa.features.address.Address) -> Dict:
+def format_capa_address(address: Union[Tuple, capa.features.address.Address]) -> Dict:
+    # this method formats capa address (in the format of tuples) into a single dictionary
     if isinstance(address, tuple):
         return functools.reduce(
             lambda a, b: a | b, [format_capa_address(addr) for addr in address]
@@ -381,6 +382,7 @@ def construct_ttp_blocks(
     filter_function=lambda rule: rule
 ) -> Iterator[Dict[str, Any]]:
 
+    # construct a ttp block for each extracted capability
     for _, capabilities in capabilities_per_file:
         for name, addresses in capabilities.items():
             if filter_function(rules[name]):
