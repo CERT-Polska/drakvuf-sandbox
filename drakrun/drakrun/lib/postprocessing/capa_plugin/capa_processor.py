@@ -189,7 +189,6 @@ def get_malware_processes(
 def get_drakvuf_feature_extractor(
     calls: Iterator[Dict],
 ) -> capa.features.extractors.drakvuf.extractor.DrakvufExtractor:
-
     # wrapper routing for initializing the Drakvuf feature extractor
     return capa.features.extractors.drakvuf.extractor.DrakvufExtractor.from_report(
         calls
