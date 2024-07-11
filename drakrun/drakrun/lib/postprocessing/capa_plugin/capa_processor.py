@@ -202,8 +202,7 @@ def decode_json_lines(fd: BinaryIO) -> Iterator[Dict]:
         try:
             # we use msgspec for a small performance improvement
             line_s = line.strip().decode()
-            obj = msgspec.json.decode(line_s)
-            yield obj
+            yield msgspec.json.decode(line_s)
         except (msgspec.DecodeError, UnicodeDecodeError):
             # sometimes Drakvuf reports bad method names and/or malformed JSON
             logger.debug("bad drakvuf log line: %s", line)
