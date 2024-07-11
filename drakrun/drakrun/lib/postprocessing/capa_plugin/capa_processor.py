@@ -144,7 +144,6 @@ def filter_rules(
 def get_malware_processes(
     metadata_path: pathlib.Path, inject_path: pathlib.Path, pstree_path: pathlib.Path
 ) -> Optional[List[str]]:
-
     # this method gets all the pids in the Drakvuf report that are associated with malware
     with metadata_path.open("r") as f:
         # we use the metadata file to get the analysis' start command
