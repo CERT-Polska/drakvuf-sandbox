@@ -356,7 +356,7 @@ def format_capa_address(address: Union[Tuple, capa.features.address.Address]) ->
     elif isinstance(address, capa.features.address.DynamicCallAddress):
         return {**format_capa_address(address.thread), "cid": address.id}
     elif isinstance(address, capa.features.address._NoAddress):
-        return {"address": "no address"}
+        return {}
     else:
         logger.debug("Encountered unknown address type: %s", type(address))
         return {"address": address}
