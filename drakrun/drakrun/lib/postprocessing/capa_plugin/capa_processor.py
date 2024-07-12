@@ -367,7 +367,7 @@ def construct_ttp_block(
         "name": rule.name.split("/")[0],
         "mbc": rule.meta.get("mbc", None),
         "att&ck": rule.meta.get("att&ck", None),
-        "occurances": [
+        "occurrences": [
             format_capa_address(address=address) for address, _ in addresses
         ],
     }
