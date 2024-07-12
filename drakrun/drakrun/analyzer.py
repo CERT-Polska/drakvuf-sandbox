@@ -12,6 +12,7 @@ import shutil
 import string
 import subprocess
 import time
+import unicodedata
 from typing import List, Optional, Tuple
 
 import magic
@@ -104,9 +105,15 @@ def filename_for_task(options: AnalysisOptions) -> Tuple[str, str]:
     # Make sure the extension is lowercase
     extension = extension.lower()
     # Validate filename provided by user and append proper extension if necessary
-    if options.sample_filename and is_valid_filename(
-        options.sample_filename, platform=Platform.UNIVERSAL
-    ):
+    file_name = options.sample_filename
+    # Normalize/remove Unicode characters as current version of Drakvuf
+    # isn't really good at handling them in logs
+    file_name = (
+        unicodedata.normalize("NFKD", file_name)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
+    if file_name and is_valid_filename(file_name, platform=Platform.UNIVERSAL):
         file_name = options.sample_filename
         if "." not in file_name or file_name.split(".")[-1].lower() != extension:
             file_name += f".{extension}"
