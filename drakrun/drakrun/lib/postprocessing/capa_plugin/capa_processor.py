@@ -400,7 +400,7 @@ def capa_analysis(analysis_dir: pathlib.Path) -> None:
         )
 
         # write the extracted TTPs to the analysis dir
-        with (analysis_dir / "ttps.json").open("w", encoding="utf8") as f:
+        with (analysis_dir / "ttps.json").open("w") as f:
             for line in construct_ttp_blocks(rules, [dynamic_capabilities], filter_function=lambda rule: rule.meta.get("att&ck", None)):
                 json.dump(line, f)
                 f.write("\n")
