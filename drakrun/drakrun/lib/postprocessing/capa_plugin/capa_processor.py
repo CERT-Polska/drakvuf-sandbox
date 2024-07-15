@@ -183,18 +183,18 @@ def dynamic_capa_analysis(
     calls = []
 
     # read api calls
-    try:
+    if (analysis_dir / "apimon.log").exists():
         with (analysis_dir / "apimon.log").open("r", errors="ignore") as apimon_fd:
             calls += list(decode_json_lines(apimon_fd))
-    except:
-        logger.debug("empty apimon.log file")
+    else:
+        logger.debug("missing apimon.log file")
 
     # read syscalls
-    try:
+    if (analysis_dir / "syscall.log").exists():
         with (analysis_dir / "syscall.log").open("r", errors="ignore") as syscall_fd:
             calls += list(decode_json_lines(syscall_fd))
-    except:
-        logger.debug("empty syscall.log file")
+    else:
+        logger.debug("missing syscall.log file")
 
     # initialize the Drakvuf capa feature extractor with the captured calls
     extractor = get_drakvuf_feature_extractor(calls)
