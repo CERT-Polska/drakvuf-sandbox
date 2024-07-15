@@ -27,7 +27,7 @@ import capa.render
 import capa.render.json
 import capa.render.result_document
 import capa.rules
-import msgspec.json
+import orjson
 
 # rules related configuration
 capa_rules_dir = pathlib.Path("./capa-rules")
@@ -41,12 +41,12 @@ perform_dynamic_analysis = True
 logger = logging.getLogger(__name__)
 
 
-def check_directory_exist(path: pathlib.Path) -> bool:
+def check_rules_directory_exist(path: pathlib.Path) -> bool:
     # this method checks whether a non-empty directory exists
     return path.is_dir() and any(path.iterdir())
 
 
-def clone_rules_reporsitory(
+def clone_rules_repository(
     rules_dir: pathlib.Path, rules_git_repo_url=capa_default_rules_repository_url
 ):
     logger.info("Cloning default capa rules repository into %s", rules_dir.absolute)
@@ -128,15 +128,15 @@ def get_malware_processes(
     # this method gets all the pids in the Drakvuf report that are associated with malware
     with metadata_path.open("r") as f:
         # we use the metadata file to get the analysis' start command
-        metadata = msgspec.json.decode(f.read())
+        metadata = orjson.loads(f.read())
 
     with inject_path.open("r") as f:
         # we use the injected processes log to get the malware process' parent pid
-        injected_processes = [msgspec.json.decode(line) for line in f]
+        injected_processes = [orjson.loads(line) for line in f]
 
     with pstree_path.open("r") as f:
         # we use the process tree to get all of the malware process' child processes
-        pstree = msgspec.json.decode(f.read())
+        pstree = orjson.loads(f.read())
 
     # make sure we have the right inject.log entry (using the metadata.json file)
     malware_injection_log: str = next(
@@ -179,10 +179,11 @@ def decode_json_lines(fd: BinaryIO) -> Iterator[Dict]:
     # read and decode json lines into a list of dictionaries
     for line in fd:
         try:
-            # we use msgspec for a small performance improvement
+            # we use orjson for a small performance improvement
             line_s = line.strip().decode()
-            yield msgspec.json.decode(line_s)
-        except (msgspec.DecodeError, UnicodeDecodeError):
+            obj = orjson.loads(line_s)
+            yield obj
+        except (UnicodeDecodeError, orjson.JSONDecodeError):
             # sometimes Drakvuf reports bad method names and/or malformed JSON
             logger.debug("bad drakvuf log line: %s", line)
 
@@ -230,7 +231,7 @@ def get_process_memory_dumps(analysis_dir: pathlib.Path, pid: int) -> Iterator[s
     # this is used mainly to get the memdumps by a malware process
     with (analysis_dir / "memdump.log").open("r") as f:
         for line in f:
-            dump = msgspec.json.decode(line)
+            dump = orjson.loads(line)
             if dump["PID"] == pid:
                 yield dump["DumpFilename"]
 
@@ -368,9 +369,9 @@ def construct_ttp_blocks(
 
 def capa_analysis(analysis_dir: pathlib.Path) -> None:
     # check and prepare the rules folder
-    if not check_rules_exist(capa_rules_dir):
+    if not check_rules_directory_exist(capa_rules_dir):
         # in case of a missing/empty rules folder, clone the official capa rules
-        clone_rules_reporsitory(capa_rules_dir)
+        clone_rules_repository(capa_rules_dir)
 
     # get rules and filter them
     rules = get_rules([capa_rules_dir])
