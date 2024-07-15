@@ -192,7 +192,6 @@ def dynamic_capa_analysis(
     rules: capa.rules.RuleSet,
     malware_pids: Optional[List[int]] = None,
 ) -> Tuple[pathlib.Path, capa.render.result_document.MatchResults]:
-
     # save all api calls and native calls into one list which gets sorted by capa later on.
     calls = []
 
