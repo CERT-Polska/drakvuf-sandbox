@@ -30,7 +30,6 @@ import orjson
 
 # rules related configuration
 capa_rules_dir = Path("./capa-rules")
-capa_default_rules_repository_url = "https://github.com/mandiant/capa-rules/"
 
 # analysis configuration
 analyze_malware_pids_only = False
