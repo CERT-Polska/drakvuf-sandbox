@@ -1,12 +1,11 @@
 import functools
 import itertools
-import json
 import logging
 import multiprocessing
-import pathlib
 import shutil
 import subprocess
 import zipfile
+from pathlib import Path
 from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Tuple, Union
 
 import capa
@@ -30,7 +29,7 @@ import capa.rules
 import orjson
 
 # rules related configuration
-capa_rules_dir = pathlib.Path("./capa-rules")
+capa_rules_dir = Path("./capa-rules")
 capa_default_rules_repository_url = "https://github.com/mandiant/capa-rules/"
 
 # analysis configuration
@@ -41,19 +40,19 @@ perform_dynamic_analysis = True
 logger = logging.getLogger(__name__)
 
 
-def check_rules_directory_exist(path: pathlib.Path) -> bool:
+def check_rules_directory_exist(path: Path) -> bool:
     # this method checks whether a non-empty directory exists
     return path.is_dir() and any(path.iterdir())
 
 
 def clone_rules_repository(
-    rules_dir: pathlib.Path, rules_git_repo_url=capa_default_rules_repository_url
+    rules_dir: Path, rules_git_repo_url=capa_default_rules_repository_url
 ):
-    logger.info("Cloning default capa rules repository into %s", rules_dir.absolute)
+    logger.info("Cloning default capa rules repository into %s", rules_dir.absolute())
 
     # clone the official capa rules repository
     subprocess.run(
-        f"git clone {rules_git_repo_url} {pathlib.Path}",
+        f"git clone {rules_git_repo_url} {Path}",
         shell=True,
         stderr=subprocess.STDOUT,
     )
@@ -82,7 +81,7 @@ def get_all_child_processes(process: Dict) -> Iterator[int]:
     yield process["pid"]
 
 
-def get_rules(rules_dir: List[pathlib.Path]) -> Optional[capa.rules.RuleSet]:
+def get_rules(rules_dir: List[Path]) -> Optional[capa.rules.RuleSet]:
     try:
         rules = capa.rules.get_rules(rules_dir)
     except (IOError, capa.rules.InvalidRule, capa.rules.InvalidRuleSet) as e:
@@ -123,7 +122,7 @@ def filter_rules(
 
 
 def get_malware_processes(
-    metadata_path: pathlib.Path, inject_path: pathlib.Path, pstree_path: pathlib.Path
+    metadata_path: Path, inject_path: Path, pstree_path: Path
 ) -> Optional[List[str]]:
     # this method gets all the pids in the Drakvuf report that are associated with malware
     with metadata_path.open("r") as f:
@@ -180,32 +179,33 @@ def decode_json_lines(fd: BinaryIO) -> Iterator[Dict]:
     for line in fd:
         try:
             # we use orjson for a small performance improvement
-            line_s = line.strip().decode()
+            line_s = line.strip()
             obj = orjson.loads(line_s)
             yield obj
-        except (UnicodeDecodeError, orjson.JSONDecodeError):
+        except (orjson.JSONDecodeError):
             # sometimes Drakvuf reports bad method names and/or malformed JSON
             logger.debug("bad drakvuf log line: %s", line)
 
 
 def dynamic_capa_analysis(
-    analysis_dir: pathlib.Path,
+    analysis_dir: Path,
     rules: capa.rules.RuleSet,
     malware_pids: Optional[List[int]] = None,
-) -> Tuple[pathlib.Path, capa.render.result_document.MatchResults]:
+) -> Tuple[Path, capa.render.result_document.MatchResults]:
+
     # save all api calls and native calls into one list which gets sorted by capa later on.
     calls = []
 
     # read api calls
     try:
-        with (analysis_dir / "apimon.log").open("rb") as apimon_fd:
+        with (analysis_dir / "apimon.log").open("r", errors="ignore") as apimon_fd:
             calls += list(decode_json_lines(apimon_fd))
     except:
         logger.debug("empty apimon.log file")
 
     # read syscalls
     try:
-        with (analysis_dir / "syscall.log").open("rb") as syscall_fd:
+        with (analysis_dir / "syscall.log").open("r", errors="ignore") as syscall_fd:
             calls += list(decode_json_lines(syscall_fd))
     except:
         logger.debug("empty syscall.log file")
@@ -226,7 +226,7 @@ def dynamic_capa_analysis(
     return analysis_dir, capabilities
 
 
-def get_process_memory_dumps(analysis_dir: pathlib.Path, pid: int) -> Iterator[str]:
+def get_process_memory_dumps(analysis_dir: Path, pid: int) -> Iterator[str]:
     # get the memory dumps from a specific process.
     # this is used mainly to get the memdumps by a malware process
     with (analysis_dir / "memdump.log").open("r") as f:
@@ -237,8 +237,8 @@ def get_process_memory_dumps(analysis_dir: pathlib.Path, pid: int) -> Iterator[s
 
 
 def static_capa_analysis(
-    dump_path: pathlib.Path, rules: capa.rules.RuleSet
-) -> Tuple[pathlib.Path, capa.render.result_document.MatchResults]:
+    dump_path: Path, rules: capa.rules.RuleSet
+) -> Tuple[Path, capa.render.result_document.MatchResults]:
 
     # get the input file's capa format
     try:
@@ -275,8 +275,8 @@ def static_capa_analysis(
 
 
 def static_memory_dumps_capa_analysis(
-    analysis_dir: pathlib.Path, rules: capa.rules.RuleSet, malware_pids: List[int] = []
-) -> Iterator[Tuple[pathlib.Path, capa.render.result_document.MatchResults]]:
+    analysis_dir: Path, rules: capa.rules.RuleSet, malware_pids: List[int] = []
+) -> Iterator[Tuple[Path, capa.render.result_document.MatchResults]]:
     malware_dumps = list(
         itertools.chain(
             *(get_process_memory_dumps(analysis_dir, pid) for pid in malware_pids)
@@ -291,8 +291,8 @@ def static_memory_dumps_capa_analysis(
             dumps = analysis_dir / "dumps"
         except PermissionError:
             # in case of missing permissions, extract into /tmp
-            zip_ref.extractall(pathlib.Path("/tmp"))
-            dumps = pathlib.Path("/tmp") / "dumps"
+            zip_ref.extractall(Path("/tmp"))
+            dumps = Path("/tmp") / "dumps"
 
     # extract the capabilities within each memory dump, one per thread
     pool = multiprocessing.Pool(processes=len(malware_dumps))
@@ -344,20 +344,23 @@ def format_capa_address(address: Union[Tuple, capa.features.address.Address]) ->
 def construct_ttp_block(
     rule: capa.rules.Rule, addresses: capa.features.address
 ) -> Dict[str, Any]:
-    return {
-        "name": rule.name.split("/")[0],
-        "mbc": rule.meta.get("mbc", None),
-        "att&ck": rule.meta.get("att&ck", None),
-        "occurrences": [
-            format_capa_address(address=address) for address, _ in addresses
-        ],
-    }
+    name = rule.name.split("/")[0]
+    mbc = rule.meta.get("mbc", None)
+    attck = rule.meta.get("att&ck", None)
+    occurrences = [format_capa_address(address=address) for address, _ in addresses]
 
+    ttp_block: Dict = dict()
+    ttp_block.update({"name": name})
+    ttp_block.update({"mbc": mbc} if mbc else {})
+    ttp_block.update({"att&ck": attck} if attck else {})
+    ttp_block.update({"occurrences": occurrences})
+
+    return ttp_block
 
 def construct_ttp_blocks(
     rules: capa.rules.RuleSet,
-    capabilities_per_file: List[Tuple[pathlib.Path, capa.engine.MatchResults, Any]],
-    filter_function=lambda rule: rule
+    capabilities_per_file: List[Tuple[Path, capa.engine.MatchResults, Any]],
+    filter_function=lambda rule: rule,
 ) -> Iterator[Dict[str, Any]]:
 
     # construct a ttp block for each extracted capability
@@ -367,7 +370,7 @@ def construct_ttp_blocks(
                 yield construct_ttp_block(rules[name], addresses)
 
 
-def capa_analysis(analysis_dir: pathlib.Path) -> None:
+def capa_analysis(analysis_dir: Path) -> None:
     # check and prepare the rules folder
     if not check_rules_directory_exist(capa_rules_dir):
         # in case of a missing/empty rules folder, clone the official capa rules
@@ -376,8 +379,7 @@ def capa_analysis(analysis_dir: pathlib.Path) -> None:
     # get rules and filter them
     rules = get_rules([capa_rules_dir])
     rules = filter_rules(
-        rules,
-        filter_function=lambda rule: rule.meta.get("att&ck", None)
+        rules, filter_function=lambda rule: rule.meta.get("att&ck", None)
     )  # select only rules with an att&ck entry specified
 
     # get malware-related pids if requested by configuration
@@ -403,7 +405,7 @@ def capa_analysis(analysis_dir: pathlib.Path) -> None:
         # write the extracted TTPs to the analysis dir
         with (analysis_dir / "ttps.json").open("w") as f:
             for line in construct_ttp_blocks(rules, [dynamic_capabilities], filter_function=lambda rule: rule.meta.get("att&ck", None)):
-                json.dump(line, f)
+                orjson.dumps(line, f)
                 f.write("\n")
 
     # extract capabilities from the memory dumps
@@ -420,11 +422,11 @@ def capa_analysis(analysis_dir: pathlib.Path) -> None:
         for dump_name, static_capabilities in static_capabilities_per_file:
             with (dumps_ttp_path / dump_name).open("w", encoding="utf8") as f:
                 for line in construct_ttp_blocks(rules, [static_capabilities]):
-                    json.dump(line, f)
+                    orjson.dumps(line, f)
                     f.write("\n")
 
 
 if __name__ == "__main__":
     import sys
 
-    capa_analysis(pathlib.Path(sys.argv[1]))
+    capa_analysis(Path(sys.argv[1]))
