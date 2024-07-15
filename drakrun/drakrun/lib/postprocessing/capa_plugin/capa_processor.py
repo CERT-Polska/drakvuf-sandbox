@@ -60,7 +60,6 @@ def clone_rules_reporsitory(
 
 
 def find_process_in_pstree(pstree: List, pid: int, procname: str) -> Dict:
-
     # this methods searches for a process in the generated process_tree.json file
     for process in pstree:
         if process["pid"] == pid:
