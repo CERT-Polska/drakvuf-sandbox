@@ -45,19 +45,6 @@ def check_rules_directory_exist(path: Path) -> bool:
     return path.is_dir() and any(path.iterdir())
 
 
-def clone_rules_repository(
-    rules_dir: Path, rules_git_repo_url=capa_default_rules_repository_url
-):
-    logger.info("Cloning default capa rules repository into %s", rules_dir.absolute())
-
-    # clone the official capa rules repository
-    subprocess.run(
-        f"git clone {rules_git_repo_url} {Path}",
-        shell=True,
-        stderr=subprocess.STDOUT,
-    )
-
-
 def find_process_in_pstree(pstree: List, pid: int, procname: str) -> Dict:
     # this methods searches for a process in the generated process_tree.json file
     for process in pstree:
@@ -374,7 +361,7 @@ def capa_analysis(analysis_dir: Path) -> None:
     # check and prepare the rules folder
     if not check_rules_directory_exist(capa_rules_dir):
         # in case of a missing/empty rules folder, clone the official capa rules
-        clone_rules_repository(capa_rules_dir)
+        logger.exception("capa rules directory is empty or non-existant")
 
     # get rules and filter them
     rules = get_rules([capa_rules_dir])
