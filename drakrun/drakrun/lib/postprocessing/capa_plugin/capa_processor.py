@@ -88,8 +88,7 @@ def get_rules(rules_dir: List[pathlib.Path]) -> Optional[capa.rules.RuleSet]:
     except (IOError, capa.rules.InvalidRule, capa.rules.InvalidRuleSet) as e:
         # display the official capa error message in case there exists any malformed capa rules
         rules = None
-        logger.error("%s", str(e))
-        logger.error(
+        logger.exception(
             "Make sure your file directory contains properly formatted capa rules. You can download the standard "
             + "collection of capa rules from https://github.com/mandiant/capa-rules/releases."
         )
