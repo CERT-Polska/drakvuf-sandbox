@@ -114,7 +114,6 @@ def filename_for_task(options: AnalysisOptions) -> Tuple[str, str]:
         .decode("ascii")
     )
     if file_name and is_valid_filename(file_name, platform=Platform.UNIVERSAL):
-        file_name = options.sample_filename
         if "." not in file_name or file_name.split(".")[-1].lower() != extension:
             file_name += f".{extension}"
     else:
