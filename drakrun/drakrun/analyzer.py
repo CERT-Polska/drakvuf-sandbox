@@ -71,11 +71,11 @@ class AnalysisOptions:
     vm_id: int
     output_dir: pathlib.Path
     plugins: List[str]
+    sample_filename: str
     hooks_path: pathlib.Path = pathlib.Path(ETC_DIR) / "hooks.txt"
     timeout: int = 600
     start_command: Optional[str] = None
     extension: Optional[str] = None
-    sample_filename: Optional[str] = None
     dns_server: Optional[str] = None
     out_interface: Optional[str] = None
     net_enable: bool = True
@@ -496,7 +496,7 @@ def main():
         hooks_path=hooks_path,
         start_command=args.start_command,
         extension=args.extension,
-        sample_filename=args.sample_filename,
+        sample_filename=args.sample_filename or sample_path.name,
         dns_server=args.dns_server,
         out_interface=args.out_interface,
         net_enable=args.net_enable,
