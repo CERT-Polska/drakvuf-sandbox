@@ -41,26 +41,9 @@ perform_dynamic_analysis = True
 logger = logging.getLogger(__name__)
 
 
-def check_rules_exist(rules_dir: pathlib.Path) -> bool:
-    # this method checks whether there is a non-empty capa rules folder
-    try:
-        if any(rules_dir.iterdir()):
-            # return true if there exists a non-empty rules folder
-            return True
-        else:
-            # if the folder is empty, remove it and return false
-            shutil.rmtree(rules_dir)
-
-    except FileNotFoundError:
-        # if the rules folder does not exist, return false
-        pass
-
-    except NotADirectoryError:
-        # if there's a file with the same name as the rules' directory, delete it and return false
-        rules_dir.unlink()
-
-    # return false if no suitable capa rules folder was found
-    return False
+def check_directory_exist(path: pathlib.Path) -> bool:
+    # this method checks whether a non-empty directory exists
+    return path.is_dir() and any(path.iterdir())
 
 
 def clone_rules_reporsitory(
