@@ -2,6 +2,7 @@ import pathlib
 from typing import Any, Dict, List, NamedTuple, Optional, Protocol
 
 from .build_process_tree import build_process_tree
+from .capa_plugin.capa_processor import capa_analysis
 from .compress_ipt import compress_ipt
 from .crop_dumps import crop_dumps
 from .generate_graphs import generate_graphs
@@ -9,7 +10,6 @@ from .generate_wireshark_key_file import generate_wireshark_key_file
 from .index_logs import index_logs
 from .process_apimon_log import process_apimon_log
 from .split_drakmon_log import split_drakmon_log
-from .capa_plugin.capa_processor import capa_analysis
 
 
 class PostprocessFunction(Protocol):
@@ -47,7 +47,13 @@ POSTPROCESS_PLUGINS = [
     ),
     PostprocessPlugin(
         function=capa_analysis,
-        requires=["apimon.log", "syscall.log", "process_tree.json", "metadata.json", "inject.log"],
+        requires=[
+            "apimon.log",
+            "syscall.log",
+            "process_tree.json",
+            "metadata.json",
+            "inject.log",
+        ],
         generates=["ttps.json"],
     ),
     PostprocessPlugin(function=crop_dumps, requires=["dumps"], generates=["dumps.zip"]),

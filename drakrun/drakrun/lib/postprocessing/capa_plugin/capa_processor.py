@@ -3,7 +3,6 @@ import itertools
 import logging
 import multiprocessing
 import shutil
-import subprocess
 import zipfile
 from pathlib import Path
 from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Tuple, Union
@@ -70,7 +69,7 @@ def get_all_child_processes(process: Dict) -> Iterator[int]:
 def get_rules(rules_dir: List[Path]) -> Optional[capa.rules.RuleSet]:
     try:
         rules = capa.rules.get_rules(rules_dir)
-    except (IOError, capa.rules.InvalidRule, capa.rules.InvalidRuleSet) as e:
+    except (IOError, capa.rules.InvalidRule, capa.rules.InvalidRuleSet):
         # display the official capa error message in case there exists any malformed capa rules
         rules = None
         logger.exception(
@@ -140,7 +139,7 @@ def get_malware_processes(
         malware_process: Dict = find_process_in_pstree(
             pstree, malware_pid, malware_procname
         )
-    except ValueError as e:
+    except ValueError:
         # malware pid not found, analyze entire log instead
         return None
 
@@ -317,10 +316,13 @@ def format_capa_address(address: Union[Tuple, capa.features.address.Address]) ->
     elif isinstance(address, capa.features.address.ProcessAddress):
         return {"ppid": address.ppid, "pid": address.pid}
     elif isinstance(address, capa.features.address.ThreadAddress):
-        return {**format_capa_address(address.process), "tid": address.tid}
+        # for the time being, we only collect the PID and PPID of a TTP
+        return {**format_capa_address(address.process)}
     elif isinstance(address, capa.features.address.DynamicCallAddress):
-        return {**format_capa_address(address.thread), "cid": address.id}
+        # for the time being, we only collect the PID and PPID of a TTP
+        return {**format_capa_address(address.thread)}
     elif isinstance(address, capa.features.address._NoAddress):
+        # empty address
         return {}
     else:
         logger.debug("Encountered unknown address type: %s", type(address))
@@ -335,13 +337,14 @@ def construct_ttp_block(
     attck = rule.meta.get("att&ck", None)
     occurrences = [format_capa_address(address=address) for address, _ in addresses]
 
-    ttp_block: Dict = dict()
+    ttp_block = dict()
     ttp_block.update({"name": name})
     ttp_block.update({"mbc": mbc} if mbc else {})
     ttp_block.update({"att&ck": attck} if attck else {})
     ttp_block.update({"occurrences": occurrences})
 
     return ttp_block
+
 
 def construct_ttp_blocks(
     rules: capa.rules.RuleSet,
@@ -389,9 +392,13 @@ def capa_analysis(analysis_dir: Path) -> None:
         )
 
         # write the extracted TTPs to the analysis dir
-        with (analysis_dir / "ttps.json").open("w") as f:
-            for line in construct_ttp_blocks(rules, [dynamic_capabilities], filter_function=lambda rule: rule.meta.get("att&ck", None)):
-                orjson.dumps(line, f)
+        with (analysis_dir / "ttps.json").open("wb") as f:
+            for ttp in construct_ttp_blocks(
+                rules,
+                [dynamic_capabilities],
+                filter_function=lambda rule: rule.meta.get("att&ck", None),
+            ):
+                f.write(orjson.dumps(ttp))
                 f.write("\n")
 
     # extract capabilities from the memory dumps
@@ -406,9 +413,9 @@ def capa_analysis(analysis_dir: Path) -> None:
 
         # dump the TTPs for each memdump into a jsonl file
         for dump_name, static_capabilities in static_capabilities_per_file:
-            with (dumps_ttp_path / dump_name).open("w", encoding="utf8") as f:
-                for line in construct_ttp_blocks(rules, [static_capabilities]):
-                    orjson.dumps(line, f)
+            with (dumps_ttp_path / dump_name).open("wb") as f:
+                for ttp in construct_ttp_blocks(rules, [static_capabilities]):
+                    f.write(orjson.dumps(ttp))
                     f.write("\n")
 
 
