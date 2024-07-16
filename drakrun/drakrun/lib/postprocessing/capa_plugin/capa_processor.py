@@ -399,7 +399,7 @@ def capa_analysis(analysis_dir: Path) -> None:
                 filter_function=lambda rule: rule.meta.get("att&ck", None),
             ):
                 f.write(orjson.dumps(ttp))
-                f.write("\n")
+                f.write(b"\n")
 
     # extract capabilities from the memory dumps
     if perform_static_analysis:
@@ -416,7 +416,7 @@ def capa_analysis(analysis_dir: Path) -> None:
             with (dumps_ttp_path / dump_name).open("wb") as f:
                 for ttp in construct_ttp_blocks(rules, [static_capabilities]):
                     f.write(orjson.dumps(ttp))
-                    f.write("\n")
+                    f.write(b"\n")
 
 
 if __name__ == "__main__":
