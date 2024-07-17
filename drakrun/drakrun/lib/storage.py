@@ -318,7 +318,7 @@ class Qcow2StorageBackend(StorageBackendBase):
     def initialize_vm0_modify_storage(self):
         """Creates storage for vm-0 modification based on current vm-0 state"""
         vm_name = "vm-0-modify"
-        volume_path = os.path.join(VOLUME_DIR, vm_name)
+        volume_path = os.path.join(VOLUME_DIR, f"{vm_name}.img")
         vm0_path = os.path.join(VOLUME_DIR, "vm-0.img")
 
         if os.path.exists(volume_path):
@@ -348,7 +348,7 @@ class Qcow2StorageBackend(StorageBackendBase):
     def commit_vm0_modify_storage(self):
         """Apply vm-0 modification to the base vm-0 snapshot"""
         vm_name = "vm-0-modify"
-        volume_path = os.path.join(VOLUME_DIR, vm_name)
+        volume_path = os.path.join(VOLUME_DIR, f"{vm_name}.img")
         subprocess.run(
             [
                 "qemu-img",
