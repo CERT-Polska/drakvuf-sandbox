@@ -1133,8 +1133,6 @@ def rollback_modify_vm0():
     install_info = InstallInfo.load()
     backend = get_storage_backend(install_info)
     vm0 = VirtualMachine(backend, 0)
-
-    log.info("Destroying vm-0...")
     vm0.destroy()
 
     log.info("Destroying vm-0 temporary snapshots...")
