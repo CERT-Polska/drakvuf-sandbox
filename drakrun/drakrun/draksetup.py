@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import os
+import pathlib
 import re
 import secrets
 import shutil
@@ -1109,16 +1110,18 @@ def commit_modify_vm0(generate_apivectors_profile):
     vm0 = VirtualMachine(backend, 0)
 
     # Create vm-0 snapshot, and destroy it
-    # WARNING: qcow2 snapshot method is a noop. fresh images are created on the fly
-    # so we can't keep the vm-0 running
-    vm0.save("/tmp/snapshot.sav")
-    vm0.save(os.path.join(VOLUME_DIR, "snapshot.sav"))
-    log.info("Snapshot was saved succesfully.")
+    temporary_snapshot_path = pathlib.Path("/tmp/snapshot.sav")
+    target_snapshot_path = pathlib.Path(VOLUME_DIR) / "snapshot.sav"
+    try:
+        vm0.save(temporary_snapshot_path.as_posix())
+        log.info("Snapshot was saved succesfully.")
 
-    # Memory state is frozen, we can't do any writes to persistent storage
-    log.info("Committing persistent memory...")
-    backend.commit_vm0_modify_storage()
-    shutil.move("/tmp/snapshot.sav", os.path.join(VOLUME_DIR, "snapshot.sav"))
+        # Memory state is frozen, we can't do any writes to persistent storage
+        log.info("Committing persistent memory...")
+        backend.commit_vm0_modify_storage()
+        shutil.move(temporary_snapshot_path, target_snapshot_path)
+    finally:
+        temporary_snapshot_path.unlink(missing_ok=True)
 
     log.info("Ensuring dnsmasq is stopped...")
     stop_dnsmasq(vm_id=0)
