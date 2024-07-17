@@ -439,6 +439,7 @@ class LvmStorageBackend(StorageBackendBase):
     def snapshot_vm0_volume(self):
         """Saves or snapshots base vm-0 volume for later use by other VMs"""
         # We'll be using vm-0 as backing storage. LVM can't make hierarchy of snapshots
+        pass
 
     def get_vm_disk_path_by_name(self, volume_name: str) -> str:
         """Returns disk path for given VM as defined by XL configuration"""
