@@ -43,7 +43,7 @@ class DrakmonShell:
         self.vm_id = vm_id
         self.vm = VirtualMachine(backend, vm_id)
 
-        if self.vm_managed and not self.vm.is_running:
+        if not self.vm_managed and not self.vm.is_running:
             raise RuntimeError(
                 "vm-0 is not running. If you want to operate on vm-0, use 'draksetup modify-vm0' first"
             )
