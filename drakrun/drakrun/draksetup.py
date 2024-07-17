@@ -1686,6 +1686,7 @@ main.add_command(cleanup)
 main.add_command(cleanup_network)
 main.add_command(init)
 main.add_command(install_minio)
+main.add_command(modify_vm0)
 
 
 if __name__ == "__main__":
