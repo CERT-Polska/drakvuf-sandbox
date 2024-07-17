@@ -519,12 +519,11 @@ class LvmStorageBackend(StorageBackendBase):
     def commit_vm0_modify_storage(self):
         """Apply vm-0 modification to the base vm-0 snapshot"""
         vm_name = "vm-0-modify"
-        volume_path = os.path.join(VOLUME_DIR, vm_name)
         subprocess.run(
             [
                 "lvconvert",
                 "--merge",
-                volume_path,
+                f"{self.lvm_volume_group}/{vm_name}",
             ],
             check=True,
         )
