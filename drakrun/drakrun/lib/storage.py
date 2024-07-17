@@ -290,7 +290,7 @@ class Qcow2StorageBackend(StorageBackendBase):
         return f"tap:qcow2:{disk_path},xvda,w"
 
     def get_vm0_modify_disk_path(self) -> str:
-        return self.get_vm_disk_path_by_name("vm0-modify")
+        return self.get_vm_disk_path_by_name("vm-0-modify")
 
     def rollback_vm_storage(self, vm_id: int):
         volume_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
