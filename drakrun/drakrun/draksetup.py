@@ -797,16 +797,14 @@ def create_vm_profiles(generate_apivectors_profile: bool):
     # Ensure that all declared usermode profiles exist
     # This is important when upgrade defines new entries in required_dll_file_list and unrequired_dll_file_list
     for profile in required_dll_file_list:
-        if not profiles_exist(profile.dest):
-            create_rekall_profile(injector, profile, True)
+        create_rekall_profile(injector, profile, True)
 
     if generate_apivectors_profile:
         for profile in unrequired_dll_file_list:
-            if not profiles_exist(profile.dest):
-                try:
-                    create_rekall_profile(injector, profile)
-                except Exception:
-                    log.exception("Unexpected exception from create_rekall_profile!")
+            try:
+                create_rekall_profile(injector, profile)
+            except Exception:
+                log.exception("Unexpected exception from create_rekall_profile!")
 
         build_os_info(APISCOUT_PROFILE_DIR, vmi_win_guid(vm.vm_name), backend)
 
