@@ -58,7 +58,6 @@ from drakrun.lib.paths import (
     ETC_DIR,
     LIB_DIR,
     PROFILE_DIR,
-    RUNTIME_FILE,
     VM_CONFIG_DIR,
     VOLUME_DIR,
 )
@@ -690,13 +689,13 @@ def build_os_info(
 
 @click.command(help="Finalize sandbox installation")
 @click.option(
-    "--usermode/--no-usermode",
-    "generate_usermode",
+    "--apivectors/--no-apivectors",
+    "generate_apivectors_profile",
     default=True,
     show_default=True,
-    help="Generate user mode profiles",
+    help="Generate extra usermode profile for apivectors",
 )
-def postinstall(generate_usermode):
+def postinstall(generate_apivectors_profile):
     if not check_root():
         return
 
@@ -718,32 +717,6 @@ def postinstall(generate_usermode):
         # If unattended install is enabled, we have an additional CD-ROM drive
         eject_cd("vm-0", SECOND_CDROM_DRIVE)
 
-    kernel_info = vmi_win_guid("vm-0")
-
-    log.info(f"Determined PDB GUID: {kernel_info.guid}")
-    log.info(f"Determined kernel filename: {kernel_info.filename}")
-
-    log.info("Fetching PDB file...")
-    dest = fetch_pdb(kernel_info.filename, kernel_info.guid, destdir=PROFILE_DIR)
-
-    log.info("Generating profile out of PDB file...")
-    profile = make_pdb_profile(dest)
-
-    log.info("Saving profile...")
-    kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
-    with open(kernel_profile, "w") as f:
-        f.write(profile)
-
-    safe_delete(dest)
-
-    vmi_offsets = extract_vmi_offsets("vm-0", kernel_profile)
-    explorer_pid = extract_explorer_pid("vm-0", kernel_profile, vmi_offsets)
-    runtime_info = RuntimeInfo(vmi_offsets=vmi_offsets, inject_pid=explorer_pid)
-
-    log.info("Saving runtime profile...")
-    with open(os.path.join(PROFILE_DIR, "runtime.json"), "w") as f:
-        f.write(runtime_info.to_json(indent=4))
-
     log.info("Saving VM snapshot...")
 
     # Create vm-0 snapshot, and destroy it
@@ -756,9 +729,7 @@ def postinstall(generate_usermode):
     log.info("Snapshotting persistent memory...")
     storage_backend.snapshot_vm0_volume()
 
-    if generate_usermode:
-        # Restore a VM and create usermode profiles
-        create_missing_profiles()
+    create_vm_profiles(generate_apivectors_profile)
 
     log.info("All right, drakrun setup is done.")
     log.info("First instance of drakrun will be enabled automatically...")
@@ -775,18 +746,10 @@ def profiles_exist(profile_name: str) -> bool:
     ).is_file()
 
 
-def create_missing_profiles():
+def create_vm_profiles(generate_apivectors_profile: bool):
     """
-    Creates usermode profiles by restoring vm-1 and extracting the DLLs.
-    Assumes that injector is configured properly, i.e. kernel and runtime
-    profiles exist and that vm-1 is free to use.
+    Creates VM profile by restoring vm-1 and extracting the required information
     """
-
-    # Prepare injector
-    runtime_info = RuntimeInfo.load(RUNTIME_FILE)
-    kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
-    injector = Injector("vm-1", runtime_info, kernel_profile)
-
     # restore vm-1
     drakconfig = load_config()
     out_interface = drakconfig.drakrun.out_interface
@@ -801,34 +764,73 @@ def create_missing_profiles():
     vm = VirtualMachine(backend, 1)
     vm.restore()
 
+    kernel_info = vmi_win_guid("vm-1")
+
+    log.info(f"Determined PDB GUID: {kernel_info.guid}")
+    log.info(f"Determined kernel filename: {kernel_info.filename}")
+
+    log.info("Fetching PDB file...")
+    pdb_file = fetch_pdb(kernel_info.filename, kernel_info.guid, destdir=PROFILE_DIR)
+
+    log.info("Generating profile out of PDB file...")
+    profile = make_pdb_profile(pdb_file)
+
+    log.info("Saving profile...")
+    kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
+    with open(kernel_profile, "w") as f:
+        f.write(profile)
+
+    safe_delete(pdb_file)
+
+    vmi_offsets = extract_vmi_offsets("vm-1", kernel_profile)
+    explorer_pid = extract_explorer_pid("vm-1", kernel_profile, vmi_offsets)
+    runtime_info = RuntimeInfo(vmi_offsets=vmi_offsets, inject_pid=explorer_pid)
+
+    log.info("Saving runtime profile...")
+    with open(os.path.join(PROFILE_DIR, "runtime.json"), "w") as f:
+        f.write(runtime_info.to_json(indent=4))
+
+    kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
+    injector = Injector("vm-1", runtime_info, kernel_profile)
+
     # Ensure that all declared usermode profiles exist
     # This is important when upgrade defines new entries in required_dll_file_list and unrequired_dll_file_list
     for profile in required_dll_file_list:
         if not profiles_exist(profile.dest):
             create_rekall_profile(injector, profile, True)
 
-    for profile in unrequired_dll_file_list:
-        if not profiles_exist(profile.dest):
-            try:
-                create_rekall_profile(injector, profile)
-            except Exception:
-                log.exception("Unexpected exception from create_rekall_profile!")
+    if generate_apivectors_profile:
+        for profile in unrequired_dll_file_list:
+            if not profiles_exist(profile.dest):
+                try:
+                    create_rekall_profile(injector, profile)
+                except Exception:
+                    log.exception("Unexpected exception from create_rekall_profile!")
 
-    build_os_info(APISCOUT_PROFILE_DIR, vmi_win_guid(vm.vm_name), backend)
+        build_os_info(APISCOUT_PROFILE_DIR, vmi_win_guid(vm.vm_name), backend)
 
-    dll_basename_list = [dll.dest for dll in dll_file_list]
-    static_apiscout_profile = build_static_apiscout_profile(
-        APISCOUT_PROFILE_DIR, dll_basename_list
-    )
-    with open(Path(APISCOUT_PROFILE_DIR) / "static_apiscout_profile.json", "w") as f:
-        json.dump(static_apiscout_profile, f)
+        dll_basename_list = [dll.dest for dll in dll_file_list]
+        static_apiscout_profile = build_static_apiscout_profile(
+            APISCOUT_PROFILE_DIR, dll_basename_list
+        )
+        with open(
+            Path(APISCOUT_PROFILE_DIR) / "static_apiscout_profile.json", "w"
+        ) as f:
+            json.dump(static_apiscout_profile, f)
 
     vm.destroy()
     delete_vm_network(vm_id=1)
 
 
 @click.command(help="Perform tasks after drakrun upgrade")
-def postupgrade():
+@click.option(
+    "--apivectors/--no-apivectors",
+    "generate_apivectors_profile",
+    default=True,
+    show_default=True,
+    help="Generate extra usermode profile for apivectors",
+)
+def postupgrade(generate_apivectors_profile: bool):
     if not check_root():
         return
 
@@ -850,7 +852,7 @@ def postupgrade():
         return
 
     stop_all_drakruns()
-    create_missing_profiles()
+    create_vm_profiles(generate_apivectors_profile)
     start_enabled_drakruns()
 
 
@@ -1091,7 +1093,14 @@ def begin_modify_vm0():
 
 
 @modify_vm0.command(name="commit", help="Commit changes made during vm-0 modification")
-def commit_modify_vm0():
+@click.option(
+    "--apivectors/--no-apivectors",
+    "generate_apivectors_profile",
+    default=True,
+    show_default=True,
+    help="Generate extra usermode profile for apivectors",
+)
+def commit_modify_vm0(generate_apivectors_profile):
     install_info = InstallInfo.load()
     backend = get_storage_backend(install_info)
 
@@ -1111,7 +1120,7 @@ def commit_modify_vm0():
 
     log.info("Ensuring dnsmasq is stopped...")
     stop_dnsmasq(vm_id=0)
-    # TODO: And here we should recreate profiles...
+    create_vm_profiles(generate_apivectors_profile)
 
 
 @modify_vm0.command(
