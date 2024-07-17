@@ -195,7 +195,7 @@ class ZfsStorageBackend(StorageBackendBase):
     def commit_vm0_modify_storage(self):
         # Make a new vm-0@booted snapshot
         vm_snap = os.path.join(self.zfs_tank_name, "vm-0@booted")
-        subprocess.run(["zfs", "destroy", "-r", vm_snap], check=True)
+        subprocess.run(["zfs", "destroy", "-R", vm_snap], check=True)
         subprocess.run(["zfs", "snapshot", vm_snap], check=True)
 
     def get_vm0_snapshot_time(self):

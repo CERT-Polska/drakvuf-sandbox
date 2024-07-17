@@ -1111,12 +1111,14 @@ def commit_modify_vm0(generate_apivectors_profile):
     # Create vm-0 snapshot, and destroy it
     # WARNING: qcow2 snapshot method is a noop. fresh images are created on the fly
     # so we can't keep the vm-0 running
+    vm0.save("/tmp/snapshot.sav")
     vm0.save(os.path.join(VOLUME_DIR, "snapshot.sav"))
     log.info("Snapshot was saved succesfully.")
 
     # Memory state is frozen, we can't do any writes to persistent storage
     log.info("Committing persistent memory...")
     backend.commit_vm0_modify_storage()
+    shutil.move("/tmp/snapshot.sav", os.path.join(VOLUME_DIR, "snapshot.sav"))
 
     log.info("Ensuring dnsmasq is stopped...")
     stop_dnsmasq(vm_id=0)
