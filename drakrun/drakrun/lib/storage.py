@@ -47,6 +47,10 @@ class StorageBackendBase:
         """Returns disk path for given volume name as defined by XL configuration"""
         raise NotImplementedError
 
+    def check_volume_exists(self, volume_name: str) -> bool:
+        """Returns True if volume already exists, False otherwise"""
+        raise NotImplementedError
+
     def get_vm_disk_path(self, vm_id: int) -> str:
         """Returns disk path for given VM number"""
         return self.get_vm_disk_path_by_name(f"vm-{vm_id}")
@@ -114,15 +118,16 @@ class ZfsStorageBackend(StorageBackendBase):
 
     def initialize_vm0_volume(self, disk_size: str):
         vm0_vol = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0"))
-        try:
-            subprocess.check_output(
-                f"zfs destroy -Rfr {vm0_vol}", stderr=subprocess.STDOUT, shell=True
-            )
-        except subprocess.CalledProcessError as exc:
-            if b"dataset does not exist" not in exc.output:
-                raise RuntimeError(
-                    f"Failed to destroy the existing ZFS volume {vm0_vol}."
+        if self.check_volume_exists("vm-0"):
+            try:
+                subprocess.check_output(
+                    f"zfs destroy -Rfr {vm0_vol}", stderr=subprocess.STDOUT, shell=True
                 )
+            except subprocess.CalledProcessError as exc:
+                if b"dataset does not exist" not in exc.output:
+                    raise RuntimeError(
+                        f"Failed to destroy the existing ZFS volume {vm0_vol}."
+                    )
         try:
             subprocess.check_output(
                 " ".join(
@@ -151,11 +156,15 @@ class ZfsStorageBackend(StorageBackendBase):
         # ZFS has vm-0@booted snapshot that can be easily reverted
         return self.get_vm_disk_path_by_name("vm-0")
 
+    def check_volume_exists(self, volume_name: str) -> bool:
+        volume_path = os.path.join("/dev/zvol", self.zfs_tank_name, volume_name)
+        return os.path.exists(volume_path)
+
     def rollback_vm_storage(self, vm_id: int):
         vm_zvol = os.path.join("/dev/zvol", self.zfs_tank_name, f"vm-{vm_id}")
         vm_snap = os.path.join(self.zfs_tank_name, f"vm-{vm_id}@booted")
 
-        if not os.path.exists(vm_zvol):
+        if not self.check_volume_exists(f"vm-{vm_id}"):
             subprocess.run(
                 [
                     "zfs",
@@ -292,6 +301,10 @@ class Qcow2StorageBackend(StorageBackendBase):
     def get_vm0_modify_disk_path(self) -> str:
         return self.get_vm_disk_path_by_name("vm-0-modify")
 
+    def check_volume_exists(self, volume_name: str) -> bool:
+        volume_path = os.path.join(VOLUME_DIR, f"{volume_name}.img")
+        return os.path.exists(volume_path)
+
     def rollback_vm_storage(self, vm_id: int):
         volume_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
         vm0_path = os.path.join(VOLUME_DIR, "vm-0.img")
@@ -403,22 +416,23 @@ class LvmStorageBackend(StorageBackendBase):
 
         disk_size - string representing volume size with M/G/T suffix, eg. 100G
         """
-        try:
-            log.info("Deleting existing logical volume and snapshot")
-            subprocess.check_output(
-                [
-                    "lvremove",
-                    "-v",
-                    "-y",
-                    f"{self.lvm_volume_group}/vm-0",
-                ],
-                stderr=subprocess.STDOUT,
-            )
-        except subprocess.CalledProcessError as exc:
-            if b"Failed to find logical volume" not in exc.output:
-                raise RuntimeError(
-                    f"Failed to destroy logical volume {self.lvm_volume_group}/vm-0"
+        if self.check_volume_exists("vm-0"):
+            try:
+                log.info("Deleting existing logical volume and snapshot")
+                subprocess.check_output(
+                    [
+                        "lvremove",
+                        "-v",
+                        "-y",
+                        f"{self.lvm_volume_group}/vm-0",
+                    ],
+                    stderr=subprocess.STDOUT,
                 )
+            except subprocess.CalledProcessError as exc:
+                if b"Failed to find logical volume" not in exc.output:
+                    raise RuntimeError(
+                        f"Failed to destroy logical volume {self.lvm_volume_group}/vm-0"
+                    )
         try:
             log.info("Creating new volume vm-0")
             subprocess.run(
@@ -448,15 +462,17 @@ class LvmStorageBackend(StorageBackendBase):
     def get_vm0_modify_disk_path(self) -> str:
         return self.get_vm_disk_path_by_name("vm-0-modify")
 
+    def check_volume_exists(self, volume_name: str) -> bool:
+        volume_path = os.path.join("/dev", f"{self.lvm_volume_group}", volume_name)
+        return os.path.exists(volume_path)
+
     def rollback_vm_storage(self, vm_id: int):
         """Rolls back changes and prepares fresh storage for new run of this VM"""
-        volume_path = os.path.join("/dev", f"{self.lvm_volume_group}", f"vm-{vm_id}")
-
         if vm_id == 0:
             raise Exception("vm-0 should not be rollbacked")
 
         log.info(f"Rolling back changes to vm-{vm_id} disk")
-        if os.path.exists(volume_path):
+        if self.check_volume_exists(f"vm-{vm_id}"):
             try:
                 subprocess.check_output(
                     [
