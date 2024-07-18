@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import os
+import pathlib
 import re
 import secrets
 import shutil
@@ -58,7 +59,6 @@ from drakrun.lib.paths import (
     ETC_DIR,
     LIB_DIR,
     PROFILE_DIR,
-    RUNTIME_FILE,
     VM_CONFIG_DIR,
     VOLUME_DIR,
 )
@@ -690,13 +690,13 @@ def build_os_info(
 
 @click.command(help="Finalize sandbox installation")
 @click.option(
-    "--usermode/--no-usermode",
-    "generate_usermode",
+    "--apivectors/--no-apivectors",
+    "generate_apivectors_profile",
     default=True,
     show_default=True,
-    help="Generate user mode profiles",
+    help="Generate extra usermode profile for apivectors",
 )
-def postinstall(generate_usermode):
+def postinstall(generate_apivectors_profile):
     if not check_root():
         return
 
@@ -718,32 +718,6 @@ def postinstall(generate_usermode):
         # If unattended install is enabled, we have an additional CD-ROM drive
         eject_cd("vm-0", SECOND_CDROM_DRIVE)
 
-    kernel_info = vmi_win_guid("vm-0")
-
-    log.info(f"Determined PDB GUID: {kernel_info.guid}")
-    log.info(f"Determined kernel filename: {kernel_info.filename}")
-
-    log.info("Fetching PDB file...")
-    dest = fetch_pdb(kernel_info.filename, kernel_info.guid, destdir=PROFILE_DIR)
-
-    log.info("Generating profile out of PDB file...")
-    profile = make_pdb_profile(dest)
-
-    log.info("Saving profile...")
-    kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
-    with open(kernel_profile, "w") as f:
-        f.write(profile)
-
-    safe_delete(dest)
-
-    vmi_offsets = extract_vmi_offsets("vm-0", kernel_profile)
-    explorer_pid = extract_explorer_pid("vm-0", kernel_profile, vmi_offsets)
-    runtime_info = RuntimeInfo(vmi_offsets=vmi_offsets, inject_pid=explorer_pid)
-
-    log.info("Saving runtime profile...")
-    with open(os.path.join(PROFILE_DIR, "runtime.json"), "w") as f:
-        f.write(runtime_info.to_json(indent=4))
-
     log.info("Saving VM snapshot...")
 
     # Create vm-0 snapshot, and destroy it
@@ -756,9 +730,7 @@ def postinstall(generate_usermode):
     log.info("Snapshotting persistent memory...")
     storage_backend.snapshot_vm0_volume()
 
-    if generate_usermode:
-        # Restore a VM and create usermode profiles
-        create_missing_profiles()
+    create_vm_profiles(generate_apivectors_profile)
 
     log.info("All right, drakrun setup is done.")
     log.info("First instance of drakrun will be enabled automatically...")
@@ -775,18 +747,10 @@ def profiles_exist(profile_name: str) -> bool:
     ).is_file()
 
 
-def create_missing_profiles():
+def create_vm_profiles(generate_apivectors_profile: bool):
     """
-    Creates usermode profiles by restoring vm-1 and extracting the DLLs.
-    Assumes that injector is configured properly, i.e. kernel and runtime
-    profiles exist and that vm-1 is free to use.
+    Creates VM profile by restoring vm-1 and extracting the required information
     """
-
-    # Prepare injector
-    runtime_info = RuntimeInfo.load(RUNTIME_FILE)
-    kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
-    injector = Injector("vm-1", runtime_info, kernel_profile)
-
     # restore vm-1
     drakconfig = load_config()
     out_interface = drakconfig.drakrun.out_interface
@@ -801,34 +765,71 @@ def create_missing_profiles():
     vm = VirtualMachine(backend, 1)
     vm.restore()
 
+    kernel_info = vmi_win_guid("vm-1")
+
+    log.info(f"Determined PDB GUID: {kernel_info.guid}")
+    log.info(f"Determined kernel filename: {kernel_info.filename}")
+
+    log.info("Fetching PDB file...")
+    pdb_file = fetch_pdb(kernel_info.filename, kernel_info.guid, destdir=PROFILE_DIR)
+
+    log.info("Generating profile out of PDB file...")
+    profile = make_pdb_profile(pdb_file)
+
+    log.info("Saving profile...")
+    kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
+    with open(kernel_profile, "w") as f:
+        f.write(profile)
+
+    safe_delete(pdb_file)
+
+    vmi_offsets = extract_vmi_offsets("vm-1", kernel_profile)
+    explorer_pid = extract_explorer_pid("vm-1", kernel_profile, vmi_offsets)
+    runtime_info = RuntimeInfo(vmi_offsets=vmi_offsets, inject_pid=explorer_pid)
+
+    log.info("Saving runtime profile...")
+    with open(os.path.join(PROFILE_DIR, "runtime.json"), "w") as f:
+        f.write(runtime_info.to_json(indent=4))
+
+    kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
+    injector = Injector("vm-1", runtime_info, kernel_profile)
+
     # Ensure that all declared usermode profiles exist
     # This is important when upgrade defines new entries in required_dll_file_list and unrequired_dll_file_list
     for profile in required_dll_file_list:
-        if not profiles_exist(profile.dest):
-            create_rekall_profile(injector, profile, True)
+        create_rekall_profile(injector, profile, True)
 
-    for profile in unrequired_dll_file_list:
-        if not profiles_exist(profile.dest):
+    if generate_apivectors_profile:
+        for profile in unrequired_dll_file_list:
             try:
                 create_rekall_profile(injector, profile)
             except Exception:
                 log.exception("Unexpected exception from create_rekall_profile!")
 
-    build_os_info(APISCOUT_PROFILE_DIR, vmi_win_guid(vm.vm_name), backend)
+        build_os_info(APISCOUT_PROFILE_DIR, vmi_win_guid(vm.vm_name), backend)
 
-    dll_basename_list = [dll.dest for dll in dll_file_list]
-    static_apiscout_profile = build_static_apiscout_profile(
-        APISCOUT_PROFILE_DIR, dll_basename_list
-    )
-    with open(Path(APISCOUT_PROFILE_DIR) / "static_apiscout_profile.json", "w") as f:
-        json.dump(static_apiscout_profile, f)
+        dll_basename_list = [dll.dest for dll in dll_file_list]
+        static_apiscout_profile = build_static_apiscout_profile(
+            APISCOUT_PROFILE_DIR, dll_basename_list
+        )
+        with open(
+            Path(APISCOUT_PROFILE_DIR) / "static_apiscout_profile.json", "w"
+        ) as f:
+            json.dump(static_apiscout_profile, f)
 
     vm.destroy()
     delete_vm_network(vm_id=1)
 
 
 @click.command(help="Perform tasks after drakrun upgrade")
-def postupgrade():
+@click.option(
+    "--apivectors/--no-apivectors",
+    "generate_apivectors_profile",
+    default=True,
+    show_default=True,
+    help="Generate extra usermode profile for apivectors",
+)
+def postupgrade(generate_apivectors_profile: bool):
     if not check_root():
         return
 
@@ -850,7 +851,7 @@ def postupgrade():
         return
 
     stop_all_drakruns()
-    create_missing_profiles()
+    create_vm_profiles(generate_apivectors_profile)
     start_enabled_drakruns()
 
 
@@ -1030,6 +1031,115 @@ def memdump_export(bucket, instance):
         log.exception("Failed to destroy VM")
 
     log.info("Done")
+
+
+@click.group(name="modify-vm0", help="Modify base VM snapshot (vm-0)")
+def modify_vm0():
+    pass
+
+
+@modify_vm0.command(name="begin", help="Safely restore vm-0 for modification")
+def begin_modify_vm0():
+    drakconfig = load_config()
+    install_info = InstallInfo.load()
+    backend = get_storage_backend(install_info)
+
+    log.info("Creating vm-0 storage snapshot...")
+    backend.initialize_vm0_modify_storage()
+
+    log.info("Setting up vm-0...")
+    generate_vm_conf(install_info, 0, disks=[backend.get_vm0_modify_disk_path()])
+    vm0 = VirtualMachine(backend, 0)
+
+    net_enable = drakconfig.drakrun.net_enable
+    out_interface = drakconfig.drakrun.out_interface
+    dns_server = drakconfig.drakrun.dns_server
+
+    setup_vm_network(
+        vm_id=0,
+        net_enable=net_enable,
+        out_interface=out_interface,
+        dns_server=dns_server,
+    )
+
+    if net_enable:
+        start_dnsmasq(vm_id=0, dns_server=dns_server, background=True)
+
+    vm0.restore()
+
+    log.info("-" * 80)
+    log.info("Initial VM setup is complete and the vm-0 was launched.")
+    log.info("Please now VNC to the port 5900 on this machine to perform modification.")
+    log.info("After you have applied your changes, please execute:")
+    log.info(
+        "- 'draksetup modify-vm0 commit' to apply your modification to the base image"
+    )
+    log.info("- 'draksetup modify-vm0 rollback' to rollback your changes")
+
+    cfg_path = os.path.join(VM_CONFIG_DIR, "vm-0.cfg")
+    with open(cfg_path, "r") as f:
+        data = f.read()
+        m = re.search(r"vncpasswd[ ]*=(.*)", data)
+        if m:
+            passwd = m.group(1).strip()
+            if passwd[0] == '"' and passwd[-1] == '"':
+                passwd = passwd[1:-1]
+
+            log.info("Your configured VNC password is:")
+            log.info(passwd)
+
+    log.info("-" * 80)
+
+
+@modify_vm0.command(name="commit", help="Commit changes made during vm-0 modification")
+@click.option(
+    "--apivectors/--no-apivectors",
+    "generate_apivectors_profile",
+    default=True,
+    show_default=True,
+    help="Generate extra usermode profile for apivectors",
+)
+def commit_modify_vm0(generate_apivectors_profile):
+    install_info = InstallInfo.load()
+    backend = get_storage_backend(install_info)
+
+    log.info("Saving VM snapshot...")
+
+    vm0 = VirtualMachine(backend, 0)
+
+    # Create vm-0 snapshot, and destroy it
+    temporary_snapshot_path = pathlib.Path("/tmp/snapshot.sav")
+    target_snapshot_path = pathlib.Path(VOLUME_DIR) / "snapshot.sav"
+    try:
+        vm0.save(temporary_snapshot_path.as_posix())
+        log.info("Snapshot was saved succesfully.")
+
+        # Memory state is frozen, we can't do any writes to persistent storage
+        log.info("Committing persistent memory...")
+        backend.commit_vm0_modify_storage()
+        shutil.move(temporary_snapshot_path, target_snapshot_path)
+    finally:
+        temporary_snapshot_path.unlink(missing_ok=True)
+
+    log.info("Ensuring dnsmasq is stopped...")
+    stop_dnsmasq(vm_id=0)
+    create_vm_profiles(generate_apivectors_profile)
+
+
+@modify_vm0.command(
+    name="rollback", help="Rollback changes made during vm-0 modification"
+)
+def rollback_modify_vm0():
+    install_info = InstallInfo.load()
+    backend = get_storage_backend(install_info)
+    vm0 = VirtualMachine(backend, 0)
+    vm0.destroy()
+
+    log.info("Destroying vm-0 temporary snapshots...")
+    backend.delete_vm0_modify_storage()
+
+    log.info("Ensuring dnsmasq is stopped...")
+    stop_dnsmasq(0)
 
 
 @click.group(help="Manage VM snapshots")
@@ -1577,6 +1687,7 @@ main.add_command(cleanup)
 main.add_command(cleanup_network)
 main.add_command(init)
 main.add_command(install_minio)
+main.add_command(modify_vm0)
 
 
 if __name__ == "__main__":

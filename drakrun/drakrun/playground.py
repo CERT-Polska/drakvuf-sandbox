@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import logging
 import subprocess
 import tempfile
@@ -27,15 +28,27 @@ log = logging.getLogger(__name__)
 
 class DrakmonShell:
     def __init__(self, vm_id: int, dns: str):
-
-        self.cleanup(vm_id)
-
         install_info = InstallInfo.load()
         backend = get_storage_backend(install_info)
 
-        generate_vm_conf(install_info, vm_id)
+        # vm-0 is not managed by drakplayground.
+        # drakplayground should not make a network setup
+        # nor restore/destroy VM by itself
+        self.vm_managed = vm_id != 0
+
+        if self.vm_managed:
+            self.cleanup(vm_id)
+            generate_vm_conf(install_info, vm_id)
+
+        self.vm_id = vm_id
         self.vm = VirtualMachine(backend, vm_id)
-        self._dns = dns
+
+        if not self.vm_managed and not self.vm.is_running:
+            raise RuntimeError(
+                "vm-0 is not running. If you want to operate on vm-0, use 'draksetup modify-vm0' first"
+            )
+
+        self.dns = dns
 
         self.runtime_info = RuntimeInfo.load(RUNTIME_FILE)
         self.desktop = WinPath(r"%USERPROFILE%") / "Desktop"
@@ -46,10 +59,8 @@ class DrakmonShell:
             self.runtime_info,
             str(self.kernel_profile),
         )
-        setup_vm_network(vm_id, True, find_default_interface(), dns)
 
     def cleanup(self, vm_id: int):
-
         log.info(f"Ensuring that drakrun@{vm_id} service is stopped...")
         try:
             subprocess.run(
@@ -131,12 +142,24 @@ class DrakmonShell:
         self.injector.create_process(cmd)
 
     def __enter__(self):
-        self.vm.restore()
+        if self.vm_managed:
+            setup_vm_network(self.vm_id, True, find_default_interface(), self.dns)
+            self.vm.restore()
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.vm.destroy()
-        delete_vm_network(self.vm.vm_id)
+        if self.vm_managed:
+            self.vm.destroy()
+            delete_vm_network(self.vm.vm_id)
+
+
+@contextlib.contextmanager
+def start_dnsmasq_if_managed(shell: DrakmonShell):
+    if shell.vm_managed:
+        with graceful_exit(start_dnsmasq(shell.vm_id, shell.dns)):
+            yield
+    else:
+        yield
 
 
 def main():
@@ -152,9 +175,7 @@ def main():
         handlers=[logging.StreamHandler()],
     )
 
-    with DrakmonShell(args.vm_id, args.dns) as shell, graceful_exit(
-        start_dnsmasq(args.vm_id, args.dns)
-    ):
+    with DrakmonShell(args.vm_id, args.dns) as shell, start_dnsmasq_if_managed(shell):
         helpers = {
             "help": shell.help,
             "copy": shell.copy,
@@ -165,11 +186,11 @@ def main():
         }
         banner = dedent(
             """
-        *** Welcome to drakrun playground ***
-        Your VM is now ready and running with internet connection.
-        You can connect to it using VNC (password can be found in /etc/drakrun/scripts/cfg.template)
-        Run help() to list available commands.
-        """
+            *** Welcome to drakrun playground ***
+            Your VM is now ready and running with internet connection.
+            You can connect to it using VNC (password can be found in /etc/drakrun/scripts/cfg.template)
+            Run help() to list available commands.
+            """
         )
         embed(banner1=banner, user_ns=helpers, colors="neutral")
 
