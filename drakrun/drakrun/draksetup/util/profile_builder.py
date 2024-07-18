@@ -23,7 +23,7 @@ from drakrun.lib.drakpdb import (
 from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.networking import delete_vm_network, setup_vm_network
-from drakrun.lib.paths import APISCOUT_PROFILE_DIR, PROFILE_DIR
+from drakrun.lib.paths import APISCOUT_PROFILE_DIR, PACKAGE_DIR, PROFILE_DIR
 from drakrun.lib.storage import StorageBackendBase, get_storage_backend
 from drakrun.lib.util import (
     RuntimeInfo,
@@ -160,8 +160,7 @@ def extract_explorer_pid(
     domain: str, kernel_profile: str, offsets: VmiOffsets, timeout: int = 30
 ) -> int:
     """Call get-explorer-pid helper and get its PID"""
-    module_dir = os.path.dirname(os.path.realpath(__file__))
-    pid_tool = os.path.join(module_dir, "tools", "get-explorer-pid")
+    pid_tool = (PACKAGE_DIR / "tools/get-explorer-pid").as_posix()
     try:
         explorer_pid_s = subprocess.check_output(
             [pid_tool, domain, kernel_profile, hex(offsets.kpgd)], timeout=timeout

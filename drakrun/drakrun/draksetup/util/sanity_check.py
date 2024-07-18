@@ -1,8 +1,8 @@
 import logging
-import os
 import subprocess
 import tempfile
 
+from drakrun.lib.paths import PACKAGE_DIR
 from drakrun.lib.vm import VirtualMachine
 
 log = logging.getLogger(__name__)
@@ -58,9 +58,8 @@ def sanity_check():
 
 def perform_xtf():
     log.info("Testing your Xen installation...")
-    module_dir = os.path.dirname(os.path.realpath(__file__))
-    cfg_path = os.path.join(module_dir, "tools", "test-hvm64-example.cfg")
-    firmware_path = os.path.join(module_dir, "tools", "test-hvm64-example")
+    cfg_path = (PACKAGE_DIR / "tools/test-hvm64-example.cfg").as_posix()
+    firmware_path = (PACKAGE_DIR / "tools/test-hvm64-example").as_posix()
 
     with open(cfg_path, "r") as f:
         test_cfg = (
@@ -78,8 +77,7 @@ def perform_xtf():
         log.info("Creating new test domain...")
         test_hvm64.create(pause=True, timeout=30)
 
-        module_dir = os.path.dirname(os.path.realpath(__file__))
-        test_altp2m_tool = os.path.join(module_dir, "tools", "test-altp2m")
+        test_altp2m_tool = (PACKAGE_DIR / "tools/test-altp2m").as_posix()
 
         log.info("Testing altp2m feature...")
         try:

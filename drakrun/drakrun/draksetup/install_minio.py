@@ -11,6 +11,7 @@ import requests
 from tqdm import tqdm
 
 from drakrun.lib.bindings.systemd import enable_service, start_service
+from drakrun.lib.paths import PACKAGE_DIR
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ def generate_minio_service_config():
 
 @click.command(help="Install MinIO (for testing purposes)")
 def install_minio():
-    data_dir = Path(__file__).parent.parent / "data"
+    data_dir = PACKAGE_DIR / "data"
     if minio_path := shutil.which("minio"):
         log.info(f"MinIO already found in {minio_path}, no need to download")
     else:
