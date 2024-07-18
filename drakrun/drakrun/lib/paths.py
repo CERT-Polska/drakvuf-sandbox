@@ -11,4 +11,4 @@ APISCOUT_PROFILE_DIR = os.path.join(LIB_DIR, "apiscout_profile")
 VOLUME_DIR = os.path.join(LIB_DIR, "volumes")
 CONFIG_PATH = os.path.join(ETC_DIR, "config.ini")
 
-PACKAGE_DIR = pathlib.Path(__file__).parent.absolute()
+PACKAGE_DIR = pathlib.Path(__file__).parent.parent.absolute()
