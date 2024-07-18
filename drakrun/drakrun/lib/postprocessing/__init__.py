@@ -6,11 +6,11 @@ from .capa_plugin.capa_processor import capa_analysis
 from .compress_ipt import compress_ipt
 from .crop_dumps import crop_dumps
 from .generate_graphs import generate_graphs
+from .generate_report import build_report
 from .generate_wireshark_key_file import generate_wireshark_key_file
 from .index_logs import index_logs
 from .process_apimon_log import process_apimon_log
 from .split_drakmon_log import split_drakmon_log
-from .generate_report import build_report
 
 
 class PostprocessFunction(Protocol):

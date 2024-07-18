@@ -90,8 +90,8 @@ def parse_processtree(processtree_file: Path) -> List[Dict]:
                     process_key(process["pid"], child["pid"])
                     for child in process["children"]
                 ],
-                "api_calls": [], # to be filled later by parse_apimon()
-                "ttps": [], # to be filled later by parse_ttps()
+                "api_calls": [],  # to be filled later by parse_apimon()
+                "ttps": [],  # to be filled later by parse_ttps()
             }
             yield from rec(process["children"], parent=process["pid"])
 
@@ -108,16 +108,16 @@ def get_metadata(analysis_dir: Path) -> Dict:
     # Currently, all metadata is contained in the metadata.json file
     return parse_metadata(analysis_dir / "metadata.json")
 
+
 def get_processes(analysis_dir: Path) -> Dict:
     # generate a dictionary of indexed processes
     processes = parse_processtree(analysis_dir / "process_tree.json")
     # parse api calls into the indexed process dictionary
-    parse_apimon(processes, analysis_dir/"apimon.log")
+    parse_apimon(processes, analysis_dir / "apimon.log")
     # parse ttps into the indexed process dictionary
-    parse_ttps(processes, analysis_dir/"ttps.json")
+    parse_ttps(processes, analysis_dir / "ttps.json")
 
     return processes
-
 
 
 def build_report(analysis_dir: Path) -> None:
