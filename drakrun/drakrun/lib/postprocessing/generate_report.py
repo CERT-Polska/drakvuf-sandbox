@@ -58,7 +58,7 @@ def parse_apimon(processes: Dict, apimon_file: Path) -> None:
             call = orjson.loads(line)
             if call["Event"] == "api_called":
                 pkey = process_key(call["PPID"], call["PID"])
-                processes[pkey]["api_calls"] += [parse_apicall(call)]
+                processes[pkey]["api_calls"].append(parse_apicall(call))
 
 
 def parse_ttps(processes: Dict, ttps_file: Path) -> None:
@@ -70,7 +70,25 @@ def parse_ttps(processes: Dict, ttps_file: Path) -> None:
             occurrences = ttp.pop("occurrences")
             for occurrence in occurrences:
                 pkey = process_key(occurrence["ppid"], occurrence["pid"])
-                processes[pkey]["ttps"] += [ttp]
+                processes[pkey]["ttps"].append(ttp)
+
+
+def parse_memdumps(processes: Dict, memdumps_file: Path) -> None:
+    # This method parses the memdump.log file and appends all memory dump
+    # information into the appropriate process in the report
+    with memdumps_file.open("r") as f:
+        for line in f:
+            memdump: Dict = orjson.loads(line)
+            pkey = process_key(memdump["PPID"], memdump["PID"])
+            processes[pkey]["memdumps"].append(
+                {
+                    "reason": memdump["DumpReason"],
+                    "addr": memdump["DumpAddr"],
+                    "size": memdump["DumpSize"],
+                    "filename": memdump["DumpFilename"],
+                    "count": memdump["DumpsCount"],
+                }
+            )
 
 
 def parse_processtree(processtree_file: Path) -> List[Dict]:
@@ -92,6 +110,7 @@ def parse_processtree(processtree_file: Path) -> List[Dict]:
                 ],
                 "api_calls": [],  # to be filled later by parse_apimon()
                 "ttps": [],  # to be filled later by parse_ttps()
+                "memdumps": [],  # to be filled later by parse_memdumps()
             }
             yield from rec(process["children"], parent=process["pid"])
 
@@ -116,6 +135,8 @@ def get_processes(analysis_dir: Path) -> Dict:
     parse_apimon(processes, analysis_dir / "apimon.log")
     # parse ttps into the indexed process dictionary
     parse_ttps(processes, analysis_dir / "ttps.json")
+    # parse memory dumps log into the indexed process dictionary
+    parse_memdumps(processes, analysis_dir / "memdump.log")
 
     return processes
 
