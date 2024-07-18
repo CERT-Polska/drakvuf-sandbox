@@ -72,7 +72,7 @@ def init(
     # In the future, consider splitting this to remove hard dependency on systemd etc
     drakrun_dir = Path(ETC_DIR)
     scripts_dir = drakrun_dir / "scripts"
-    data_dir = Path(__file__).parent / "data"
+    data_dir = Path(__file__).parent.parent / "data"
 
     drakrun_dir.mkdir(exist_ok=True)
     scripts_dir.mkdir(exist_ok=True)

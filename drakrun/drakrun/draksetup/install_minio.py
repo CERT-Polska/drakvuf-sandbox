@@ -41,7 +41,7 @@ def generate_minio_service_config():
 
 @click.command(help="Install MinIO (for testing purposes)")
 def install_minio():
-    data_dir = Path(__file__).parent / "data"
+    data_dir = Path(__file__).parent.parent / "data"
     if minio_path := shutil.which("minio"):
         log.info(f"MinIO already found in {minio_path}, no need to download")
     else:
