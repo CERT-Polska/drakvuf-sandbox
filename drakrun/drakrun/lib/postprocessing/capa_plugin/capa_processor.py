@@ -336,6 +336,9 @@ def construct_ttp_block(
     mbc = rule.meta.get("mbc", None)
     attck = rule.meta.get("att&ck", None)
     occurrences = [format_capa_address(address=address) for address, _ in addresses]
+    occurrences = [
+        dict(t) for t in {tuple(d.items()) for d in occurrences}
+    ]  # remove duplicate addresses
 
     ttp_block = dict()
     ttp_block.update({"name": name})
