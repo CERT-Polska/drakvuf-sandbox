@@ -6,7 +6,7 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 
-from drakcore.ipt_utils import (
+from drakrun.ipt_utils import (
     get_fault_pa,
     get_fault_va,
     get_frame_va,
