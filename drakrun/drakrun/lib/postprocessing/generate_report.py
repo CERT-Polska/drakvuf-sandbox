@@ -1,11 +1,12 @@
+import itertools
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Iterator, List, Union
+from typing import Dict, Iterator, List, Optional, Union
 
 import orjson
 
 
-def epoch_to_timestring(unix_time: Union[int, float, str]) -> str:
+def epoch_to_timestring(unix_time: Union[int, float, str]) -> Optional[str]:
     # This method converts a unix epoch time into a formated time string.
     # Example:
     #   Input: 1716998460
@@ -15,7 +16,7 @@ def epoch_to_timestring(unix_time: Union[int, float, str]) -> str:
 
     if not unix_time or unix_time == 0:
         # Sometimes the time in the logs would be zero or None
-        return "not available"
+        return None
 
     return str(datetime.fromtimestamp(unix_time))
 
@@ -46,7 +47,7 @@ def parse_apicall(apicall: Dict) -> Dict:
         "CalledFrom": apicall["CalledFrom"],
         "Method": apicall["Method"],
         "ReturnValue": apicall["ReturnValue"],
-        "Argument": dict(arg.split("=", maxsplit=1) for arg in apicall["Arguments"]),
+        "Argument": [arg.split("=", maxsplit=1)[1] for arg in apicall["Arguments"]],
     }
 
 
@@ -59,6 +60,26 @@ def parse_apimon(processes: Dict, apimon_file: Path) -> None:
             if call["Event"] == "api_called":
                 pkey = process_key(call["PPID"], call["PID"])
                 processes[pkey]["api_calls"].append(parse_apicall(call))
+
+    for pkey, process in processes.items():
+        grouped_api_calls = [
+            list(j)
+            for i, j in itertools.groupby(
+                process["api_calls"],
+                key=lambda call: (
+                    call["CalledFrom"],
+                    call["Method"],
+                    call["ReturnValue"],
+                    call["Argument"],
+                ),
+            )
+        ]
+        api_calls = list()
+        for calls_group in grouped_api_calls:
+            api_call = dict()
+            api_call.update(calls_group[0] | {"Repeated": len(calls_group) - 1})
+            api_calls.append(api_call)
+        process["api_calls"] = api_calls
 
 
 def parse_ttps(processes: Dict, ttps_file: Path) -> None:
