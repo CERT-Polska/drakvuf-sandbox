@@ -5,7 +5,7 @@ import multiprocessing
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, TextIO, Dict, Iterator, List, Optional, Tuple, Union
 
 import capa.engine
 import capa.render.result_document
@@ -117,7 +117,7 @@ def get_drakvuf_feature_extractor(
     return DrakvufExtractor.from_report(calls)
 
 
-def decode_json_lines(fd: BinaryIO) -> Iterator[Dict]:
+def decode_json_lines(fd: TextIO) -> Iterator[Dict]:
     # read and decode json lines into a list of dictionaries
     for line in fd:
         try:
