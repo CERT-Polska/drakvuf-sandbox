@@ -1,13 +1,9 @@
 import os
-import subprocess
 
 import click
 
+from drakrun.lib.bindings.xen import xen_insert_cd
 from drakrun.lib.vm import FIRST_CDROM_DRIVE
-
-
-def insert_cd(domain, drive, iso):
-    subprocess.run(["xl", "cd-insert", domain, drive, iso], check=True)
 
 
 @click.command(help="Mount ISO into guest", no_args_is_help=True)
@@ -25,4 +21,4 @@ def mount(iso_path, domain_name):
     Domain can be retrieved by running "xl list" command on the host.
     """
     iso_path_full = os.path.abspath(iso_path)
-    insert_cd(domain_name, FIRST_CDROM_DRIVE, iso_path_full)
+    xen_insert_cd(domain_name, FIRST_CDROM_DRIVE, iso_path_full)
