@@ -9,7 +9,7 @@ from textwrap import dedent
 
 from IPython import embed
 
-from drakrun.draksetup import insert_cd
+from drakrun.lib.bindings.xen import xen_insert_cd
 from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.networking import (
@@ -136,7 +136,7 @@ class DrakmonShell:
 
     def mount(self, local_iso_path, drive=FIRST_CDROM_DRIVE):
         local_iso_path = Path(local_iso_path)
-        insert_cd(self.vm.vm_name, drive, local_iso_path)
+        xen_insert_cd(self.vm.vm_name, drive, local_iso_path)
 
     def run(self, cmd):
         self.injector.create_process(cmd)
