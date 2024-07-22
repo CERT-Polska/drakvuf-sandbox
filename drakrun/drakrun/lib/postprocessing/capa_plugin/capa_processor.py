@@ -84,7 +84,7 @@ def get_all_child_processes(process: Dict) -> Iterator[int]:
 
 
 def filter_rules(rules: RuleSet, filter_function=lambda rule: rule) -> RuleSet:
-    # this method filters the given rules folder following arbitrary logic (specified by filter_function)
+    """this method filters the given rules folder following arbitrary logic (specified by filter_function)"""
     rules = list(rules.rules.values())
     reduced_rules = list(filter(filter_function, rules))
 
