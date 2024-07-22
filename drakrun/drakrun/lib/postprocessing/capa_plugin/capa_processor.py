@@ -7,25 +7,42 @@ import zipfile
 from pathlib import Path
 from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Tuple, Union
 
-import capa
-import capa.capabilities
-import capa.capabilities.common
 import capa.engine
-import capa.features
-import capa.features.address
-import capa.features.common
-import capa.features.extractors
-import capa.features.extractors.base_extractor
-import capa.features.extractors.drakvuf
-import capa.features.extractors.drakvuf.extractor
-import capa.helpers
-import capa.loader
-import capa.main
-import capa.render
-import capa.render.json
 import capa.render.result_document
-import capa.rules
 import orjson
+from capa.capabilities.common import find_capabilities
+from capa.features.address import (
+    AbsoluteVirtualAddress,
+    Address,
+    DNTokenAddress,
+    DNTokenOffsetAddress,
+    DynamicCallAddress,
+    ProcessAddress,
+    RelativeVirtualAddress,
+    FileOffsetAddress,
+    ThreadAddress,
+    _NoAddress,
+)
+from capa.features.extractors.base_extractor import ProcessFilter
+from capa.features.extractors.drakvuf.extractor import DrakvufExtractor
+from capa.helpers import get_auto_format
+from capa.loader import get_extractor
+from capa.main import (
+    BACKEND_DOTNET,
+    BACKEND_VIV,
+    FORMAT_DOTNET,
+    OS_WINDOWS,
+    UnsupportedFormatError,
+)
+from capa.rules import (
+    InvalidRule,
+    InvalidRuleSet,
+    Rule,
+    RuleSet,
+    get_rules,
+    get_rules_and_dependencies,
+)
+from capa.version import get_major_version
 
 # rules related configuration
 capa_rules_dir = Path("./capa-rules")
@@ -54,7 +71,7 @@ def find_process_in_pstree(pstree: List, pid: int) -> Dict:
             return child_processes
 
     # return None in case the process is not found
-    raise RuntimeError(f"PID {pid} not found in the process tree") 
+    raise RuntimeError(f"PID {pid} not found in the process tree")
 
 
 def get_all_child_processes(process: Dict) -> Iterator[int]:
@@ -66,29 +83,7 @@ def get_all_child_processes(process: Dict) -> Iterator[int]:
     yield process["pid"]
 
 
-def get_rules(rule_dirs: List[Path]) -> capa.rules.RuleSet:
-    try:
-        return capa.rules.get_rules(rule_dirs)
-    except (IOError, capa.rules.InvalidRule, capa.rules.InvalidRuleSet):
-        # display the official capa error message in case there exists any malformed capa rules
-        logger.exception(
-            "Make sure your file directory contains properly formatted capa rules. You can download the standard "
-            + "collection of capa rules from https://github.com/mandiant/capa-rules/releases."
-        )
-        logger.error(
-            "Please ensure you're using the rules that correspond to your major version of capa (%s)",
-            capa.version.get_major_version(),
-        )
-        logger.error(
-            "Or, for more details, see the rule set documentation here: %s",
-            "https://github.com/mandiant/capa/blob/master/doc/rules.md",
-        )
-        raise
-
-
-def filter_rules(
-    rules: capa.rules.RuleSet, filter_function=lambda rule: rule
-) -> capa.rules.RuleSet:
+def filter_rules(rules: RuleSet, filter_function=lambda rule: rule) -> RuleSet:
     # this method filters the given rules folder following arbitrary logic (specified by filter_function)
     rules = list(rules.rules.values())
     reduced_rules = list(filter(filter_function, rules))
@@ -96,17 +91,13 @@ def filter_rules(
     # filter the given rules folder using the specified boolean function
     filtered_rules = set()
     for rule in reduced_rules:
-        filtered_rules.update(
-            capa.rules.get_rules_and_dependencies(rules, rule.name)
-        )
+        filtered_rules.update(get_rules_and_dependencies(rules, rule.name))
 
     # generate the new ruleset, and return it
-    return capa.rules.RuleSet(list(filtered_rules))
+    return RuleSet(list(filtered_rules))
 
 
-def get_malware_processes(
-    inject_path: Path, pstree_path: Path
-) -> List[int]:
+def get_malware_processes(inject_path: Path, pstree_path: Path) -> List[int]:
     # this method gets all the pids in the Drakvuf report that are associated with malware
     with inject_path.open("r") as f:
         # we use the injected processes log to get the malware process' parent pid
@@ -135,11 +126,9 @@ def get_malware_processes(
 
 def get_drakvuf_feature_extractor(
     calls: Iterator[Dict],
-) -> capa.features.extractors.drakvuf.extractor.DrakvufExtractor:
+) -> DrakvufExtractor:
     # wrapper routing for initializing the Drakvuf feature extractor
-    return capa.features.extractors.drakvuf.extractor.DrakvufExtractor.from_report(
-        calls
-    )
+    return DrakvufExtractor.from_report(calls)
 
 
 def decode_json_lines(fd: BinaryIO) -> Iterator[Dict]:
@@ -157,7 +146,7 @@ def decode_json_lines(fd: BinaryIO) -> Iterator[Dict]:
 
 def dynamic_capa_analysis(
     analysis_dir: Path,
-    rules: capa.rules.RuleSet,
+    rules: RuleSet,
     malware_pids: Optional[List[int]] = None,
 ) -> Tuple[Path, capa.render.result_document.MatchResults]:
 
@@ -183,12 +172,10 @@ def dynamic_capa_analysis(
 
     # apply a filter to the extractor if we wish to only analyze a specific set of processes
     if malware_pids:
-        extractor = capa.features.extractors.base_extractor.ProcessFilter(
-            extractor, malware_pids
-        )
+        extractor = ProcessFilter(extractor, malware_pids)
 
     # extract dymamic capabilities
-    capabilities, _ = capa.capabilities.common.find_capabilities(rules, extractor)
+    capabilities, _ = find_capabilities(rules, extractor)
 
     # analysis_dir is returned for conformity reasons with the ttp generation function (same routine for both static and dynamic capability extraction)
     return analysis_dir, capabilities
@@ -205,27 +192,27 @@ def get_process_memory_dumps(analysis_dir: Path, pid: int) -> Iterator[str]:
 
 
 def static_capa_analysis(
-    dump_path: Path, rules: capa.rules.RuleSet
+    dump_path: Path, rules: RuleSet
 ) -> Tuple[Path, capa.render.result_document.MatchResults]:
 
     # get the input file's capa format
     try:
-        input_format = capa.helpers.get_auto_format(dump_path)
-    except capa.main.UnsupportedFormatError:
+        input_format = get_auto_format(dump_path)
+    except UnsupportedFormatError:
         logger.debug("dump %s has an unsupported format", dump_path)
         return
 
     # get the input file's adequate analysis backend
-    if input_format == capa.main.FORMAT_DOTNET:
-        backend = capa.main.BACKEND_DOTNET
+    if input_format == FORMAT_DOTNET:
+        backend = BACKEND_DOTNET
     else:
-        backend = capa.main.BACKEND_VIV
+        backend = BACKEND_VIV
 
     # get the right capa feature extractor for the input: Vivisect, .NET, etc.
-    extractor = capa.loader.get_extractor(
+    extractor = get_extractor(
         dump_path,
         input_format,
-        capa.main.OS_WINDOWS,
+        OS_WINDOWS,
         backend,
         [],
         False,
@@ -234,16 +221,14 @@ def static_capa_analysis(
     )
 
     # extract capabilities from the file, and ignore the returned metadata
-    capabilities, _ = capa.capabilities.common.find_capabilities(
-        rules, extractor, disable_progress=True
-    )
+    capabilities, _ = find_capabilities(rules, extractor, disable_progress=True)
 
     # return the capabilities alongside the memdump's path (for TTP categorization purposes)
     return dump_path, capabilities
 
 
 def static_memory_dumps_capa_analysis(
-    analysis_dir: Path, rules: capa.rules.RuleSet, malware_pids: List[int] = []
+    analysis_dir: Path, rules: RuleSet, malware_pids: List[int] = []
 ) -> Iterator[Tuple[Path, capa.render.result_document.MatchResults]]:
     malware_dumps = list(
         itertools.chain(
@@ -277,7 +262,7 @@ def static_memory_dumps_capa_analysis(
         )
 
 
-def format_capa_address(address: Union[Tuple, capa.features.address.Address]) -> Dict:
+def format_capa_address(address: Union[Tuple, Address]) -> Dict:
     # this method formats capa address (in the format of tuples) into a single dictionary
     if isinstance(address, tuple):
         return functools.reduce(
@@ -285,26 +270,22 @@ def format_capa_address(address: Union[Tuple, capa.features.address.Address]) ->
         )
     elif isinstance(
         address,
-        (
-            capa.features.address.AbsoluteVirtualAddress,
-            capa.features.address.RelativeVirtualAddress,
-            capa.features.address.FileOffsetAddress,
-        ),
+        (AbsoluteVirtualAddress, RelativeVirtualAddress, FileOffsetAddress),
     ):
         return {"address": hex(address)}
-    elif isinstance(address, capa.features.address.DNTokenAddress):
+    elif isinstance(address, DNTokenAddress):
         return {"token": address.token}
-    elif isinstance(address, capa.features.address.DNTokenOffsetAddress):
+    elif isinstance(address, DNTokenOffsetAddress):
         return {**format_capa_address(address.token), "offset": address.offset}
-    elif isinstance(address, capa.features.address.ProcessAddress):
+    elif isinstance(address, ProcessAddress):
         return {"ppid": address.ppid, "pid": address.pid}
-    elif isinstance(address, capa.features.address.ThreadAddress):
+    elif isinstance(address, ThreadAddress):
         # for the time being, we only collect the PID and PPID of a TTP
         return {**format_capa_address(address.process)}
-    elif isinstance(address, capa.features.address.DynamicCallAddress):
+    elif isinstance(address, DynamicCallAddress):
         # for the time being, we only collect the PID and PPID of a TTP
         return {**format_capa_address(address.thread)}
-    elif isinstance(address, capa.features.address._NoAddress):
+    elif isinstance(address, _NoAddress):
         # empty address
         return {}
     else:
@@ -312,9 +293,7 @@ def format_capa_address(address: Union[Tuple, capa.features.address.Address]) ->
         return {"address": address}
 
 
-def construct_ttp_block(
-    rule: capa.rules.Rule, addresses: capa.features.address
-) -> Dict[str, Any]:
+def construct_ttp_block(rule: Rule, addresses: List[Address]) -> Dict[str, Any]:
     name = rule.name.split("/")[0]
     mbc = rule.meta.get("mbc", None)
     attck = rule.meta.get("att&ck", None)
@@ -333,7 +312,7 @@ def construct_ttp_block(
 
 
 def construct_ttp_blocks(
-    rules: capa.rules.RuleSet,
+    rules: RuleSet,
     capabilities_per_file: List[Tuple[Path, capa.engine.MatchResults, Any]],
     filter_function=lambda rule: rule,
 ) -> Iterator[Dict[str, Any]]:
@@ -361,9 +340,9 @@ def capa_analysis(analysis_dir: Path) -> None:
     malware_pids = None
     if analyze_malware_pids_only:
         malware_pids = get_malware_processes(
-                inject_path=analysis_dir / "inject.log",
-                pstree_path=analysis_dir / "process_tree.json",
-            )
+            inject_path=analysis_dir / "inject.log",
+            pstree_path=analysis_dir / "process_tree.json",
+        )
 
     # make sure either static or dynamic capability extraction is on
     assert perform_dynamic_analysis or perform_static_analysis
