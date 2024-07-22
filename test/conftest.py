@@ -90,8 +90,8 @@ def drakmon_setup():
 
         logging.info("Uploading MinIO server binary")
         ssh.put(MINIO_SERVER_BIN_PATH, "/usr/local/bin/minio")
-
         logging.info("Upload finished")
+        ssh.run("chmod +x /usr/local/bin/minio")
         ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
         logging.info("Install DRAKVUF")
         # Install DRAKVUF
