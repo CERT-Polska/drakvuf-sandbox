@@ -182,7 +182,7 @@ def dynamic_capa_analysis(
 
 
 def get_process_memory_dumps(analysis_dir: Path, pid: int) -> Iterator[str]:
-    # get the memory dumps from a specific process.
+    """get the memory dumps from a specific process."""
     # this is used mainly to get the memdumps by a malware process
     with (analysis_dir / "memdump.log").open("r") as f:
         for line in f:
