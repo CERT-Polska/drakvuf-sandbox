@@ -54,7 +54,7 @@ def find_process_in_pstree(pstree: List, pid: int, procname: str) -> Dict:
                 return child_processes
 
     # return None in case the process is not found
-    return None
+    raise RuntimeError(f"PID {pid} not found in the process tree") 
 
 
 def get_all_child_processes(process: Dict) -> Iterator[int]:
