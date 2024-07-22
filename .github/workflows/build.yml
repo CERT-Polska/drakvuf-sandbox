@@ -185,7 +185,7 @@ jobs:
         run: |
           wget https://dl.min.io/server/minio/release/linux-amd64/minio -O /tmp/minio
       - name: Save cached MinIO server
-        id:  cache-minio-server-restore
+        id:  cache-minio-server-save
         uses: actions/cache/save@v3
         with:
           path: |
