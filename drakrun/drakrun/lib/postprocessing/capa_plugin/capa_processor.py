@@ -250,7 +250,7 @@ def static_memory_dumps_capa_analysis(
 
 
 def format_capa_address(address: Union[Tuple, ca.Address]) -> Dict:
-    # this method formats capa address (in the format of tuples) into a single dictionary
+    """This method formats capa address (in the format of tuples) into a single dictionary"""
     if isinstance(address, tuple):
         return functools.reduce(
             lambda a, b: a | b, [format_capa_address(addr) for addr in address]
