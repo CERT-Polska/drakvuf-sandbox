@@ -151,6 +151,9 @@ def dynamic_capa_analysis(
     else:
         logger.debug("missing syscall.log file")
 
+    if not calls:
+        raise RuntimeError("both syscall.log and apimon.log are either empty or non-existent")
+
     # initialize the Drakvuf capa feature extractor with the captured calls
     extractor = get_drakvuf_feature_extractor(calls)
 
