@@ -75,7 +75,7 @@ def find_process_in_pstree(pstree: List, pid: int) -> Dict:
 
 
 def get_all_child_processes(process: Dict) -> Iterator[int]:
-    # this method returns all of the child processes pids (recursively), including their parent's
+    """This method returns all of the child processes pids (recursively), including their parent's"""
     for p in process["children"]:
         yield from get_all_child_processes(p)
 
