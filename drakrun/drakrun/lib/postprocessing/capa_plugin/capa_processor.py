@@ -61,7 +61,7 @@ def check_rules_directory_exist(path: Path) -> bool:
 
 
 def find_process_in_pstree(pstree: List, pid: int) -> Dict:
-    # this methods searches for a process in the generated process_tree.json file
+    """This methods searches for a process in the generated process_tree.json file"""
     for process in pstree:
         if process["pid"] == pid:
             return process
