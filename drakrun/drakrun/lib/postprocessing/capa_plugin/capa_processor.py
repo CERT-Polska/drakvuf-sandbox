@@ -294,7 +294,6 @@ def construct_ttp_block(rule: Rule, addresses: List[ca.Address]) -> Dict[str, An
     ttp_block.update({"mbc": mbc} if mbc else {})
     ttp_block.update({"att&ck": attck} if attck else {})
     ttp_block.update({"occurrences": occurrences})
-
     return ttp_block
 
 
