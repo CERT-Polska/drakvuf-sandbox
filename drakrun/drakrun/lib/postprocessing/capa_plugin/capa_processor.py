@@ -113,7 +113,7 @@ def get_malware_processes(inject_path: Path, pstree_path: Path) -> List[int]:
 def get_drakvuf_feature_extractor(
     calls: Iterator[Dict],
 ) -> DrakvufExtractor:
-    # wrapper routing for initializing the Drakvuf feature extractor
+    """Wrapper routing for initializing the Drakvuf feature extractor"""
     return DrakvufExtractor.from_report(calls)
 
 
