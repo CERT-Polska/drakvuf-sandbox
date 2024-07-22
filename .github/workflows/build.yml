@@ -81,7 +81,8 @@ jobs:
           sh drakvuf/package/depends.sh
           bash ci/build_bundle.sh "${{ matrix.distro }}:${{matrix.version}}"
           ls -r /out
-      - name: Save Drakvuf bundle cache
+      - if: ${{ steps.cache-drakvuf-bundle-restore.outputs.cache-hit != 'true' }}
+        name: Save Drakvuf bundle cache
         id: cache-drakvuf-bundle-save
         uses: actions/cache/save@v3
         with:
