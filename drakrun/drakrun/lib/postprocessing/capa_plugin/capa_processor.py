@@ -119,8 +119,8 @@ def get_malware_processes(
     # make sure that inject.log has only one entry
     if len(injected_processes):
         raise ValueError("inject.log has more than one entry")
-    else:
-        malware_injection_log = injected_processes[0]
+
+    malware_injection_log = injected_processes[0]
 
     # get the parent malware process' pid and process name
     malware_pid: int = malware_injection_log["InjectedPid"]
