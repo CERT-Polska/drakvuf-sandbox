@@ -107,13 +107,9 @@ def filter_rules(
 
 
 def get_malware_processes(
-    metadata_path: Path, inject_path: Path, pstree_path: Path
+    inject_path: Path, pstree_path: Path
 ) -> Optional[List[int]]:
     # this method gets all the pids in the Drakvuf report that are associated with malware
-    with metadata_path.open("r") as f:
-        # we use the metadata file to get the analysis' start command
-        metadata = orjson.loads(f.read())
-
     with inject_path.open("r") as f:
         # we use the injected processes log to get the malware process' parent pid
         injected_processes = [orjson.loads(line) for line in f]
@@ -122,13 +118,11 @@ def get_malware_processes(
         # we use the process tree to get all of the malware process' child processes
         pstree = orjson.loads(f.read())
 
-    # make sure we have the right inject.log entry (using the metadata.json file)
-    malware_injection_log: str = next(
-        filter(
-            lambda line: line["ProcessName"] == metadata["start_command"],
-            injected_processes,
-        )
-    )
+    # make sure that inject.log has only one entry
+    if len(injected_processes):
+        raise ValueError("inject.log has more than one entry")
+    else:
+        malware_injection_log = injected_processes[0]
 
     # get the parent malware process' pid and process name
     malware_pid: int = malware_injection_log["InjectedPid"]
@@ -375,7 +369,6 @@ def capa_analysis(analysis_dir: Path) -> None:
     malware_pids = None
     if analyze_malware_pids_only:
         malware_pids = get_malware_processes(
-                metadata_path=analysis_dir / "metadata.json",
                 inject_path=analysis_dir / "inject.log",
                 pstree_path=analysis_dir / "process_tree.json",
             )

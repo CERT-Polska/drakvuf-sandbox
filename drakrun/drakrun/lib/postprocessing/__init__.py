@@ -51,7 +51,6 @@ POSTPROCESS_PLUGINS = [
             "apimon.log",
             "syscall.log",
             "process_tree.json",
-            "metadata.json",
             "inject.log",
         ],
         generates=["ttps.json"],
