@@ -11,18 +11,7 @@ import capa.engine
 import capa.render.result_document
 import orjson
 from capa.capabilities.common import find_capabilities
-from capa.features.address import (
-    AbsoluteVirtualAddress,
-    Address,
-    DNTokenAddress,
-    DNTokenOffsetAddress,
-    DynamicCallAddress,
-    ProcessAddress,
-    RelativeVirtualAddress,
-    FileOffsetAddress,
-    ThreadAddress,
-    _NoAddress,
-)
+import capa.features.address as ca
 from capa.features.extractors.base_extractor import ProcessFilter
 from capa.features.extractors.drakvuf.extractor import DrakvufExtractor
 from capa.helpers import get_auto_format
@@ -259,7 +248,7 @@ def static_memory_dumps_capa_analysis(
         )
 
 
-def format_capa_address(address: Union[Tuple, Address]) -> Dict:
+def format_capa_address(address: Union[Tuple, ca.Address]) -> Dict:
     # this method formats capa address (in the format of tuples) into a single dictionary
     if isinstance(address, tuple):
         return functools.reduce(
@@ -267,22 +256,22 @@ def format_capa_address(address: Union[Tuple, Address]) -> Dict:
         )
     elif isinstance(
         address,
-        (AbsoluteVirtualAddress, RelativeVirtualAddress, FileOffsetAddress),
+        (ca.AbsoluteVirtualAddress, ca.RelativeVirtualAddress, ca.FileOffsetAddress),
     ):
         return {"address": hex(address)}
-    elif isinstance(address, DNTokenAddress):
+    elif isinstance(address, ca.DNTokenAddress):
         return {"token": address.token}
-    elif isinstance(address, DNTokenOffsetAddress):
+    elif isinstance(address, ca.DNTokenOffsetAddress):
         return {**format_capa_address(address.token), "offset": address.offset}
-    elif isinstance(address, ProcessAddress):
+    elif isinstance(address, ca.ProcessAddress):
         return {"ppid": address.ppid, "pid": address.pid}
-    elif isinstance(address, ThreadAddress):
+    elif isinstance(address, ca.ThreadAddress):
         # for the time being, we only collect the PID and PPID of a TTP
         return {**format_capa_address(address.process)}
-    elif isinstance(address, DynamicCallAddress):
+    elif isinstance(address, ca.DynamicCallAddress):
         # for the time being, we only collect the PID and PPID of a TTP
         return {**format_capa_address(address.thread)}
-    elif isinstance(address, _NoAddress):
+    elif isinstance(address, ca._NoAddress):
         # empty address
         return {}
     else:
@@ -290,7 +279,7 @@ def format_capa_address(address: Union[Tuple, Address]) -> Dict:
         return {"address": address}
 
 
-def construct_ttp_block(rule: Rule, addresses: List[Address]) -> Dict[str, Any]:
+def construct_ttp_block(rule: Rule, addresses: List[ca.Address]) -> Dict[str, Any]:
     name = rule.name.split("/")[0]
     mbc = rule.meta.get("mbc", None)
     attck = rule.meta.get("att&ck", None)
