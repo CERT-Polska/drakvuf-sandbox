@@ -108,7 +108,7 @@ def filter_rules(
 
 def get_malware_processes(
     metadata_path: Path, inject_path: Path, pstree_path: Path
-) -> Optional[List[str]]:
+) -> Optional[List[int]]:
     # this method gets all the pids in the Drakvuf report that are associated with malware
     with metadata_path.open("r") as f:
         # we use the metadata file to get the analysis' start command
@@ -144,7 +144,7 @@ def get_malware_processes(
         return None
 
     # return a list of all spawned malware processes (does not include process injection)
-    return get_all_child_processes(malware_process)
+    return list(get_all_child_processes(malware_process))
 
 
 def get_drakvuf_feature_extractor(
@@ -374,13 +374,11 @@ def capa_analysis(analysis_dir: Path) -> None:
     # get malware-related pids if requested by configuration
     malware_pids = None
     if analyze_malware_pids_only:
-        malware_pids = list(
-            get_malware_processes(
+        malware_pids = get_malware_processes(
                 metadata_path=analysis_dir / "metadata.json",
                 inject_path=analysis_dir / "inject.log",
                 pstree_path=analysis_dir / "process_tree.json",
             )
-        )
 
     # make sure either static or dynamic capability extraction is on
     assert perform_dynamic_analysis or perform_static_analysis
