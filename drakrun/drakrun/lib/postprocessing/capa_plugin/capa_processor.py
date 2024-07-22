@@ -108,7 +108,7 @@ def filter_rules(
 
 def get_malware_processes(
     inject_path: Path, pstree_path: Path
-) -> Optional[List[int]]:
+) -> List[int]:
     # this method gets all the pids in the Drakvuf report that are associated with malware
     with inject_path.open("r") as f:
         # we use the injected processes log to get the malware process' parent pid
@@ -129,13 +129,9 @@ def get_malware_processes(
     malware_procname: str = malware_injection_log["ProcessName"]
 
     # find the malware process' sub-tree in the overall process tree
-    try:
-        malware_process: Dict = find_process_in_pstree(
-            pstree, malware_pid, malware_procname
-        )
-    except ValueError:
-        # malware pid not found, analyze entire log instead
-        return None
+    malware_process: Dict = find_process_in_pstree(
+        pstree, malware_pid, malware_procname
+    )
 
     # return a list of all spawned malware processes (does not include process injection)
     return list(get_all_child_processes(malware_process))
