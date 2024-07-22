@@ -173,6 +173,24 @@ jobs:
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update && apt-get install -y -q git
+      - name: Restore cached MinIO server
+        id: cache-minio-server-restore
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            /tmp/minio
+          key: minio-server-bin
+      - if: ${{ steps.cache-minio-server-restore.outputs.cache-hit != 'true' }}
+        name: Download MinIO server
+        run: |
+          wget https://dl.min.io/server/minio/release/linux-amd64/minio -O /tmp/minio
+      - name: Save cached MinIO server
+        id:  cache-minio-server-restore
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            /tmp/minio
+          key: minio-server-bin
       - name: Start tests
         run: |
           git config --global --add safe.directory "$(pwd)"
@@ -185,6 +203,7 @@ jobs:
           BASE_IMAGE: "${{ matrix.distro }}-${{ matrix.version_number }}-generic-amd64"
           SNAPSHOT_VERSION: "win7-20210922"
           MINIO_HOST: "192.168.100.1:8181"
+          MINIO_SERVER_BIN_PATH: "/tmp/minio"
           VM_RUNNER_API_URL: "http://127.0.0.1:8080"
           VM_SUFFIX: "${{ matrix.distro }}-${{ matrix.version_number }}"
           # It's local Minio readonly account accessible from local runner

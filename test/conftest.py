@@ -20,6 +20,7 @@ SNAPSHOT_VERSION = os.getenv("SNAPSHOT_VERSION")
 MINIO_HOST = os.getenv("MINIO_HOST")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY")
+MINIO_SERVER_BIN_PATH = os.getenv("MINIO_SERVER_BIN_PATH")
 # VM_RUNNER_API_KEY
 # VM_RUNNER_SOCKS_USERNAME
 # VM_RUNNER_SOCKS_PASSWORD
@@ -86,6 +87,9 @@ def drakmon_setup():
         for deb in (drakvuf_sandbox_debs + drakvuf_debs):
             logging.info("Uploading %s", deb.name)
             ssh.put(deb.as_posix())
+
+        logging.info("Uploading MinIO server binary")
+        ssh.put(MINIO_SERVER_BIN_PATH, "/usr/local/bin/minio")
 
         logging.info("Upload finished")
         ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
