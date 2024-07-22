@@ -66,12 +66,11 @@ def get_all_child_processes(process: Dict) -> Iterator[int]:
     yield process["pid"]
 
 
-def get_rules(rules_dir: List[Path]) -> Optional[capa.rules.RuleSet]:
+def get_rules(rule_dirs: List[Path]) -> capa.rules.RuleSet:
     try:
-        rules = capa.rules.get_rules(rules_dir)
+        return capa.rules.get_rules(rule_dirs)
     except (IOError, capa.rules.InvalidRule, capa.rules.InvalidRuleSet):
         # display the official capa error message in case there exists any malformed capa rules
-        rules = None
         logger.exception(
             "Make sure your file directory contains properly formatted capa rules. You can download the standard "
             + "collection of capa rules from https://github.com/mandiant/capa-rules/releases."
@@ -84,8 +83,7 @@ def get_rules(rules_dir: List[Path]) -> Optional[capa.rules.RuleSet]:
             "Or, for more details, see the rule set documentation here: %s",
             "https://github.com/mandiant/capa/blob/master/doc/rules.md",
         )
-
-    return rules
+        raise
 
 
 def filter_rules(
