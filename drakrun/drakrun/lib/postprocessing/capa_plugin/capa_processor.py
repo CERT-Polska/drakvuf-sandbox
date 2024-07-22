@@ -99,7 +99,7 @@ def filter_rules(
     filtered_rules = set()
     for rule in reduced_rules:
         filtered_rules.update(
-            set(capa.rules.get_rules_and_dependencies(rules, rule.name))
+            capa.rules.get_rules_and_dependencies(rules, rule.name)
         )
 
     # generate the new ruleset, and return it
