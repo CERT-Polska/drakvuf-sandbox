@@ -302,8 +302,7 @@ def construct_ttp_blocks(
     capabilities_per_file: List[Tuple[Path, capa.engine.MatchResults, Any]],
     filter_function=None,
 ) -> Iterator[Dict[str, Any]]:
-
-    # construct a ttp block for each extracted capability
+    """construct a ttp block for each extracted capability"""
     for _, capabilities in capabilities_per_file:
         for name, addresses in capabilities.items():
             if filter_function(rules[name]):
