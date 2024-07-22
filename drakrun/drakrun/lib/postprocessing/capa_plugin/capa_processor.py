@@ -123,7 +123,7 @@ def decode_json_lines(fd: TextIO) -> Iterator[Dict]:
         try:
             # we use orjson for a small performance improvement
             yield orjson.loads(line.strip())
-        except (orjson.JSONDecodeError):
+        except orjson.JSONDecodeError:
             # sometimes Drakvuf reports bad method names and/or malformed JSON
             logger.debug("bad drakvuf log line: %s", line)
 
