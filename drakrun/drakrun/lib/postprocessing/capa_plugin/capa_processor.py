@@ -35,14 +35,11 @@ from capa.main import (
     UnsupportedFormatError,
 )
 from capa.rules import (
-    InvalidRule,
-    InvalidRuleSet,
     Rule,
     RuleSet,
     get_rules,
     get_rules_and_dependencies,
 )
-from capa.version import get_major_version
 
 # rules related configuration
 capa_rules_dir = Path("./capa-rules")
@@ -83,7 +80,7 @@ def get_all_child_processes(process: Dict) -> Iterator[int]:
     yield process["pid"]
 
 
-def filter_rules(rules: RuleSet, filter_function=lambda rule: rule) -> RuleSet:
+def filter_rules(rules: RuleSet, filter_function=None) -> RuleSet:
     """this method filters the given rules folder following arbitrary logic (specified by filter_function)"""
     rules = list(rules.rules.values())
     reduced_rules = list(filter(filter_function, rules))
@@ -314,7 +311,7 @@ def construct_ttp_block(rule: Rule, addresses: List[Address]) -> Dict[str, Any]:
 def construct_ttp_blocks(
     rules: RuleSet,
     capabilities_per_file: List[Tuple[Path, capa.engine.MatchResults, Any]],
-    filter_function=lambda rule: rule,
+    filter_function=None,
 ) -> Iterator[Dict[str, Any]]:
 
     # construct a ttp block for each extracted capability
