@@ -182,7 +182,7 @@ def static_capa_analysis(
     dump_path: Path, rules: RuleSet
 ) -> Tuple[Path, capa.render.result_document.MatchResults]:
 
-    # get the input file's capa format
+    """get the input file's capa format"""
     try:
         input_format = get_auto_format(dump_path)
     except UnsupportedFormatError:
