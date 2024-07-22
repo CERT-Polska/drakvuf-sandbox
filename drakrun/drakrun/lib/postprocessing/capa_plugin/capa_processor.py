@@ -235,7 +235,7 @@ def static_memory_dumps_capa_analysis(
             dumps = Path("/tmp") / "dumps"
 
     # extract the capabilities within each memory dump, one per thread
-    pool = multiprocessing.Pool(processes=len(malware_dumps))
+    pool = multiprocessing.Pool(processes=len(4))
     yield from pool.starmap(
         static_capa_analysis, map(lambda dump: (dumps / dump, rules), malware_dumps)
     )
