@@ -43,13 +43,13 @@ def check_rules_directory_exist(path: Path) -> bool:
     return path.is_dir() and any(path.iterdir())
 
 
-def find_process_in_pstree(pstree: List, pid: int, procname: str) -> Dict:
+def find_process_in_pstree(pstree: List, pid: int) -> Dict:
     # this methods searches for a process in the generated process_tree.json file
     for process in pstree:
         if process["pid"] == pid:
             return process
         else:
-            child_processes = find_process_in_pstree(process["children"], pid, procname)
+            child_processes = find_process_in_pstree(process["children"], pid)
             if child_processes:
                 return child_processes
 
@@ -127,9 +127,7 @@ def get_malware_processes(
     malware_procname: str = malware_injection_log["ProcessName"]
 
     # find the malware process' sub-tree in the overall process tree
-    malware_process: Dict = find_process_in_pstree(
-        pstree, malware_pid, malware_procname
-    )
+    malware_process: Dict = find_process_in_pstree(pstree, malware_pid)
 
     # return a list of all spawned malware processes (does not include process injection)
     return list(get_all_child_processes(malware_process))
