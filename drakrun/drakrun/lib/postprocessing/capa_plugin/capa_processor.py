@@ -313,7 +313,8 @@ def capa_analysis(analysis_dir: Path) -> None:
     """check and prepare the rules folder"""
     if not check_rules_directory_exist(capa_rules_dir):
         # in case of a missing/empty rules folder, clone the official capa rules
-        logger.exception("capa rules directory is empty or non-existant")
+        raise RuntimeError("capa rules directory is empty or non-existant")
+        
 
     # get rules and filter them
     rules = get_rules([capa_rules_dir])
