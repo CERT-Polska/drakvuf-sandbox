@@ -143,11 +143,8 @@ def get_malware_processes(
         # malware pid not found, analyze entire log instead
         return None
 
-    # get all child processes of the malware process
-    malware_pids = get_all_child_processes(malware_process)
-
     # return a list of all spawned malware processes (does not include process injection)
-    return malware_pids
+    return get_all_child_processes(malware_process)
 
 
 def get_drakvuf_feature_extractor(
