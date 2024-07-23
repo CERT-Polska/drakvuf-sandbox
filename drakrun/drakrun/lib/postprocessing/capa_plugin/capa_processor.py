@@ -11,7 +11,7 @@ from typing import Any, TextIO, Dict, Iterator, List, Optional, Tuple, Union
 import capa.engine
 import capa.render.result_document
 import orjson
-from capa.capabilities.common import find_capabilities
+from capa.capabilities.common import find_capabilities, Result
 import capa.features.address as ca
 from capa.features.extractors.base_extractor import ProcessFilter
 from capa.features.extractors.drakvuf.extractor import DrakvufExtractor
@@ -277,7 +277,7 @@ def format_capa_address(address: Union[Tuple, ca.Address]) -> Dict:
         return {"address": address}
 
 
-def construct_ttp_block(rule: Rule, addresses: List[ca.Address]) -> Dict[str, Any]:
+def construct_ttp_block(rule: Rule, addresses: List[Tuple[ca.Address, Result]]) -> Dict[str, Any]:
     name = rule.name.split("/")[0]
     mbc = rule.meta.get("mbc", None)
     attck = rule.meta.get("att&ck", None)
