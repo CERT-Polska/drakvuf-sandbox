@@ -4,6 +4,7 @@ import logging
 import multiprocessing
 import shutil
 import zipfile
+from tempfile import TemporaryDirectory
 from pathlib import Path
 from typing import Any, TextIO, Dict, Iterator, List, Optional, Tuple, Union
 
@@ -101,7 +102,6 @@ def get_malware_processes(inject_path: Path, pstree_path: Path) -> List[int]:
 
     # get the parent malware process' pid and process name
     malware_pid: int = malware_injection_log["InjectedPid"]
-    malware_procname: str = malware_injection_log["ProcessName"]
 
     # find the malware process' sub-tree in the overall process tree
     malware_process: Dict = find_process_in_pstree(pstree, malware_pid)
@@ -223,16 +223,12 @@ def static_memory_dumps_capa_analysis(
         )
     )
 
-    # extract all memory dumps temporarily into a dumps/ folder
-    with zipfile.ZipFile(analysis_dir / "dumps.zip", "r") as zip_ref:
-        try:
-            # try to extract the memory dumps into the analysis folder
-            zip_ref.extractall(analysis_dir)
-            dumps = analysis_dir / "dumps"
-        except PermissionError:
-            # in case of missing permissions, extract into /tmp
-            zip_ref.extractall(Path("/tmp"))
-            dumps = Path("/tmp") / "dumps"
+    with TemporaryDirectory() as dump_extraction_directory:
+        # extract all memory dumps temporarily into a dumps/ folder
+        with zipfile.ZipFile(analysis_dir / "dumps.zip", "r") as zip_ref:
+            # extract the memory dumps into the temporary directory
+            zip_ref.extractall(dumps)
+            dumps = Path(dump_extraction_directory) / "dumps"
 
     # extract the capabilities within each memory dump, one per thread
     pool = multiprocessing.Pool(processes=len(4))
@@ -247,6 +243,7 @@ def static_memory_dumps_capa_analysis(
         logger.debug(
             "Permission Denied: Could not remove temporary dumps.zip extraction folder"
         )
+
 
 
 def format_capa_address(address: Union[Tuple, ca.Address]) -> Dict:
