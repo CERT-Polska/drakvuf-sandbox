@@ -13,12 +13,13 @@ from drakrun.lib.apiscout import (
 from drakrun.lib.config import load_config
 from drakrun.lib.drakpdb import (
     DLL,
+    apivectors_dll_file_list,
     dll_file_list,
     fetch_pdb,
     make_pdb_profile,
+    optional_dll_file_list,
     pe_codeview_data,
     required_dll_file_list,
-    unrequired_dll_file_list,
 )
 from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
@@ -261,12 +262,18 @@ def create_vm_profiles(generate_apivectors_profile: bool):
     injector = Injector("vm-1", runtime_info, kernel_profile)
 
     # Ensure that all declared usermode profiles exist
-    # This is important when upgrade defines new entries in required_dll_file_list and unrequired_dll_file_list
+    # This is important when upgrade defines new entries in required_dll_file_list
     for profile in required_dll_file_list:
         create_rekall_profile(injector, profile, True)
 
+    for profile in optional_dll_file_list:
+        try:
+            create_rekall_profile(injector, profile)
+        except Exception:
+            log.exception("Unexpected exception from create_rekall_profile!")
+
     if generate_apivectors_profile:
-        for profile in unrequired_dll_file_list:
+        for profile in apivectors_dll_file_list:
             try:
                 create_rekall_profile(injector, profile)
             except Exception:
