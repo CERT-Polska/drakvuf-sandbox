@@ -8,8 +8,8 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 from typing import Any, TextIO, Dict, Iterator, List, Optional, Tuple, Union
 
-import capa.engine
-import capa.render.result_document
+import capa.engine as ce
+import capa.render.result_document as crd
 import orjson
 from capa.capabilities.common import find_capabilities, Result
 import capa.features.address as ca
@@ -132,7 +132,7 @@ def dynamic_capa_analysis(
     analysis_dir: Path,
     rules: RuleSet,
     malware_pids: Optional[List[int]] = None,
-) -> Tuple[Path, capa.render.result_document.MatchResults]:
+) -> Tuple[Path, crd.MatchResults]:
 
     # save all api calls and native calls into one list which gets sorted by capa later on.
     calls = []
@@ -180,7 +180,7 @@ def get_process_memory_dumps(analysis_dir: Path, pid: int) -> Iterator[str]:
 
 def static_capa_analysis(
     dump_path: Path, rules: RuleSet
-) -> Tuple[Path, capa.render.result_document.MatchResults]:
+) -> Tuple[Path, crd.MatchResults]:
 
     """get the input file's capa format"""
     try:
@@ -216,7 +216,7 @@ def static_capa_analysis(
 
 def static_memory_dumps_capa_analysis(
     analysis_dir: Path, rules: RuleSet, malware_pids: List[int] = []
-) -> Iterator[Tuple[Path, capa.render.result_document.MatchResults]]:
+) -> Iterator[Tuple[Path, crd.MatchResults]]:
     malware_dumps = list(
         itertools.chain(
             *(get_process_memory_dumps(analysis_dir, pid) for pid in malware_pids)
@@ -296,7 +296,7 @@ def construct_ttp_block(rule: Rule, addresses: List[Tuple[ca.Address, Result]]) 
 
 def construct_ttp_blocks(
     rules: RuleSet,
-    capabilities_per_file: List[Tuple[Path, capa.engine.MatchResults]],
+    capabilities_per_file: List[Tuple[Path, ce.MatchResults]],
     filter_function=None,
 ) -> Iterator[Dict[str, Any]]:
     """construct a ttp block for each extracted capability"""
@@ -359,7 +359,7 @@ def capa_analysis(analysis_dir: Path) -> None:
         # dump the TTPs for each memdump into a jsonl file
         for dump_name, static_capabilities in static_capabilities_per_file:
             with (dumps_ttp_path / dump_name).open("wb") as f:
-                for ttp in construct_ttp_blocks(rules, [static_capabilities]):
+                for ttp in construct_ttp_blocks(rules, [(dump_name, static_capabilities)]):
                     f.write(orjson.dumps(ttp))
                     f.write(b"\n")
 
