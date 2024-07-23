@@ -4,15 +4,15 @@ import logging
 import multiprocessing
 import shutil
 import zipfile
-from tempfile import TemporaryDirectory
 from pathlib import Path
-from typing import Any, TextIO, Dict, Iterator, List, Optional, Tuple, Union
+from tempfile import TemporaryDirectory
+from typing import Any, Dict, Iterator, List, Optional, TextIO, Tuple, Union
 
 import capa.engine as ce
+import capa.features.address as ca
 import capa.render.result_document as crd
 import orjson
-from capa.capabilities.common import find_capabilities, Result
-import capa.features.address as ca
+from capa.capabilities.common import Result, find_capabilities
 from capa.features.extractors.base_extractor import ProcessFilter
 from capa.features.extractors.drakvuf.extractor import DrakvufExtractor
 from capa.helpers import get_auto_format
@@ -24,12 +24,7 @@ from capa.main import (
     OS_WINDOWS,
     UnsupportedFormatError,
 )
-from capa.rules import (
-    Rule,
-    RuleSet,
-    get_rules,
-    get_rules_and_dependencies,
-)
+from capa.rules import Rule, RuleSet, get_rules, get_rules_and_dependencies
 
 # rules related configuration
 capa_rules_dir = Path("./capa-rules")
@@ -152,7 +147,9 @@ def dynamic_capa_analysis(
         logger.debug("missing syscall.log file")
 
     if not calls:
-        raise RuntimeError("both syscall.log and apimon.log are either empty or non-existent")
+        raise RuntimeError(
+            "both syscall.log and apimon.log are either empty or non-existent"
+        )
 
     # initialize the Drakvuf capa feature extractor with the captured calls
     extractor = get_drakvuf_feature_extractor(calls)
@@ -227,7 +224,7 @@ def static_memory_dumps_capa_analysis(
         # extract all memory dumps temporarily into a dumps/ folder
         with zipfile.ZipFile(analysis_dir / "dumps.zip", "r") as zip_ref:
             # extract the memory dumps into the temporary directory
-            zip_ref.extractall(dumps)
+            zip_ref.extractall(dump_extraction_directory)
             dumps = Path(dump_extraction_directory) / "dumps"
 
     # extract the capabilities within each memory dump, one per thread
@@ -245,7 +242,6 @@ def static_memory_dumps_capa_analysis(
         )
 
 
-
 def format_capa_address(address: Union[Tuple, ca.Address]) -> Dict:
     """This method formats capa address (in the format of tuples) into a single dictionary"""
     if isinstance(address, tuple):
@@ -260,7 +256,10 @@ def format_capa_address(address: Union[Tuple, ca.Address]) -> Dict:
     elif isinstance(address, ca.DNTokenAddress):
         return {"token": hex(address)}
     elif isinstance(address, ca.DNTokenOffsetAddress):
-        return {**format_capa_address(ca.DNTokenAddress(address.token)), "offset": address.offset}
+        return {
+            **format_capa_address(ca.DNTokenAddress(address.token)),
+            "offset": address.offset,
+        }
     elif isinstance(address, ca.ProcessAddress):
         return {"ppid": address.ppid, "pid": address.pid}
     elif isinstance(address, ca.ThreadAddress):
@@ -277,7 +276,9 @@ def format_capa_address(address: Union[Tuple, ca.Address]) -> Dict:
         return {"address": address}
 
 
-def construct_ttp_block(rule: Rule, addresses: List[Tuple[ca.Address, Result]]) -> Dict[str, Any]:
+def construct_ttp_block(
+    rule: Rule, addresses: List[Tuple[ca.Address, Result]]
+) -> Dict[str, Any]:
     name = rule.name.split("/")[0]
     mbc = rule.meta.get("mbc", None)
     attck = rule.meta.get("att&ck", None)
@@ -311,7 +312,6 @@ def capa_analysis(analysis_dir: Path) -> None:
     if not check_rules_directory_exist(capa_rules_dir):
         # in case of a missing/empty rules folder, clone the official capa rules
         raise RuntimeError("capa rules directory is empty or non-existant")
-        
 
     # get rules and filter them
     rules = get_rules([capa_rules_dir])
@@ -359,7 +359,9 @@ def capa_analysis(analysis_dir: Path) -> None:
         # dump the TTPs for each memdump into a jsonl file
         for dump_name, static_capabilities in static_capabilities_per_file:
             with (dumps_ttp_path / dump_name).open("wb") as f:
-                for ttp in construct_ttp_blocks(rules, [(dump_name, static_capabilities)]):
+                for ttp in construct_ttp_blocks(
+                    rules, [(dump_name, static_capabilities)]
+                ):
                     f.write(orjson.dumps(ttp))
                     f.write(b"\n")
 
