@@ -258,9 +258,9 @@ def format_capa_address(address: Union[Tuple, ca.Address]) -> Dict:
     ):
         return {"address": hex(address)}
     elif isinstance(address, ca.DNTokenAddress):
-        return {"token": address.token}
+        return {"token": hex(address)}
     elif isinstance(address, ca.DNTokenOffsetAddress):
-        return {**format_capa_address(address.token), "offset": address.offset}
+        return {**format_capa_address(ca.DNTokenAddress(address.token)), "offset": address.offset}
     elif isinstance(address, ca.ProcessAddress):
         return {"ppid": address.ppid, "pid": address.pid}
     elif isinstance(address, ca.ThreadAddress):
