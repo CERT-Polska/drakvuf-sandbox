@@ -12,7 +12,8 @@ import capa.engine as ce
 import capa.features.address as ca
 import capa.render.result_document as crd
 import orjson
-from capa.capabilities.common import Result, find_capabilities
+from capa.capabilities.common import find_capabilities
+from capa.features.common import Result
 from capa.features.extractors.base_extractor import ProcessFilter
 from capa.features.extractors.drakvuf.extractor import DrakvufExtractor
 from capa.helpers import get_auto_format
