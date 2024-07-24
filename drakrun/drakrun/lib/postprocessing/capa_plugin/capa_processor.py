@@ -304,7 +304,7 @@ def construct_ttp_blocks(
     """construct a ttp block for each extracted capability"""
     for _, capabilities in capabilities_per_file:
         for name, addresses in capabilities.items():
-            if filter_function(rules[name]):
+            if not filter_function or filter_function(rules[name]):
                 yield construct_ttp_block(rules[name], addresses)
 
 
