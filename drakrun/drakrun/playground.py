@@ -121,7 +121,8 @@ class DrakmonShell:
         usage = dedent(
             """\
         Available commands:
-        - copy(file_path)   # copy file onto vm desktop
+        - copy(file_path, <remote_path>)   # copy file to guest (by default to vm desktop)
+        - fetch(remote_path, <local_path>) # fetch file from guest (by default into current directory)
         - mount(iso_path)   # mount iso, useful for installing software, e.g. office
         - drakvuf(plugins)  # start drakvuf with provided set of plugins
         - run(cmd)          # run command inside vm
@@ -130,9 +131,15 @@ class DrakmonShell:
         )
         print(usage)
 
-    def copy(self, local):
+    def copy(self, local, remote=None):
         local = Path(local)
-        self.injector.write_file(local, self.desktop / local.name)
+        remote = WinPath(remote) if remote is not None else self.desktop / local.name
+        self.injector.write_file(local, remote)
+
+    def fetch(self, remote, local=None):
+        remote = WinPath(remote)
+        local = Path(local) if local is not None else Path(".") / remote.name
+        self.injector.read_file(remote, local)
 
     def mount(self, local_iso_path, drive=FIRST_CDROM_DRIVE):
         local_iso_path = Path(local_iso_path)
@@ -179,6 +186,7 @@ def main():
         helpers = {
             "help": shell.help,
             "copy": shell.copy,
+            "fetch": shell.fetch,
             "mount": shell.mount,
             "drakvuf": shell.drakvuf,
             "vm": shell.vm,
