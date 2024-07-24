@@ -48,8 +48,6 @@ POSTPROCESS_PLUGINS = [
     PostprocessPlugin(
         function=capa_analysis,
         requires=[
-            "apimon.log",
-            "syscall.log",
             "process_tree.json",
             "inject.log",
         ],
