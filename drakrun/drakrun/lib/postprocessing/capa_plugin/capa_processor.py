@@ -228,18 +228,10 @@ def static_memory_dumps_capa_analysis(
             zip_ref.extractall(dump_extraction_directory)
             dumps = Path(dump_extraction_directory) / "dumps"
 
-    # extract the capabilities within each memory dump, one per thread
-    pool = multiprocessing.Pool(processes=len(4))
-    yield from pool.starmap(
-        static_capa_analysis, map(lambda dump: (dumps / dump, rules), malware_dumps)
-    )
-
-    # try to remove the temporarily created folder
-    try:
-        shutil.rmtree(dumps)
-    except PermissionError:
-        logger.debug(
-            "Permission Denied: Could not remove temporary dumps.zip extraction folder"
+        # extract the capabilities within each memory dump, one per thread
+        pool = multiprocessing.Pool(processes=4)
+        yield from pool.starmap(
+            static_capa_analysis, map(lambda dump: (dumps / dump, rules), malware_dumps)
         )
 
 
