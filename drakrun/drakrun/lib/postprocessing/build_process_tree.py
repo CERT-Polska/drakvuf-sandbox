@@ -96,24 +96,10 @@ class MultipleProcessesReturned(Exception):
         super().__init__(message)
 
 
-class MissingParentProcessError(Exception):
-    def __init__(self, process: Process):
-        message = f"Cannot find parent process of {process}"
-        super().__init__(message)
-
-
 def parse_running_process_entry(pstree: ProcessTree, entry: Dict[str, Any]) -> None:
+    # We assume here that running processes are enumerated in order of creation
+    # (created by appending new entries to the end of EPROCESS linked list)
     parent = pstree.get_single_process(entry["PPID"], 0, float(entry["TimeStamp"]))
-    if parent is None:
-        # Running processes might have parents that we don't have any information about. Mock them.
-        parent = Process(
-            pid=entry["PPID"],
-            procname="Mocked parent",
-            ts_from=0.0,  # We don't know when the process was created.
-            # But we know it is not longer alive.
-            ts_to=float(entry["TimeStamp"]),
-        )
-        pstree.add_process(parent)
     p = Process(
         pid=entry["PID"],
         procname=entry["RunningProcess"],
@@ -145,11 +131,13 @@ def parse_nt_create_user_process_entry(
     if int(entry["Status"], 16) != 0:
         # Ignore unsuccessful entries.
         return
+    process_pid = entry["NewPid"]
+    process_ppid = entry["PID"]
     parent = pstree.get_single_process(
-        entry["PID"], float(entry["TimeStamp"]), float(entry["TimeStamp"])
+        process_ppid, float(entry["TimeStamp"]), float(entry["TimeStamp"])
     )
     p = Process(
-        pid=entry["NewPid"],
+        pid=process_pid,
         procname=entry["ImagePathName"],
         ts_from=float(entry["TimeStamp"]),
         # At this point, we don't know yet when the process will be terminated.
@@ -158,9 +146,12 @@ def parse_nt_create_user_process_entry(
         args=split_commandline(entry["CommandLine"]) if entry["CommandLine"] else [],
     )
     if parent is None:
-        # Parent must be alive at the process creation time.
-        raise MissingParentProcessError(p)
-    parent.children.append(p)
+        # Parent must be alive at the process creation time, but who knows what happened
+        logger.debug(
+            f"Parent process not found at the process creation time (PID: {process_pid}, PPID: {process_ppid})"
+        )
+    else:
+        parent.children.append(p)
     pstree.add_process(p)
 
 
@@ -171,11 +162,13 @@ def parse_nt_create_process_ex_entry(
     if int(entry["Status"], 16) != 0:
         # Ignore unsuccessful entries.
         return
+    process_pid = entry["NewPid"]
+    process_ppid = entry["PID"]
     parent = pstree.get_single_process(
-        entry["PID"], float(entry["TimeStamp"]), float(entry["TimeStamp"])
+        process_ppid, float(entry["TimeStamp"]), float(entry["TimeStamp"])
     )
     p = Process(
-        pid=entry["NewPid"],
+        pid=process_pid,
         procname="Unnamed",
         ts_from=float(entry["TimeStamp"]),
         # At this point, we don't know yet when the process will be terminated.
@@ -183,9 +176,12 @@ def parse_nt_create_process_ex_entry(
         parent=parent,
     )
     if parent is None:
-        # Parent must be alive at the process creation time.
-        raise MissingParentProcessError(p)
-    parent.children.append(p)
+        # Parent must be alive at the process creation time, but who knows what happened
+        logger.debug(
+            f"Parent process not found at the process creation time (PID: {process_pid}, PPID: {process_ppid})"
+        )
+    else:
+        parent.children.append(p)
     pstree.add_process(p)
 
 
