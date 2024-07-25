@@ -128,7 +128,7 @@ def dynamic_capa_analysis(
     analysis_dir: Path,
     rules: RuleSet,
     malware_pids: Optional[List[int]] = None,
-) -> Tuple[Path, crd.MatchResults]:
+) -> Tuple[Path, ResultDocumentMatchResults]:
 
     # save all api calls and native calls into one list which gets sorted by capa later on.
     calls = []
@@ -178,7 +178,7 @@ def get_process_memory_dumps(analysis_dir: Path, pid: int) -> Iterator[str]:
 
 def static_capa_analysis(
     dump_path: Path, rules: RuleSet
-) -> Tuple[Path, crd.MatchResults]:
+) -> Tuple[Path, ResultDocumentMatchResults]:
 
     """get the input file's capa format"""
     try:
@@ -214,7 +214,7 @@ def static_capa_analysis(
 
 def static_memory_dumps_capa_analysis(
     analysis_dir: Path, rules: RuleSet, malware_pids: List[int] = []
-) -> Iterator[Tuple[Path, crd.MatchResults]]:
+) -> Iterator[Tuple[Path, ResultDocumentMatchResults]]:
     malware_dumps = list(
         itertools.chain(
             *(get_process_memory_dumps(analysis_dir, pid) for pid in malware_pids)
@@ -290,7 +290,7 @@ def construct_ttp_block(
 
 def construct_ttp_blocks(
     rules: RuleSet,
-    capabilities_per_file: List[Tuple[Path, ce.MatchResults]],
+    capabilities_per_file: List[Tuple[Path, EngineMatchResults]],
     filter_function=None,
 ) -> Iterator[Dict[str, Any]]:
     """construct a ttp block for each extracted capability"""
