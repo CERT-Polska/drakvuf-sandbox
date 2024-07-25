@@ -8,9 +8,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, Iterator, List, Optional, TextIO, Tuple, Union
 
-import capa.engine as ce
+from capa.engine import MatchResults as EngineMatchResults
 import capa.features.address as ca
-import capa.render.result_document as crd
+from capa.render.result_document import MatchResults as ResultDocumentMatchResults
 import orjson
 from capa.capabilities.common import find_capabilities
 from capa.features.common import Result
