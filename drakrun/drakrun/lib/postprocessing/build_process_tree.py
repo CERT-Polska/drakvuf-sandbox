@@ -147,7 +147,7 @@ def parse_nt_create_user_process_entry(
     )
     if parent is None:
         # Parent must be alive at the process creation time, but who knows what happened
-        logger.debug(
+        logger.warning(
             f"Parent process not found at the process creation time (PID: {process_pid}, PPID: {process_ppid})"
         )
     else:
@@ -177,7 +177,7 @@ def parse_nt_create_process_ex_entry(
     )
     if parent is None:
         # Parent must be alive at the process creation time, but who knows what happened
-        logger.debug(
+        logger.warning(
             f"Parent process not found at the process creation time (PID: {process_pid}, PPID: {process_ppid})"
         )
     else:
