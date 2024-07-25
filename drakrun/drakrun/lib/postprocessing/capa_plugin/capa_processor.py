@@ -198,11 +198,11 @@ def static_capa_analysis(
         dump_path,
         input_format,
         OS_WINDOWS,
-        backend,
-        [],
-        False,
-        False,
-        dump_path,
+        backend=backend,
+        sigpaths=[],
+        should_save_workspace=False,
+        disable_progress=False,
+        sample_path=dump_path,
     )
 
     # extract capabilities from the file, and ignore the returned metadata
