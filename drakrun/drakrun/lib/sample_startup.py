@@ -61,6 +61,8 @@ def get_startup_argv(
         return ["mshta.exe", target_path]
     elif extension in ["msi"]:
         return ["msiexec.exe", "/I", target_path, "/qb", "ACCEPTEULA=1", "LicenseAccepted=1"]
+    elif extension in ["cpl"]:
+        return ["control.exe", target_path]
     else:
         return ["cmd.exe", "/C", mslex.join(["start", target_path])]
 
