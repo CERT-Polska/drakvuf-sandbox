@@ -2,7 +2,7 @@ alabaster==0.7.13
 asttokens==2.2.1
 Babel==2.11.0
 backcall==0.2.0
-certifi==2023.7.22
+certifi==2024.7.4
 charset-normalizer==3.0.1
 decorator==5.1.1
 docutils==0.18.1
@@ -37,5 +37,5 @@ sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.5
 stack-data==0.6.2
 traitlets==5.9.0
-urllib3==1.26.18
+urllib3==1.26.19
 wcwidth==0.2.6

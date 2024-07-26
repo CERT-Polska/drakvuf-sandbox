@@ -51,9 +51,10 @@ This project is authored by:
 * Michał Leszczyński ([@icedevml](https://github.com/icedevml))
 * Adam Kliś ([@BonusPlay](https://github.com/BonusPlay))
 * Hubert Jasudowicz ([@chivay](https://github.com/chivay))
+* Paweł Srokosz ([@psrok1](https://github.com/psrok1))
 * Konstanty Cieśliński ([@kscieslinski](https://github.com/kscieslinski))
 * Arkadiusz Wróbel ([@catsuryuu](https://github.com/catsuryuu))
-* Paweł Srokosz ([@psrok1](https://github.com/psrok1))
+* Jarosław Jedynak ([@msm-cert](https://github.com/msm-cert))
 
 If you have any questions about [DRAKVUF](https://drakvuf.com/) engine itself, contact tamas@tklengyel.com
 
