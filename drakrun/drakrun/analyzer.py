@@ -12,6 +12,7 @@ import shutil
 import string
 import subprocess
 import time
+import unicodedata
 from typing import List, Optional, Tuple
 
 import magic
@@ -70,11 +71,11 @@ class AnalysisOptions:
     vm_id: int
     output_dir: pathlib.Path
     plugins: List[str]
+    sample_filename: str
     hooks_path: pathlib.Path = pathlib.Path(ETC_DIR) / "hooks.txt"
     timeout: int = 600
     start_command: Optional[str] = None
     extension: Optional[str] = None
-    sample_filename: Optional[str] = None
     dns_server: Optional[str] = None
     out_interface: Optional[str] = None
     net_enable: bool = True
@@ -104,10 +105,15 @@ def filename_for_task(options: AnalysisOptions) -> Tuple[str, str]:
     # Make sure the extension is lowercase
     extension = extension.lower()
     # Validate filename provided by user and append proper extension if necessary
-    if options.sample_filename and is_valid_filename(
-        options.sample_filename, platform=Platform.UNIVERSAL
-    ):
-        file_name = options.sample_filename
+    file_name = options.sample_filename
+    # Normalize/remove Unicode characters as current version of Drakvuf
+    # isn't really good at handling them in logs
+    file_name = (
+        unicodedata.normalize("NFKD", file_name)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
+    if file_name and is_valid_filename(file_name, platform=Platform.UNIVERSAL):
         if "." not in file_name or file_name.split(".")[-1].lower() != extension:
             file_name += f".{extension}"
     else:
@@ -490,7 +496,7 @@ def main():
         hooks_path=hooks_path,
         start_command=args.start_command,
         extension=args.extension,
-        sample_filename=args.sample_filename,
+        sample_filename=args.sample_filename or sample_path.name,
         dns_server=args.dns_server,
         out_interface=args.out_interface,
         net_enable=args.net_enable,

@@ -43,12 +43,36 @@ class StorageBackendBase:
         """Saves or snapshots base vm-0 volume for later use by other VMs"""
         raise NotImplementedError
 
+    def get_vm_disk_path_by_name(self, volume_name: str) -> str:
+        """Returns disk path for given volume name as defined by XL configuration"""
+        raise NotImplementedError
+
+    def check_volume_exists(self, volume_name: str) -> bool:
+        """Returns True if volume already exists, False otherwise"""
+        raise NotImplementedError
+
     def get_vm_disk_path(self, vm_id: int) -> str:
-        """Returns disk path for given VM as defined by XL configuration"""
+        """Returns disk path for given VM number"""
+        return self.get_vm_disk_path_by_name(f"vm-{vm_id}")
+
+    def get_vm0_modify_disk_path(self) -> str:
+        """Returns disk path for VM-0 modification"""
         raise NotImplementedError
 
     def rollback_vm_storage(self, vm_id: int):
         """Rolls back changes and prepares fresh storage for new run of this VM"""
+        raise NotImplementedError
+
+    def initialize_vm0_modify_storage(self):
+        """Creates storage for vm-0 modification based on current vm-0 state"""
+        raise NotImplementedError
+
+    def delete_vm0_modify_storage(self):
+        """Deletes pending vm-0 modification"""
+        raise NotImplementedError
+
+    def commit_vm0_modify_storage(self):
+        """Apply vm-0 modification to the base vm-0 snapshot"""
         raise NotImplementedError
 
     def get_vm0_snapshot_time(self):
@@ -63,9 +87,12 @@ class StorageBackendBase:
         """Import vm-0 disk from a file (symmetric to export_vm0)"""
         raise NotImplementedError
 
+    def delete_vm_volume_by_name(self, volume_name: str):
+        raise NotImplementedError
+
     def delete_vm_volume(self, vm_id: int):
         """Delete vm_id disk volume"""
-        raise NotImplementedError
+        return self.delete_vm_volume_by_name(f"vm-{vm_id}")
 
 
 class ZfsStorageBackend(StorageBackendBase):
@@ -91,15 +118,16 @@ class ZfsStorageBackend(StorageBackendBase):
 
     def initialize_vm0_volume(self, disk_size: str):
         vm0_vol = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0"))
-        try:
-            subprocess.check_output(
-                f"zfs destroy -Rfr {vm0_vol}", stderr=subprocess.STDOUT, shell=True
-            )
-        except subprocess.CalledProcessError as exc:
-            if b"dataset does not exist" not in exc.output:
-                raise RuntimeError(
-                    f"Failed to destroy the existing ZFS volume {vm0_vol}."
+        if self.check_volume_exists("vm-0"):
+            try:
+                subprocess.check_output(
+                    f"zfs destroy -Rfr {vm0_vol}", stderr=subprocess.STDOUT, shell=True
                 )
+            except subprocess.CalledProcessError as exc:
+                if b"dataset does not exist" not in exc.output:
+                    raise RuntimeError(
+                        f"Failed to destroy the existing ZFS volume {vm0_vol}."
+                    )
         try:
             subprocess.check_output(
                 " ".join(
@@ -121,14 +149,22 @@ class ZfsStorageBackend(StorageBackendBase):
         snap_name = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0@booted"))
         subprocess.check_output(f"zfs snapshot {snap_name}", shell=True)
 
-    def get_vm_disk_path(self, vm_id: int) -> str:
-        return f"phy:/dev/zvol/{self.zfs_tank_name}/vm-{vm_id},hda,w"
+    def get_vm_disk_path_by_name(self, volume_name: str) -> str:
+        return f"phy:/dev/zvol/{self.zfs_tank_name}/{volume_name},hda,w"
+
+    def get_vm0_modify_disk_path(self) -> str:
+        # ZFS has vm-0@booted snapshot that can be easily reverted
+        return self.get_vm_disk_path_by_name("vm-0")
+
+    def check_volume_exists(self, volume_name: str) -> bool:
+        volume_path = os.path.join("/dev/zvol", self.zfs_tank_name, volume_name)
+        return os.path.exists(volume_path)
 
     def rollback_vm_storage(self, vm_id: int):
         vm_zvol = os.path.join("/dev/zvol", self.zfs_tank_name, f"vm-{vm_id}")
         vm_snap = os.path.join(self.zfs_tank_name, f"vm-{vm_id}@booted")
 
-        if not os.path.exists(vm_zvol):
+        if not self.check_volume_exists(f"vm-{vm_id}"):
             subprocess.run(
                 [
                     "zfs",
@@ -155,6 +191,22 @@ class ZfsStorageBackend(StorageBackendBase):
 
         subprocess.run(["zfs", "rollback", vm_snap], check=True)
 
+    def initialize_vm0_modify_storage(self):
+        # Just ensure that vm-0 is rollbacked to the vm-0@booted state
+        volume_snap = os.path.join(self.zfs_tank_name, "vm-0@booted")
+        subprocess.run(["zfs", "rollback", volume_snap], check=True)
+
+    def delete_vm0_modify_storage(self):
+        # Just rollback to the vm-0@booted state
+        volume_snap = os.path.join(self.zfs_tank_name, "vm-0@booted")
+        subprocess.run(["zfs", "rollback", volume_snap], check=True)
+
+    def commit_vm0_modify_storage(self):
+        # Make a new vm-0@booted snapshot
+        volume_snap = os.path.join(self.zfs_tank_name, "vm-0@booted")
+        subprocess.run(["zfs", "destroy", "-R", volume_snap], check=True)
+        subprocess.run(["zfs", "snapshot", volume_snap], check=True)
+
     def get_vm0_snapshot_time(self):
         base_snap = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0@booted"))
         out = subprocess.check_output(
@@ -180,16 +232,16 @@ class ZfsStorageBackend(StorageBackendBase):
                 stdin=snapshot_file,
             )
 
-    def delete_vm_volume(self, vm_id: int):
-        vm_id_vol = os.path.join(self.zfs_tank_name, f"vm-{vm_id}")
+    def delete_vm_volume_by_name(self, volume_name: str):
+        volume_path = os.path.join(self.zfs_tank_name, volume_name)
         try:
-            log.info(f"Deleting zfs volume {vm_id_vol}")
+            log.info(f"Deleting zfs volume {volume_path}")
             subprocess.check_output(
-                ["zfs", "destroy", "-Rfr", vm_id_vol], stderr=subprocess.STDOUT
+                ["zfs", "destroy", "-Rfr", volume_path], stderr=subprocess.STDOUT
             )
         except subprocess.CalledProcessError as exc:
             log.error(exc.stdout)
-            raise Exception(f"Couldn't delete {vm_id_vol}")
+            raise Exception(f"Couldn't delete {volume_path}")
 
     def delete_zfs_tank(self):
         try:
@@ -242,9 +294,16 @@ class Qcow2StorageBackend(StorageBackendBase):
         # We'll be using vm-0.img as backing storage
         pass
 
-    def get_vm_disk_path(self, vm_id: int) -> str:
-        disk_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
+    def get_vm_disk_path_by_name(self, volume_name: str) -> str:
+        disk_path = os.path.join(VOLUME_DIR, f"{volume_name}.img")
         return f"tap:qcow2:{disk_path},xvda,w"
+
+    def get_vm0_modify_disk_path(self) -> str:
+        return self.get_vm_disk_path_by_name("vm-0-modify")
+
+    def check_volume_exists(self, volume_name: str) -> bool:
+        volume_path = os.path.join(VOLUME_DIR, f"{volume_name}.img")
+        return os.path.exists(volume_path)
 
     def rollback_vm_storage(self, vm_id: int):
         volume_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
@@ -269,6 +328,51 @@ class Qcow2StorageBackend(StorageBackendBase):
             check=True,
         )
 
+    def initialize_vm0_modify_storage(self):
+        """Creates storage for vm-0 modification based on current vm-0 state"""
+        volume_name = "vm-0-modify"
+        volume_path = os.path.join(VOLUME_DIR, f"{volume_name}.img")
+        vm0_path = os.path.join(VOLUME_DIR, "vm-0.img")
+
+        if os.path.exists(volume_path):
+            raise RuntimeError(
+                f"{volume_path} already exists. Rollback your vm-0 modification before starting a new one"
+            )
+
+        subprocess.run(
+            [
+                "qemu-img",
+                "create",
+                "-f",
+                "qcow2",
+                "-F",
+                "qcow2",
+                "-o",
+                f"backing_file={vm0_path}",
+                volume_path,
+            ],
+            check=True,
+        )
+
+    def delete_vm0_modify_storage(self):
+        """Deletes pending vm-0 modification"""
+        self.delete_vm_volume_by_name("vm-0-modify")
+
+    def commit_vm0_modify_storage(self):
+        """Apply vm-0 modification to the base vm-0 snapshot"""
+        volume_name = "vm-0-modify"
+        volume_path = os.path.join(VOLUME_DIR, f"{volume_name}.img")
+        subprocess.run(
+            [
+                "qemu-img",
+                "commit",
+                "-d",
+                volume_path,
+            ],
+            check=True,
+        )
+        self.delete_vm_volume_by_name("vm-0-modify")
+
     def get_vm0_snapshot_time(self):
         return int(os.path.getmtime(os.path.join(VOLUME_DIR, "vm-0.img")))
 
@@ -278,11 +382,11 @@ class Qcow2StorageBackend(StorageBackendBase):
     def import_vm0(self, path: str):
         shutil.copy(path, os.path.join(VOLUME_DIR, "vm-0.img"))
 
-    def delete_vm_volume(self, vm_id: str):
+    def delete_vm_volume_by_name(self, volume_name: str):
         # unmount can be done here
-        disk_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
+        disk_path = os.path.join(VOLUME_DIR, f"{volume_name}.img")
         if not safe_delete(disk_path):
-            raise Exception(f"Couldn't delete vm-{vm_id}.img")
+            raise Exception(f"Couldn't delete {volume_name}.img")
 
 
 class LvmStorageBackend(StorageBackendBase):
@@ -312,23 +416,23 @@ class LvmStorageBackend(StorageBackendBase):
 
         disk_size - string representing volume size with M/G/T suffix, eg. 100G
         """
-        try:
-            log.info("Deleting existing logical volume and snapshot")
-            subprocess.check_output(
-                [
-                    "lvremove",
-                    "-v",
-                    "-y",
-                    # "--noudevsync",
-                    f"{self.lvm_volume_group}/vm-0",
-                ],
-                stderr=subprocess.STDOUT,
-            )
-        except subprocess.CalledProcessError as exc:
-            if b"Failed to find logical volume" not in exc.output:
-                raise RuntimeError(
-                    f"Failed to destroy logical volume {self.lvm_volume_group}/vm-0"
+        if self.check_volume_exists("vm-0"):
+            try:
+                log.info("Deleting existing logical volume and snapshot")
+                subprocess.check_output(
+                    [
+                        "lvremove",
+                        "-v",
+                        "-y",
+                        f"{self.lvm_volume_group}/vm-0",
+                    ],
+                    stderr=subprocess.STDOUT,
                 )
+            except subprocess.CalledProcessError as exc:
+                if b"Failed to find logical volume" not in exc.output:
+                    raise RuntimeError(
+                        f"Failed to destroy logical volume {self.lvm_volume_group}/vm-0"
+                    )
         try:
             log.info("Creating new volume vm-0")
             subprocess.run(
@@ -348,49 +452,33 @@ class LvmStorageBackend(StorageBackendBase):
 
     def snapshot_vm0_volume(self):
         """Saves or snapshots base vm-0 volume for later use by other VMs"""
-        # vm-0 is the original disk being treated as a snapshot
-        # vm-0-snap is being created just for the access time of the change in vm snapshot
-        subprocess.run(
-            ["lvremove", f"{self.lvm_volume_group}/vm-0-snap"],
-            stderr=subprocess.DEVNULL,
-        )
-        try:
-            subprocess.check_output(
-                [
-                    "lvcreate",
-                    "-s",
-                    "-L",
-                    self.snapshot_disksize,
-                    "-n",
-                    "vm-0-snap",
-                    f"{self.lvm_volume_group}/vm-0",
-                ],
-                stderr=subprocess.STDOUT,
-            )
-        except subprocess.CalledProcessError as exc:
-            log.debug(exc.output)
-            raise RuntimeError("Couldn't create snapshot")
+        # We'll be using vm-0 as backing storage. LVM can't make hierarchy of snapshots
+        pass
 
-    def get_vm_disk_path(self, vm_id: int) -> str:
+    def get_vm_disk_path_by_name(self, volume_name: str) -> str:
         """Returns disk path for given VM as defined by XL configuration"""
-        return f"phy:/dev/{self.lvm_volume_group}/vm-{vm_id},hda,w"
+        return f"phy:/dev/{self.lvm_volume_group}/{volume_name},hda,w"
+
+    def get_vm0_modify_disk_path(self) -> str:
+        return self.get_vm_disk_path_by_name("vm-0-modify")
+
+    def check_volume_exists(self, volume_name: str) -> bool:
+        volume_path = os.path.join("/dev", f"{self.lvm_volume_group}", volume_name)
+        return os.path.exists(volume_path)
 
     def rollback_vm_storage(self, vm_id: int):
         """Rolls back changes and prepares fresh storage for new run of this VM"""
-        vm_id_vol = os.path.join("/dev", f"{self.lvm_volume_group}", f"vm-{vm_id}")
-
         if vm_id == 0:
             raise Exception("vm-0 should not be rollbacked")
 
         log.info(f"Rolling back changes to vm-{vm_id} disk")
-        if os.path.exists(vm_id_vol):
+        if self.check_volume_exists(f"vm-{vm_id}"):
             try:
                 subprocess.check_output(
                     [
                         "lvremove",
                         "-v",
                         "-y",
-                        # "--noudevsync",
                         f"{self.lvm_volume_group}/vm-{vm_id}",
                     ],
                     stderr=subprocess.STDOUT,
@@ -418,6 +506,45 @@ class LvmStorageBackend(StorageBackendBase):
             log.debug(exc.output)
             raise RuntimeError("Couldn't rollback disk")
 
+    def initialize_vm0_modify_storage(self):
+        """Creates storage for vm-0 modification based on current vm-0 state"""
+        volume_name = "vm-0-modify"
+        volume_path = os.path.join("/dev", f"{self.lvm_volume_group}", volume_name)
+
+        if os.path.exists(volume_path):
+            raise RuntimeError(
+                f"{volume_path} already exists. Rollback your vm-0 modification before starting a new one"
+            )
+
+        subprocess.check_output(
+            [
+                "lvcreate",
+                "-s",
+                "-L",
+                self.snapshot_disksize,
+                "-n",
+                volume_name,
+                f"{self.lvm_volume_group}/vm-0",
+            ],
+            stderr=subprocess.STDOUT,
+        )
+
+    def delete_vm0_modify_storage(self):
+        """Deletes pending vm-0 modification"""
+        self.delete_vm_volume_by_name("vm-0-modify")
+
+    def commit_vm0_modify_storage(self):
+        """Apply vm-0 modification to the base vm-0 snapshot"""
+        volume_name = "vm-0-modify"
+        subprocess.run(
+            [
+                "lvconvert",
+                "--merge",
+                f"{self.lvm_volume_group}/{volume_name}",
+            ],
+            check=True,
+        )
+
     def get_vm0_snapshot_time(self):
         """Get UNIX timestamp of when vm-0 snapshot was last modified"""
 
@@ -428,13 +555,10 @@ class LvmStorageBackend(StorageBackendBase):
         )
 
         lvs = json.loads(p.stdout.decode("utf-8"))["report"][0]["lv"]
-        target_lvs = list(filter(lambda x: x["lv_name"] == "vm-0-snap", lvs))
-
-        if len(target_lvs) > 1:
-            raise RuntimeError("Found multiple lvs named vm-0-snap!")
+        target_lvs = list(filter(lambda x: x["lv_name"] == "vm-0", lvs))
 
         if len(target_lvs) == 0:
-            raise RuntimeError("Failed to find LV vm-0-snap!")
+            raise RuntimeError("Failed to find LV vm-0")
 
         dt = datetime.datetime.strptime(
             target_lvs[0]["lv_time"], "%Y-%m-%d %H:%M:%S %z"
@@ -469,7 +593,7 @@ class LvmStorageBackend(StorageBackendBase):
             check=True,
         )
 
-    def delete_vm_volume(self, vm_id: str):
+    def delete_vm_volume_by_name(self, volume_name: str):
         try:
             subprocess.check_output(
                 [
@@ -477,7 +601,7 @@ class LvmStorageBackend(StorageBackendBase):
                     "-v",
                     "-y",
                     # "--noudevsync",
-                    f"{self.lvm_volume_group}/vm-{vm_id}",
+                    f"{self.lvm_volume_group}/{volume_name}",
                 ],
                 stderr=subprocess.STDOUT,
             )

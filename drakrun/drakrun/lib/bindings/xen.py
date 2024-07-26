@@ -109,3 +109,7 @@ def get_xen_info() -> Dict[str, str]:
         k, v = k.strip(), v.strip()
         elements[k] = v
     return elements
+
+
+def xen_insert_cd(domain, drive, iso):
+    subprocess.run(["xl", "cd-insert", domain, drive, iso], check=True)

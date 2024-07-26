@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass, field
+from typing import Optional
 
 from dataclasses_json import config, dataclass_json
 
@@ -52,6 +53,7 @@ class VmiOffsets:
 class RuntimeInfo:
     vmi_offsets: VmiOffsets
     inject_pid: int
+    inject_tid: Optional[int] = None
 
     @staticmethod
     def load(file_path: str) -> "RuntimeInfo":

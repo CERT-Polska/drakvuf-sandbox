@@ -60,6 +60,11 @@ class Injector:
             hex(self.runtime_info.vmi_offsets.kpgd),
             "-m",
             method,
+            *(
+                ["-I", str(self.runtime_info.inject_tid)]
+                if self.runtime_info.inject_tid is not None
+                else []
+            ),
         ]
 
     def _get_cmdline_writefile(self, local: str, remote: str) -> List[str]:
