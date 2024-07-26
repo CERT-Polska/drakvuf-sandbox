@@ -69,6 +69,10 @@ def get_startup_argv(
         return ["cmd.exe", "/C", "start", "/wait", "\"\"", target_path]
     elif extension in ["sct"]:
         return ["regsvr32.exe", "/u", "/n", f"/i:{target_path}", "scrobj.dll"]
+    elif extension in ["hta"]:
+        return ["mshta.exe", target_path]
+    elif extension in ["chm"]:
+        return ["hh.exe", target_path]
     else:
         return ["cmd.exe", "/C", mslex.join(["start", target_path])]
 
