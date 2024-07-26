@@ -108,7 +108,8 @@ def parse_running_process_entry(pstree: ProcessTree, entry: Dict[str, Any]) -> N
         ts_to=None,
         parent=parent,
     )
-    parent.children.append(p)
+    if parent is not None:
+        parent.children.append(p)
     pstree.add_process(p)
 
 
