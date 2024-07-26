@@ -59,6 +59,8 @@ def get_startup_argv(
         return ["wscript.exe", target_path]
     elif extension in ["hta", "html", "htm"]:
         return ["mshta.exe", target_path]
+    elif extension in ["msi"]:
+        return ["msiexec.exe", "/I", target_path, "/qb", "ACCEPTEULA=1", "LicenseAccepted=1"]
     else:
         return ["cmd.exe", "/C", mslex.join(["start", target_path])]
 
