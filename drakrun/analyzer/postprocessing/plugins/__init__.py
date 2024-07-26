@@ -3,6 +3,7 @@ from .capa_plugin.capa_processor import capa_analysis
 from .compress_ipt import compress_ipt
 from .crop_dumps import crop_dumps
 from .generate_graphs import generate_graphs
+from .generate_report import build_report
 from .generate_wireshark_key_file import generate_wireshark_key_file
 from .index_logs import index_logs
 from .plugin_base import PostprocessPlugin
@@ -32,6 +33,15 @@ POSTPROCESS_PLUGINS = [
             "inject.log",
         ],
         generates=["ttps.json"],
+    ),
+    PostprocessPlugin(
+        function=build_report,
+        requires=[
+            "metadata.json",
+            "process_tree,json",
+            "apimon.log",
+            "ttps.json",
+        ],
     ),
     PostprocessPlugin(function=crop_dumps, requires=["dumps"], generates=["dumps.zip"]),
     PostprocessPlugin(function=compress_ipt, requires=["ipt"], generates=["ipt.zip"]),
