@@ -67,6 +67,8 @@ def get_startup_argv(
         return ["iexplore.exe", target_path]
     elif extension in ["lnk"]:
         return ["cmd.exe", "/C", "start", "/wait", "\"\"", target_path]
+    elif extension in ["sct"]:
+        return ["regsvr32.exe", "/u", "/n", f"/i:{target_path}", "scrobj.dll"]
     else:
         return ["cmd.exe", "/C", mslex.join(["start", target_path])]
 
