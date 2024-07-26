@@ -73,6 +73,8 @@ def get_startup_argv(
         return ["mshta.exe", target_path]
     elif extension in ["chm"]:
         return ["hh.exe", target_path]
+    elif extension in ["eml"]:
+        return ["outlook.exe", "/eml", target_path]
     else:
         return ["cmd.exe", "/C", mslex.join(["start", target_path])]
 
