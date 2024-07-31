@@ -6,19 +6,18 @@ import subprocess
 import traceback
 from pathlib import Path, PureWindowsPath
 
+from drakpdb import fetch_pdb, make_pdb_profile, pe_codeview_data
+
 from drakrun.lib.apiscout import (
     build_static_apiscout_profile,
     make_static_apiscout_profile_for_dll,
 )
 from drakrun.lib.config import load_config
-from drakrun.lib.drakpdb import (
+from drakrun.lib.dll_profiles import (
     DLL,
     apivectors_dll_file_list,
     dll_file_list,
-    fetch_pdb,
-    make_pdb_profile,
     optional_dll_file_list,
-    pe_codeview_data,
     required_dll_file_list,
 )
 from drakrun.lib.injector import Injector
@@ -116,7 +115,7 @@ def create_rekall_profile(injector: Injector, file: DLL, raise_on_error=False):
             dll_symstore_hash=codeview_data["symstore_hash"],
         )
         with open(os.path.join(PROFILE_DIR, f"{file.dest}.json"), "w") as f:
-            f.write(profile)
+            f.write(json.dumps(profile, indent=4))
     except json.JSONDecodeError:
         log.debug(f"stdout: {cmd.stdout}")
         log.debug(f"stderr: {cmd.stderr}")
@@ -246,7 +245,7 @@ def create_vm_profiles(generate_apivectors_profile: bool):
     log.info("Saving profile...")
     kernel_profile = os.path.join(PROFILE_DIR, "kernel.json")
     with open(kernel_profile, "w") as f:
-        f.write(profile)
+        f.write(json.dumps(profile, indent=4))
 
     safe_delete(pdb_file)
 

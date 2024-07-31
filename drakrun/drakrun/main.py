@@ -24,7 +24,7 @@ from drakrun.lib.analysis_status import (
 )
 from drakrun.lib.bindings.xen import get_xen_info, parse_xen_commandline
 from drakrun.lib.config import load_config
-from drakrun.lib.drakpdb import dll_file_list
+from drakrun.lib.dll_profiles import dll_file_list
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.paths import (
     APISCOUT_PROFILE_DIR,
