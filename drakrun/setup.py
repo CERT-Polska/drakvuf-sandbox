@@ -27,7 +27,6 @@ setup(
             "drakpostprocess = drakrun.postprocess:main",
             "draksetup = drakrun.draksetup:main",
             "drakpush = drakrun.drakpush:main",
-            "drakpdb = drakrun.drakpdb:main",
             "drakplayground = drakrun.playground:main",
             "draktestd = drakrun.regression:RegressionTester.main",
             "draktest = drakrun.regression:RegressionTester.submit_main",
