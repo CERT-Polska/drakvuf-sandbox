@@ -8,11 +8,10 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, Iterator, List, Optional, TextIO, Tuple, Union
 
-from capa.engine import MatchResults as EngineMatchResults
 import capa.features.address as ca
-from capa.render.result_document import MatchResults as ResultDocumentMatchResults
 import orjson
 from capa.capabilities.common import find_capabilities
+from capa.engine import MatchResults as EngineMatchResults
 from capa.features.common import Result
 from capa.features.extractors.base_extractor import ProcessFilter
 from capa.features.extractors.drakvuf.extractor import DrakvufExtractor
@@ -25,15 +24,9 @@ from capa.main import (
     OS_WINDOWS,
     UnsupportedFormatError,
 )
+from capa.render.result_document import MatchResults as ResultDocumentMatchResults
 from capa.rules import Rule, RuleSet, get_rules, get_rules_and_dependencies
-
-# rules related configuration
-capa_rules_dir = Path("./capa-rules")
-
-# analysis configuration
-analyze_malware_pids_only = False
-perform_static_analysis = False
-perform_dynamic_analysis = True
+from drakrun.lib.config import DrakrunConfig, load_config
 
 logger = logging.getLogger(__name__)
 
@@ -301,6 +294,16 @@ def construct_ttp_blocks(
 
 
 def capa_analysis(analysis_dir: Path) -> None:
+    config: DrakrunConfig = load_config()
+
+    # capa rules directory
+    capa_rules_dir = config.capa.rules_directory
+
+    # analysis-related config
+    analyze_drakmon_log = config.capa.analyze_drakmon_log
+    analyze_memdumps = config.capa.analyze_memdumps
+    anayze_only_malware_pids = config.capa.anayze_only_malware_pids
+
     """check and prepare the rules folder"""
     if not check_rules_directory_exist(capa_rules_dir):
         # in case of a missing/empty rules folder, clone the official capa rules
@@ -314,17 +317,17 @@ def capa_analysis(analysis_dir: Path) -> None:
 
     # get malware-related pids if requested by configuration
     malware_pids = None
-    if analyze_malware_pids_only:
+    if anayze_only_malware_pids:
         malware_pids = get_malware_processes(
             inject_path=analysis_dir / "inject.log",
             pstree_path=analysis_dir / "process_tree.json",
         )
 
     # make sure either static or dynamic capability extraction is on
-    assert perform_dynamic_analysis or perform_static_analysis
+    assert analyze_drakmon_log or analyze_memdumps
 
     # extract capabilities from the Drakvuf report
-    if perform_dynamic_analysis:
+    if analyze_drakmon_log:
         dynamic_capabilities = dynamic_capa_analysis(
             analysis_dir, rules, malware_pids=malware_pids
         )
@@ -340,7 +343,7 @@ def capa_analysis(analysis_dir: Path) -> None:
                 f.write(b"\n")
 
     # extract capabilities from the memory dumps
-    if perform_static_analysis:
+    if analyze_memdumps:
         static_capabilities_per_file = static_memory_dumps_capa_analysis(
             analysis_dir, rules, malware_pids=malware_pids
         )
