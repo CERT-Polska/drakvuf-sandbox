@@ -2,6 +2,7 @@ import pathlib
 from typing import Any, Dict, List, NamedTuple, Optional, Protocol
 
 from .build_process_tree import build_process_tree
+from .capa_plugin.capa_processor import capa_analysis
 from .compress_ipt import compress_ipt
 from .crop_dumps import crop_dumps
 from .generate_graphs import generate_graphs
@@ -43,6 +44,14 @@ POSTPROCESS_PLUGINS = [
         function=build_process_tree,
         requires=["procmon.log"],
         generates=["process_tree.json"],
+    ),
+    PostprocessPlugin(
+        function=capa_analysis,
+        requires=[
+            "process_tree.json",
+            "inject.log",
+        ],
+        generates=["ttps.json"],
     ),
     PostprocessPlugin(function=crop_dumps, requires=["dumps"], generates=["dumps.zip"]),
     PostprocessPlugin(function=compress_ipt, requires=["ipt"], generates=["ipt.zip"]),

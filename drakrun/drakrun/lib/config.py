@@ -2,13 +2,14 @@ import configparser
 import os
 import re
 from collections import defaultdict
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from configupdater import ConfigUpdater
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 from typing_extensions import Annotated
 
-from .paths import CONFIG_PATH
+from .paths import CONFIG_PATH, PACKAGE_DIR
 
 CommaSeparatedStrList = Annotated[
     List[str],
@@ -51,6 +52,13 @@ class MinioConfigSection(BaseModel):
     secure: bool
     access_key: str
     secret_key: str
+
+
+class CapaConfigSection(BaseModel):
+    rules_directory: Path = PACKAGE_DIR / "data" / "capa-rules"
+    analyze_drakmon_log: bool
+    analyze_memdumps: bool
+    anayze_only_malware_pids: bool
 
 
 class DrakrunConfigSection(BaseModel):
@@ -114,6 +122,7 @@ class DrakrunConfig(BaseModel):
     minio: MinioConfigSection
     drakrun: DrakrunConfigSection
     drakvuf_plugins: DrakvufPluginsConfigSection
+    capa: CapaConfigSection
 
     @staticmethod
     def _file_to_dict(filename: str) -> Dict[str, Dict[str, str]]:
