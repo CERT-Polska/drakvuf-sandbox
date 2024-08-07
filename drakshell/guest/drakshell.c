@@ -258,7 +258,7 @@ void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshel
     }
 
     dcb.BaudRate = 115200;
-    dcb.fParity = false;
+    dcb.fParity = true;
 
     if(!SetCommState(hComm, &dcb))
     {
