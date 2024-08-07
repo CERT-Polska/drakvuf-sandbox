@@ -224,7 +224,7 @@ static bool req_download_file(HANDLE hComm)
     return true;
 }
 
-static void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshell_main() {
+void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshell_main() {
     if(!load_winapi()) {
         // Failed to load some WinAPI functions
         return;
@@ -275,37 +275,7 @@ static void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) d
     CloseHandle(hComm);
 }
 
-static DWORD WINAPI __attribute__((naked)) thread_start() {
-    #if defined(__x86_64__)
-    asm("push rcx");
-    #endif
-    #if defined(__i386__)
-    asm("push ecx");
-    #endif
-
-    drakshell_main();
-
-    // This one is going to deallocate memory occupied by shellcode
-    // and finish the thread to cover up all traces of drakshell
-    // in explorer.exe
-    //
-    // We're going to jump to the VirtualFree and it is going to
-    // return to the ExitThread for us.
-    #if defined(__x86_64__)
-    asm("pop rcx\n"
-        "and rcx, -4096\n"
-        "xor rdx, rdx\n"
-        "mov r8, 0x8000\n"
-        "jmp %0"
-        : : "r" (pVirtualFree));
-    #endif
-    #if defined(__i386__)
-    // TODO: Support 32-bit host process as well?
-    asm("pop ecx\n"
-        "xor eax, eax\n"
-        "ret\n")
-    #endif
-}
+extern void thread_start();
 
 // Tell the compiler incoming stack alignment is not RSP%16==8 or ESP%16==12
 __attribute__((force_align_arg_pointer))
