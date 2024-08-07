@@ -63,7 +63,7 @@ class DrakshellClient:
         len_msg = self._sock.recv(2)
         if not len_msg:
             raise RuntimeError('Socket has unexpectedly disconnected')
-        arg_len = struct.unpack("<I", len_msg)[0]
+        arg_len = struct.unpack("<H", len_msg)[0]
         arg = b''
         while arg_len > 0:
             part = self._sock.recv(arg_len)
