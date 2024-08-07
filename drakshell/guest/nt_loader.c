@@ -218,6 +218,8 @@ PExitThread pExitThread;
 PSleep pSleep;
 PVirtualFree pVirtualFree;
 PGetLastError pGetLastError;
+PGetCommState pGetCommState;
+PSetCommState pSetCommState;
 
 bool load_winapi() {
     HANDLE hKernel32, hUser32;
@@ -244,6 +246,8 @@ bool load_winapi() {
     pSleep = GetProcAddress(hKernel32, "Sleep");
     pVirtualFree = GetProcAddress(hKernel32, "VirtualFree");
     pGetLastError = GetProcAddress(hKernel32, "GetLastError");
+    pGetCommState = GetProcAddress(hKernel32, "GetCommState");
+    pSetCommState = GetProcAddress(hKernel32, "SetCommState");
 
     return true;
 }

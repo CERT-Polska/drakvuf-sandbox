@@ -225,6 +225,8 @@ static bool req_download_file(HANDLE hComm)
 }
 
 void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshell_main() {
+    DCB dcb = { .DCBlength = sizeof(DCB) };
+
     if(!load_winapi()) {
         // Failed to load some WinAPI functions
         return;
@@ -246,6 +248,21 @@ void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshel
     if(hComm == INVALID_HANDLE_VALUE)
     {
         OutputDebugStringW(L"Failed to connect to COM1");
+        return;
+    }
+
+    if(!GetCommState(hComm, &dcb))
+    {
+        OutputDebugStringW(L"Failed to get mode of COM1");
+        return;
+    }
+
+    dcb.BaudRate = 115200;
+    dcb.fParity = false;
+
+    if(!SetCommState(hComm, &dcb))
+    {
+        OutputDebugStringW(L"Failed to set mode of COM1");
         return;
     }
 

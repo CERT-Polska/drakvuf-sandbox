@@ -42,6 +42,37 @@ typedef char* LPSTR;
 typedef wchar_t* LPWSTR;
 typedef bool BOOL;
 
+typedef struct _DCB {
+    DWORD DCBlength;
+    DWORD BaudRate;
+    DWORD fBinary : 1;
+    DWORD fParity : 1;
+    DWORD fOutxCtsFlow : 1;
+    DWORD fOutxDsrFlow : 1;
+    DWORD fDtrControl : 2;
+    DWORD fDsrSensitivity : 1;
+    DWORD fTXContinueOnXoff : 1;
+    DWORD fOutX : 1;
+    DWORD fInX : 1;
+    DWORD fErrorChar : 1;
+    DWORD fNull : 1;
+    DWORD fRtsControl : 2;
+    DWORD fAbortOnError : 1;
+    DWORD fDummy2 : 17;
+    WORD  wReserved;
+    WORD  XonLim;
+    WORD  XoffLim;
+    BYTE  ByteSize;
+    BYTE  Parity;
+    BYTE  StopBits;
+    char  XonChar;
+    char  XoffChar;
+    char  ErrorChar;
+    char  EofChar;
+    char  EvtChar;
+    WORD  wReserved1;
+} DCB, *LPDCB;
+
 #define WINAPI __attribute__((ms_abi))
 
 typedef int (WINAPI* PCreateThread)(
@@ -148,6 +179,20 @@ extern PVirtualFree pVirtualFree;
 typedef DWORD (WINAPI* PGetLastError)();
 extern PGetLastError pGetLastError;
 #define GetLastError (*pGetLastError)
+
+typedef BOOL (WINAPI* PGetCommState)(
+    HANDLE hFile,
+    LPDCB  lpDCB
+);
+extern PGetCommState pGetCommState;
+#define GetCommState (*pGetCommState)
+
+typedef BOOL (WINAPI* PSetCommState)(
+    HANDLE hFile,
+    LPDCB  lpDCB
+);
+extern PSetCommState pSetCommState;
+#define SetCommState (*pSetCommState)
 
 extern void* get_func_from_peb(const wchar_t* libraryName, const char* procName);
 extern bool load_winapi();
