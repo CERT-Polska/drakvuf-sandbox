@@ -36,7 +36,7 @@ def parse_metadata(metadata_file: Path) -> Dict:
 def process_key(ppid: int, pid: int) -> str:
     # This method defines the way we use to address and differentiate between processes.
     # The convention used by default is ppid_pid.
-    return "_".join((str(ppid), str(pid)))
+    return f"{ppid}_{pid}"
 
 
 def parse_apicall(apicall: Dict) -> Dict:
