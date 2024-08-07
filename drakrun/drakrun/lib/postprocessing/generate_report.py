@@ -163,8 +163,7 @@ def get_processes(analysis_dir: Path) -> Dict:
 
 
 def build_report(analysis_dir: Path) -> None:
-    report = dict()
-
+    report = {}
     report.update({"info": get_metadata(analysis_dir)})
     report.update({"processes": get_processes(analysis_dir)})
 
