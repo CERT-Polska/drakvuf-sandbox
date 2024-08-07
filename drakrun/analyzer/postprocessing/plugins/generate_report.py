@@ -153,11 +153,14 @@ def get_processes(analysis_dir: Path) -> Dict:
     # generate a dictionary of indexed processes
     processes = parse_processtree(analysis_dir / "process_tree.json")
     # parse api calls into the indexed process dictionary
-    parse_apimon(processes, analysis_dir / "apimon.log")
+    if (analysis_dir / "apimon.log").is_file():
+        parse_apimon(processes, analysis_dir / "apimon.log")
     # parse ttps into the indexed process dictionary
-    parse_ttps(processes, analysis_dir / "ttps.json")
+    if (analysis_dir / "ttps.json").is_file():
+        parse_ttps(processes, analysis_dir / "ttps.json")
     # parse memory dumps log into the indexed process dictionary
-    parse_memdumps(processes, analysis_dir / "memdump.log")
+    if (analysis_dir / "memdump.log").is_file():
+        parse_memdumps(processes, analysis_dir / "memdump.log")
 
     return processes
 
