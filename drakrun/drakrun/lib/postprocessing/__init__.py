@@ -47,12 +47,8 @@ POSTPROCESS_PLUGINS = [
     ),
     PostprocessPlugin(
         function=build_report,
-        requires=[
-            "metadata.json",
-            "process_tree,json",
-            "apimon.log",
-            "ttps.json",
-        ],
+        requires=[],
+        generates=["report.json"],
     ),
     PostprocessPlugin(function=crop_dumps, requires=["dumps"], generates=["dumps.zip"]),
     PostprocessPlugin(function=compress_ipt, requires=["ipt"], generates=["ipt.zip"]),
