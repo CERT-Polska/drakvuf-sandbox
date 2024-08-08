@@ -1,5 +1,5 @@
 import itertools
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Union
 
@@ -18,7 +18,8 @@ def epoch_to_timestring(unix_time: Union[int, float, str]) -> Optional[str]:
         # Sometimes the time in the logs would be zero or None
         return None
 
-    return str(datetime.fromtimestamp(unix_time))
+    time = datetime.fromtimestamp(unix_time, tz=timezone.utc)
+    return time.isoformat()
 
 
 def parse_metadata(metadata_file: Path) -> Dict:
