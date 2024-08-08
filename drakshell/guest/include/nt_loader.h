@@ -13,6 +13,9 @@
 #define OPEN_EXISTING 3
 #define CREATE_NEW 1
 #define INVALID_HANDLE_VALUE ((void*)(long long)-1)
+#define HANDLE_FLAG_INHERIT 1
+#define STARTF_USESTDHANDLES 0x00000100
+
 
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
@@ -34,7 +37,9 @@ typedef char CHAR;
 typedef unsigned char UCHAR;
 
 typedef void* HANDLE;
-typedef void* LPVOID;
+typedef void* PVOID;
+typedef PVOID LPVOID;
+typedef HANDLE *PHANDLE;
 typedef unsigned long SIZE_T;
 typedef const char* LPCSTR;
 typedef const wchar_t* LPCWSTR;
@@ -73,6 +78,53 @@ typedef struct _DCB {
     WORD  wReserved1;
 } DCB, *LPDCB;
 
+typedef struct _SECURITY_ATTRIBUTES {
+    DWORD  nLength;
+    LPVOID lpSecurityDescriptor;
+    BOOL   bInheritHandle;
+} SECURITY_ATTRIBUTES, *PSECURITY_ATTRIBUTES, *LPSECURITY_ATTRIBUTES;
+
+typedef struct _STARTUPINFOW {
+    DWORD  cb;
+    LPWSTR lpReserved;
+    LPWSTR lpDesktop;
+    LPWSTR lpTitle;
+    DWORD  dwX;
+    DWORD  dwY;
+    DWORD  dwXSize;
+    DWORD  dwYSize;
+    DWORD  dwXCountChars;
+    DWORD  dwYCountChars;
+    DWORD  dwFillAttribute;
+    DWORD  dwFlags;
+    WORD   wShowWindow;
+    WORD   cbReserved2;
+    LPBYTE lpReserved2;
+    HANDLE hStdInput;
+    HANDLE hStdOutput;
+    HANDLE hStdError;
+} STARTUPINFOW, *LPSTARTUPINFOW;
+
+typedef struct _PROCESS_INFORMATION {
+    HANDLE hProcess;
+    HANDLE hThread;
+    DWORD  dwProcessId;
+    DWORD  dwThreadId;
+} PROCESS_INFORMATION, *PPROCESS_INFORMATION, *LPPROCESS_INFORMATION;
+
+typedef struct _OVERLAPPED {
+    PVOID Internal;
+    PVOID InternalHigh;
+    union {
+        struct {
+            DWORD Offset;
+            DWORD OffsetHigh;
+        } DUMMYSTRUCTNAME;
+        PVOID Pointer;
+    } DUMMYUNIONNAME;
+    HANDLE    hEvent;
+} OVERLAPPED, *LPOVERLAPPED;
+
 #define WINAPI __attribute__((ms_abi))
 
 typedef int (WINAPI* PCreateThread)(
@@ -110,6 +162,21 @@ typedef bool (WINAPI* PCloseHandle)(HANDLE hObject);
 extern PCloseHandle pCloseHandle;
 #define CloseHandle (*pCloseHandle)
 
+typedef BOOL (WINAPI* PCreateProcessW)(
+    LPCWSTR lpApplicationName,
+    LPWSTR lpCommandLine,
+    LPSECURITY_ATTRIBUTES lpProcessAttributes,
+    LPSECURITY_ATTRIBUTES lpThreadAttributes,
+    BOOL bInheritHandles,
+    DWORD dwCreationFlags,
+    LPVOID lpEnvironment,
+    LPCWSTR lpCurrentDirectory,
+    LPSTARTUPINFOW lpStartupInfo,
+    LPPROCESS_INFORMATION lpProcessInformation
+);
+extern PCreateProcessW pCreateProcessW;
+#define CreateProcessW (*pCreateProcessW)
+
 typedef HANDLE (WINAPI* PCreateFileW)(
     LPCWSTR lpFileName,
     DWORD dwDesiredAccess,
@@ -141,21 +208,6 @@ typedef bool (WINAPI* PWriteFile)(
 );
 extern PWriteFile pWriteFile;
 #define WriteFile (*pWriteFile)
-
-typedef bool (WINAPI* PCreateProcessW)(
-    LPCWSTR lpApplicationName,
-    LPWSTR lpCommandLine,
-    LPVOID lpProcessAttributes,
-    LPVOID lpThreadAttributes,
-    BOOL bInheritHandles,
-    DWORD dwCreationFlags,
-    LPVOID lpEnvironment,
-    LPCWSTR lpCurrentDirectory,
-    LPVOID lpStartupInfo,
-    LPVOID lpProcessInformation
-);
-extern PCreateProcessW pCreateProcessW;
-#define CreateProcessW (*pCreateProcessW)
 
 typedef void (WINAPI* PExitThread)(
     DWORD dwExitCode
@@ -193,6 +245,41 @@ typedef BOOL (WINAPI* PSetCommState)(
 );
 extern PSetCommState pSetCommState;
 #define SetCommState (*pSetCommState)
+
+typedef BOOL (WINAPI* PCreatePipe)(
+    PHANDLE hReadPipe,
+    PHANDLE hWritePipe,
+    LPSECURITY_ATTRIBUTES lpPipeAttributes,
+    DWORD nSize
+);
+extern PCreatePipe pCreatePipe;
+#define CreatePipe (*pCreatePipe)
+
+typedef BOOL (WINAPI* PSetHandleInformation)(
+    HANDLE hObject,
+    DWORD  dwMask,
+    DWORD  dwFlags
+);
+extern PSetHandleInformation pSetHandleInformation;
+#define SetHandleInformation (*pSetHandleInformation)
+
+typedef DWORD (WINAPI* PWaitForMultipleObjects)(
+    DWORD nCount,
+    const HANDLE *lpHandles,
+    BOOL bWaitAll,
+    DWORD dwMilliseconds
+);
+extern PWaitForMultipleObjects pWaitForMultipleObjects;
+#define WaitForMultipleObjects (*pWaitForMultipleObjects)
+
+typedef HANDLE (WINAPI* PCreateEvent)(
+    LPSECURITY_ATTRIBUTES lpEventAttributes,
+    BOOL bManualReset,
+    BOOL bInitialState,
+    LPCSTR lpName
+);
+extern PCreateEvent pCreateEvent;
+#define CreateEvent (*pCreateEvent)
 
 extern void* get_func_from_peb(const wchar_t* libraryName, const char* procName);
 extern bool load_winapi();

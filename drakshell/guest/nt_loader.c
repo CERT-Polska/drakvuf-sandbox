@@ -220,6 +220,10 @@ PVirtualFree pVirtualFree;
 PGetLastError pGetLastError;
 PGetCommState pGetCommState;
 PSetCommState pSetCommState;
+PCreatePipe pCreatePipe;
+PSetHandleInformation pSetHandleInformation;
+PWaitForMultipleObjects pWaitForMultipleObjects;
+PCreateEvent pCreateEvent;
 
 bool load_winapi() {
     HANDLE hKernel32, hUser32;
@@ -248,6 +252,10 @@ bool load_winapi() {
     pGetLastError = GetProcAddress(hKernel32, "GetLastError");
     pGetCommState = GetProcAddress(hKernel32, "GetCommState");
     pSetCommState = GetProcAddress(hKernel32, "SetCommState");
+    pCreatePipe = GetProcAddress(hKernel32, "CreatePipe");
+    pSetHandleInformation = GetProcAddress(hKernel32, "SetHandleInformation");
+    pWaitForMultipleObjects = GetProcAddress(hKernel32, "WaitForMultipleObjects");
+    pCreateEvent = GetProcAddress(hKernel32, "CreateEventA");
 
     return true;
 }

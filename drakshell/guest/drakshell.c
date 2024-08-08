@@ -7,15 +7,21 @@
 #include "nt_loader.h"
 
 #define REQ_PING 0x30
-#define REQ_UPLOAD 0x31
-#define REQ_DOWNLOAD 0x32
-#define REQ_EXIT 0x33
+#define REQ_INTERACTIVE_EXECUTE 0x31
+#define REQ_EXECUTE_AND_FINISH 0x32
+#define REQ_FINISH 0x33
+#define REQ_BLOCK 0x34
 
-#define RESP_SUCCESS 0x30
-#define RESP_FILE_OPENED 0x31
-#define RESP_ERROR 0x32
+#define RESP_PONG 0x30
+#define RESP_INTERACTIVE_EXECUTE_START 0x31
+#define RESP_EXECUTE_AND_FINISH_START 0x32
+#define RESP_FINISH_START 0x33
+#define RESP_BLOCK 0x34
 
-static bool recv(HANDLE hComm, LPBYTE buffer, DWORD size) {
+#define RESP_BAD_REQ 0x40
+#define RESP_FATAL_FINISH 0x41
+
+static bool recvn(HANDLE hComm, LPBYTE buffer, DWORD size) {
     DWORD bytesRead = 0;
 
     while(size > 0) {
@@ -31,7 +37,7 @@ static bool recv(HANDLE hComm, LPBYTE buffer, DWORD size) {
     return true;
 }
 
-static bool send(HANDLE hComm, LPBYTE buffer, DWORD size) {
+static bool sendn(HANDLE hComm, LPBYTE buffer, DWORD size) {
     DWORD bytesWritten = 0;
 
     while(size > 0) {
@@ -47,181 +53,246 @@ static bool send(HANDLE hComm, LPBYTE buffer, DWORD size) {
     return true;
 }
 
-static bool recv_req(HANDLE hComm, LPBYTE req) {
-    return recv(hComm, req, sizeof(*req));
+static bool recv_control(HANDLE hComm, LPBYTE req) {
+    return recvn(hComm, req, sizeof(*req));
 }
 
-static bool send_resp(HANDLE hComm, BYTE resp) {
-    return send(hComm, &resp, sizeof(resp));
+static bool send_control(HANDLE hComm, BYTE resp) {
+    return sendn(hComm, &resp, sizeof(resp));
 }
 
-static bool send_error(HANDLE hComm) {
-    DWORD gle = GetLastError();
-    BYTE resp = RESP_ERROR;
-    if(!send(hComm, &resp, sizeof(resp)))
-        return false;
-    return send(hComm, (LPBYTE)&gle, sizeof(gle));
-}
-
-static bool recv_arg(HANDLE hComm, LPBYTE bufferToRecv, LPWORD argSize, WORD argMaxSize) {
-    if(!recv(hComm, (LPBYTE)argSize, sizeof(*argSize))) {
+static bool recv_block(HANDLE hComm, LPBYTE bufferToRecv, LPWORD argSize, WORD argMaxSize) {
+    if(!recvn(hComm, (LPBYTE)argSize, sizeof(*argSize))) {
         return false;
     }
     if(*argSize > argMaxSize) {
         return false;
     }
-    return recv(hComm, bufferToRecv, *argSize);
+    return recvn(hComm, bufferToRecv, *argSize);
 }
 
-static bool send_arg(HANDLE hComm, LPBYTE bufferToSend, WORD argSize) {
-    if(!send(hComm, (LPBYTE)&argSize, sizeof(argSize))) {
+static bool send_block(HANDLE hComm, LPBYTE bufferToSend, WORD argSize) {
+    if(!sendn(hComm, (LPBYTE)&argSize, sizeof(argSize))) {
         return false;
     }
     if(!argSize)
         return true;
-    return send(hComm, bufferToSend, argSize);
+    return sendn(hComm, bufferToSend, argSize);
 }
 
-static bool req_ping(HANDLE hComm) {
-    return send_resp(hComm, RESP_SUCCESS);
-}
+typedef struct _STD_HANDLES {
+    HANDLE hStdinRead;
+    HANDLE hStdinWrite;
+    HANDLE hStdoutRead;
+    HANDLE hStdoutWrite;
+    HANDLE hStderrRead;
+    HANDLE hStderrWrite;
+} STD_HANDLES, *PSTD_HANDLES;
 
-static bool req_upload_file(HANDLE hComm)
-{
-    union {
-        struct {
-            wchar_t fileName[512];
-            wchar_t targetFileName[512];
-        };
-        BYTE buffer[4096];
-    } buffers;
-    WORD readBytes = 0;
-    // Receive file name
-    if(!recv_arg(hComm, (LPBYTE)buffers.fileName, &readBytes, sizeof(buffers.fileName) - sizeof(wchar_t))) {
+static bool init_std_handles(PSTD_HANDLES handles) {
+    SECURITY_ATTRIBUTES saInheritHandle;
+
+    saInheritHandle.nLength = sizeof(SECURITY_ATTRIBUTES);
+    saInheritHandle.bInheritHandle = true;
+    saInheritHandle.lpSecurityDescriptor = NULL;
+
+    handles->hStdinRead = INVALID_HANDLE_VALUE;
+    handles->hStdinWrite = INVALID_HANDLE_VALUE;
+    handles->hStdoutRead = INVALID_HANDLE_VALUE;
+    handles->hStdoutWrite = INVALID_HANDLE_VALUE;
+    handles->hStderrRead = INVALID_HANDLE_VALUE;
+    handles->hStderrWrite = INVALID_HANDLE_VALUE;
+
+    if(!CreatePipe(&(handles->hStdinRead), &(handles->hStdinWrite), &saInheritHandle, 0)) {
         return false;
     }
-    // Ensure terminator at the end
-    buffers.fileName[readBytes] = 0;
-    // Expand into target file name
-    DWORD maxTargetSize = (sizeof(buffers.targetFileName) / sizeof(wchar_t));
-    DWORD targetSize = ExpandEnvironmentStringsW(buffers.fileName, buffers.targetFileName, maxTargetSize);
-    if(!targetSize || targetSize > maxTargetSize) {
-        send_error(hComm);
-        return true;
-    }
-    // Try to open file for writing
-    HANDLE hFile = CreateFileW(
-        buffers.targetFileName,
-        GENERIC_WRITE,
-        0,
-        NULL,
-        CREATE_NEW,
-        0,
-        NULL
-    );
-    if(hFile == INVALID_HANDLE_VALUE) {
-        send_error(hComm);
-        return true;
-    }
-    // If everything is OK so far, let client continue its upload
-    if(!send_resp(hComm, RESP_FILE_OPENED)) {
-        CloseHandle(hFile);
+    if(!SetHandleInformation(handles->hStdinWrite, HANDLE_FLAG_INHERIT, 0)) {
         return false;
     }
-    if(!send_arg(hComm, (LPBYTE)buffers.targetFileName, targetSize * sizeof(wchar_t))) {
-        CloseHandle(hFile);
+    if(!CreatePipe(&(handles->hStdoutRead), &(handles->hStdoutWrite), &saInheritHandle, 0)) {
         return false;
     }
-
-    DWORD bytesWritten;
-
-    while(true) {
-        if(!recv_arg(hComm, buffers.buffer, &readBytes, sizeof(buffers.buffer))) {
-            CloseHandle(hFile);
-            return false;
-        }
-        if(readBytes == 0) {
-            break;
-        }
-        if(!WriteFile(hFile, buffers.buffer, readBytes, &bytesWritten, NULL)) {
-            send_error(hComm);
-            CloseHandle(hFile);
-            return true;
-        }
+    if(!SetHandleInformation(handles->hStdoutWrite, HANDLE_FLAG_INHERIT, 0)) {
+        return false;
     }
-    send_resp(hComm, RESP_SUCCESS);
-    CloseHandle(hFile);
+    if(!CreatePipe(&(handles->hStderrRead), &(handles->hStderrWrite), &saInheritHandle, 0)) {
+        return false;
+    }
+    if(!SetHandleInformation(handles->hStderrWrite, HANDLE_FLAG_INHERIT, 0)) {
+        return false;
+    }
     return true;
 }
 
-static bool req_download_file(HANDLE hComm)
-{
-    union {
+static void close_std_handles(PSTD_HANDLES handles) {
+    if(handles->hStdinRead != INVALID_HANDLE_VALUE) {
+        CloseHandle(handles->hStdinRead);
+        handles->hStdinRead = INVALID_HANDLE_VALUE;
+    }
+    if(handles->hStdoutRead != INVALID_HANDLE_VALUE) {
+        CloseHandle(handles->hStdoutRead);
+        handles->hStdoutRead = INVALID_HANDLE_VALUE;
+    }
+    if(handles->hStderrRead != INVALID_HANDLE_VALUE) {
+        CloseHandle(handles->hStderrRead);
+        handles->hStderrRead = INVALID_HANDLE_VALUE;
+    }
+    if(handles->hStdinWrite != INVALID_HANDLE_VALUE) {
+        CloseHandle(handles->hStdinWrite);
+        handles->hStdinWrite = INVALID_HANDLE_VALUE;
+    }
+    if(handles->hStdoutWrite != INVALID_HANDLE_VALUE) {
+        CloseHandle(handles->hStdoutWrite);
+        handles->hStdoutWrite = INVALID_HANDLE_VALUE;
+    }
+    if(handles->hStderrWrite != INVALID_HANDLE_VALUE) {
+        CloseHandle(handles->hStderrWrite);
+        handles->hStderrWrite = INVALID_HANDLE_VALUE;
+    }
+}
+
+static bool create_interactive_process(LPWSTR szCmdline, PSTD_HANDLES std_handles, PHANDLE lphProcess) {
+    BOOL bSuccess;
+    PROCESS_INFORMATION piProcInfo = {0};
+    STARTUPINFOW siStartInfo = {0};
+
+    siStartInfo.cb = sizeof(STARTUPINFOW);
+    siStartInfo.hStdError = std_handles->hStderrWrite;
+    siStartInfo.hStdOutput = std_handles->hStdoutWrite;
+    siStartInfo.hStdInput = std_handles->hStdinRead;
+    siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+    bSuccess = CreateProcessW(NULL,
+        szCmdline,     // command line
+        NULL,          // process security attributes
+        NULL,          // primary thread security attributes
+        true,          // handles are inherited
+        0,             // creation flags
+        NULL,          // use parent's environment
+        NULL,          // use parent's current directory
+        &siStartInfo,  // STARTUPINFO pointer
+        &piProcInfo    // receives PROCESS_INFORMATION
+    );
+    if(!bSuccess) {
+        return false;
+    } else {
+        // Close handle to the main thread
+        CloseHandle(piProcInfo.hThread);
+        // Close handles to the child-side of pipes
+        // because inheritance made a duplicates
+        CloseHandle(std_handles->hStderrWrite);
+        std_handles->hStderrWrite = INVALID_HANDLE_VALUE;
+        CloseHandle(std_handles->hStdoutWrite);
+        std_handles->hStdoutWrite = INVALID_HANDLE_VALUE;
+        CloseHandle(std_handles->hStdinRead);
+        std_handles->hStdinRead = INVALID_HANDLE_VALUE;
+        // Pass process handle to the caller
+        *lphProcess = piProcInfo.hProcess;
+        return true;
+    }
+}
+
+static bool interactive_execute(HANDLE hComm) {
+     union {
         struct {
-            wchar_t fileName[512];
-            wchar_t targetFileName[512];
+            wchar_t commandLine[1024];
         };
-        BYTE buffer[4096];
+        struct {
+            BYTE stdinBuffer[1024];
+            BYTE stdoutBuffer[1024];
+            BYTE stderrBuffer[1024];
+        };
     } buffers;
     WORD readBytes = 0;
-    // Receive file name
-    if(!recv_arg(hComm, (LPBYTE)buffers.fileName, &readBytes, sizeof(buffers.fileName) - sizeof(wchar_t))) {
+    BYTE control = 0;
+    STD_HANDLES std_handles = {0};
+    HANDLE hProcess;
+
+    // Receive command line
+    if(!recv_control(hComm, &control)) {
+        return false;
+    }
+    if(control != REQ_BLOCK) {
+        // We probably lost sync in the middle
+        // and there is another try to use drakshell.
+        // Let's finish this mode gracefully
+        if(!send_control(hComm, RESP_BAD_REQ)) {
+            return false;
+        }
+        return true;
+    }
+    if(!recv_block(hComm, (LPBYTE)buffers.commandLine, &readBytes, sizeof(buffers.commandLine) - sizeof(wchar_t))) {
         return false;
     }
     // Ensure terminator at the end
-    buffers.fileName[readBytes] = 0;
-    // Expand into target file name
-    DWORD maxTargetSize = (sizeof(buffers.targetFileName) / sizeof(wchar_t));
-    DWORD targetSize = ExpandEnvironmentStringsW(buffers.fileName, buffers.targetFileName, maxTargetSize);
-    if(!targetSize || targetSize > maxTargetSize) {
-        send_error(hComm);
-        return true;
-    }
-    // Try to open file for writing
-    HANDLE hFile = CreateFileW(
-        buffers.targetFileName,
-        GENERIC_READ,
-        0,
-        NULL,
-        OPEN_EXISTING,
-        0,
-        NULL
-    );
-    if(hFile == INVALID_HANDLE_VALUE) {
-        send_error(hComm);
-        return true;
-    }
-    // If everything is OK so far, let client continue its upload
-    if(!send_resp(hComm, RESP_FILE_OPENED)) {
-        CloseHandle(hFile);
-        return false;
-    }
-    if(!send_arg(hComm, (LPBYTE)buffers.targetFileName, targetSize * sizeof(wchar_t))) {
-        CloseHandle(hFile);
+    buffers.commandLine[readBytes] = 0;
+    if(!init_std_handles(&std_handles)) {
+        close_std_handles(&std_handles);
         return false;
     }
 
-    DWORD readBytesFromFile;
+    if(!create_interactive_process(buffers.commandLine, &std_handles, &hProcess)) {
+        // TODO: Send GLE status code
+        close_std_handles(&std_handles);
+        return true; // Not a fatal error
+    }
+
+    // Message loop
+    OVERLAPPED opStdin = {0};
+    OVERLAPPED opStdout = {0};
+    OVERLAPPED opStderr = {0};
+    BOOL stdinPending = false;
+    BOOL stdoutPending = false;
+    BOOL stderrPending = false;
+
+    opStdin.hEvent = CreateEvent(NULL, true, true, NULL);
+    opStdout.hEvent = CreateEvent(NULL, true, true, NULL);
+    opStderr.hEvent = CreateEvent(NULL, true, true, NULL);
 
     while(true) {
-        if(!ReadFile(hFile, buffers.buffer, sizeof(buffers.buffer), &readBytesFromFile, NULL)) {
-            send_arg(hComm, NULL, 0); // send EOF
-            send_error(hComm); // then reading error
-            CloseHandle(hFile);
-            return true;
+        HANDLE waitable_handles[4] = {
+            opStdin.hEvent, opStdout.hEvent, opStderr.hEvent, hProcess
+        };
+        DWORD status = WaitForMultipleObjects(
+            4, waitable_handles, false, 0xFFFFFFFF
+        );
+        if(status == 0) {
+            // stdin packet from drakshell client
+            if(stdinPending) {
+                // Pending operation finished
+                // Call GetOverlappedResult to get the size
+                // Then send the stdin to the process
+            }
         }
-        if(!send_arg(hComm, buffers.buffer, readBytesFromFile)) {
-            CloseHandle(hFile);
-            return false;
+        else if (status == 1) {
+            // stdout packet from process
+            if(stdoutPending) {
+                // Pending operation finished
+                // Call GetOverlappedResult to get the size
+                // Then send the stdout to the client
+            }
         }
-        if(readBytes == 0) {
-            // EOF has been sent, we can break the loop
-            break;
+        else if (status == 2) {
+            // stderr packet from process
+            if(stderrPending) {
+                // Pending operation finished
+                // Call GetOverlappedResult to get the size
+                // Then send the stderr to the client
+            }
+        }
+        else if (status == 3) {
+            // process is terminated
+            // Close everything and report the exit code
+        }
+        else {
+            // something went wrong
+            // Terminate process, close everything and report the fatal error
         }
     }
-    send_resp(hComm, RESP_SUCCESS);
-    CloseHandle(hFile);
-    return true;
+}
+
+static bool execute_and_finish() {
+
 }
 
 void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshell_main() {
@@ -269,23 +340,50 @@ void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshel
     OutputDebugStringW(L"I'm connected");
 
     while(true) {
-        BYTE command = 0;
-
-        if(!recv(hComm, &command, 1)) {
+        BYTE control = 0;
+        if(!recv_control(hComm, &control)) {
+            OutputDebugStringW(L"Failed to receive request control byte");
             break;
         }
-
-        if(command == REQ_PING) {
-            if(!req_ping(hComm))
+        if(control == REQ_PING) {
+            // Ping checks if shell is in initial state
+            // and is able to receive commands
+            if(!send_control(hComm, RESP_PONG)) {
+                OutputDebugStringW(L"Failed to send RESP_PONG response");
                 break;
+            }
         }
-        else if(command == REQ_UPLOAD) {
-            if(!req_upload_file(hComm))
+        else if(control == REQ_INTERACTIVE_EXECUTE) {
+            if(!send_control(hComm, RESP_INTERACTIVE_EXECUTE_START)) {
+                OutputDebugStringW(L"Failed to send RESP_INTERACTIVE_EXECUTE_START response");
                 break;
+            }
+            if(!interactive_execute(hComm)) {
+                OutputDebugStringW(L"Fatal error in interactive execute mode");
+                break;
+            }
         }
-        else if(command == REQ_DOWNLOAD) {
-            if(!req_download_file(hComm))
+        else if(control == REQ_EXECUTE_AND_FINISH) {
+            if(!send_control(hComm, RESP_EXECUTE_AND_FINISH_START)) {
+                OutputDebugStringW(L"Failed to send RESP_INTERACTIVE_EXECUTE_START response");
                 break;
+            }
+            if(!execute_and_finish()) {
+                OutputDebugStringW(L"Fatal error in interactive execute mode");
+            }
+            // We're always finishing here
+            break;
+        }
+        else if(control == REQ_FINISH) {
+            if(!send_control(hComm, RESP_FINISH_START)) {
+                OutputDebugStringW(L"Failed to send RESP_FINISH_START response");
+            }
+            break;
+        } else {
+            if(!send_control(hComm, RESP_BAD_REQ)) {
+                OutputDebugStringW(L"Failed to send RESP_BAD_REQ response");
+                break;
+            }
         }
     }
     OutputDebugStringW(L"Bye");
