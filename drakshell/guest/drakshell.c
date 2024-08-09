@@ -24,11 +24,54 @@
 #define RESP_BAD_REQ 0x40
 #define RESP_FATAL_ERROR 0x41
 
+static bool read(HANDLE hComm, LPBYTE buffer, LPDWORD size, DWORD maxSize) {
+    // Synchronized wrapper over async ReadFile
+    OVERLAPPED overlapped = {0};
+    DWORD result;
+    overlapped.hEvent = CreateEvent(NULL, true, true, NULL);
+    if(!ReadFile(hComm, buffer, maxSize, NULL, &overlapped)) {
+        if(GetLastError() != ERROR_IO_PENDING) {
+            return false;
+        }
+        result = WaitForSingleObject(overlapped.hEvent, INFINITE)
+        if(result) {
+            // Not a WAIT_OBJECT_0
+            return false;
+        }
+    }
+    if(!GetOverlappedResult(hComm, &overlapped, size, FALSE)) {
+        return false;
+    }
+    return true;
+}
+
+static bool write(HANDLE hComm, LPBYTE buffer, LPDWORD size, DWORD maxSize) {
+    // Synchronized wrapper over async WriteFile
+    OVERLAPPED overlapped = {0};
+    DWORD result;
+    overlapped.hEvent = CreateEvent(NULL, true, true, NULL);
+    if(!WriteFile(hComm, buffer, maxSize, NULL, &overlapped)) {
+        if(GetLastError() != ERROR_IO_PENDING) {
+            return false;
+        }
+        result = WaitForSingleObject(overlapped.hEvent, INFINITE)
+        if(result) {
+            // Not a WAIT_OBJECT_0
+            return false;
+        }
+    }
+    if(!GetOverlappedResult(hComm, &overlapped, size, FALSE)) {
+        return false;
+    }
+    return true;
+}
+
 static bool recvn(HANDLE hComm, LPBYTE buffer, DWORD size) {
+    OVERLAPPED overlapped = {0};
     DWORD bytesRead = 0;
 
     while(size > 0) {
-        if(!ReadFile(hComm, buffer, size, &bytesRead, NULL)) {
+        if(!read(hComm, buffer, &bytesRead, size)) {
             OutputDebugStringW(L"recvn: ReadFile failed");
             return false;
         }
@@ -46,7 +89,7 @@ static bool sendn(HANDLE hComm, LPBYTE buffer, DWORD size) {
     DWORD bytesWritten = 0;
 
     while(size > 0) {
-        if(!WriteFile(hComm, buffer, size, &bytesWritten, NULL)) {
+        if(!write(hComm, buffer, &bytesWritten, size)) {
             OutputDebugStringW(L"sendn: WriteFile failed");
             return false;
         }
@@ -414,8 +457,8 @@ static bool interactive_execute(HANDLE hComm) {
                     OutputDebugStringW(L"interactive_execute: stdin read failed");
                     break;
                 }
-                if(!WriteFile(
-                    hComm, buffers.stdinBuffer, bytesRead, &bytesWritten, NULL
+                if(!sendn(
+                    std_handles.hStdinWrite, buffers.stdinBuffer, bytesRead
                 )) {
                     // ERR: Failed to write to stdin
                     lastError = GetLastError();

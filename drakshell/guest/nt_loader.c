@@ -229,6 +229,7 @@ PCancelIo pCancelIo;
 PGetExitCodeProcess pGetExitCodeProcess;
 PTerminateProcess pTerminateProcess;
 PCreateNamedPipeW pCreateNamedPipeW;
+PWaitForSingleObject pWaitForSingleObject;
 
 bool load_winapi() {
     HANDLE hKernel32, hUser32;
@@ -266,6 +267,7 @@ bool load_winapi() {
     pGetExitCodeProcess = GetProcAddress(hKernel32, "GetExitCodeProcess");
     pTerminateProcess = GetProcAddress(hKernel32, "TerminateProcess");
     pCreateNamedPipeW = GetProcAddress(hKernel32, "CreateNamedPipeW");
+    pWaitForSingleObject = GetProcAddress(hKernel32, "WaitForSingleObject");
 
     return true;
 }

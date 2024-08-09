@@ -22,6 +22,7 @@
 #define PIPE_ACCESS_INBOUND 0x00000001
 #define FILE_FLAG_OVERLAPPED 0x40000000
 #define FILE_FLAG_FIRST_PIPE_INSTANCE 0x00080000
+#define INFINITE 0xffffffff
 
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
@@ -328,6 +329,13 @@ typedef HANDLE (WINAPI* PCreateNamedPipeW)(
 );
 extern PCreateNamedPipeW pCreateNamedPipeW;
 #define CreateNamedPipe (*pCreateNamedPipeW)
+
+typedef DWORD (WINAPI* PWaitForSingleObject)(
+    HANDLE hHandle,
+    DWORD  dwMilliseconds
+);
+extern PWaitForSingleObject pWaitForSingleObject;
+#define WaitForSingleObject (*pWaitForSingleObject)
 
 extern void* get_func_from_peb(const wchar_t* libraryName, const char* procName);
 extern bool load_winapi();
