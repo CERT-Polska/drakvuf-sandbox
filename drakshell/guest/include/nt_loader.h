@@ -15,7 +15,8 @@
 #define INVALID_HANDLE_VALUE ((void*)(long long)-1)
 #define HANDLE_FLAG_INHERIT 1
 #define STARTF_USESTDHANDLES 0x00000100
-
+#define ERROR_IO_PENDING 0x000003e5
+#define ERROR_BROKEN_PIPE 0x0000006d
 
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
@@ -280,6 +281,35 @@ typedef HANDLE (WINAPI* PCreateEvent)(
 );
 extern PCreateEvent pCreateEvent;
 #define CreateEvent (*pCreateEvent)
+
+typedef BOOL (WINAPI* PGetOverlappedResult)(
+    HANDLE hFile,
+    LPOVERLAPPED lpOverlapped,
+    LPDWORD lpNumberOfBytesTransferred,
+    BOOL bWait
+);
+extern PGetOverlappedResult pGetOverlappedResult;
+#define GetOverlappedResult (*pGetOverlappedResult)
+
+typedef BOOL (WINAPI* PCancelIo)(
+    HANDLE hFile
+);
+extern PCancelIo pCancelIo;
+#define CancelIo (*pCancelIo)
+
+typedef BOOL (WINAPI* PGetExitCodeProcess)(
+    HANDLE hProcess,
+    LPDWORD lpExitCode
+);
+extern PGetExitCodeProcess pGetExitCodeProcess;
+#define GetExitCodeProcess (*pGetExitCodeProcess)
+
+typedef BOOL (WINAPI* PTerminateProcess)(
+    HANDLE hProcess,
+    UINT uExitCode
+);
+extern PTerminateProcess pTerminateProcess;
+#define TerminateProcess (*pTerminateProcess)
 
 extern void* get_func_from_peb(const wchar_t* libraryName, const char* procName);
 extern bool load_winapi();

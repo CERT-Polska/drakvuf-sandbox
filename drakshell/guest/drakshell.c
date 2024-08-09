@@ -16,19 +16,24 @@
 #define RESP_INTERACTIVE_EXECUTE_START 0x31
 #define RESP_EXECUTE_AND_FINISH_START 0x32
 #define RESP_FINISH_START 0x33
-#define RESP_BLOCK 0x34
+#define RESP_STDOUT_BLOCK 0x34
+#define RESP_STDERR_BLOCK 0x35
+#define RESP_INTERACTIVE_EXECUTE_PROCESS_CREATED 0x36
+#define RESP_INTERACTIVE_EXECUTE_END 0x37
 
 #define RESP_BAD_REQ 0x40
-#define RESP_FATAL_FINISH 0x41
+#define RESP_FATAL_ERROR 0x41
 
 static bool recvn(HANDLE hComm, LPBYTE buffer, DWORD size) {
     DWORD bytesRead = 0;
 
     while(size > 0) {
         if(!ReadFile(hComm, buffer, size, &bytesRead, NULL)) {
+            OutputDebugStringW(L"recvn: ReadFile failed");
             return false;
         }
         if(!bytesRead) {
+            OutputDebugStringW(L"recvn: Broken pipe");
             return false;
         }
         size -= bytesRead;
@@ -42,9 +47,11 @@ static bool sendn(HANDLE hComm, LPBYTE buffer, DWORD size) {
 
     while(size > 0) {
         if(!WriteFile(hComm, buffer, size, &bytesWritten, NULL)) {
+            OutputDebugStringW(L"sendn: WriteFile failed");
             return false;
         }
         if(!bytesWritten) {
+            OutputDebugStringW(L"sendn: Broken pipe");
             return false;
         }
         size -= bytesWritten;
@@ -66,6 +73,7 @@ static bool recv_block(HANDLE hComm, LPBYTE bufferToRecv, LPWORD argSize, WORD a
         return false;
     }
     if(*argSize > argMaxSize) {
+        OutputDebugStringW(L"recv_block: Buffer overflow");
         return false;
     }
     return recvn(hComm, bufferToRecv, *argSize);
@@ -78,6 +86,17 @@ static bool send_block(HANDLE hComm, LPBYTE bufferToSend, WORD argSize) {
     if(!argSize)
         return true;
     return sendn(hComm, bufferToSend, argSize);
+}
+
+static bool send_control_with_code(HANDLE hComm, BYTE resp, DWORD code) {
+    if(!send_control(hComm, resp)) {
+        return false;
+    }
+    return sendn(hComm, (LPBYTE)&code, sizeof(code));
+}
+
+static bool send_fatal_error(HANDLE hComm, DWORD gle) {
+    return send_control_with_code(hComm, RESP_FATAL_ERROR, gle);
 }
 
 typedef struct _STD_HANDLES {
@@ -104,21 +123,27 @@ static bool init_std_handles(PSTD_HANDLES handles) {
     handles->hStderrWrite = INVALID_HANDLE_VALUE;
 
     if(!CreatePipe(&(handles->hStdinRead), &(handles->hStdinWrite), &saInheritHandle, 0)) {
+        OutputDebugStringW(L"init_std_handles: CreatePipe failed for stdin");
         return false;
     }
     if(!SetHandleInformation(handles->hStdinWrite, HANDLE_FLAG_INHERIT, 0)) {
+        OutputDebugStringW(L"init_std_handles: SetHandleInformation failed for stdin");
         return false;
     }
     if(!CreatePipe(&(handles->hStdoutRead), &(handles->hStdoutWrite), &saInheritHandle, 0)) {
+        OutputDebugStringW(L"init_std_handles: CreatePipe failed for stdout");
         return false;
     }
     if(!SetHandleInformation(handles->hStdoutWrite, HANDLE_FLAG_INHERIT, 0)) {
+        OutputDebugStringW(L"init_std_handles: SetHandleInformation failed for stdout");
         return false;
     }
     if(!CreatePipe(&(handles->hStderrRead), &(handles->hStderrWrite), &saInheritHandle, 0)) {
+        OutputDebugStringW(L"init_std_handles: CreatePipe failed for stderr");
         return false;
     }
     if(!SetHandleInformation(handles->hStderrWrite, HANDLE_FLAG_INHERIT, 0)) {
+        OutputDebugStringW(L"init_std_handles: SetHandleInformation failed for stderr");
         return false;
     }
     return true;
@@ -203,13 +228,14 @@ static bool interactive_execute(HANDLE hComm) {
             BYTE stderrBuffer[1024];
         };
     } buffers;
-    WORD readBytes = 0;
+    WORD commandLineBytesRead = 0;
     BYTE control = 0;
     STD_HANDLES std_handles = {0};
     HANDLE hProcess;
 
     // Receive command line
     if(!recv_control(hComm, &control)) {
+        send_control(hComm, RESP_BAD_REQ);
         return false;
     }
     if(control != REQ_BLOCK) {
@@ -221,73 +247,267 @@ static bool interactive_execute(HANDLE hComm) {
         }
         return true;
     }
-    if(!recv_block(hComm, (LPBYTE)buffers.commandLine, &readBytes, sizeof(buffers.commandLine) - sizeof(wchar_t))) {
+    if(!recv_block(hComm, (LPBYTE)buffers.commandLine, &commandLineBytesRead, sizeof(buffers.commandLine) - sizeof(wchar_t))) {
+        send_control(hComm, RESP_BAD_REQ);
         return false;
     }
     // Ensure terminator at the end
-    buffers.commandLine[readBytes] = 0;
+    buffers.commandLine[commandLineBytesRead] = 0;
     if(!init_std_handles(&std_handles)) {
+        send_fatal_error(hComm, GetLastError());
         close_std_handles(&std_handles);
         return false;
     }
 
     if(!create_interactive_process(buffers.commandLine, &std_handles, &hProcess)) {
         // TODO: Send GLE status code
+        send_fatal_error(hComm, GetLastError());
+        OutputDebugStringW(L"create_interactive_process: Failed to create process");
         close_std_handles(&std_handles);
         return true; // Not a fatal error
+    }
+
+    if(!send_control(hComm, RESP_INTERACTIVE_EXECUTE_PROCESS_CREATED)) {
+        return false;
     }
 
     // Message loop
     OVERLAPPED opStdin = {0};
     OVERLAPPED opStdout = {0};
     OVERLAPPED opStderr = {0};
+
     BOOL stdinPending = false;
     BOOL stdoutPending = false;
     BOOL stderrPending = false;
+
+    DWORD exitCode = 0;
+    DWORD lastError = 0;
+    BOOL isFatalError = false;
+    BOOL isProcessError = false;
 
     opStdin.hEvent = CreateEvent(NULL, true, true, NULL);
     opStdout.hEvent = CreateEvent(NULL, true, true, NULL);
     opStderr.hEvent = CreateEvent(NULL, true, true, NULL);
 
+    control = 0;
+
     while(true) {
         HANDLE waitable_handles[4] = {
-            opStdin.hEvent, opStdout.hEvent, opStderr.hEvent, hProcess
+            hProcess, opStdin.hEvent, opStdout.hEvent, opStderr.hEvent
         };
         DWORD status = WaitForMultipleObjects(
             4, waitable_handles, false, 0xFFFFFFFF
         );
-        if(status == 0) {
+        if (status == 0) {
+            // Process is terminated
+            // Close everything and report the exit code
+            if(!GetExitCodeProcess(hProcess, &exitCode)) {
+                // ERROR: Something went wrong
+                OutputDebugStringW(L"interactive_execute: Process exited but can't get exit code");
+                lastError = GetLastError();
+                isProcessError = true;
+                break;
+            }
+            CloseHandle(hProcess);
+            hProcess = INVALID_HANDLE_VALUE;
+            break;
+        }
+        else if(status == 1) {
             // stdin packet from drakshell client
+            DWORD bytesRead = 0;
+            DWORD bytesWritten = 0;
             if(stdinPending) {
                 // Pending operation finished
                 // Call GetOverlappedResult to get the size
                 // Then send the stdin to the process
+                if(!GetOverlappedResult(hComm, &opStdin, &bytesRead, false)) {
+                    // ERR: Operation is still pending? Weird...
+                    OutputDebugStringW(L"interactive_execute: stdin read unexpectedly pending");
+                    lastError = GetLastError();
+                    isFatalError = true;
+                    break;
+                }
+                // Async stdin read only reads control byte
+                if(control != REQ_BLOCK) {
+                    // ERR: Possible desync or client wants to terminate process
+                    // Terminate gracefully
+                    OutputDebugStringW(L"interactive_execute: stdin read desync");
+                    break;
+                }
+                if(!recv_block(hComm, buffers.stdinBuffer, (LPWORD)&bytesRead, sizeof(buffers.stdinBuffer))) {
+                    // ERR: Failed to read block
+                    lastError = GetLastError();
+                    isFatalError = true;
+                    OutputDebugStringW(L"interactive_execute: stdin read failed");
+                    break;
+                }
+                if(!WriteFile(
+                    hComm, buffers.stdinBuffer, bytesRead, &bytesWritten, NULL
+                )) {
+                    // ERR: Failed to write to stdin
+                    lastError = GetLastError();
+                    isProcessError = true;
+                    OutputDebugStringW(L"interactive_execute: stdin write failed");
+                    break;
+                }
+            }
+            if(!ReadFile(hComm, &control, 1, NULL, &opStdin)) {
+                if(GetLastError() == ERROR_IO_PENDING) {
+                    stdinPending = true;
+                } else {
+                    // ERROR: Read failed
+                    lastError = GetLastError();
+                    isFatalError = true;
+                    OutputDebugStringW(L"interactive_execute: stdin read failed");
+                    break;
+                }
+            } else {
+                // Result was immediately available
+                // I hope the object is signaled in that case
+                // and we can just handle it in another loop
+                // TODO: I need to test it by sending 1-byte stdin packets in one block
+                OutputDebugStringW(L"interactive_execute: got stdin immediately");
+                stdinPending = true;
             }
         }
-        else if (status == 1) {
+        else if (status == 2) {
+            DWORD bytesRead = 0;
+            DWORD bytesWritten = 0;
             // stdout packet from process
             if(stdoutPending) {
                 // Pending operation finished
                 // Call GetOverlappedResult to get the size
                 // Then send the stdout to the client
+                if(!GetOverlappedResult(std_handles.hStdoutRead, &opStdout, &bytesRead, false)) {
+                    // ERR: Operation is still pending? Weird...
+                    lastError = GetLastError();
+                    isFatalError = true;
+                    OutputDebugStringW(L"interactive_execute: stdout read unexpectedly pending");
+                    break;
+                }
+                if(!send_control(hComm, RESP_STDOUT_BLOCK)) {
+                    // ERR: Failed to send control byte
+                    // TODO: Have dedicated control byte for STDOUT
+                    lastError = GetLastError();
+                    isFatalError = true;
+                    OutputDebugStringW(L"interactive_execute: stdout write failed");
+                    break;
+                }
+                if(!send_block(hComm, buffers.stdoutBuffer, (WORD)bytesRead)) {
+                    // ERR: Failed to send block
+                    lastError = GetLastError();
+                    isFatalError = true;
+                    OutputDebugStringW(L"interactive_execute: stdout write failed");
+                    break;
+                }
+            }
+            if(!ReadFile(std_handles.hStdoutRead, buffers.stdoutBuffer, sizeof(buffers.stdoutBuffer), NULL, &opStdout)) {
+                if(GetLastError() == ERROR_IO_PENDING) {
+                    stdoutPending = true;
+                } else {
+                    // ERROR: Read failed
+                    lastError = GetLastError();
+                    isProcessError = true;
+                    OutputDebugStringW(L"interactive_execute: stdout read failed");
+                    break;
+                }
+            } else {
+                // Result was immediately available
+                // I hope the object is signaled in that case
+                // and we can just handle it in another loop
+                stdoutPending = true;
+                OutputDebugStringW(L"interactive_execute: got stdout immediately");
             }
         }
-        else if (status == 2) {
+        else if (status == 3) {
+            DWORD bytesRead = 0;
+            DWORD bytesWritten = 0;
             // stderr packet from process
             if(stderrPending) {
                 // Pending operation finished
                 // Call GetOverlappedResult to get the size
                 // Then send the stderr to the client
+                if(!GetOverlappedResult(std_handles.hStderrRead, &opStderr, &bytesRead, false)) {
+                    // ERR: Operation is still pending? Weird...
+                    lastError = GetLastError();
+                    isFatalError = true;
+                    OutputDebugStringW(L"interactive_execute: stderr read unexpectedly pending");
+                    break;
+                }
+                if(!send_control(hComm, RESP_STDERR_BLOCK)) {
+                    // ERR: Failed to send control byte
+                    // TODO: Have dedicated control byte for STDERR
+                    lastError = GetLastError();
+                    isFatalError = true;
+                    OutputDebugStringW(L"interactive_execute: stderr write failed");
+                    break;
+                }
+                if(!send_block(hComm, buffers.stderrBuffer, (WORD)bytesRead)) {
+                    // ERR: Failed to send block
+                    lastError = GetLastError();
+                    isFatalError = true;
+                    OutputDebugStringW(L"interactive_execute: stderr write failed");
+                    break;
+                }
             }
-        }
-        else if (status == 3) {
-            // process is terminated
-            // Close everything and report the exit code
+            if(!ReadFile(std_handles.hStderrRead, buffers.stderrBuffer, sizeof(buffers.stderrBuffer), NULL, &opStderr)) {
+                if(GetLastError() == ERROR_IO_PENDING) {
+                    stderrPending = true;
+                } else {
+                    // ERROR: Read failed
+                    OutputDebugStringW(L"interactive_execute: stderr read failed");
+                    lastError = GetLastError();
+                    isProcessError = true;
+                    break;
+                }
+            } else {
+                // Result was immediately available
+                // I hope the object is signaled in that case
+                // and we can just handle it in another loop
+                stderrPending = true;
+                OutputDebugStringW(L"interactive_execute: got stderr immediately");
+            }
         }
         else {
             // something went wrong
             // Terminate process, close everything and report the fatal error
+            lastError = GetLastError();
+            isProcessError = true;
+            OutputDebugStringW(L"interactive_execute: WaitForMultipleObjects unexpected status");
+            break;
         }
+    }
+    if(hProcess != INVALID_HANDLE_VALUE) {
+        // Process is not yet closed, needs to be terminated
+        OutputDebugStringW(L"interactive_execute: terminating process with ERROR_BROKEN_PIPE");
+        TerminateProcess(hProcess, ERROR_BROKEN_PIPE);
+    }
+    if(stdinPending) {
+        CancelIo(hComm);
+    }
+    if(stdoutPending) {
+        CancelIo(std_handles.hStdoutRead);
+    }
+    if(stderrPending) {
+        CancelIo(std_handles.hStderrRead);
+    }
+    close_std_handles(&std_handles);
+    CloseHandle(opStdin.hEvent);
+    CloseHandle(opStdout.hEvent);
+    CloseHandle(opStderr.hEvent);
+    if(isFatalError) {
+        send_fatal_error(hComm, lastError);
+        OutputDebugStringW(L"interactive_execute: fatal error");
+        return false;
+    } else if(isProcessError) {
+        // Report process error
+        send_fatal_error(hComm, lastError);
+        OutputDebugStringW(L"interactive_execute: process error");
+        return true;
+    } else {
+        // Report success
+        OutputDebugStringW(L"interactive_execute: finished successfully");
+        return true;
     }
 }
 

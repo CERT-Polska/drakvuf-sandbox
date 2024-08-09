@@ -224,6 +224,10 @@ PCreatePipe pCreatePipe;
 PSetHandleInformation pSetHandleInformation;
 PWaitForMultipleObjects pWaitForMultipleObjects;
 PCreateEvent pCreateEvent;
+PGetOverlappedResult pGetOverlappedResult;
+PCancelIo pCancelIo;
+PGetExitCodeProcess pGetExitCodeProcess;
+PTerminateProcess pTerminateProcess;
 
 bool load_winapi() {
     HANDLE hKernel32, hUser32;
@@ -256,6 +260,10 @@ bool load_winapi() {
     pSetHandleInformation = GetProcAddress(hKernel32, "SetHandleInformation");
     pWaitForMultipleObjects = GetProcAddress(hKernel32, "WaitForMultipleObjects");
     pCreateEvent = GetProcAddress(hKernel32, "CreateEventA");
+    pGetOverlappedResult = GetProcAddress(hKernel32, "GetOverlappedResult");
+    pCancelIo = GetProcAddress(hKernel32, "CancelIo");
+    pGetExitCodeProcess = GetProcAddress(hKernel32, "GetExitCodeProcess");
+    pTerminateProcess = GetProcAddress(hKernel32, "TerminateProcess");
 
     return true;
 }

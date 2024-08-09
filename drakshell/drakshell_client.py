@@ -1,14 +1,26 @@
+import enum
 import struct
 import socket
 
 REQ_PING = 0x30
-REQ_UPLOAD = 0x31
-REQ_DOWNLOAD = 0x32
-REQ_EXIT = 0x33
+REQ_INTERACTIVE_EXECUTE = 0x31
+REQ_EXECUTE_AND_FINISH = 0x32
+REQ_FINISH = 0x33
+REQ_BLOCK = 0x34
 
-RESP_SUCCESS = 0x30
-RESP_FILE_OPENED = 0x31
-RESP_ERROR = 0x32
+
+class DrakshellRespCode(enum.IntEnum):
+    RESP_PONG = 0x30
+    RESP_INTERACTIVE_EXECUTE_START = 0x31
+    RESP_EXECUTE_AND_FINISH_START = 0x32
+    RESP_FINISH_START = 0x33
+    RESP_STDOUT_BLOCK = 0x34
+    RESP_STDERR_BLOCK = 0x35
+    RESP_INTERACTIVE_EXECUTE_PROCESS_CREATED = 0x36
+    RESP_INTERACTIVE_EXECUTE_END = 0x37
+
+    RESP_BAD_REQ = 0x40
+    RESP_FATAL_ERROR = 0x41
 
 
 class DrakshellClient:
@@ -27,21 +39,21 @@ class DrakshellClient:
             self._sock = None
             raise
 
-    def _send_req(self, req):
+    def send_control(self, req):
         if self._sock is None:
             raise RuntimeError('Socket is not connected')
         msg = struct.pack("<B", req)
         self._sock.send(msg)
 
-    def _recv_resp(self):
+    def _recv_control(self):
         if self._sock is None:
             raise RuntimeError('Socket is not connected')
         msg = self._sock.recv(1)
         if not msg:
             raise RuntimeError('Socket has unexpectedly disconnected')
-        return msg[0]
+        return DrakshellRespCode(msg[0])
 
-    def _recv_gle(self):
+    def _recv_status_code(self):
         if self._sock is None:
             raise RuntimeError('Socket is not connected')
         msg = self._sock.recv(4)
@@ -49,15 +61,7 @@ class DrakshellClient:
             raise RuntimeError('Socket has unexpectedly disconnected')
         return struct.unpack("<I", msg)[0]
 
-    def _send_arg(self, arg):
-        if self._sock is None:
-            raise RuntimeError('Socket is not connected')
-        if len(arg) > self.MAX_BUFFER_SIZE:
-            raise ValueError("Message block too long")
-        len_msg = struct.pack("<H", len(arg))
-        self._sock.send(len_msg + arg)
-
-    def _recv_arg(self):
+    def _recv_block(self):
         if self._sock is None:
             raise RuntimeError('Socket is not connected')
         len_msg = self._sock.recv(2)
@@ -73,38 +77,22 @@ class DrakshellClient:
             arg += part
         return arg
 
-    def ping(self):
-        self._send_req(REQ_PING)
-        resp = self._recv_resp()
-        if resp != RESP_SUCCESS:
-            raise RuntimeError(f'Unexpected response: {resp}')
-        return True
+    def send_block(self, arg):
+        if self._sock is None:
+            raise RuntimeError('Socket is not connected')
+        if len(arg) > self.MAX_BUFFER_SIZE:
+            raise ValueError("Message block too long")
+        self.send_control(REQ_BLOCK)
+        len_msg = struct.pack("<H", len(arg))
+        self._sock.send(len_msg + arg)
 
-    def upload_file(self, host_path, guest_path):
-        self._send_req(REQ_UPLOAD)
-        self._send_arg(guest_path.encode("utf-16le") + b"\0\0")
-        resp = self._recv_resp()
-        if resp == RESP_FILE_OPENED:
-            target_guest_path = self._recv_arg()
-        elif resp == RESP_ERROR:
-            gle = self._recv_gle()
-            raise RuntimeError(f"Can't open file for writing: {gle}")
-        else:
-            raise RuntimeError(f'Unexpected response: {resp}')
+    def recv_response(self):
+        resp = self._recv_control()
 
-        with open(host_path, "rb") as f:
-            while True:
-                block = f.read(self.MAX_BUFFER_SIZE)
-                self._send_arg(block)
-                if not block:
-                    break
-
-        resp = self._recv_resp()
-        if resp == RESP_SUCCESS:
-            return target_guest_path.decode("utf-16le")
-        elif resp == RESP_ERROR:
-            gle = self._recv_gle()
-            raise RuntimeError(f"Error during file read: {gle}")
-        else:
-            raise RuntimeError(f'Unexpected response: {resp}')
-
+        if resp in [DrakshellRespCode.RESP_STDOUT_BLOCK, DrakshellRespCode.RESP_STDERR_BLOCK]:
+            block = self._recv_block()
+            return resp, block
+        elif resp in [DrakshellRespCode.RESP_FATAL_ERROR, DrakshellRespCode.RESP_INTERACTIVE_EXECUTE_END]:
+            code = self._recv_status_code()
+            return resp, code
+        return resp, None
