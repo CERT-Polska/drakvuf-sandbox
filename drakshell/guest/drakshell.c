@@ -185,7 +185,7 @@ static bool create_interactive_process(LPWSTR szCmdline, PSTD_HANDLES std_handle
     siStartInfo.hStdError = std_handles->hStderrWrite;
     siStartInfo.hStdOutput = std_handles->hStdoutWrite;
     siStartInfo.hStdInput = std_handles->hStdinRead;
-    siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+    siStartInfo.dwFlags = STARTF_USESTDHANDLES;
 
     bSuccess = CreateProcessW(NULL,
         szCmdline,     // command line
@@ -301,6 +301,7 @@ static bool interactive_execute(HANDLE hComm) {
         if (status == 0) {
             // Process is terminated
             // Close everything and report the exit code
+            OutputDebugStringW(L"interactive_execute: hProcess signalled");
             if(!GetExitCodeProcess(hProcess, &exitCode)) {
                 // ERROR: Something went wrong
                 OutputDebugStringW(L"interactive_execute: Process exited but can't get exit code");
@@ -314,9 +315,11 @@ static bool interactive_execute(HANDLE hComm) {
         }
         else if(status == 1) {
             // stdin packet from drakshell client
+            OutputDebugStringW(L"interactive_execute: stdin signalled");
             DWORD bytesRead = 0;
             DWORD bytesWritten = 0;
             if(stdinPending) {
+                OutputDebugStringW(L"interactive_execute: stdin pending");
                 // Pending operation finished
                 // Call GetOverlappedResult to get the size
                 // Then send the stdin to the process
@@ -350,6 +353,7 @@ static bool interactive_execute(HANDLE hComm) {
                     OutputDebugStringW(L"interactive_execute: stdin write failed");
                     break;
                 }
+                OutputDebugStringW(L"interactive_execute: stdin handled");
             }
             if(!ReadFile(hComm, &control, 1, NULL, &opStdin)) {
                 if(GetLastError() == ERROR_IO_PENDING) {
@@ -371,10 +375,12 @@ static bool interactive_execute(HANDLE hComm) {
             }
         }
         else if (status == 2) {
+            OutputDebugStringW(L"interactive_execute: stdout signalled");
             DWORD bytesRead = 0;
             DWORD bytesWritten = 0;
             // stdout packet from process
             if(stdoutPending) {
+                OutputDebugStringW(L"interactive_execute: stdout pending");
                 // Pending operation finished
                 // Call GetOverlappedResult to get the size
                 // Then send the stdout to the client
@@ -418,12 +424,15 @@ static bool interactive_execute(HANDLE hComm) {
                 stdoutPending = true;
                 OutputDebugStringW(L"interactive_execute: got stdout immediately");
             }
+            OutputDebugStringW(L"interactive_execute: stdout handled");
         }
         else if (status == 3) {
+            OutputDebugStringW(L"interactive_execute: stderr signalled");
             DWORD bytesRead = 0;
             DWORD bytesWritten = 0;
             // stderr packet from process
             if(stderrPending) {
+                OutputDebugStringW(L"interactive_execute: stderr pending");
                 // Pending operation finished
                 // Call GetOverlappedResult to get the size
                 // Then send the stderr to the client
@@ -467,6 +476,7 @@ static bool interactive_execute(HANDLE hComm) {
                 stderrPending = true;
                 OutputDebugStringW(L"interactive_execute: got stderr immediately");
             }
+            OutputDebugStringW(L"interactive_execute: stderr handled");
         }
         else {
             // something went wrong
@@ -506,6 +516,7 @@ static bool interactive_execute(HANDLE hComm) {
         return true;
     } else {
         // Report success
+        send_control_with_code(hComm, RESP_INTERACTIVE_EXECUTE_END, exitCode);
         OutputDebugStringW(L"interactive_execute: finished successfully");
         return true;
     }
