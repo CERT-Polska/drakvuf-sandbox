@@ -64,10 +64,20 @@ class Channel:
             raise RuntimeError('Socket has unexpectedly disconnected')
         return RespCode(msg[0])
 
+    def _recvn(self, size):
+        data = b''
+        while size > 0:
+            part = self._sock.recv(size)
+            if not part:
+                raise RuntimeError('Socket has unexpectedly disconnected')
+            size -= len(part)
+            data += part
+        return data
+
     def _recv_status_code(self):
         if self._sock is None:
             raise RuntimeError('Socket is not connected')
-        msg = self._sock.recv(4)
+        msg = self._recvn(4)
         if not msg:
             raise RuntimeError('Socket has unexpectedly disconnected')
         return struct.unpack("<I", msg)[0]
@@ -79,14 +89,7 @@ class Channel:
         if not len_msg:
             raise RuntimeError('Socket has unexpectedly disconnected')
         arg_len = struct.unpack("<H", len_msg)[0]
-        arg = b''
-        while arg_len > 0:
-            part = self._sock.recv(arg_len)
-            if not part:
-                raise RuntimeError('Socket has unexpectedly disconnected')
-            arg_len -= len(part)
-            arg += part
-        return arg
+        return self._recvn(arg_len)
 
     def send_data(self, arg):
         if self._sock is None:
