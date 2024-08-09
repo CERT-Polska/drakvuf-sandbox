@@ -101,7 +101,7 @@ class Channel:
         self._sock.settimeout(timeout)
         resp = self._recv_control()
         if resp in [RespCode.RESP_STDOUT_DATA, RespCode.RESP_STDERR_DATA]:
-            block = self._recv_block()
+            block = self._recv_data()
             return resp, block
         elif resp in [RespCode.RESP_PROCESS_EXIT, RespCode.RESP_PROCESS_ERROR, RespCode.RESP_FATAL_ERROR]:
             code = self._recv_status_code()
