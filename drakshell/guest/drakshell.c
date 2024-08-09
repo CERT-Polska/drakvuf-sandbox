@@ -395,7 +395,7 @@ static bool interactive_execute(HANDLE hComm) {
     DWORD exitCode = 0;
     DWORD lastError = 0;
     BOOL isFatalError = false;
-    BOOL isProcessError = false;
+    BOOL isProcessBrokenPipe = false;
 
     opStdin.hEvent = CreateEvent(NULL, true, true, NULL);
     opStdout.hEvent = CreateEvent(NULL, true, true, NULL);
@@ -416,10 +416,9 @@ static bool interactive_execute(HANDLE hComm) {
             // Close everything and report the exit code
             OutputDebugStringW(L"interactive_execute: hProcess signalled");
             if(!GetExitCodeProcess(hProcess, &exitCode)) {
-                // ERROR: Something went wrong
                 OutputDebugStringW(L"interactive_execute: Process exited but can't get exit code");
                 lastError = GetLastError();
-                isProcessError = true;
+                isProcessBrokenPipe = true;
                 break;
             }
             CloseHandle(hProcess);
@@ -438,7 +437,7 @@ static bool interactive_execute(HANDLE hComm) {
                 // Then send the stdin to the process
                 if(!GetOverlappedResult(hComm, &opStdin, &bytesRead, false)) {
                     // ERR: Operation is still pending? Weird...
-                    OutputDebugStringW(L"interactive_execute: stdin read unexpectedly pending");
+                    OutputDebugStringW(L"interactive_execute: stdin read broken pipe");
                     lastError = GetLastError();
                     isFatalError = true;
                     break;
@@ -462,7 +461,7 @@ static bool interactive_execute(HANDLE hComm) {
                 )) {
                     // ERR: Failed to write to stdin
                     lastError = GetLastError();
-                    isProcessError = true;
+                    isProcessBrokenPipe = true;
                     OutputDebugStringW(L"interactive_execute: stdin write failed");
                     break;
                 }
@@ -500,8 +499,8 @@ static bool interactive_execute(HANDLE hComm) {
                 if(!GetOverlappedResult(std_handles.hStdoutRead, &opStdout, &bytesRead, false)) {
                     // ERR: Operation is still pending? Weird...
                     lastError = GetLastError();
-                    isFatalError = true;
-                    OutputDebugStringW(L"interactive_execute: stdout read unexpectedly pending");
+                    isProcessBrokenPipe = true;
+                    OutputDebugStringW(L"interactive_execute: stdout read broken pipe");
                     break;
                 }
                 if(!send_control(hComm, RESP_STDOUT_BLOCK)) {
@@ -526,7 +525,7 @@ static bool interactive_execute(HANDLE hComm) {
                 } else {
                     // ERROR: Read failed
                     lastError = GetLastError();
-                    isProcessError = true;
+                    isProcessBrokenPipe = true;
                     OutputDebugStringW(L"interactive_execute: stdout read failed");
                     break;
                 }
@@ -552,8 +551,8 @@ static bool interactive_execute(HANDLE hComm) {
                 if(!GetOverlappedResult(std_handles.hStderrRead, &opStderr, &bytesRead, false)) {
                     // ERR: Operation is still pending? Weird...
                     lastError = GetLastError();
-                    isFatalError = true;
-                    OutputDebugStringW(L"interactive_execute: stderr read unexpectedly pending");
+                    isProcessBrokenPipe = true;
+                    OutputDebugStringW(L"interactive_execute: stderr read broken pipe");
                     break;
                 }
                 if(!send_control(hComm, RESP_STDERR_BLOCK)) {
@@ -579,7 +578,7 @@ static bool interactive_execute(HANDLE hComm) {
                     // ERROR: Read failed
                     OutputDebugStringW(L"interactive_execute: stderr read failed");
                     lastError = GetLastError();
-                    isProcessError = true;
+                    isProcessBrokenPipe = true;
                     break;
                 }
             } else {
@@ -595,15 +594,31 @@ static bool interactive_execute(HANDLE hComm) {
             // something went wrong
             // Terminate process, close everything and report the fatal error
             lastError = GetLastError();
-            isProcessError = true;
+            isProcessBrokenPipe = true;
             OutputDebugStringW(L"interactive_execute: WaitForMultipleObjects unexpected status");
             break;
         }
     }
     if(hProcess != INVALID_HANDLE_VALUE) {
-        // Process is not yet closed, needs to be terminated
-        OutputDebugStringW(L"interactive_execute: terminating process with ERROR_BROKEN_PIPE");
-        TerminateProcess(hProcess, ERROR_BROKEN_PIPE);
+        if(isFatalError) {
+            OutputDebugStringW(L"interactive_execute: terminating process with ERROR_BROKEN_PIPE");
+            TerminateProcess(hProcess, ERROR_BROKEN_PIPE);
+        }
+        else if(isProcessBrokenPipe) {
+            // Wait a while for process to stop
+            WaitForSingleObject(hProcess, 1000);
+            if(!GetExitCodeProcess(hProcess, &exitCode))
+            {
+                // Process is not yet closed, needs to be terminated
+                OutputDebugStringW(L"interactive_execute: terminating process with ERROR_BROKEN_PIPE");
+                TerminateProcess(hProcess, ERROR_BROKEN_PIPE);
+            } else {
+                // If process exited gracefully: let's treat it as graceful exit
+                isProcessBrokenPipe = false;
+            }
+        }
+        CloseHandle(hProcess);
+        hProcess = INVALID_HANDLE_VALUE;
     }
     if(stdinPending) {
         CancelIo(hComm);
@@ -622,7 +637,7 @@ static bool interactive_execute(HANDLE hComm) {
         send_fatal_error(hComm, lastError);
         OutputDebugStringW(L"interactive_execute: fatal error");
         return false;
-    } else if(isProcessError) {
+    } else if(isProcessBrokenPipe) {
         // Report process error
         send_fatal_error(hComm, lastError);
         OutputDebugStringW(L"interactive_execute: process error");

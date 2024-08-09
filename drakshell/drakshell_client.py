@@ -23,7 +23,7 @@ class DrakshellRespCode(enum.IntEnum):
     RESP_FATAL_ERROR = 0x41
 
 
-class DrakshellClient:
+class DrakshellChannel:
     MAX_BUFFER_SIZE = 4096
 
     def __init__(self, unix_socket_path):
@@ -96,3 +96,4 @@ class DrakshellClient:
             code = self._recv_status_code()
             return resp, code
         return resp, None
+
