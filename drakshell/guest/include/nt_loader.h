@@ -337,5 +337,11 @@ typedef DWORD (WINAPI* PWaitForSingleObject)(
 extern PWaitForSingleObject pWaitForSingleObject;
 #define WaitForSingleObject (*pWaitForSingleObject)
 
+typedef void (WINAPI* PSetLastError)(
+    DWORD dwErrCode
+);
+extern PSetLastError pSetLastError;
+#define SetLastError (*pSetLastError)
+
 extern void* get_func_from_peb(const wchar_t* libraryName, const char* procName);
 extern bool load_winapi();
