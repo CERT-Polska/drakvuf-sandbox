@@ -85,7 +85,7 @@ class Channel:
     def _recv_data(self):
         if self._sock is None:
             raise RuntimeError('Socket is not connected')
-        len_msg = self._sock.recv(2)
+        len_msg = self._recvn(2)
         if not len_msg:
             raise RuntimeError('Socket has unexpectedly disconnected')
         arg_len = struct.unpack("<H", len_msg)[0]
