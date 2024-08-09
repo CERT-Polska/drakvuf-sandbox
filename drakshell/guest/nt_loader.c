@@ -228,6 +228,7 @@ PGetOverlappedResult pGetOverlappedResult;
 PCancelIo pCancelIo;
 PGetExitCodeProcess pGetExitCodeProcess;
 PTerminateProcess pTerminateProcess;
+PCreateNamedPipeW pCreateNamedPipeW;
 
 bool load_winapi() {
     HANDLE hKernel32, hUser32;
@@ -264,6 +265,7 @@ bool load_winapi() {
     pCancelIo = GetProcAddress(hKernel32, "CancelIo");
     pGetExitCodeProcess = GetProcAddress(hKernel32, "GetExitCodeProcess");
     pTerminateProcess = GetProcAddress(hKernel32, "TerminateProcess");
+    pCreateNamedPipeW = GetProcAddress(hKernel32, "CreateNamedPipeW");
 
     return true;
 }

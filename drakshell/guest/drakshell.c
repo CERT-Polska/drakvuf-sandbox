@@ -122,30 +122,99 @@ static bool init_std_handles(PSTD_HANDLES handles) {
     handles->hStderrRead = INVALID_HANDLE_VALUE;
     handles->hStderrWrite = INVALID_HANDLE_VALUE;
 
-    if(!CreatePipe(&(handles->hStdinRead), &(handles->hStdinWrite), &saInheritHandle, 0)) {
-        OutputDebugStringW(L"init_std_handles: CreatePipe failed for stdin");
+    handles->hStdinRead = CreateNamedPipe(
+        L"\\\\.\\pipe\\drakshell-stdin",
+        PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+        0, // byte & wait mode
+        1,
+        4096,
+        4096,
+        0,
+        &saInheritHandle
+    );
+
+    if(handles->hStdinRead == INVALID_HANDLE_VALUE) {
+        OutputDebugStringW(L"init_std_handles: CreateNamedPipe failed for stdin");
         return false;
     }
-    if(!SetHandleInformation(handles->hStdinWrite, HANDLE_FLAG_INHERIT, 0)) {
-        OutputDebugStringW(L"init_std_handles: SetHandleInformation failed for stdin");
+
+    handles->hStdinWrite = CreateFileW(
+        L"\\\\.\\pipe\\drakshell-stdin",
+        GENERIC_WRITE,
+        0,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_OVERLAPPED,
+        NULL
+    );
+
+    if(handles->hStdinWrite == INVALID_HANDLE_VALUE) {
+        OutputDebugStringW(L"init_std_handles: CreateFileW failed for stdin");
         return false;
     }
-    if(!CreatePipe(&(handles->hStdoutRead), &(handles->hStdoutWrite), &saInheritHandle, 0)) {
-        OutputDebugStringW(L"init_std_handles: CreatePipe failed for stdout");
+
+    handles->hStdoutWrite = CreateNamedPipe(
+        L"\\\\.\\pipe\\drakshell-stdout",
+        PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED,
+        0, // byte & wait mode
+        1,
+        4096,
+        4096,
+        0,
+        &saInheritHandle
+    );
+
+    if(handles->hStdoutWrite == INVALID_HANDLE_VALUE) {
+        OutputDebugStringW(L"init_std_handles: CreateNamedPipe failed for stdout");
         return false;
     }
-    if(!SetHandleInformation(handles->hStdoutWrite, HANDLE_FLAG_INHERIT, 0)) {
-        OutputDebugStringW(L"init_std_handles: SetHandleInformation failed for stdout");
+
+    handles->hStdoutRead = CreateFileW(
+        L"\\\\.\\pipe\\drakshell-stdout",
+        GENERIC_READ,
+        0,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_OVERLAPPED,
+        NULL
+    );
+
+    if(handles->hStdoutRead == INVALID_HANDLE_VALUE) {
+        OutputDebugStringW(L"init_std_handles: CreateFileW failed for stdout");
         return false;
     }
-    if(!CreatePipe(&(handles->hStderrRead), &(handles->hStderrWrite), &saInheritHandle, 0)) {
-        OutputDebugStringW(L"init_std_handles: CreatePipe failed for stderr");
+
+    handles->hStderrWrite = CreateNamedPipe(
+        L"\\\\.\\pipe\\drakshell-stderr",
+        PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED,
+        0, // byte & wait mode
+        1,
+        4096,
+        4096,
+        0,
+        &saInheritHandle
+    );
+
+    if(handles->hStderrWrite == INVALID_HANDLE_VALUE) {
+        OutputDebugStringW(L"init_std_handles: CreateNamedPipe failed for stderr");
         return false;
     }
-    if(!SetHandleInformation(handles->hStderrWrite, HANDLE_FLAG_INHERIT, 0)) {
-        OutputDebugStringW(L"init_std_handles: SetHandleInformation failed for stderr");
+
+    handles->hStderrRead = CreateFileW(
+        L"\\\\.\\pipe\\drakshell-stderr",
+        GENERIC_READ,
+        0,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_OVERLAPPED,
+        NULL
+    );
+
+    if(handles->hStderrRead == INVALID_HANDLE_VALUE) {
+        OutputDebugStringW(L"init_std_handles: CreateFileW failed for stderr");
         return false;
     }
+
     return true;
 }
 
@@ -545,7 +614,7 @@ void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshel
         0,
         NULL,
         OPEN_EXISTING,
-        0,
+        FILE_FLAG_OVERLAPPED,
         NULL
     );
     if(hComm == INVALID_HANDLE_VALUE)

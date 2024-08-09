@@ -17,6 +17,11 @@
 #define STARTF_USESTDHANDLES 0x00000100
 #define ERROR_IO_PENDING 0x000003e5
 #define ERROR_BROKEN_PIPE 0x0000006d
+#define PIPE_ACCESS_DUPLEX 0x00000003
+#define PIPE_ACCESS_OUTBOUND 0x00000002
+#define PIPE_ACCESS_INBOUND 0x00000001
+#define FILE_FLAG_OVERLAPPED 0x40000000
+#define FILE_FLAG_FIRST_PIPE_INSTANCE 0x00080000
 
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
@@ -310,6 +315,19 @@ typedef BOOL (WINAPI* PTerminateProcess)(
 );
 extern PTerminateProcess pTerminateProcess;
 #define TerminateProcess (*pTerminateProcess)
+
+typedef HANDLE (WINAPI* PCreateNamedPipeW)(
+    LPCWSTR lpName,
+    DWORD dwOpenMode,
+    DWORD dwPipeMode,
+    DWORD nMaxInstances,
+    DWORD nOutBufferSize,
+    DWORD nInBufferSize,
+    DWORD nDefaultTimeOut,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes
+);
+extern PCreateNamedPipeW pCreateNamedPipeW;
+#define CreateNamedPipe (*pCreateNamedPipeW)
 
 extern void* get_func_from_peb(const wchar_t* libraryName, const char* procName);
 extern bool load_winapi();
