@@ -295,6 +295,7 @@ static bool interactive_execute(HANDLE hComm) {
         HANDLE waitable_handles[4] = {
             hProcess, opStdin.hEvent, opStdout.hEvent, opStderr.hEvent
         };
+        OutputDebugStringW(L"interactive_execute: waiting for next event");
         DWORD status = WaitForMultipleObjects(
             4, waitable_handles, false, 0xFFFFFFFF
         );
@@ -353,7 +354,6 @@ static bool interactive_execute(HANDLE hComm) {
                     OutputDebugStringW(L"interactive_execute: stdin write failed");
                     break;
                 }
-                OutputDebugStringW(L"interactive_execute: stdin handled");
             }
             if(!ReadFile(hComm, &control, 1, NULL, &opStdin)) {
                 if(GetLastError() == ERROR_IO_PENDING) {
@@ -373,6 +373,7 @@ static bool interactive_execute(HANDLE hComm) {
                 OutputDebugStringW(L"interactive_execute: got stdin immediately");
                 stdinPending = true;
             }
+            OutputDebugStringW(L"interactive_execute: stdin handled");
         }
         else if (status == 2) {
             OutputDebugStringW(L"interactive_execute: stdout signalled");
