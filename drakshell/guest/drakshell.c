@@ -33,13 +33,13 @@ static bool read(HANDLE hComm, LPBYTE buffer, LPDWORD size, DWORD maxSize) {
         if(GetLastError() != ERROR_IO_PENDING) {
             return false;
         }
-        result = WaitForSingleObject(overlapped.hEvent, INFINITE)
+        result = WaitForSingleObject(overlapped.hEvent, INFINITE);
         if(result) {
             // Not a WAIT_OBJECT_0
             return false;
         }
     }
-    if(!GetOverlappedResult(hComm, &overlapped, size, FALSE)) {
+    if(!GetOverlappedResult(hComm, &overlapped, size, false)) {
         return false;
     }
     return true;
@@ -54,13 +54,13 @@ static bool write(HANDLE hComm, LPBYTE buffer, LPDWORD size, DWORD maxSize) {
         if(GetLastError() != ERROR_IO_PENDING) {
             return false;
         }
-        result = WaitForSingleObject(overlapped.hEvent, INFINITE)
+        result = WaitForSingleObject(overlapped.hEvent, INFINITE);
         if(result) {
             // Not a WAIT_OBJECT_0
             return false;
         }
     }
-    if(!GetOverlappedResult(hComm, &overlapped, size, FALSE)) {
+    if(!GetOverlappedResult(hComm, &overlapped, size, false)) {
         return false;
     }
     return true;
