@@ -19,7 +19,7 @@ import magic
 from pathvalidate import Platform, is_valid_filename
 
 from .lib.config import load_config
-from .lib.drakpdb import dll_file_list
+from .lib.dll_profiles import dll_file_list
 from .lib.injector import Injector
 from .lib.install_info import InstallInfo
 from .lib.networking import (
