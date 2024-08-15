@@ -1,12 +1,8 @@
 karton-core==5.3.4
 minio==5.0.7
 redis==5.0.3
-pefile==2019.4.18
-# Use pdbparse from master branch
-# current release - 1.5 has troubles parsing some of the PDBs
-pdbparse @ git+https://github.com/moyix/pdbparse.git@b5b61793e4a457c43a5aef7a0499b959826b2c04
-construct==2.9.45
-requests==2.32.2
+pefile==2023.2.7
+requests==2.32.3
 tqdm==4.66.3
 python-magic==0.4.25
 dataclasses-json==0.5.6
@@ -14,8 +10,8 @@ click==8.1.7
 oletools==0.60
 regex==2020.7.14
 ipython==8.10.0
-malduck==4.1.0
-mwdblib==3.4.1
+malduck==4.4.1
+mwdblib==4.5.0
 orjson==3.9.10
 # Something went wrong in 4.3.0 package
 yara-python<4.3.0
@@ -28,3 +24,4 @@ configupdater==3.2
 # drak-web dependencies
 Flask==2.2.5
 uwsgi==2.0.22
+drakpdb==0.2.2
