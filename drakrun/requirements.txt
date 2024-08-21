@@ -12,7 +12,7 @@ regex==2020.7.14
 ipython==8.10.
 malduck==4.4.1
 mwdblib==4.5.0
-capa>7.1.0
+flare-capa>=7.2.0
 orjson==3.9.10
 # Something went wrong in 4.3.0 package
 yara-python<4.3.0
