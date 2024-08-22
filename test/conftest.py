@@ -8,7 +8,7 @@ from pathlib import Path
 from invoke.exceptions import UnexpectedExit
 from vm_runner_client import DrakvufVM
 
-from utils import apt_install, pipx_install
+from utils import apt_install
 
 logging.basicConfig(level=logging.INFO)
 
@@ -115,23 +115,22 @@ def drakmon_setup():
     with drakvuf_vm.connect_ssh() as ssh:
         ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
         apt_install(ssh, ["redis-server", "python3", "python3-pip", "python3-venv", "git", "dnsmasq", "bridge-utils"])
-        logging.info("Setting up pip and pipx")
+        logging.info("Setting up pip and virtualenv")
         ssh.run(f"DEBIAN_FRONTEND=noninteractive pip3 install --upgrade pip", in_stream=False)
-        ssh.run(f"DEBIAN_FRONTEND=noninteractive pip3 install pipx", in_stream=False)
-        ssh.run(f"DEBIAN_FRONTEND=noninteractive pipx ensurepath --global", in_stream=False)
+        ssh.run(f"DEBIAN_FRONTEND=noninteractive python3 -m venv /root/venv", in_stream=False)
 
         for d in drakvuf_sandbox_whls:
-            pipx_install(ssh, ["./" + d.name], "--global")
+            ssh.run(f"DEBIAN_FRONTEND=noninteractive /root/venv/bin/pip install ./{d.name}", in_stream=False)
 
         # Import snapshot
         assert SNAPSHOT_VERSION is not None
-        ssh.run(f"draksetup install-minio")
-        ssh.run(f"draksetup init --unattended")
+        ssh.run(f"/root/venv/bin/draksetup install-minio")
+        ssh.run(f"/root/venv/bin/draksetup init --unattended")
         ssh.run(f'DRAKRUN_MINIO_ADDRESS="{MINIO_HOST}" '
                 f'DRAKRUN_MINIO_SECURE=0 '
                 f'DRAKRUN_MINIO_ACCESS_KEY="{MINIO_ACCESS_KEY}" '
                 f'DRAKRUN_MINIO_SECRET_KEY="{MINIO_SECRET_KEY}" '
-                f'draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full')
+                f'/root/venv/bin/draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full')
 
         # Shut up QEMU
         ssh.run("ln -s /dev/null /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO")
