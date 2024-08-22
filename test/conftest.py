@@ -114,7 +114,7 @@ def drakmon_setup():
 
     with drakvuf_vm.connect_ssh() as ssh:
         ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
-        apt_install(ssh, ["redis-server", "python3", "python3-pip", "git", "dnsmasq", "bridge-utils"])
+        apt_install(ssh, ["redis-server", "python3", "python3-pip", "python3-venv", "git", "dnsmasq", "bridge-utils"])
         logging.info("Setting up pip and pipx")
         ssh.run(f"DEBIAN_FRONTEND=noninteractive pip3 install --upgrade pip", in_stream=False)
         ssh.run(f"DEBIAN_FRONTEND=noninteractive pip3 install pipx", in_stream=False)
