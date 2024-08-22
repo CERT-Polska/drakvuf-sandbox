@@ -8,7 +8,7 @@ from pathlib import Path
 from invoke.exceptions import UnexpectedExit
 from vm_runner_client import DrakvufVM
 
-from utils import apt_install, pip_install
+from utils import apt_install
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,7 +31,7 @@ DRAKMON_SERVICES = [
     "redis-server.service",
 ]
 
-DRAKVUF_SANDBOX_DEBS = [
+DRAKVUF_SANDBOX_WHLS = [
     "drakvuf_sandbox-*.whl",
 ]
 
@@ -40,7 +40,7 @@ DRAKVUF_DEBS = [
 ]
 
 
-def resolve_debs(debs):
+def resolve_package_paths(debs):
     debs_path = Path(DRAKVUF_DEBS_PATH)
     if not debs_path.is_dir():
         raise RuntimeError(f"Incorrect DRAKVUF_DEBS_PATH: {DRAKVUF_DEBS_PATH}")
@@ -74,8 +74,8 @@ def drakmon_ssh(drakmon_setup: DrakvufVM):
 def drakmon_setup():
     logging.info("Running end to end test: creating VM")
 
-    drakvuf_sandbox_debs = list(resolve_debs(DRAKVUF_SANDBOX_DEBS))
-    drakvuf_debs = list(resolve_debs(DRAKVUF_DEBS))
+    drakvuf_sandbox_whls = list(resolve_package_paths(DRAKVUF_SANDBOX_WHLS))
+    drakvuf_debs = list(resolve_package_paths(DRAKVUF_DEBS))
 
     drakvuf_vm = DrakvufVM.create(BASE_IMAGE)
     logging.info(f"VM {drakvuf_vm.identity} created.")
@@ -84,7 +84,7 @@ def drakmon_setup():
     drakvuf_vm.wait_for_state(alive=True)
 
     with drakvuf_vm.connect_ssh() as ssh:
-        for deb in (drakvuf_sandbox_debs + drakvuf_debs):
+        for deb in (drakvuf_sandbox_whls + drakvuf_debs):
             logging.info("Uploading %s", deb.name)
             ssh.put(deb.as_posix())
 
@@ -114,23 +114,23 @@ def drakmon_setup():
 
     with drakvuf_vm.connect_ssh() as ssh:
         ssh.run("apt-get --allow-releaseinfo-change update", in_stream=False)
-        apt_install(ssh, ["redis-server", "python3", "python3-pip", "git", "dnsmasq", "bridge-utils"])
-        pip_install(ssh, ["pip"], "--upgrade")
-        for d in drakvuf_sandbox_debs:
-            if str(d).endswith(".deb"):
-                apt_install(ssh, ["./" + d.name])
-            else:
-                pip_install(ssh, ["./" + d.name])
+        apt_install(ssh, ["redis-server", "python3", "python3-pip", "python3-venv", "git", "dnsmasq", "bridge-utils"])
+        logging.info("Setting up pip and virtualenv")
+        ssh.run(f"DEBIAN_FRONTEND=noninteractive pip3 install --upgrade pip", in_stream=False)
+        ssh.run(f"DEBIAN_FRONTEND=noninteractive python3 -m venv /root/venv", in_stream=False)
+
+        for d in drakvuf_sandbox_whls:
+            ssh.run(f"DEBIAN_FRONTEND=noninteractive /root/venv/bin/pip install ./{d.name}", in_stream=False)
 
         # Import snapshot
         assert SNAPSHOT_VERSION is not None
-        ssh.run(f"draksetup install-minio")
-        ssh.run(f"draksetup init --unattended")
+        ssh.run(f"/root/venv/bin/draksetup install-minio")
+        ssh.run(f"/root/venv/bin/draksetup init --unattended")
         ssh.run(f'DRAKRUN_MINIO_ADDRESS="{MINIO_HOST}" '
                 f'DRAKRUN_MINIO_SECURE=0 '
                 f'DRAKRUN_MINIO_ACCESS_KEY="{MINIO_ACCESS_KEY}" '
                 f'DRAKRUN_MINIO_SECRET_KEY="{MINIO_SECRET_KEY}" '
-                f'draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full')
+                f'/root/venv/bin/draksetup snapshot import --bucket snapshots --name {SNAPSHOT_VERSION} --full')
 
         # Shut up QEMU
         ssh.run("ln -s /dev/null /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO")
