@@ -121,7 +121,7 @@ def drakmon_setup():
         ssh.run(f"DEBIAN_FRONTEND=noninteractive pipx ensurepath --global", in_stream=False)
 
         for d in drakvuf_sandbox_whls:
-            pipx_install(ssh, ["./" + d.name])
+            pipx_install(ssh, ["./" + d.name], "--global")
 
         # Import snapshot
         assert SNAPSHOT_VERSION is not None
