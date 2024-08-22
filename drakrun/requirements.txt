@@ -9,7 +9,7 @@ dataclasses-json==0.5.6
 click==8.1.7
 oletools==0.60
 regex==2020.7.14
-ipython==8.10.
+ipython==8.10.0
 malduck==4.4.1
 mwdblib==4.5.0
 flare-capa>=7.2.0
