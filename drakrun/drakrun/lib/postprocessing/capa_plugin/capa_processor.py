@@ -2,7 +2,6 @@ import functools
 import itertools
 import logging
 import multiprocessing
-import shutil
 import zipfile
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -26,6 +25,7 @@ from capa.main import (
 )
 from capa.render.result_document import MatchResults as ResultDocumentMatchResults
 from capa.rules import Rule, RuleSet, get_rules, get_rules_and_dependencies
+
 from drakrun.lib.config import DrakrunConfig, load_config
 
 logger = logging.getLogger(__name__)
