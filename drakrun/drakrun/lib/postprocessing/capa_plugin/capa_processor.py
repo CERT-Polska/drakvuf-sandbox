@@ -302,7 +302,7 @@ def capa_analysis(analysis_dir: Path) -> None:
     # analysis-related config
     analyze_drakmon_log = config.capa.analyze_drakmon_log
     analyze_memdumps = config.capa.analyze_memdumps
-    anayze_only_malware_pids = config.capa.anayze_only_malware_pids
+    analyze_only_malware_pids = config.capa.analyze_only_malware_pids
 
     """check and prepare the rules folder"""
     if not check_rules_directory_exist(capa_rules_dir):
@@ -317,7 +317,7 @@ def capa_analysis(analysis_dir: Path) -> None:
 
     # get malware-related pids if requested by configuration
     malware_pids = None
-    if anayze_only_malware_pids:
+    if analyze_only_malware_pids:
         malware_pids = get_malware_processes(
             inject_path=analysis_dir / "inject.log",
             pstree_path=analysis_dir / "process_tree.json",

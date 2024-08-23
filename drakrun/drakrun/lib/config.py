@@ -58,7 +58,7 @@ class CapaConfigSection(BaseModel):
     rules_directory: Path = PACKAGE_DIR / "data" / "capa-rules"
     analyze_drakmon_log: bool
     analyze_memdumps: bool
-    anayze_only_malware_pids: bool
+    analyze_only_malware_pids: bool
 
 
 class DrakrunConfigSection(BaseModel):
