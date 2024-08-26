@@ -5,7 +5,6 @@ from .build_process_tree import build_process_tree
 from .compress_ipt import compress_ipt
 from .crop_dumps import crop_dumps
 from .generate_graphs import generate_graphs
-from .generate_report import build_report
 from .generate_wireshark_key_file import generate_wireshark_key_file
 from .index_logs import index_logs
 from .process_apimon_log import process_apimon_log
@@ -44,11 +43,6 @@ POSTPROCESS_PLUGINS = [
         function=build_process_tree,
         requires=["procmon.log"],
         generates=["process_tree.json"],
-    ),
-    PostprocessPlugin(
-        function=build_report,
-        requires=[],
-        generates=["report.json"],
     ),
     PostprocessPlugin(function=crop_dumps, requires=["dumps"], generates=["dumps.zip"]),
     PostprocessPlugin(function=compress_ipt, requires=["ipt"], generates=["ipt.zip"]),
