@@ -9,7 +9,7 @@ function sortByProcess(jsonLinesDict, key) {
   let sortedDict = {};
   let pKey = "";
   for (let entry of jsonLinesDict) {
-    pKey = entry["PID"] + "_" + entry["PPID"];
+    pKey = entry["PPID"] + "_" + entry["PID"];
     if (!(pKey in sortedDict)) {
       sortedDict[pKey] = new Set();
     }
