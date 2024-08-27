@@ -3,7 +3,7 @@ import Button from "@mui/material/Button";
 import ProcessTree from "./Tree.js";
 import LabTabs from "./SideBar.js";
 import api from "./api";
-import "./index.css";
+import "./behavioralGraph.css";
 
 function sortByProcess(jsonLinesDict, key) {
   let sortedDict = {};
