@@ -39,6 +39,9 @@ const Api = {
   async getApiCalls(analysis, pid) {
     return axios.get(`/processed/${analysis}/apicall/${pid}`);
   },
+  async getReport(analysis){
+    return axios.get(`/processed/${analysis}/report`)
+  },
   async query(q) {
     return axios.get("/query", { params: { q: q } });
   },

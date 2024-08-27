@@ -222,7 +222,7 @@ class AnalysisMain extends Component {
     }
 
     const metadata = await api.getMetadata(this.analysisID);
-    if (metadata.data) {
+    if (metadata.data) {q
       this.setState({ metadata: metadata.data });
     }
   }
