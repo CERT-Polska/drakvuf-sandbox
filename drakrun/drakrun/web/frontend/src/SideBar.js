@@ -118,15 +118,19 @@ export default function LabTabs({
           sx={{
             borderBottom: 3,
             borderColor: "divider",
-            backgroundColor: "#343538",
+            backgroundColor: "#1976d2",
           }}
         >
           <TabList
             onChange={handleChange}
             variant="fullWidth"
             sx={{
-              ".Mui-textColorInherit": {
-                color: `orange`,
+              "& .MuiTab-root.Mui-selected": {
+                color: 'white',
+              },
+              "& .MuiTabs-indicator": {
+                backgroundColor: "white",
+                height: 3,
               },
             }}
           >
