@@ -181,7 +181,7 @@ Building from sources
 
     $ git clone --recursive git@github.com:CERT-Polska/drakvuf-sandbox.git
 
-2. Build and install Drakvuf from sources using [instructions from the official Drakvuf documentation](https://drakvuf.com/). It's recommended to use version pinned to the submodule.
+2. Build and install Drakvuf from sources using `instructions from the official Drakvuf documentation <https://drakvuf.com/>`_. It's recommended to use version pinned to the submodule.
 
 3. Install DRAKVUF Sandbox system dependencies
 
