@@ -171,3 +171,38 @@ It's also recommended to perform all installation activities using ``root`` user
     Add ``--no-report`` if you don't want ``draksetup`` to send `basic usage report <https://github.com/CERT-Polska/drakvuf-sandbox/blob/master/USAGE_STATISTICS.md>`_. 
 
 16. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
+
+Building from sources
+=====================
+
+1. Clone Drakvuf Sandbox repository including submodules
+
+  .. code-block:: console
+
+    $ git clone --recursive git@github.com:CERT-Polska/drakvuf-sandbox.git
+
+2. Build and install Drakvuf from sources using [instructions from the official Drakvuf documentation](https://drakvuf.com/). It's recommended to use version pinned to the submodule.
+
+3. Install DRAKVUF Sandbox system dependencies
+
+    .. code-block:: console
+
+      $ apt install tcpdump genisoimage qemu-utils bridge-utils dnsmasq libmagic1
+
+4. Install additional Web build dependencies
+
+    .. code-block:: console
+
+      $ apt install nodejs npm
+
+5. Make and install DRAKVUF Sandbox Python wheel. It's highly recommended to use `virtualenv <https://docs.python.org/3/library/venv.html>`_.
+
+    .. code-block:: console
+
+      $ python3 -m venv venv
+      $ source venv/bin/activate
+      $ cd drakrun
+      $ make
+      $ make install
+
+6. Follow the :ref:`Basic installation` starting from the Step 2. Redis, MinIO and Drakvuf Sandbox configuration.
