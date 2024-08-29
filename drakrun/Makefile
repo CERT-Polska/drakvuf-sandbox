@@ -5,7 +5,12 @@ PYTHON_SOURCE_FILES := $( find drakrun -name '*.py' ) drakrun/data pyproject.tom
 all: dist/*.whl
 
 dist/*.whl: $(PYTHON_SOURCE_FILES) drakrun/web/frontend/build drakrun/tools/get-explorer-pid drakrun/tools/test-altp2m
+	rm -f dist/*.whl
+ifdef DIST
 	python3 setup.py bdist_wheel
+else
+	DRAKRUN_VERSION_TAG=$(git rev-parse --short HEAD) python3 setup.py bdist_wheel
+endif
 
 drakrun/web/frontend/build: drakrun/web/frontend/node_modules $(WEB_SOURCE_FILES) drakrun/web/frontend/public
 	cd drakrun/web/frontend ; npm run build
