@@ -59,6 +59,7 @@ class CapaConfigSection(BaseModel):
     analyze_drakmon_log: bool
     analyze_memdumps: bool
     analyze_only_malware_pids: bool
+    worker_pool_processes: int = 4
 
 
 class DrakrunConfigSection(BaseModel):

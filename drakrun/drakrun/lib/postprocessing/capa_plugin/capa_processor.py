@@ -206,7 +206,10 @@ def static_capa_analysis(
 
 
 def static_memory_dumps_capa_analysis(
-    analysis_dir: Path, rules: RuleSet, malware_pids: List[int] = []
+    analysis_dir: Path,
+    rules: RuleSet,
+    config: DrakrunConfig,
+    malware_pids: List[int] = [],
 ) -> Iterator[Tuple[Path, ResultDocumentMatchResults]]:
     malware_dumps = list(
         itertools.chain(
@@ -222,7 +225,7 @@ def static_memory_dumps_capa_analysis(
             dumps = Path(dump_extraction_directory) / "dumps"
 
         # extract the capabilities within each memory dump, one per thread
-        pool = multiprocessing.Pool(processes=4)
+        pool = multiprocessing.Pool(processes=config.capa.worker_pool_processes)
         yield from pool.starmap(
             static_capa_analysis, map(lambda dump: (dumps / dump, rules), malware_dumps)
         )
@@ -345,7 +348,7 @@ def capa_analysis(analysis_dir: Path) -> None:
     # extract capabilities from the memory dumps
     if analyze_memdumps:
         static_capabilities_per_file = static_memory_dumps_capa_analysis(
-            analysis_dir, rules, malware_pids=malware_pids
+            analysis_dir, rules, config, malware_pids=malware_pids
         )
 
         # create a folder containing the TTPs corresponding to each dump
