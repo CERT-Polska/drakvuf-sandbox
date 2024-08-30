@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@novnc/novnc": "^1.2.0",
-    "axios": "^1.6.0",
+    "axios": "^1.7.4",
     "d3": "^5.16.0",
     "d3-selection-multi": "^1.0.1",
     "graphviz-react": "^1.1.1",
