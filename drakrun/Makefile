@@ -1,16 +1,15 @@
-WEB_SOURCE_FILES := $(find drakrun/web/frontend/src -name '*.js' -or -name '*.css')
-PYTHON_SOURCE_FILES := $( find drakrun -name '*.py' ) drakrun/data pyproject.toml MANIFEST.in requirements.txt setup.py
+WEB_SOURCE_FILES := $(wildcard *.js *.css)
+PYTHON_SOURCE_FILES := $( wildcard *.py ) drakrun/data pyproject.toml MANIFEST.in requirements.txt setup.py
 
 .PHONY: all
 all: dist/*.whl
 
 dist/*.whl: $(PYTHON_SOURCE_FILES) drakrun/web/frontend/build drakrun/tools/get-explorer-pid drakrun/tools/test-altp2m
 	rm -f dist/*.whl
-ifdef DIST
-	python3 setup.py bdist_wheel
-else
-	DRAKRUN_VERSION_TAG=$(shell git rev-parse --short HEAD) python3 setup.py bdist_wheel
+ifndef DIST
+	export DRAKRUN_VERSION_TAG=$(shell git rev-parse --short HEAD)
 endif
+	python3 setup.py bdist_wheel
 
 drakrun/web/frontend/build: drakrun/web/frontend/node_modules $(WEB_SOURCE_FILES) drakrun/web/frontend/public
 	cd drakrun/web/frontend ; npm run build
