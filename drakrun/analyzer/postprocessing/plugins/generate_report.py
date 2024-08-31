@@ -167,9 +167,10 @@ def get_processes(analysis_dir: Path) -> Dict:
 
 
 def build_report(analysis_dir: Path) -> None:
-    report = {}
-    report.update({"info": get_metadata(analysis_dir)})
-    report.update({"processes": get_processes(analysis_dir)})
+    report = {
+        "info": get_metadata(analysis_dir),
+        "processes": get_processes(analysis_dir),
+    }
 
     with (analysis_dir / "report.json").open("wb") as f:
         f.write(orjson.dumps(report, option=orjson.OPT_INDENT_2))
