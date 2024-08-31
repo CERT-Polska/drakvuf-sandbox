@@ -113,7 +113,7 @@ def parse_memdumps(processes: Dict, memdumps_file: Path) -> None:
             )
 
 
-def parse_processtree(processtree_file: Path) -> List[Dict]:
+def parse_processtree(processtree_file: Path) -> Dict[str, Dict]:
     # This method extracts all the processes and their associated information
     # from the process_tree.json file.
     def rec(processes: List[Dict], parent=0) -> Iterator[Dict]:
