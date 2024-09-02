@@ -1,20 +1,17 @@
 import itertools
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Union
+from typing import Dict, Iterator, List, Optional
 
 import orjson
 
 
-def epoch_to_timestring(unix_time: Union[int, float, str]) -> Optional[str]:
+def epoch_to_timestring(unix_time: Optional[float]) -> Optional[str]:
     # This method converts a unix epoch time into a formated time string.
     # Example:
-    #   Input: 1716998460
+    #   Input: 1716998460.000
     #   Return: '2024-05-29 17:01:00'
-    if isinstance(unix_time, str):
-        unix_time = float(unix_time)
-
-    if not unix_time or unix_time == 0:
+    if not unix_time:
         # Sometimes the time in the logs would be zero or None
         return None
 
@@ -44,7 +41,7 @@ def parse_apicall(apicall: Dict) -> Dict:
     # This method takes in an apimon entry and fetches the necessary information from it.
     # Unix epoch times are converted to printable time strings.
     return {
-        "TimeStamp": epoch_to_timestring(apicall["TimeStamp"]),
+        "TimeStamp": epoch_to_timestring(float(apicall["TimeStamp"])),
         "CalledFrom": apicall["CalledFrom"],
         "Method": apicall["Method"],
         "ReturnValue": apicall["ReturnValue"],
