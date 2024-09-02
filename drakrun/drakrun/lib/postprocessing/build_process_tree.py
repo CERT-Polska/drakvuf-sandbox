@@ -15,52 +15,62 @@ class Process:
     process with selected `pid` value at a time.
     """
 
+    seqid: int
     pid: int
-    procname: str = "Unnamed"
-    args: List[str] = field(default_factory=list)
-    ts_from: Optional[float] = None
-    ts_to: Optional[float] = None
+    ts_from: float
+    ts_to: Optional[float]
+    procname: str
+    args: List[str]
     parent: Optional["Process"] = None
     children: List["Process"] = field(default_factory=list)
 
-    def __str__(self):
-        return f"{pathlib.PureWindowsPath(self.procname).name}({self.pid}) {self.args}"
+    def __str__(self) -> str:
+        return f"{pathlib.PureWindowsPath(self.procname).name}(pid={self.pid}, seq={self.seqid}) {self.args}"
 
 
 class ProcessTree:
     def __init__(self):
         self.processes: List[Process] = []
 
-    def add_process(self, p: Process) -> None:
-        processes = self.get_processes(p.pid, p.ts_from, p.ts_from)
-        if len(processes) != 0:
-            raise MultipleProcessesReturned(processes)
+    def add_process(
+        self,
+        pid: int,
+        ts_from: float,
+        procname: str,
+        parent: Optional[Process],
+        args: Optional[List[str]] = None,
+    ) -> Process:
+        """
+        Add a new process to tree, assign sequential id and return Process object
+        """
+        process = Process(
+            seqid=len(self.processes),
+            pid=pid,
+            ts_from=ts_from,
+            ts_to=None,
+            procname=procname,
+            parent=parent,
+            args=args or [],
+        )
+        existing_process = self.get_process(pid)
+        if existing_process is not None and existing_process.ts_to is None:
+            # Found another process with the same PID
+            # Let's assume it's no longer active, it may happen in parse_running_process_entry
+            existing_process.ts_to = ts_from
 
-        self.processes.append(p)
+        self.processes.append(process)
+        if parent:
+            parent.children.append(process)
+        return process
 
-    def get_processes(self, pid: int, ts_from: float, ts_to: float) -> List[Process]:
+    def get_process(self, pid: int) -> Optional[Process]:
         """
-        Retrieves all processes with given pid that were alive in provided time period: [ts_from, ts_to].
+        Get last seen active process with given PID.
         """
-        processes = []
-        for p in self.processes:
-            if (
-                pid == p.pid
-                and (p.ts_to is None or ts_from <= p.ts_to)
-                and p.ts_from <= ts_to
-            ):
-                processes.append(p)
-        return processes
-
-    def get_single_process(self, pid, ts_from, ts_to) -> Optional[Process]:
-        """
-        Retrieves process with given pid that was alive in provided time period.
-        Fails if there is more than 1 process that fulfills this condidions.
-        """
-        processes = self.get_processes(pid, ts_from, ts_to)
-        if len(processes) > 1:
-            raise MultipleProcessesReturned(processes)
-        return next(iter(processes), None)
+        for process in reversed(self.processes):
+            if process.pid == pid:
+                return process
+        return None
 
     def __str__(self):
         def print_tree_rec(depth: int, root: Process) -> str:
@@ -76,6 +86,7 @@ class ProcessTree:
         def tree_as_dict(root) -> Dict[str, Any]:
             subtrees = [tree_as_dict(c) for c in root.children]
             return {
+                "seqid": root.seqid,
                 "pid": root.pid,
                 "procname": root.procname,
                 "args": root.args,
@@ -89,28 +100,13 @@ class ProcessTree:
         return root_subtrees
 
 
-class MultipleProcessesReturned(Exception):
-    def __init__(self, processes: List[Process]):
-        processs_str = ", ".join([str(p) for p in processes])
-        message = f"More than one proces fulfills condition: {processs_str}"
-        super().__init__(message)
-
-
 def parse_running_process_entry(pstree: ProcessTree, entry: Dict[str, Any]) -> None:
     # We assume here that running processes are enumerated in order of creation
     # (created by appending new entries to the end of EPROCESS linked list)
-    parent = pstree.get_single_process(entry["PPID"], 0, float(entry["TimeStamp"]))
-    p = Process(
-        pid=entry["PID"],
-        procname=entry["RunningProcess"],
-        ts_from=0.0,  # We don't know when the process was created.
-        # At this point, we don't know yet when the process will be terminated.
-        ts_to=None,
-        parent=parent,
+    parent = pstree.get_process(entry["PPID"])
+    pstree.add_process(
+        pid=entry["PID"], ts_from=0.0, procname=entry["RunningProcess"], parent=parent
     )
-    if parent is not None:
-        parent.children.append(p)
-    pstree.add_process(p)
 
 
 def split_commandline(cmdline: str) -> [str]:
@@ -134,26 +130,20 @@ def parse_nt_create_user_process_entry(
         return
     process_pid = entry["NewPid"]
     process_ppid = entry["PID"]
-    parent = pstree.get_single_process(
-        process_ppid, float(entry["TimeStamp"]), float(entry["TimeStamp"])
-    )
-    p = Process(
-        pid=process_pid,
-        procname=entry["ImagePathName"],
-        ts_from=float(entry["TimeStamp"]),
-        # At this point, we don't know yet when the process will be terminated.
-        ts_to=None,
-        parent=parent,
-        args=split_commandline(entry["CommandLine"]) if entry["CommandLine"] else [],
-    )
+    parent = pstree.get_process(process_ppid)
     if parent is None:
         # Parent must be alive at the process creation time, but who knows what happened
         logger.warning(
             f"Parent process not found at the process creation time (PID: {process_pid}, PPID: {process_ppid})"
         )
-    else:
-        parent.children.append(p)
-    pstree.add_process(p)
+
+    pstree.add_process(
+        pid=process_pid,
+        ts_from=float(entry["TimeStamp"]),
+        procname=entry["ImagePathName"],
+        parent=parent,
+        args=split_commandline(entry["CommandLine"]) if entry["CommandLine"] else [],
+    )
 
 
 def parse_nt_create_process_ex_entry(
@@ -165,36 +155,27 @@ def parse_nt_create_process_ex_entry(
         return
     process_pid = entry["NewPid"]
     process_ppid = entry["PID"]
-    parent = pstree.get_single_process(
-        process_ppid, float(entry["TimeStamp"]), float(entry["TimeStamp"])
-    )
-    p = Process(
-        pid=process_pid,
-        procname="Unnamed",
-        ts_from=float(entry["TimeStamp"]),
-        # At this point, we don't know yet when the process will be terminated.
-        ts_to=None,
-        parent=parent,
-    )
+    parent = pstree.get_process(process_ppid)
     if parent is None:
         # Parent must be alive at the process creation time, but who knows what happened
         logger.warning(
             f"Parent process not found at the process creation time (PID: {process_pid}, PPID: {process_ppid})"
         )
-    else:
-        parent.children.append(p)
-    pstree.add_process(p)
+    pstree.add_process(
+        pid=process_pid,
+        ts_from=float(entry["TimeStamp"]),
+        procname="Unnamed",
+        parent=parent,
+    )
 
 
 def parse_mm_clean_process_address_space_entry(
     pstree: ProcessTree, entry: Dict[str, Any]
 ) -> None:
     pid = entry["ExitPid"]
-    p = pstree.get_single_process(
-        pid, float(entry["TimeStamp"]), float(entry["TimeStamp"])
-    )
+    p = pstree.get_process(pid)
     if p is None:
-        # Maybe we had already marked it.
+        logger.warning(f"Process not found ath the process exit time (PID: {pid})")
         return
     p.ts_to = float(entry["TimeStamp"])
 
