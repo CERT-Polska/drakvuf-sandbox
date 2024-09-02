@@ -1,9 +1,10 @@
 import json
 import logging
 import pathlib
-import shlex
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, TextIO
+
+import mslex
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +109,7 @@ def split_commandline(cmdline: str) -> [str]:
     # Procmon plugin performs extra cmdline encoding.
     cmdline = cmdline.encode().decode("unicode_escape")
     try:
-        return shlex.split(cmdline, posix=False)
+        return mslex.split(cmdline, check=False, like_cmd=False)
     except Exception:
         # If we fail to parse cmdline, wrap it into list, so we don't
         # lose any information.
