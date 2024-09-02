@@ -10,11 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Process:
-    """
-    Process is uniquely identified by pid + ts_from + ts_to, as there can be only one
-    process with selected `pid` value at a time.
-    """
-
     seqid: int
     pid: int
     ts_from: float
