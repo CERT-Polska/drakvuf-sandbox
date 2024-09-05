@@ -98,12 +98,12 @@ jobs:
           mkdir /usr/include/libvmi
           cp -v /build/usr/include/libvmi/* /usr/include/libvmi/
           make -C ./drakrun/drakrun/tools
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: drakvuf-bundle-debs-${{ matrix.distro }}-${{ matrix.version }}
           path: |
             /out/drakvuf-bundle*.deb
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: draksetup-tools-${{ matrix.distro }}-${{ matrix.version }}
           path: |
@@ -121,7 +121,7 @@ jobs:
         with:
           node-version: '16'
       - name: Download draksetup compiled tools from artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: draksetup-tools-debian-bullseye
           path: drakrun/drakrun/tools
@@ -130,7 +130,7 @@ jobs:
           chmod +x drakrun/drakrun/tools/*  # gh artifacts don't keep file permissions
           cd drakrun
           make DIST=1
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: drakvuf-sandbox-whl
           path: ./drakrun/dist/drakvuf_sandbox-*.whl
@@ -152,12 +152,12 @@ jobs:
         with:
           submodules: recursive
       - name: Download drakrun debs from artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: drakvuf-sandbox-whl
           path: /debs
       - name: Download drakvuf-bundle debs from artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: drakvuf-bundle-debs-${{ matrix.distro }}-${{ matrix.version }}
           path: /debs
