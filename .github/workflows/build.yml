@@ -91,23 +91,13 @@ jobs:
             /build/usr/lib/libvmi*
             /build/usr/include/libvmi/*
           key: drakvuf-bundle-${{ env.DRAKVUF_COMMIT }}-${{ matrix.distro }}-${{ matrix.version }}
-      - if: ${{ steps.cache-drakvuf-bundle.outputs.cache-hit != 'true' }}
-        name: Build Xen Test Framework
-        working-directory: /opt
-        run: |
-          apt install -y make pkg-config gcc libglib2.0-dev
-          git clone https://xenbits.xen.org/git-http/xtf.git
-          cd xtf
-          git checkout bf1c4eb6cb52785cf539eb83752dfcecfe66c5d1
-          make -j4
       - name: Build draksetup tools
         run: |
-          apt install -y libjson-c-dev
+          apt install -y make pkg-config gcc libglib2.0-dev libjson-c-dev
           cp -v /build/usr/lib/libvmi* /usr/lib/
           mkdir /usr/include/libvmi
           cp -v /build/usr/include/libvmi/* /usr/include/libvmi/
           make -C ./drakrun/drakrun/tools
-          cp /opt/xtf/tests/example/test-hvm64-example ./drakrun/drakrun/tools/
       - uses: actions/upload-artifact@v4
         with:
           name: drakvuf-bundle-debs-${{ matrix.distro }}-${{ matrix.version }}

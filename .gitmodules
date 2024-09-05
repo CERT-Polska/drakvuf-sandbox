@@ -4,3 +4,6 @@
 [submodule "drakrun/drakrun/lib/postprocessing/capa_plugin/capa-rules"]
 	path = drakrun/drakrun/data/capa-rules
 	url = https://github.com/mandiant/capa-rules/
+[submodule "drakrun/drakrun/tools/xtf"]
+	path = drakrun/drakrun/tools/xtf
+	url = https://github.com/andyhhp/xtf.git
