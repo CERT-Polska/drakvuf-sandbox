@@ -6,4 +6,4 @@
 	url = https://github.com/mandiant/capa-rules/
 [submodule "drakrun/drakrun/tools/xtf"]
 	path = drakrun/drakrun/tools/xtf
-	url = https://xenbits.xen.org/git-http/xtf.git
+	url = https://github.com/andyhhp/xtf.git
