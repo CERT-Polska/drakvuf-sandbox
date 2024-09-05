@@ -4,7 +4,7 @@ PYTHON_SOURCE_FILES := $( wildcard *.py ) drakrun/data pyproject.toml MANIFEST.i
 .PHONY: all
 all: dist/*.whl
 
-dist/*.whl: $(PYTHON_SOURCE_FILES) drakrun/web/frontend/build drakrun/tools/get-explorer-pid drakrun/tools/test-altp2m
+dist/*.whl: $(PYTHON_SOURCE_FILES) drakrun/web/frontend/build drakrun/tools/get-explorer-pid drakrun/tools/test-altp2m drakrun/tools/test-hvm64-example
 	rm -f dist/*.whl
 ifndef DIST
 	DRAKRUN_VERSION_TAG=$(shell git rev-parse --short HEAD) python3 setup.py bdist_wheel
@@ -23,6 +23,10 @@ drakrun/tools/get-explorer-pid: drakrun/tools/get-explorer-pid.c
 
 drakrun/tools/test-altp2m: drakrun/tools/test-altp2m.c
 	gcc $< -o $@ -lvmi `pkg-config --cflags --libs glib-2.0`
+
+drakrun/tools/test-hvm64-example: drakrun/tools/xtf
+	$(MAKE) -C drakrun/tools/xtf
+	cp drakrun/tools/xtf/tests/example/test-hvm64-example drakrun/tools/test-hvm64-example
 
 .PHONY: clean
 clean:
