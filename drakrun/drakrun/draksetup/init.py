@@ -15,6 +15,8 @@ from drakrun.lib.config import DrakrunConfig, load_config, update_config
 from drakrun.lib.minio import get_minio_client
 from drakrun.lib.paths import ETC_DIR, PACKAGE_DIR
 
+from .util.ensure_dirs import ensure_dirs
+
 log = logging.getLogger(__name__)
 
 MINIO_ENV_CONFIG_FILE = Path("/etc/default/minio")
@@ -71,11 +73,9 @@ def init(
     # Simple activities handled by deb packages before
     # In the future, consider splitting this to remove hard dependency on systemd etc
     drakrun_dir = Path(ETC_DIR)
-    scripts_dir = drakrun_dir / "scripts"
     data_dir = PACKAGE_DIR / "data"
 
-    drakrun_dir.mkdir(exist_ok=True)
-    scripts_dir.mkdir(exist_ok=True)
+    ensure_dirs()
 
     def create_configuration_file(config_file_name, target_dir=drakrun_dir):
         target_path = target_dir / config_file_name
