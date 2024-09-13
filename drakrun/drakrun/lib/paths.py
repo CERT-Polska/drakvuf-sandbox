@@ -3,6 +3,7 @@ import pathlib
 
 ETC_DIR = "/etc/drakrun"
 VM_CONFIG_DIR = os.path.join(ETC_DIR, "configs")
+SCRIPTS_DIR = os.path.join(ETC_DIR, "scripts")
 
 LIB_DIR = "/var/lib/drakrun"
 PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
