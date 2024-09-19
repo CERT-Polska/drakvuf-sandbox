@@ -1,5 +1,7 @@
 import configparser
 import logging
+import secrets
+import string
 import sysconfig
 from pathlib import Path
 from typing import List, Optional
@@ -36,6 +38,14 @@ def create_configuration_file(config_file_name, target_dir=None):
     target_path.write_text(config_data)
     log.info(f"Created {target_path}.")
     return target_path
+
+
+def set_template_vnc_password(template_path):
+    template_data = template_path.read_text()
+    passwd_characters = string.ascii_letters + string.digits
+    vnc_passwd = "".join(secrets.choice(passwd_characters) for _ in range(20))
+    template_data = template_data.replace("{{ VNC_PASS }}", vnc_passwd)
+    template_path.write_text(template_data)
 
 
 def apply_local_minio_service_config(config: DrakrunConfig):
@@ -226,7 +236,10 @@ def init(
         create_configuration_file("hooks.txt")
         create_configuration_file("drakrun@.service", target_dir=SYSTEMD_SERVICE_PATH)
         fix_exec_start("drakrun@.service")
-        create_configuration_file("cfg.template", target_dir=ETC_SCRIPTS_DIR)
+        template_path = create_configuration_file(
+            "cfg.template", target_dir=ETC_SCRIPTS_DIR
+        )
+        set_template_vnc_password(template_path)
 
     if is_component_to_init("system"):
         create_configuration_file(
