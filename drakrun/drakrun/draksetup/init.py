@@ -21,6 +21,21 @@ log = logging.getLogger(__name__)
 
 MINIO_ENV_CONFIG_FILE = Path("/etc/default/minio")
 SYSTEMD_SERVICE_PATH = Path("/etc/systemd/system")
+PACKAGE_DATA_DIR = PACKAGE_DIR / "data"
+ETC_SCRIPTS_DIR = Path(ETC_DIR) / "scripts"
+
+
+def create_configuration_file(config_file_name, target_dir=None):
+    target_dir = target_dir or Path(ETC_DIR)
+    target_path = target_dir / config_file_name
+    if target_path.exists():
+        log.info(f"{target_path} already created.")
+        return target_path
+
+    config_data = (PACKAGE_DATA_DIR / config_file_name).read_text()
+    target_path.write_text(config_data)
+    log.info(f"Created {target_path}.")
+    return target_path
 
 
 def apply_local_minio_service_config(config: DrakrunConfig):
@@ -30,6 +45,59 @@ def apply_local_minio_service_config(config: DrakrunConfig):
     config.minio.access_key = parser.get("DEFAULT", "MINIO_ROOT_USER")
     config.minio.secret_key = parser.get("DEFAULT", "MINIO_ROOT_PASSWORD")
     return config
+
+
+def get_scripts_bin_path():
+    scripts_path = Path(sysconfig.get_path("scripts"))
+    if scripts_path == Path("/usr/bin"):
+        # pip installs global scripts in different path than
+        # pointed by sysconfig
+        return Path("/usr/local/bin")
+    return scripts_path
+
+
+def fix_exec_start(config_file_name):
+    """
+    This function fixes ExecStart entry to point at correct virtualenv bin directory
+
+    ExecStart=/usr/local/bin/karton-system --config-file /etc/drakrun/config.ini
+    """
+    systemd_config_path = SYSTEMD_SERVICE_PATH / config_file_name
+    systemd_config = systemd_config_path.read_text()
+    current_exec_start = next(
+        line for line in systemd_config.splitlines() if line.startswith("ExecStart=")
+    )
+    current_exec_path_str = current_exec_start.split("=")[1].split()[0]
+    current_exec_path = Path(current_exec_path_str)
+    new_exec_path = get_scripts_bin_path() / current_exec_path.name
+    if current_exec_path != new_exec_path:
+        systemd_config = systemd_config.replace(
+            current_exec_path_str, new_exec_path.as_posix()
+        )
+        systemd_config_path.write_text(systemd_config)
+        log.info(
+            f"{systemd_config_path}: Replaced {current_exec_path} with {new_exec_path}"
+        )
+    return systemd_config_path
+
+
+def apply_setting(
+    message, current_value, option_value, hide_input=False, unattended=False
+):
+    if option_value is not None:
+        # If option value is already provided: just return option_value
+        return option_value
+    if unattended:
+        # If unattended and no option value: just leave current value
+        return current_value
+    default_value = current_value or None
+    input_value = click.prompt(message, default=default_value, hide_input=hide_input)
+    if input_value is None:
+        # If input not provided and no reasonable default found: leave current value
+        return current_value
+    else:
+        # Else: provide input value
+        return input_value
 
 
 @click.command(help="Pre-installation activities")
@@ -72,21 +140,7 @@ def init(
 ):
     # Simple activities handled by deb packages before
     # In the future, consider splitting this to remove hard dependency on systemd etc
-    drakrun_dir = Path(ETC_DIR)
-    data_dir = PACKAGE_DIR / "data"
-
     ensure_dirs()
-
-    def create_configuration_file(config_file_name, target_dir=drakrun_dir):
-        target_path = target_dir / config_file_name
-        if target_path.exists():
-            log.info(f"{target_path} already created.")
-            return target_path
-
-        config_data = (data_dir / config_file_name).read_text()
-        target_path.write_text(config_data)
-        log.info(f"Created {target_path}.")
-        return target_path
 
     drakrun_config_path = create_configuration_file("config.ini")
 
@@ -104,32 +158,17 @@ def init(
         )
         raise click.Abort()
 
-    def apply_setting(message, current_value, option_value, hide_input=False):
-        if option_value is not None:
-            # If option value is already provided: just return option_value
-            return option_value
-        if unattended:
-            # If unattended and no option value: just leave current value
-            return current_value
-        default_value = current_value or None
-        input_value = click.prompt(
-            message, default=default_value, hide_input=hide_input
-        )
-        if input_value is None:
-            # If input not provided and no reasonable default found: leave current value
-            return current_value
-        else:
-            # Else: provide input value
-            return input_value
-
     config.redis.host = apply_setting(
-        "Provide redis hostname", config.redis.host, redis_host
+        "Provide redis hostname", config.redis.host, redis_host, unattended=unattended
     )
     config.redis.port = apply_setting(
-        "Provide redis port", config.redis.port, redis_port
+        "Provide redis port", config.redis.port, redis_port, unattended=unattended
     )
     config.minio.address = apply_setting(
-        "Provide S3 (MinIO) address", config.minio.address, s3_address
+        "Provide S3 (MinIO) address",
+        config.minio.address,
+        s3_address,
+        unattended=unattended,
     )
 
     minio_env_applied = False
@@ -146,10 +185,16 @@ def init(
 
     if not minio_env_applied:
         config.minio.access_key = apply_setting(
-            "Provide S3 (MinIO) access key", config.minio.access_key, s3_access_key
+            "Provide S3 (MinIO) access key",
+            config.minio.access_key,
+            s3_access_key,
+            unattended=unattended,
         )
         config.minio.secret_key = apply_setting(
-            "Provide S3 (MinIO) secret key", config.minio.secret_key, s3_secret_key
+            "Provide S3 (MinIO) secret key",
+            config.minio.secret_key,
+            s3_secret_key,
+            unattended=unattended,
         )
 
     config.minio.secure = s3_secure
@@ -177,45 +222,11 @@ def init(
     def is_component_to_init(component_name):
         return not only or component_name in only
 
-    def get_scripts_bin_path():
-        scripts_path = Path(sysconfig.get_path("scripts"))
-        if scripts_path == Path("/usr/bin"):
-            # pip installs global scripts in different path than
-            # pointed by sysconfig
-            return Path("/usr/local/bin")
-        return scripts_path
-
-    def fix_exec_start(config_file_name):
-        """
-        This function fixes ExecStart entry to point at correct virtualenv bin directory
-
-        ExecStart=/usr/local/bin/karton-system --config-file /etc/drakrun/config.ini
-        """
-        systemd_config_path = SYSTEMD_SERVICE_PATH / config_file_name
-        systemd_config = systemd_config_path.read_text()
-        current_exec_start = next(
-            line
-            for line in systemd_config.splitlines()
-            if line.startswith("ExecStart=")
-        )
-        current_exec_path_str = current_exec_start.split("=")[1].split()[0]
-        current_exec_path = Path(current_exec_path_str)
-        new_exec_path = get_scripts_bin_path() / current_exec_path.name
-        if current_exec_path != new_exec_path:
-            systemd_config = systemd_config.replace(
-                current_exec_path_str, new_exec_path.as_posix()
-            )
-            systemd_config_path.write_text(systemd_config)
-            log.info(
-                f"{systemd_config_path}: Replaced {current_exec_path} with {new_exec_path}"
-            )
-        return systemd_config_path
-
     if is_component_to_init("drakrun"):
         create_configuration_file("hooks.txt")
         create_configuration_file("drakrun@.service", target_dir=SYSTEMD_SERVICE_PATH)
         fix_exec_start("drakrun@.service")
-        create_configuration_file("cfg.template", target_dir=(drakrun_dir / "scripts"))
+        create_configuration_file("cfg.template", target_dir=ETC_SCRIPTS_DIR)
 
     if is_component_to_init("system"):
         create_configuration_file(
