@@ -240,6 +240,7 @@ def init(
             "cfg.template", target_dir=ETC_SCRIPTS_DIR
         )
         set_template_vnc_password(template_path)
+        create_configuration_file("vm-post-restore.ps1", target_dir=ETC_SCRIPTS_DIR)
 
     if is_component_to_init("system"):
         create_configuration_file(
