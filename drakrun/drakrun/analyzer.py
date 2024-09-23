@@ -1,6 +1,8 @@
 import argparse
+import base64
 import contextlib
 import dataclasses
+import datetime
 import itertools
 import json
 import logging
@@ -173,25 +175,41 @@ def drop_sample_to_vm(
         raise e
 
 
+def prepare_post_restore_envs(options: AnalysisOptions):
+    current_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return {
+        "$DRAKVUF_NET_ENABLE": "$true" if options.net_enable else "$false",
+        "$DRAKVUF_DATE": f'"{current_date}"',
+    }
+
+
+def prepare_post_restore_command(options: AnalysisOptions):
+    post_restore_script_path = pathlib.Path(ETC_DIR) / "scripts" / "vm-post-restore.ps1"
+    post_restore_script = post_restore_script_path.read_text()
+    post_restore_envs = prepare_post_restore_envs(options)
+    for env_key, env_value in post_restore_envs.items():
+        post_restore_script = post_restore_script.replace(env_key, env_value)
+    log.debug("Prepared post-restore script: " + post_restore_script)
+    encoded_ps1 = base64.b64encode(post_restore_script.encode("utf-16le")).decode()
+    return "powershell.exe -EncodedCommand " + encoded_ps1
+
+
 def run_post_restore_vm_commands(vm: DrakvufVM, options: AnalysisOptions):
     log.info("Running post-restore VM commands...")
-    if options.net_enable:
-        max_attempts = 3
-        for i in range(max_attempts):
-            try:
-                log.info(f"Trying to setup network (attempt {i + 1}/{max_attempts})")
-                vm.injector.create_process(
-                    "cmd /C ipconfig /release >nul", wait=True, timeout=120
-                )
-                vm.injector.create_process(
-                    "cmd /C ipconfig /renew >nul", wait=True, timeout=120
-                )
-                break
-            except Exception:
-                log.exception("Analysis attempt failed. Retrying...")
-        else:
-            log.warning(f"Giving up after {max_attempts} failures...")
-            raise RuntimeError("Failed to setup VM network after 3 attempts")
+    max_attempts = 3
+    for i in range(max_attempts):
+        try:
+            log.info(
+                f"Trying to run post-restore commands (attempt {i + 1}/{max_attempts})"
+            )
+            post_restore_command = prepare_post_restore_command(options)
+            vm.injector.create_process(post_restore_command, wait=True, timeout=120)
+            break
+        except Exception:
+            log.exception("Post-restore command execution failed. Retrying...")
+    else:
+        log.warning(f"Giving up after {max_attempts} failures...")
+        raise RuntimeError("Failed to run post-restore commands after 3 attempts")
 
 
 def get_profile_args_list() -> List[str]:
