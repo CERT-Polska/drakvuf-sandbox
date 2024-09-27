@@ -60,9 +60,6 @@ def postinstall(generate_apivectors_profile):
     create_vm_profiles(generate_apivectors_profile)
 
     log.info("All right, drakrun setup is done.")
-    log.info("First instance of drakrun will be enabled automatically...")
-    subprocess.check_output("systemctl enable drakrun@1", shell=True)
-    subprocess.check_output("systemctl start drakrun@1", shell=True)
-
-    log.info("If you want to have more parallel instances, execute:")
-    log.info("  # draksetup scale <number of instances>")
+    log.info("If you want to enable drakrun worker, execute:")
+    log.info("  # draksetup scale 1")
+    log.info("or provide a higher number if you want to have more parallel VMs")
