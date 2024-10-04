@@ -12,9 +12,9 @@ log = logging.getLogger(__name__)
 @click.argument("scale_count", type=int)
 def scale(scale_count):
     """Enable or disable additional parallel instances of drakrun service.."""
-    if scale_count >= 0:
+    if scale_count < 0:
         raise RuntimeError(
-            "Invalid value of scale parameter - must be a positive number."
+            "Invalid value of scale parameter - must be a non-negative number."
         )
 
     cur_services = set(list(get_enabled_drakruns()))
