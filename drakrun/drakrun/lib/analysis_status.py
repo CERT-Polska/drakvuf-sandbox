@@ -69,6 +69,8 @@ def create_or_update_analysis_status(
 
 def get_analysis_status_list(rs: StrictRedis) -> List[Dict[str, Any]]:
     analysis_ids = rs.lrange(ANALYSES_LIST, 0, -1)
+    if len(analysis_ids) == 0:
+        return []
     analysis_data = zip(
         analysis_ids,
         [
