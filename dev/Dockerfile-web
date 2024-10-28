@@ -1,0 +1,15 @@
+FROM node:16-alpine AS build
+WORKDIR /usr/src/app
+COPY drakrun/web/frontend .
+
+RUN npm ci && npm run build
+
+FROM python:3.10
+WORKDIR /usr/src/app
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+COPY . .
+COPY --from=build /usr/src/app/build /usr/src/app/drakrun/web/frontend/build
+ENV FLASK_APP=drakrun/web/app.py
+CMD ["flask", "run", "-h", "0.0.0.0"]
+

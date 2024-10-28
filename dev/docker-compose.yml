@@ -1,0 +1,18 @@
+services:
+  web:
+    build:
+      context: ../drakrun
+      dockerfile: ../dev/Dockerfile-web
+    ports:
+      - '5000:5000'
+    volumes:
+      - './config.ini:/etc/drakrun/config.ini'
+  redis:
+    image: "redis:latest"
+  minio:
+    image: "minio/minio:latest"
+    entrypoint: sh
+    command: -c "mkdir -p /data/drakrun && minio server --address 0.0.0.0:9000 --console-address :9001 /data"
+    ports:
+      - '9000:9000'
+      - '9001:9001'
