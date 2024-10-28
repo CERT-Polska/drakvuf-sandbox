@@ -16,3 +16,8 @@ services:
     ports:
       - '9000:9000'
       - '9001:9001'
+    volumes:
+      - minio-storage:/data
+
+volumes:
+  minio-storage:

@@ -11,5 +11,5 @@ RUN pip install -r requirements.txt
 COPY . .
 COPY --from=build /usr/src/app/build /usr/src/app/drakrun/web/frontend/build
 ENV FLASK_APP=drakrun/web/app.py
-CMD ["flask", "run", "-h", "0.0.0.0"]
+CMD ["flask", "run", "-h", "0.0.0.0", "--with-threads"]
 
