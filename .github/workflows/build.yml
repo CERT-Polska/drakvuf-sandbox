@@ -144,6 +144,7 @@ jobs:
       - name: compile
         run: |
             mkdir bin
+            cd test/drak-tester
             cl /EHsc src/drakvuf_dump_tester.cpp src/utils/drakvuf_tester_utils.cpp /Isrc/utils /Fobin\ /Febin\drakvuf_tester.exe /std:c++latest
       - uses: actions/upload-artifact@v4
         with:
