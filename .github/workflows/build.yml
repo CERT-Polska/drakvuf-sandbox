@@ -3,6 +3,7 @@ on:
   push:
     branches:
     - master
+    - drakvuf-test-sample
   pull_request:
     branches:
     - master
@@ -134,6 +135,20 @@ jobs:
         with:
           name: drakvuf-sandbox-whl
           path: ./drakrun/dist/drakvuf_sandbox-*.whl
+  drak-dump-tester-build:
+    name: build tester on Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ilammy/msvc-dev-cmd@v1.4.1
+      - name: compile
+        run: |
+            mkdir bin
+            cl /EHsc src/drakvuf_dump_tester.cpp src/utils/drakvuf_tester_utils.cpp /Isrc/utils /Fobin\ /Febin\drakvuf_tester.exe /std:c++latest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drak-tester.exe
+          path: bin
   test_e2e:
     needs: [ package_drakrun, package_drakvuf_bundle ]
     strategy:
@@ -184,6 +199,11 @@ jobs:
           path: |
             /tmp/minio
           key: minio-server-bin
+      - name: Download drakvuf_tester.exe from artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: drak-tester.exe
+          path: bin
       - name: Start tests
         run: |
           git config --global --add safe.directory "$(pwd)"
@@ -211,3 +231,7 @@ jobs:
         env:
           VM_RUNNER_API_URL: "http://127.0.0.1:8080"
           VM_SUFFIX: "${{ matrix.distro }}-${{ matrix.version_number }}"
+
+
+
+
