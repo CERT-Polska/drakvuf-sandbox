@@ -141,7 +141,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ilammy/msvc-dev-cmd@v1.4.1
-      - uses: GuillaumeFalourd/setup-windows10-sdk-action@v2.4
       - name: compile
         run: |
             cd test/drak-tester

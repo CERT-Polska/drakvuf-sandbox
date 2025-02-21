@@ -429,7 +429,7 @@ DrakTestStatus NtSetInformationThreadTest()
     myNtSetInformationThread = (pNtSetInformationThread) GetProcAddress(hNtdll, "NtSetInformationThread");
     myNtQueryInformationThread = (pNtQueryInformationThread) GetProcAddress(hNtdll, "NtQueryInformationThread");
 
-    ntStatus = myNtQueryInformationThread(piIExplorer.hThread, ThreadWow64Context, &wow64Context, sizeof(wow64Context), NULL);
+    ntStatus = myNtQueryInformationThread(piIExplorer.hThread, (THREADINFOCLASS) ThreadWow64Context, &wow64Context, sizeof(wow64Context), NULL);
 
     if (!NT_SUCCESS(ntStatus))
     {
@@ -437,7 +437,7 @@ DrakTestStatus NtSetInformationThreadTest()
         drakStatus = DrakTestStatus::Failed;
         goto clean_exit;
     }
-    ntStatus = myNtSetInformationThread(piIExplorer.hThread, ThreadWow64Context, &wow64Context, sizeof(wow64Context));
+    ntStatus = myNtSetInformationThread(piIExplorer.hThread, (THREADINFOCLASS) ThreadWow64Context, &wow64Context, sizeof(wow64Context));
     if (!NT_SUCCESS(ntStatus))
     {
         PRINT_DEBUG("NtSetInformationThread failed with status: %x\n", ntStatus);
