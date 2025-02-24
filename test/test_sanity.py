@@ -64,7 +64,9 @@ def test_sample_analysis(drakcore):
     else:
         raise Exception("No matching entry found")
 
+
 def test_drak_tester_analysis(drakcore):
+    print("test_drak_tester_analysis")
     task_uuid = drakcore.upload(open("bin/drakvuf_tester.exe", "rb"), timeout=120)
 
     # wait until end of analysis
@@ -78,12 +80,45 @@ def test_drak_tester_analysis(drakcore):
     time.sleep(10.0)
 
     # check logs if our binary was ran
-    response = drakcore.analysis_log(task_uuid, "filetracer")
-    for line in response.iter_lines():
+    response = drakcore.analysis_log(task_uuid, "memdump")
+    drak_tester_check_memdump_hooks(response)
+
+
+def drak_tester_check_memdump_hooks(memdump_log):
+    print("drak_tester_check_memdump_hooks")
+    all_passed = True
+    hooks = (
+        "NtFreeVirtualMemory",
+        "NtProtectVirtualMemory",
+        "NtTerminateProcess",
+        "NtWriteVirtualMemory",
+        "NtCreateThreadEx",
+        "NtSetInformationThread"
+        )
+    sample_name = "sample.exe"
+    hooks_map = {
+        "NtFreeVirtualMemory": False,
+        "NtProtectVirtualMemory": False,
+        "NtTerminateProcess": False,
+        "NtWriteVirtualMemory": False,
+        "NtCreateThreadEx": False,
+        "NtSetInformationThread": False,
+    }
+    method_field = "Method"
+    filename_field = "FileName"
+
+    # check memdump log for memdump hooks
+    for line in memdump_log.iter_lines():
         d = json.loads(line)
         # our sample tried to create a file
-        if d.get("Method") == "NtCreateFile" and "test.txt" in d.get("FileName"):
-            break
-    else:
+        method = d.get(method_field)
+        if method in hooks and sample_name in d.get(filename_field):
+            hooks[method] = True
+
+    for k in hooks_map:
+        if hooks_map[k] == False:
+            print(f"{k} not found in memdump.log")
+            all_passed = False
+
+    if not all_passed:
         raise Exception("No matching entry found")
-    
