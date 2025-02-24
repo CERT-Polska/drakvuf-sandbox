@@ -148,8 +148,8 @@ jobs:
             cl /EHsc src/drakvuf_dump_tester.cpp src/utils/drakvuf_tester_utils.cpp /Isrc/utils /Fobin\ /Febin\drakvuf_tester.exe /std:c++latest
       - uses: actions/upload-artifact@v4
         with:
-          name: drak-tester
-          path: ./bin/drak-tester.exe
+          name: drakvuf-tester
+          path: ./bin/drakvuf-tester.exe
   test_e2e:
     needs: [ package_drakrun, package_drakvuf_bundle ]
     strategy:
@@ -203,8 +203,8 @@ jobs:
       - name: Download drakvuf_tester.exe from artifacts
         uses: actions/download-artifact@v4
         with:
-          name: drak-tester
-          path: ./bin/drak-tester.exe
+          name: drakvuf-tester
+          path: ./bin/drakvuf-tester.exe
       - name: Start tests
         run: |
           git config --global --add safe.directory "$(pwd)"
