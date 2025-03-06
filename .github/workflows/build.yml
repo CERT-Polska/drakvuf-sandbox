@@ -204,7 +204,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: drakvuf-tester
-          path: test/drak-tester/bin/drakvuf_tester.exe
+          path: test/drak-tester/drakvuf_tester.exe
       - name: Start tests
         run: |
           git config --global --add safe.directory "$(pwd)"
