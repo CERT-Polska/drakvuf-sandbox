@@ -80,12 +80,16 @@ def test_drak_tester_analysis(drakcore):
     time.sleep(10.0)
 
     # check logs if our binary was ran
-    response = drakcore.analysis_log(task_uuid, "memdump")
+    response = drakcore.analysis_log(task_uuid, "memdump.log")
     drak_tester_check_memdump_hooks(response)
 
 
 def drak_tester_check_memdump_hooks(memdump_log):
     print("drak_tester_check_memdump_hooks")
+    if memdump_log is None:
+        print("No memdump log found")
+        raise Exception("No memdump log found")
+
     all_passed = True
     hooks = (
         "NtFreeVirtualMemory",
