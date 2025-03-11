@@ -80,7 +80,7 @@ def test_drak_tester_analysis(drakcore):
     time.sleep(10.0)
 
     # check logs if our binary was ran
-    response = drakcore.analysis_log(task_uuid, "memdump.log")
+    response = drakcore.analysis_log(task_uuid, "memdump")
     drak_tester_check_memdump_hooks(response)
 
 
