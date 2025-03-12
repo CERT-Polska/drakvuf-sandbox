@@ -81,14 +81,21 @@ def test_drak_tester_analysis(drakcore):
 
     # check logs if our binary was ran
     response = drakcore.analysis_log(task_uuid, "memdump")
+    print("response: ", response)
     drak_tester_check_memdump_hooks(response)
 
 
 def drak_tester_check_memdump_hooks(memdump_log):
     print("drak_tester_check_memdump_hooks")
+    print(f"memdump_log: {memdump_log}")
     if memdump_log is None:
         print("No memdump log found")
         raise Exception("No memdump log found")
+
+    if not memdump_log:
+        print("Empty memdump log")
+        raise Exception("Empty memdump log")
+    print("memdump found")
 
     all_passed = True
     hooks = (
@@ -114,7 +121,6 @@ def drak_tester_check_memdump_hooks(memdump_log):
     # check memdump log for memdump hooks
     for line in memdump_log.iter_lines():
         d = json.loads(line)
-        # our sample tried to create a file
         method = d.get(method_field)
         if method in hooks and sample_name in d.get(filename_field):
             hooks[method] = True
