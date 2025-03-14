@@ -81,9 +81,6 @@ def test_drak_tester_analysis(drakcore):
 
     # check logs if our binary was ran
     response = drakcore.analysis_log(task_uuid, "memdump")
-
-    for line in response.iter_lines():
-        d = json.loads(line)
     drak_tester_check_memdump_hooks(response)
 
 
@@ -115,7 +112,6 @@ def drak_tester_check_memdump_hooks(memdump_log):
 
     # check memdump log for memdump hooks
     for line in memdump_log.iter_lines():
-        print("line: ", line)
         d = json.loads(line)
         method = d.get(method_field)
         if method in hooks and d.get(filename_field) is not None and sample_name in d.get(filename_field):
