@@ -59,7 +59,6 @@ def test_sample_analysis(drakcore):
     print("response: ", response)
     for line in response.iter_lines():
         d = json.loads(line)
-        print("d: ", d)
         # our sample tried to create a file
         if d.get("Method") == "NtCreateFile" and "test.txt" in d.get("FileName"):
             break
@@ -68,7 +67,6 @@ def test_sample_analysis(drakcore):
 
 
 def test_drak_tester_analysis(drakcore):
-    print("test_drak_tester_analysis")
     task_uuid = drakcore.upload(open("drak-tester/drakvuf_tester.exe", "rb"), timeout=120)
 
     # wait until end of analysis
@@ -86,22 +84,13 @@ def test_drak_tester_analysis(drakcore):
 
     for line in response.iter_lines():
         d = json.loads(line)
-        print("d: ", d)
-    print("response: ", response)
     drak_tester_check_memdump_hooks(response)
 
 
 def drak_tester_check_memdump_hooks(memdump_log):
-    print("drak_tester_check_memdump_hooks")
-    print(f"memdump_log: {memdump_log}")
     if memdump_log is None:
         print("No memdump log found")
         raise Exception("No memdump log found")
-
-    if not memdump_log:
-        print("Empty memdump log")
-        raise Exception("Empty memdump log")
-    print("memdump found")
 
     all_passed = True
     hooks = (
@@ -128,9 +117,8 @@ def drak_tester_check_memdump_hooks(memdump_log):
     for line in memdump_log.iter_lines():
         print("line: ", line)
         d = json.loads(line)
-        print("d: ", d)
         method = d.get(method_field)
-        if method in hooks and sample_name in d.get(filename_field):
+        if method in hooks and d.get(filename_field) is not None and sample_name in d.get(filename_field):
             hooks[method] = True
 
     for k in hooks_map:
