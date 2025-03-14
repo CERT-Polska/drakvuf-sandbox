@@ -56,8 +56,10 @@ def test_sample_analysis(drakcore):
 
     # check logs if our binary was ran
     response = drakcore.analysis_log(task_uuid, "filetracer")
+    print("response: ", response)
     for line in response.iter_lines():
         d = json.loads(line)
+        print("d: ", d)
         # our sample tried to create a file
         if d.get("Method") == "NtCreateFile" and "test.txt" in d.get("FileName"):
             break
@@ -81,6 +83,10 @@ def test_drak_tester_analysis(drakcore):
 
     # check logs if our binary was ran
     response = drakcore.analysis_log(task_uuid, "memdump")
+
+    for line in response.iter_lines():
+        d = json.loads(line)
+        print("d: ", d)
     print("response: ", response)
     drak_tester_check_memdump_hooks(response)
 
@@ -120,7 +126,9 @@ def drak_tester_check_memdump_hooks(memdump_log):
 
     # check memdump log for memdump hooks
     for line in memdump_log.iter_lines():
+        print("line: ", line)
         d = json.loads(line)
+        print("d: ", d)
         method = d.get(method_field)
         if method in hooks and sample_name in d.get(filename_field):
             hooks[method] = True
