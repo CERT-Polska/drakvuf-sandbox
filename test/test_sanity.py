@@ -66,7 +66,8 @@ def drakcore(drakmon_vm):
 
 
 def test_drak_tester_analysis(drakcore):
-    task_uuid = drakcore.upload(open("drak-tester/drakvuf_tester.exe", "rb"), timeout=600)
+    print("Uploading drakvuf_tester.exe")
+    task_uuid = drakcore.upload(open("drak-tester/drakvuf_tester.exe", "rb"), timeout=360)
 
     # wait until end of analysis
     while True:
