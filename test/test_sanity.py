@@ -56,7 +56,6 @@ def test_sample_analysis(drakcore):
 
     # check logs if our binary was ran
     response = drakcore.analysis_log(task_uuid, "filetracer")
-    print("response: ", response)
     for line in response.iter_lines():
         d = json.loads(line)
         # our sample tried to create a file
@@ -67,7 +66,7 @@ def test_sample_analysis(drakcore):
 
 
 def test_drak_tester_analysis(drakcore):
-    task_uuid = drakcore.upload(open("drak-tester/drakvuf_tester.exe", "rb"), timeout=120)
+    task_uuid = drakcore.upload(open("drak-tester/drakvuf_tester.exe", "rb"), timeout=300)
 
     # wait until end of analysis
     while True:
@@ -86,10 +85,8 @@ def test_drak_tester_analysis(drakcore):
 
 def drak_tester_check_memdump_hooks(memdump_log):
     if memdump_log is None:
-        print("No memdump log found")
         raise Exception("No memdump log found")
 
-    all_passed = True
     hooks = (
         "NtFreeVirtualMemory",
         "NtProtectVirtualMemory",
@@ -109,8 +106,9 @@ def drak_tester_check_memdump_hooks(memdump_log):
     }
     method_field = "Method"
     filename_field = "FileName"
+    all_passed = True
 
-    # check memdump log for memdump hooks
+    # check memdump log for hooks
     for line in memdump_log.iter_lines():
         d = json.loads(line)
         method = d.get(method_field)
