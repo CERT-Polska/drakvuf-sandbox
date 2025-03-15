@@ -41,28 +41,29 @@ def test_web_ui_reachable(drakcore):
     response.raise_for_status()
 
 
-# def test_sample_analysis(drakcore):
-#     task_uuid = drakcore.upload(open("test.exe", "rb"), timeout=120)
+def test_sample_analysis(drakcore):
+    print("Uploading test.exe")
+    task_uuid = drakcore.upload(open("test.exe", "rb"), timeout=120)
 
-#     # wait until end of analysis
-#     while True:
-#         r = drakcore.check_status(task_uuid)
-#         if r["status"] != "pending":
-#             break
-#         time.sleep(10.0)
+    # wait until end of analysis
+    while True:
+        r = drakcore.check_status(task_uuid)
+        if r["status"] != "pending":
+            break
+        time.sleep(10.0)
 
-#     # give it a bit more time?
-#     time.sleep(10.0)
+    # give it a bit more time?
+    time.sleep(10.0)
 
-#     # check logs if our binary was ran
-#     response = drakcore.analysis_log(task_uuid, "filetracer")
-#     for line in response.iter_lines():
-#         d = json.loads(line)
-#         # our sample tried to create a file
-#         if d.get("Method") == "NtCreateFile" and "test.txt" in d.get("FileName"):
-#             break
-#     else:
-#         raise Exception("No matching entry found")
+    # check logs if our binary was ran
+    response = drakcore.analysis_log(task_uuid, "filetracer")
+    for line in response.iter_lines():
+        d = json.loads(line)
+        # our sample tried to create a file
+        if d.get("Method") == "NtCreateFile" and "test.txt" in d.get("FileName"):
+            break
+    else:
+        raise Exception("No matching entry found")
 
 
 def test_drak_tester_analysis(drakcore):
