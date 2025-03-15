@@ -11,34 +11,34 @@ def drakcore(drakmon_vm):
     return Drakcore(drakmon_vm)
 
 
-# def test_running_on_xen(drakmon_ssh):
-#     assert get_hypervisor_type(drakmon_ssh) == "xen"
+def test_running_on_xen(drakmon_ssh):
+    assert get_hypervisor_type(drakmon_ssh) == "xen"
 
 
-# def test_services_running(drakmon_ssh):
-#     def check_status():
-#         infos = [get_service_info(drakmon_ssh, service) for service in DRAKMON_SERVICES]
+def test_services_running(drakmon_ssh):
+    def check_status():
+        infos = [get_service_info(drakmon_ssh, service) for service in DRAKMON_SERVICES]
 
-#         for info in infos:
-#             assert info["LoadState"] == "loaded"
-#             assert info["ActiveState"] == "active"
-#             assert info["SubState"] == "running"
+        for info in infos:
+            assert info["LoadState"] == "loaded"
+            assert info["ActiveState"] == "active"
+            assert info["SubState"] == "running"
 
-#     # Wait up to 5 seconds for the services to be up
-#     for _ in range(5):
-#         try:
-#             check_status()
-#             break
-#         except AssertionError:
-#             pass
-#         time.sleep(1.0)
-#     else:
-#         raise Exception("Services down")
+    # Wait up to 5 seconds for the services to be up
+    for _ in range(5):
+        try:
+            check_status()
+            break
+        except AssertionError:
+            pass
+        time.sleep(1.0)
+    else:
+        raise Exception("Services down")
 
 
-# def test_web_ui_reachable(drakcore):
-#     response = drakcore.get("/")
-#     response.raise_for_status()
+def test_web_ui_reachable(drakcore):
+    response = drakcore.get("/")
+    response.raise_for_status()
 
 
 # def test_sample_analysis(drakcore):
