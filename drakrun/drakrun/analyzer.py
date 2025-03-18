@@ -203,7 +203,7 @@ def run_post_restore_vm_commands(vm: DrakvufVM, options: AnalysisOptions):
                 f"Trying to run post-restore commands (attempt {i + 1}/{max_attempts})"
             )
             post_restore_command = prepare_post_restore_command(options)
-            vm.injector.create_process(post_restore_command, wait=True, timeout=120)
+            vm.injector.create_process(post_restore_command, wait=True, timeout=240)
             break
         except Exception:
             log.exception("Post-restore command execution failed. Retrying...")
