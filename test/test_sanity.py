@@ -107,16 +107,16 @@ def drak_tester_check_memdump_hooks(memdump_log):
         "NtSetInformationThread": False,
     }
     method_field = "Method"
-    filename_field = "FileName"
+    processname_field = "ProcessName"
     all_passed = True
 
     # check memdump log for hooks
     for line in memdump_log.iter_lines():
         d = json.loads(line)
         method = d.get(method_field)
-        if method in hooks and d.get(filename_field) is not None and sample_name in d.get(filename_field):
+        if method in hooks and d.get(processname_field) is not None and sample_name in d.get(processname_field):
             print(f"{method} found")
-            hooks[method] = True
+            hooks_map[method] = True
 
     for k in hooks_map:
         if hooks_map[k] == False:
