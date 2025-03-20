@@ -97,6 +97,9 @@ def drakmon_setup():
         # Install DRAKVUF
         for d in drakvuf_debs:
             apt_install(ssh, ["./" + d.name])
+        # Change DRAK_DOM0_RAM to 8GB
+        ssh.run('sed -i "s/# DRAK_DOM0_RAM=.*/DRAK_DOM0_RAM=8192/g" /etc/default/grub.d/xen.cfg')
+        ssh.run("update-grub")
 
         # Reboot into Xen
         ssh.run("systemctl reboot", disown=True)
