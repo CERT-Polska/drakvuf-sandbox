@@ -1,0 +1,28 @@
+.rowC{
+    position: absolute;
+    top: 0%;
+    bottom: 0%;
+    width:26%;
+    right: 0%;
+    background-color: 'black';
+    z-index:10;
+  }
+  
+  tr:hover {
+    background-color: #2ae300;
+  }
+  tr {
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    font-size: 18px; 
+  }
+  td {
+    width: 100%;  
+    padding-top: 11px;
+    padding-bottom: 11px;
+    padding-right: 11px;
+    padding-left:11px;
+    color: white;
+  }
