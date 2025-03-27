@@ -137,7 +137,8 @@ def drakmon_setup():
 
         # Shut up QEMU
         ssh.run("ln -s /dev/null /root/SW_DVD5_Win_Pro_7w_SP1_64BIT_Polish_-2_MLF_X17-59386.ISO")
-
+        # Wait a bit until all service start (temporary fix)
+        time.sleep(10)
         ssh.run("systemctl start drakrun@1")
 
     logging.info("VM provisioned, starting tests...")
