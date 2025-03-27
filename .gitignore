@@ -3,3 +3,5 @@
 /*.sav
 .idea/
 .vscode/
+*.egg-info/
+__pycache__/
