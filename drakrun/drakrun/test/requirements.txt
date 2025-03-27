@@ -1,2 +1,0 @@
-pytest==6.2.2
-pytest-steps==1.7.3
