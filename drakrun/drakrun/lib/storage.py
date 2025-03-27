@@ -2,15 +2,14 @@ import datetime
 import json
 import logging
 import os
+import pathlib
 import shlex
 import shutil
 import subprocess
 import time
 from typing import Tuple
 
-from drakrun.lib.install_info import InstallInfo
-from drakrun.lib.paths import VOLUME_DIR
-from drakrun.lib.util import safe_delete
+from .install_info import InstallInfo
 
 log = logging.getLogger(__name__)
 
@@ -79,11 +78,11 @@ class StorageBackendBase:
         """Get UNIX timestamp of when vm-0 snapshot was last modified"""
         raise NotImplementedError
 
-    def export_vm0(self, file):
+    def export_vm0(self, path):
         """Export vm-0 disk into a file (symmetric to import_vm0)"""
         raise NotImplementedError
 
-    def import_vm0(self, file):
+    def import_vm0(self, path):
         """Import vm-0 disk from a file (symmetric to export_vm0)"""
         raise NotImplementedError
 
@@ -98,7 +97,7 @@ class StorageBackendBase:
 class ZfsStorageBackend(StorageBackendBase):
     """Implements storage backend based on ZFS zvols"""
 
-    def __init__(self, install_info: InstallInfo):
+    def __init__(self, install_info: InstallInfo) -> None:
         super().__init__(install_info)
         self.zfs_tank_name = install_info.zfs_tank_name
         if self.zfs_tank_name is None:
@@ -106,7 +105,7 @@ class ZfsStorageBackend(StorageBackendBase):
         self.check_tools()
 
     @staticmethod
-    def check_tools():
+    def check_tools() -> None:
         """Verify existence of zfs command utility"""
         try:
             subprocess.check_output("zfs -?", shell=True)
@@ -116,18 +115,9 @@ class ZfsStorageBackend(StorageBackendBase):
                 "Make sure you have ZFS support installed."
             )
 
-    def initialize_vm0_volume(self, disk_size: str):
-        vm0_vol = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0"))
+    def initialize_vm0_volume(self, disk_size: str) -> None:
         if self.check_volume_exists("vm-0"):
-            try:
-                subprocess.check_output(
-                    f"zfs destroy -Rfr {vm0_vol}", stderr=subprocess.STDOUT, shell=True
-                )
-            except subprocess.CalledProcessError as exc:
-                if b"dataset does not exist" not in exc.output:
-                    raise RuntimeError(
-                        f"Failed to destroy the existing ZFS volume {vm0_vol}."
-                    )
+            self.delete_vm_volume_by_name("vm-0")
         try:
             subprocess.check_output(
                 " ".join(
@@ -160,7 +150,7 @@ class ZfsStorageBackend(StorageBackendBase):
         volume_path = os.path.join("/dev/zvol", self.zfs_tank_name, volume_name)
         return os.path.exists(volume_path)
 
-    def rollback_vm_storage(self, vm_id: int):
+    def rollback_vm_storage(self, vm_id: int) -> None:
         vm_zvol = os.path.join("/dev/zvol", self.zfs_tank_name, f"vm-{vm_id}")
         vm_snap = os.path.join(self.zfs_tank_name, f"vm-{vm_id}@booted")
 
@@ -191,23 +181,22 @@ class ZfsStorageBackend(StorageBackendBase):
 
         subprocess.run(["zfs", "rollback", vm_snap], check=True)
 
-    def initialize_vm0_modify_storage(self):
+    def initialize_vm0_modify_storage(self) -> None:
         # Just ensure that vm-0 is rollbacked to the vm-0@booted state
-        volume_snap = os.path.join(self.zfs_tank_name, "vm-0@booted")
-        subprocess.run(["zfs", "rollback", volume_snap], check=True)
+        self.delete_vm0_modify_storage()
 
-    def delete_vm0_modify_storage(self):
+    def delete_vm0_modify_storage(self) -> None:
         # Just rollback to the vm-0@booted state
         volume_snap = os.path.join(self.zfs_tank_name, "vm-0@booted")
         subprocess.run(["zfs", "rollback", volume_snap], check=True)
 
-    def commit_vm0_modify_storage(self):
+    def commit_vm0_modify_storage(self) -> None:
         # Make a new vm-0@booted snapshot
         volume_snap = os.path.join(self.zfs_tank_name, "vm-0@booted")
         subprocess.run(["zfs", "destroy", "-R", volume_snap], check=True)
         subprocess.run(["zfs", "snapshot", volume_snap], check=True)
 
-    def get_vm0_snapshot_time(self):
+    def get_vm0_snapshot_time(self) -> int:
         base_snap = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0@booted"))
         out = subprocess.check_output(
             f"zfs get -H -p -o value creation {base_snap}", shell=True
@@ -215,24 +204,24 @@ class ZfsStorageBackend(StorageBackendBase):
         ts = int(out.decode("ascii").strip())
         return ts
 
-    def export_vm0(self, file):
-        with open(file, "wb") as snapshot_file:
+    def export_vm0(self, path) -> None:
+        with open(path, "wb") as snapshot_file:
             subprocess.run(
                 ["zfs", "send", f"{self.zfs_tank_name}/vm-0@booted"],
                 check=True,
                 stdout=snapshot_file,
             )
 
-    def import_vm0(self, file):
+    def import_vm0(self, path) -> None:
         subprocess.run(["zfs", "create", self.zfs_tank_name], check=True)
-        with open(file, "rb") as snapshot_file:
+        with open(path, "rb") as snapshot_file:
             subprocess.run(
                 ["zfs", "recv", f"{self.zfs_tank_name}/vm-0@booted"],
                 check=True,
                 stdin=snapshot_file,
             )
 
-    def delete_vm_volume_by_name(self, volume_name: str):
+    def delete_vm_volume_by_name(self, volume_name: str) -> None:
         volume_path = os.path.join(self.zfs_tank_name, volume_name)
         try:
             log.info(f"Deleting zfs volume {volume_path}")
@@ -243,26 +232,17 @@ class ZfsStorageBackend(StorageBackendBase):
             log.error(exc.stdout)
             raise Exception(f"Couldn't delete {volume_path}")
 
-    def delete_zfs_tank(self):
-        try:
-            log.info("Deleting zfs tank")
-            subprocess.run(
-                ["zfs", "destroy", "-r", f"{self.zfs_tank_name}"], check=True
-            )
-        except subprocess.CalledProcessError as exc:
-            log.error(exc.stdout)
-            raise Exception(f"Couldn't delete {self.zfs_tank_name}")
-
 
 class Qcow2StorageBackend(StorageBackendBase):
     """Implements storage backend based on QEMU QCOW2 image format"""
 
-    def __init__(self, install_info: InstallInfo):
+    def __init__(self, install_info: InstallInfo) -> None:
         super().__init__(install_info)
+        self.snapshot_dir = install_info.snapshot_dir
         self.check_tools()
 
     @staticmethod
-    def check_tools():
+    def check_tools() -> None:
         """Verify existence of qemu-img"""
         try:
             subprocess.check_output("qemu-img --version", shell=True)
@@ -272,7 +252,7 @@ class Qcow2StorageBackend(StorageBackendBase):
                 "Make sure you have qemu-utils installed."
             )
 
-    def initialize_vm0_volume(self, disk_size: str):
+    def initialize_vm0_volume(self, disk_size: str) -> None:
         try:
             subprocess.check_output(
                 " ".join(
@@ -281,7 +261,7 @@ class Qcow2StorageBackend(StorageBackendBase):
                         "create",
                         "-f",
                         "qcow2",
-                        os.path.join(VOLUME_DIR, "vm-0.img"),
+                        os.path.join(self.snapshot_dir, "vm-0.img"),
                         shlex.quote(disk_size),
                     ]
                 ),
@@ -295,23 +275,20 @@ class Qcow2StorageBackend(StorageBackendBase):
         pass
 
     def get_vm_disk_path_by_name(self, volume_name: str) -> str:
-        disk_path = os.path.join(VOLUME_DIR, f"{volume_name}.img")
+        disk_path = os.path.join(self.snapshot_dir, f"{volume_name}.img")
         return f"tap:qcow2:{disk_path},xvda,w"
 
     def get_vm0_modify_disk_path(self) -> str:
         return self.get_vm_disk_path_by_name("vm-0-modify")
 
     def check_volume_exists(self, volume_name: str) -> bool:
-        volume_path = os.path.join(VOLUME_DIR, f"{volume_name}.img")
+        volume_path = os.path.join(self.snapshot_dir, f"{volume_name}.img")
         return os.path.exists(volume_path)
 
-    def rollback_vm_storage(self, vm_id: int):
-        volume_path = os.path.join(VOLUME_DIR, f"vm-{vm_id}.img")
-        vm0_path = os.path.join(VOLUME_DIR, "vm-0.img")
-        try:
-            os.unlink(volume_path)
-        except FileNotFoundError:
-            pass
+    def rollback_vm_storage(self, vm_id: int) -> None:
+        volume_path = os.path.join(self.snapshot_dir, f"vm-{vm_id}.img")
+        vm0_path = os.path.join(self.snapshot_dir, "vm-0.img")
+        self.delete_vm_volume(vm_id)
 
         subprocess.run(
             [
@@ -328,16 +305,14 @@ class Qcow2StorageBackend(StorageBackendBase):
             check=True,
         )
 
-    def initialize_vm0_modify_storage(self):
+    def initialize_vm0_modify_storage(self) -> None:
         """Creates storage for vm-0 modification based on current vm-0 state"""
         volume_name = "vm-0-modify"
-        volume_path = os.path.join(VOLUME_DIR, f"{volume_name}.img")
-        vm0_path = os.path.join(VOLUME_DIR, "vm-0.img")
+        volume_path = os.path.join(self.snapshot_dir, f"{volume_name}.img")
+        vm0_path = os.path.join(self.snapshot_dir, "vm-0.img")
 
         if os.path.exists(volume_path):
-            raise RuntimeError(
-                f"{volume_path} already exists. Rollback your vm-0 modification before starting a new one"
-            )
+            self.delete_vm_volume_by_name(volume_name)
 
         subprocess.run(
             [
@@ -354,14 +329,14 @@ class Qcow2StorageBackend(StorageBackendBase):
             check=True,
         )
 
-    def delete_vm0_modify_storage(self):
+    def delete_vm0_modify_storage(self) -> None:
         """Deletes pending vm-0 modification"""
         self.delete_vm_volume_by_name("vm-0-modify")
 
-    def commit_vm0_modify_storage(self):
+    def commit_vm0_modify_storage(self) -> None:
         """Apply vm-0 modification to the base vm-0 snapshot"""
         volume_name = "vm-0-modify"
-        volume_path = os.path.join(VOLUME_DIR, f"{volume_name}.img")
+        volume_path = os.path.join(self.snapshot_dir, f"{volume_name}.img")
         subprocess.run(
             [
                 "qemu-img",
@@ -373,20 +348,19 @@ class Qcow2StorageBackend(StorageBackendBase):
         )
         self.delete_vm_volume_by_name("vm-0-modify")
 
-    def get_vm0_snapshot_time(self):
-        return int(os.path.getmtime(os.path.join(VOLUME_DIR, "vm-0.img")))
+    def get_vm0_snapshot_time(self) -> int:
+        return int(os.path.getmtime(os.path.join(self.snapshot_dir, "vm-0.img")))
 
-    def export_vm0(self, path: str):
-        shutil.copy(os.path.join(VOLUME_DIR, "vm-0.img"), path)
+    def export_vm0(self, path: str) -> None:
+        shutil.copy(os.path.join(self.snapshot_dir, "vm-0.img"), path)
 
-    def import_vm0(self, path: str):
-        shutil.copy(path, os.path.join(VOLUME_DIR, "vm-0.img"))
+    def import_vm0(self, path: str) -> None:
+        shutil.copy(path, os.path.join(self.snapshot_dir, "vm-0.img"))
 
-    def delete_vm_volume_by_name(self, volume_name: str):
+    def delete_vm_volume_by_name(self, volume_name: str) -> None:
         # unmount can be done here
-        disk_path = os.path.join(VOLUME_DIR, f"{volume_name}.img")
-        if not safe_delete(disk_path):
-            raise Exception(f"Couldn't delete {volume_name}.img")
+        disk_path = os.path.join(self.snapshot_dir, f"{volume_name}.img")
+        pathlib.Path(disk_path).unlink(missing_ok=True)
 
 
 class LvmStorageBackend(StorageBackendBase):
@@ -395,7 +369,6 @@ class LvmStorageBackend(StorageBackendBase):
     def __init__(self, install_info: InstallInfo):
         super().__init__(install_info)
         self.lvm_volume_group = install_info.lvm_volume_group
-        self.install_info = install_info
         self.check_tools()
         self.snapshot_disksize = "1G"
 
@@ -512,9 +485,7 @@ class LvmStorageBackend(StorageBackendBase):
         volume_path = os.path.join("/dev", f"{self.lvm_volume_group}", volume_name)
 
         if os.path.exists(volume_path):
-            raise RuntimeError(
-                f"{volume_path} already exists. Rollback your vm-0 modification before starting a new one"
-            )
+            self.delete_vm_volume_by_name(volume_name)
 
         subprocess.check_output(
             [
