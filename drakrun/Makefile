@@ -21,13 +21,6 @@ drakrun/web/frontend/node_modules: drakrun/web/frontend/package.json drakrun/web
 drakrun/tools/get-explorer-pid: drakrun/tools/get-explorer-pid.c
 	gcc $< -o $@ -lvmi `pkg-config --cflags --libs glib-2.0`
 
-drakrun/tools/test-altp2m: drakrun/tools/test-altp2m.c
-	gcc $< -o $@ -lvmi `pkg-config --cflags --libs glib-2.0`
-
-drakrun/tools/test-hvm64-example: drakrun/tools/xtf
-	$(MAKE) -C drakrun/tools/xtf
-	cp drakrun/tools/xtf/tests/example/test-hvm64-example drakrun/tools/test-hvm64-example
-
 .PHONY: clean
 clean:
 	rm -rf dist drakvuf_sandbox.egg-info build
