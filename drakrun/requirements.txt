@@ -10,12 +10,8 @@ click==8.1.7
 oletools==0.60
 regex==2020.7.14
 ipython==8.10.0
-malduck==4.4.1
-mwdblib==4.5.0
 flare-capa>=7.2.0
 orjson==3.9.15
-# Something went wrong in 4.3.0 package
-yara-python<4.3.0
 mslex==1.1.0
 pydantic==2.6.4
 # Peer dependency of Pydantic
