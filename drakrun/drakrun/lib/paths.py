@@ -13,3 +13,6 @@ VOLUME_DIR = os.path.join(LIB_DIR, "volumes")
 CONFIG_PATH = os.path.join(ETC_DIR, "config.ini")
 
 PACKAGE_DIR = pathlib.Path(__file__).parent.parent.absolute()
+
+SNAPSHOT_DIR = pathlib.Path(VOLUME_DIR)
+XL_CFG_TEMPLATE_PATH = pathlib.Path(SCRIPTS_DIR) / "cfg.template"

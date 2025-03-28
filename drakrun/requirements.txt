@@ -13,7 +13,7 @@ ipython==8.10.0
 flare-capa>=7.2.0
 orjson==3.9.15
 mslex==1.1.0
-pydantic==2.6.4
+pydantic==2.10.6
 # Peer dependency of Pydantic
 typing-extensions
 pathvalidate==3.2.0

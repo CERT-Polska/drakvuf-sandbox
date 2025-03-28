@@ -1,48 +1,40 @@
 import json
-import os
-from dataclasses import dataclass
+import pathlib
 from typing import Optional
 
-from dataclasses_json import DataClassJsonMixin
+from pydantic import BaseModel
 
-from .paths import ETC_DIR
-from .util import safe_delete
+from .paths import SNAPSHOT_DIR, XL_CFG_TEMPLATE_PATH
 
 
-@dataclass
-class InstallInfo(DataClassJsonMixin):
+class InstallInfo(BaseModel):
+    """
+    This object is main configuration of the VM, initialized during installation process.
+
+    Values are mapped to the xl domain configuration file template.
+    """
+
     storage_backend: str
     disk_size: str
-    iso_path: str
-    enable_unattended: bool
-    vcpus: int = 2
-    memory: int = 3072
+    vnc_passwd: str
+    vcpus: int
+    memory: int
+    reboot_vm0_action: str = "restart"
+    reboot_vmn_action: str = "destroy"
+    xl_cfg_template: pathlib.Path = XL_CFG_TEMPLATE_PATH
+    snapshot_dir: pathlib.Path = SNAPSHOT_DIR
+
+    lvm_snapshot_size: str = "1G"
     zfs_tank_name: Optional[str] = None
     lvm_volume_group: Optional[str] = None
-    iso_sha256: Optional[str] = None
-
-    INSTALL_FILE_PATH = os.path.join(ETC_DIR, "install.json")
 
     @staticmethod
-    def load() -> "InstallInfo":
-        """Reads and parses install.json file"""
-        with open(InstallInfo.INSTALL_FILE_PATH, "r") as f:
-            return InstallInfo.from_json(f.read())
+    def load(path: pathlib.Path) -> "InstallInfo":
+        """Parses InstallInfo file at the provided path"""
+        with path.open("r") as f:
+            return InstallInfo.model_validate_json(f.read())
 
-    @staticmethod
-    def try_load() -> Optional["InstallInfo"]:
-        """Tries to load install.json of fails with None"""
-        try:
-            return InstallInfo.load()
-        except FileNotFoundError:
-            return None
-
-    @staticmethod
-    def delete():
-        if not safe_delete(InstallInfo.INSTALL_FILE_PATH):
-            raise Exception("install.json not deleted")
-
-    def save(self):
-        """Serializes self and writes to install.json"""
-        with open(InstallInfo.INSTALL_FILE_PATH, "w") as f:
-            f.write(json.dumps(self.to_dict(), indent=4))
+    def save(self, path: pathlib.Path) -> None:
+        """Serializes self and writes to the provided path"""
+        with path.open("w") as f:
+            f.write(json.dumps(self.model_dump(mode="json"), indent=4))
