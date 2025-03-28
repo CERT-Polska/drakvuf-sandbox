@@ -28,7 +28,7 @@ struct drakTestStruct {
  * @param[in] path - application path
  * @param[out] pi - created process info (with handle)
  */
-DrakTestStatus CreateProcFromPath(const char* path, PROCESS_INFORMATION* pi)
+DrakTestStatus CreateProcFromPath(const char* path, PROCESS_INFORMATION* pi, DWORD flags)
 {
     char buff[MAX_PATH] = { 0 };
     STARTUPINFOA si;
@@ -38,11 +38,12 @@ DrakTestStatus CreateProcFromPath(const char* path, PROCESS_INFORMATION* pi)
     si.cb = sizeof(si);
     SecureZeroMemory(pi, sizeof(pi));
 
-    if ( !CreateProcessA(NULL, buff, NULL, NULL, FALSE, 0, NULL, NULL, &si, pi) )
+    if ( !CreateProcessA(NULL, buff, NULL, NULL, FALSE, flags, NULL, NULL, &si, pi) )
     {
         PRINT_DEBUG("CreateProcessA failed with code: %d\n", GetLastError());
         return DrakTestStatus::Failed;
     }
+    WaitForSingleObject(pi->hProcess, 3000);
 
     return DrakTestStatus::OK;
 }
@@ -84,7 +85,7 @@ DrakTestStatus ExecutePayload(HANDLE hProc, LPVOID remoteProcBuffer, int flags =
         PRINT_DEBUG("CreateRemoteThread failed with code: %d\n", GetLastError());
         return DrakTestStatus::Failed;
     }
-    WaitForSingleObject(hThread, INFINITE);
+    WaitForSingleObject(hProc, 3000);
     CloseHandleErrCheck(hThread);
 
     return DrakTestStatus::OK;
@@ -190,6 +191,29 @@ DrakTestStatus RemoteInject(HANDLE hProc, unsigned char* payload, size_t* payloa
             return DrakTestStatus::Failed;
         }
     }
+
+    // Sleep(3000);
+    // int pid;
+    // pid = FindProc(L"calc.exe");
+    // if (pid != 0)
+    // {
+    //     HANDLE h = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
+    //     UINT exitCode = 0;
+    //     if (!TerminateProcess(h, exitCode))
+    //     {
+    //         PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
+    //     }
+    // }
+    // pid = FindProc(L"CalculatorApp.exe");
+    // if (pid != 0)
+    // {
+    //     HANDLE h = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
+    //     UINT exitCode = 0;
+    //     if (!TerminateProcess(h, exitCode))
+    //     {
+    //         PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
+    //     }
+    // }
 
     return DrakTestStatus::OK;
 }
@@ -300,28 +324,31 @@ DrakTestStatus NtWriteVirtualMemoryTest()
     
     PROCESS_INFORMATION piNotepad;
     size_t payloadSize = sizeof(PAYLOADEK);
-    DrakTestStatus status;
+    DrakTestStatus status = DrakTestStatus::OK;
     UINT exitCode = 0;
 
-    status = CreateProcFromPath(SZ_NOTEPAD, &piNotepad);
+    status = CreateProcFromPath(SZ_NOTEPAD, &piNotepad, 0);
+
     if (status == DrakTestStatus::Failed)
     {
         PRINT_DEBUG("CreateProcFromPath failed in test %s: \n", __FUNCTION__);
         goto clean_exit;
     }
 
-    status = RemoteInject(piNotepad.hProcess, PAYLOADEK, &payloadSize,  false, false, false);
+    status = RemoteInject(piNotepad.hProcess, PAYLOADEK, &payloadSize,  false, true, false);
     if (status == DrakTestStatus::Failed)
     {
         PRINT_DEBUG("RemoteInject failed in test %s: \n", __FUNCTION__);
         goto clean_exit;
     }
 
-    clean_exit:
+    // PostMessage(piNotepad.hProcess, )
+
     if (!TerminateProcess(piNotepad.hProcess, exitCode))
     {
         PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
     }
+    clean_exit:
     CloseHandleErrCheck(piNotepad.hProcess);
     CloseHandleErrCheck(piNotepad.hThread);
 
@@ -343,7 +370,7 @@ DrakTestStatus NtCreateThreadExTest()
     DrakTestStatus status;
     UINT exitCode = 0;
 
-    status = CreateProcFromPath(SZ_NOTEPAD, &piNotepad);
+    status = CreateProcFromPath(SZ_NOTEPAD, &piNotepad, 0);
     if (status == DrakTestStatus::Failed)
     {
         PRINT_DEBUG("CreateProcFromPath failed in test %s: \n", __FUNCTION__);
@@ -356,11 +383,11 @@ DrakTestStatus NtCreateThreadExTest()
         PRINT_DEBUG("RemoteInject failed in test %s: \n", __FUNCTION__);
     }
 
+    // if (!TerminateProcess(piNotepad.hProcess, exitCode))
+    // {
+    //     PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
+    // }
     clean_exit:
-    if (!TerminateProcess(piNotepad.hProcess, exitCode))
-    {
-        PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
-    }
     CloseHandleErrCheck(piNotepad.hProcess);
     CloseHandleErrCheck(piNotepad.hThread);
 
@@ -389,7 +416,7 @@ DrakTestStatus NtSetInformationThreadTest()
     DrakTestStatus drakStatus;
     UINT exitCode = 0;
 
-    drakStatus = CreateProcFromPath(SZ_IEXPLORER, &piIExplorer);
+    drakStatus = CreateProcFromPath(SZ_IEXPLORER, &piIExplorer, CREATE_SUSPENDED);
     if (drakStatus == DrakTestStatus::Failed)
     {
         PRINT_DEBUG("CreateProcFromPath failed in test %s: \n", __FUNCTION__);
@@ -441,11 +468,9 @@ DrakTestStatus NtSetInformationThreadTest()
     if (!NT_SUCCESS(ntStatus))
     {
         PRINT_DEBUG("NtSetInformationThread failed with status: %x\n", ntStatus);
-        PRINT_DEBUG("NtSetInformationThread failed with status: %d\n", ntStatus);
         drakStatus = DrakTestStatus::Failed;
         goto clean_exit;
     }
-
     status = ResumeThread(piIExplorer.hThread);
     if (!NT_SUCCESS(ntStatus))
     {
@@ -453,14 +478,14 @@ DrakTestStatus NtSetInformationThreadTest()
         drakStatus = DrakTestStatus::Failed;
         goto clean_exit;
     }
-    Sleep(3000);
-    WaitForSingleObject(piIExplorer.hThread, INFINITE);
+    // Sleep(3000);
+    WaitForSingleObject(piIExplorer.hThread, 3000);
 
-    clean_exit:
     if (!TerminateProcess(piIExplorer.hProcess, exitCode))
     {
         PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
     }
+    clean_exit:
     CloseHandleErrCheck(piIExplorer.hThread);
     CloseHandleErrCheck(piIExplorer.hProcess);
 
@@ -481,7 +506,7 @@ DrakTestStatus NtFreeVirtualMemoryShellcodeTest()
     DrakTestStatus status;
     UINT exitCode = 0;
 
-    status = CreateProcFromPath(SZ_NOTEPAD, &piNotepad);
+    status = CreateProcFromPath(SZ_NOTEPAD, &piNotepad, 0);
     if (status == DrakTestStatus::Failed)
     {
         PRINT_DEBUG("CreateProcFromPath failed in test %s: \n", __FUNCTION__);

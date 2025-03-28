@@ -44,7 +44,6 @@ DWORD FindProc(const WCHAR* procname)
         if (wcscmp(pe.szExeFile, procname) == 0)
         {
             PRINT_DEBUG("found: %ls\n", pe.szExeFile);
-
             return pe.th32ProcessID;
         }
         result = Process32NextW(hProcSnapshot, &pe);
