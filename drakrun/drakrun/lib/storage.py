@@ -2,7 +2,6 @@ import datetime
 import json
 import logging
 import os
-import pathlib
 import shutil
 import subprocess
 import time
@@ -276,7 +275,7 @@ class Qcow2StorageBackend(StorageBackendBase):
                     "create",
                     "-f",
                     "qcow2",
-                    os.path.join(self.snapshot_dir, "vm-0.img"),
+                    (self.snapshot_dir / "vm-0.img").as_posix(),
                     disk_size,
                 ],
                 check=True,
@@ -289,19 +288,18 @@ class Qcow2StorageBackend(StorageBackendBase):
         pass
 
     def get_vm_disk_path_by_name(self, volume_name: str) -> str:
-        disk_path = os.path.join(self.snapshot_dir, f"{volume_name}.img")
+        disk_path = (self.snapshot_dir / f"{volume_name}.img").as_posix()
         return f"tap:qcow2:{disk_path},xvda,w"
 
     def get_vm0_modify_disk_path(self) -> str:
         return self.get_vm_disk_path_by_name("vm-0-modify")
 
     def check_volume_exists(self, volume_name: str) -> bool:
-        volume_path = os.path.join(self.snapshot_dir, f"{volume_name}.img")
-        return os.path.exists(volume_path)
+        return (self.snapshot_dir / f"{volume_name}.img").exists()
 
     def rollback_vm_storage(self, vm_id: int) -> None:
-        volume_path = os.path.join(self.snapshot_dir, f"vm-{vm_id}.img")
-        vm0_path = os.path.join(self.snapshot_dir, "vm-0.img")
+        volume_path = self.snapshot_dir / f"vm-{vm_id}.img"
+        vm0_path = self.snapshot_dir / "vm-0.img"
         self.delete_vm_volume(vm_id)
 
         subprocess.run(
@@ -313,8 +311,8 @@ class Qcow2StorageBackend(StorageBackendBase):
                 "-F",
                 "qcow2",
                 "-o",
-                f"backing_file={vm0_path}",
-                volume_path,
+                f"backing_file={vm0_path.as_posix()}",
+                volume_path.as_posix(),
             ],
             check=True,
         )
@@ -322,10 +320,10 @@ class Qcow2StorageBackend(StorageBackendBase):
     def initialize_vm0_modify_storage(self) -> None:
         """Creates storage for vm-0 modification based on current vm-0 state"""
         volume_name = "vm-0-modify"
-        volume_path = os.path.join(self.snapshot_dir, f"{volume_name}.img")
-        vm0_path = os.path.join(self.snapshot_dir, "vm-0.img")
+        volume_path = self.snapshot_dir / f"{volume_name}.img"
+        vm0_path = self.snapshot_dir / "vm-0.img"
 
-        if os.path.exists(volume_path):
+        if volume_path.exists():
             self.delete_vm_volume_by_name(volume_name)
 
         subprocess.run(
@@ -337,8 +335,8 @@ class Qcow2StorageBackend(StorageBackendBase):
                 "-F",
                 "qcow2",
                 "-o",
-                f"backing_file={vm0_path}",
-                volume_path,
+                f"backing_file={vm0_path.as_posix()}",
+                volume_path.as_posix(),
             ],
             check=True,
         )
@@ -350,31 +348,33 @@ class Qcow2StorageBackend(StorageBackendBase):
     def commit_vm0_modify_storage(self) -> None:
         """Apply vm-0 modification to the base vm-0 snapshot"""
         volume_name = "vm-0-modify"
-        volume_path = os.path.join(self.snapshot_dir, f"{volume_name}.img")
+        volume_path = self.snapshot_dir / f"{volume_name}.img"
         subprocess.run(
             [
                 "qemu-img",
                 "commit",
                 "-d",
-                volume_path,
+                volume_path.as_posix(),
             ],
             check=True,
         )
-        self.delete_vm_volume_by_name("vm-0-modify")
+        self.delete_vm_volume_by_name(volume_name)
 
     def get_vm0_snapshot_time(self) -> int:
-        return int(os.path.getmtime(os.path.join(self.snapshot_dir, "vm-0.img")))
+        volume_path = self.snapshot_dir / "vm-0.img"
+        return int(volume_path.lstat().st_mtime)
 
     def export_vm0(self, path: str) -> None:
-        shutil.copy(os.path.join(self.snapshot_dir, "vm-0.img"), path)
+        volume_path = self.snapshot_dir / "vm-0.img"
+        shutil.copy(volume_path, path)
 
     def import_vm0(self, path: str) -> None:
-        shutil.copy(path, os.path.join(self.snapshot_dir, "vm-0.img"))
+        volume_path = self.snapshot_dir / "vm-0.img"
+        shutil.copy(path, volume_path)
 
     def delete_vm_volume_by_name(self, volume_name: str) -> None:
         # unmount can be done here
-        disk_path = os.path.join(self.snapshot_dir, f"{volume_name}.img")
-        pathlib.Path(disk_path).unlink(missing_ok=True)
+        (self.snapshot_dir / f"{volume_name}.img").unlink(missing_ok=True)
 
 
 class LvmStorageBackend(StorageBackendBase):
