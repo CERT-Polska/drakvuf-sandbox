@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import pathlib
-import shlex
 import shutil
 import subprocess
 import time
@@ -108,7 +107,12 @@ class ZfsStorageBackend(StorageBackendBase):
     def check_tools() -> None:
         """Verify existence of zfs command utility"""
         try:
-            subprocess.check_output("zfs -?", shell=True)
+            subprocess.run(
+                ["zfs", "-?"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         except subprocess.CalledProcessError:
             raise RuntimeError(
                 "Failed to execute zfs command. "
@@ -119,25 +123,23 @@ class ZfsStorageBackend(StorageBackendBase):
         if self.check_volume_exists("vm-0"):
             self.delete_vm_volume_by_name("vm-0")
         try:
-            subprocess.check_output(
-                " ".join(
-                    [
-                        "zfs",
-                        "create",
-                        "-s",
-                        "-V",
-                        shlex.quote(disk_size),
-                        shlex.quote(os.path.join(self.zfs_tank_name, "vm-0")),
-                    ]
-                ),
-                shell=True,
+            subprocess.run(
+                [
+                    "zfs",
+                    "create",
+                    "-s",
+                    "-V",
+                    disk_size,
+                    os.path.join(self.zfs_tank_name, "vm-0"),
+                ],
+                check=True,
             )
         except subprocess.CalledProcessError:
             raise RuntimeError("Failed to create a new volume using zfs create.")
 
     def snapshot_vm0_volume(self):
-        snap_name = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0@booted"))
-        subprocess.check_output(f"zfs snapshot {snap_name}", shell=True)
+        snap_name = os.path.join(self.zfs_tank_name, "vm-0@booted")
+        subprocess.run(["zfs", "snapshot", snap_name], check=True)
 
     def get_vm_disk_path_by_name(self, volume_name: str) -> str:
         return f"phy:/dev/zvol/{self.zfs_tank_name}/{volume_name},hda,w"
@@ -197,9 +199,18 @@ class ZfsStorageBackend(StorageBackendBase):
         subprocess.run(["zfs", "snapshot", volume_snap], check=True)
 
     def get_vm0_snapshot_time(self) -> int:
-        base_snap = shlex.quote(os.path.join(self.zfs_tank_name, "vm-0@booted"))
+        base_snap = os.path.join(self.zfs_tank_name, "vm-0@booted")
         out = subprocess.check_output(
-            f"zfs get -H -p -o value creation {base_snap}", shell=True
+            [
+                "zfs",
+                "get",
+                "-H",
+                "-p",
+                "-o",
+                "value",
+                "creation",
+                base_snap,
+            ]
         )
         ts = int(out.decode("ascii").strip())
         return ts
@@ -245,7 +256,12 @@ class Qcow2StorageBackend(StorageBackendBase):
     def check_tools() -> None:
         """Verify existence of qemu-img"""
         try:
-            subprocess.check_output("qemu-img --version", shell=True)
+            subprocess.run(
+                ["qemu-img", "--version"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         except subprocess.CalledProcessError:
             raise RuntimeError(
                 "Failed to determine qemu-img version. "
@@ -254,18 +270,16 @@ class Qcow2StorageBackend(StorageBackendBase):
 
     def initialize_vm0_volume(self, disk_size: str) -> None:
         try:
-            subprocess.check_output(
-                " ".join(
-                    [
-                        "qemu-img",
-                        "create",
-                        "-f",
-                        "qcow2",
-                        os.path.join(self.snapshot_dir, "vm-0.img"),
-                        shlex.quote(disk_size),
-                    ]
-                ),
-                shell=True,
+            subprocess.run(
+                [
+                    "qemu-img",
+                    "create",
+                    "-f",
+                    "qcow2",
+                    os.path.join(self.snapshot_dir, "vm-0.img"),
+                    disk_size,
+                ],
+                check=True,
             )
         except subprocess.CalledProcessError:
             raise RuntimeError("Failed to create a new volume using qemu-img.")
