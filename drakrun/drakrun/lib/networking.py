@@ -1,9 +1,19 @@
 import logging
 import os
+import pathlib
 import re
 import signal
 import subprocess
+import time
 from typing import List, Optional
+
+from .network_info import (
+    NetworkConfiguration,
+    NetworkInfo,
+    get_network_info_path,
+    make_network_info_for_vm,
+)
+from .paths import RUN_DIR
 
 log = logging.getLogger(__name__)
 
@@ -114,77 +124,57 @@ def delete_iptables_chains() -> None:
         subprocess.run(f"iptables {rule}", shell=True)
 
 
-def start_tcpdump_collector(domid: int, outdir: str) -> subprocess.Popen:
+def start_tcpdump_collector(domid: int, outfile: str) -> subprocess.Popen:
     try:
         subprocess.run("tcpdump --version", shell=True, check=True)
     except subprocess.CalledProcessError:
         raise RuntimeError("Failed to start tcpdump")
 
-    return subprocess.Popen(
-        ["tcpdump", "-i", f"vif{domid}.0-emu", "-w", f"{outdir}/dump.pcap"]
-    )
+    return subprocess.Popen(["tcpdump", "-i", f"vif{domid}.0-emu", "-w", outfile])
 
 
-def start_dnsmasq(
-    vm_id: int, dns_server: str, background=False
-) -> Optional[subprocess.Popen]:
-    try:
-        subprocess.run("dnsmasq --version", shell=True, check=True)
-    except subprocess.CalledProcessError:
-        raise RuntimeError("Failed to start dnsmasq")
+def start_dnsmasq(dns_server: str, bridge_name: str, vm_ip: str, dnsmasq_pidfile: str):
+    if os.path.exists(dnsmasq_pidfile):
+        stop_dnsmasq(dnsmasq_pidfile)
 
-    if dns_server == "use-gateway-address":
-        dns_server = f"10.13.{vm_id}.1"
-
-    dnsmasq_pidfile = f"/var/run/dnsmasq-vm{vm_id}.pid"
-
-    if background:
-        if os.path.exists(dnsmasq_pidfile):
-            with open(dnsmasq_pidfile, "r") as f:
-                dnsmasq_pid = int(f.read().strip())
-
-            try:
-                os.kill(dnsmasq_pid, 0)
-            except OSError:
-                log.info("Starting dnsmasq in background")
-            else:
-                log.info("Already running dnsmasq in background")
-                return
-    else:
-        # Ensure dnsmasq is stopped
-        stop_dnsmasq(vm_id)
-
-    return subprocess.Popen(
+    subprocess.Popen(
         [
             "dnsmasq",
-            "--keep-in-foreground" if not background else "",
             "--conf-file=/dev/null",
             "--bind-interfaces",
-            f"--interface=drak{vm_id}",
+            f"--interface={bridge_name}",
             "--port=0",
             "--no-hosts",
             "--no-resolv",
             "--no-poll",
             "--leasefile-ro",
             f"--pid-file={dnsmasq_pidfile}",
-            f"--dhcp-range=10.13.{vm_id}.100,10.13.{vm_id}.200,255.255.255.0,12h",
+            f"--dhcp-range={vm_ip},{vm_ip},12h",
             f"--dhcp-option=option:dns-server,{dns_server}",
-        ]
+        ],
+        start_new_session=True,
     )
 
 
-def stop_dnsmasq(vm_id: int) -> None:
-    dnsmasq_pidfile = f"/var/run/dnsmasq-vm{vm_id}.pid"
-
-    if os.path.exists(dnsmasq_pidfile):
-        with open(dnsmasq_pidfile, "r") as f:
-            dnsmasq_pid = int(f.read().strip())
-
+def stop_dnsmasq(dnsmasq_pidfile: str) -> None:
+    dnsmasq_pidfile = pathlib.Path(dnsmasq_pidfile)
+    if dnsmasq_pidfile.exists():
+        dnsmasq_pid = int(dnsmasq_pidfile.read_text().strip())
         try:
             os.kill(dnsmasq_pid, signal.SIGTERM)
-            log.info(f"Stopped dnsmasq of vm-{vm_id}")
-        except OSError:
-            log.info(f"dnsmasq-vm{vm_id} is already stopped")
+        except OSError as e:
+            log.warning("Failed to stop dnsmasq: %s", str(e))
+        # Wait for exit
+        # dnsmasq doesn't remove its own PID file on termination
+        for _ in range(10):
+            try:
+                os.kill(dnsmasq_pid, 0)
+            except ProcessLookupError:
+                dnsmasq_pidfile.unlink(missing_ok=True)
+                break
+            time.sleep(0.5)
+        else:
+            log.warning(f"Failed to stop dnsmasq: process {dnsmasq_pid} still running")
 
 
 def interface_exists(iface: str) -> bool:
@@ -192,42 +182,43 @@ def interface_exists(iface: str) -> bool:
     return proc.returncode == 0
 
 
-def setup_vm_network(
-    vm_id: int, net_enable: bool, out_interface: str, dns_server: str
-) -> None:
+def start_vm_network(vm_id: int, network_conf: NetworkConfiguration) -> NetworkInfo:
     setup_iptables_chains()
-    bridge_name = f"drak{vm_id}"
+
+    network_info_path = get_network_info_path(vm_id)
+    if network_info_path.exists():
+        stop_vm_network(vm_id)
+
+    network_info = make_network_info_for_vm(vm_id, network_conf)
+    bridge_name = network_info.bridge_name
     try:
         subprocess.run(
             f"brctl addbr {bridge_name}", shell=True, capture_output=True, check=True
         )
         log.info(f"Created bridge {bridge_name}")
-    except subprocess.CalledProcessError as e:
-        if b"already exists" in e.stderr:
-            log.info(f"Bridge {bridge_name} already exists.")
-        else:
-            raise Exception(f"Failed to create bridge {bridge_name}.")
+    except subprocess.CalledProcessError:
+        raise Exception(f"Failed to create bridge {bridge_name}.")
     else:
         subprocess.run(
-            f"ip addr add 10.13.{vm_id}.1/24 dev {bridge_name}", shell=True, check=True
+            f"ip addr add {network_info.gateway_address}/{network_info.network_prefix} dev {bridge_name}",
+            shell=True,
+            check=True,
         )
 
     subprocess.run(f"ip link set dev {bridge_name} up", shell=True, check=True)
     log.info(f"Bridge {bridge_name} is up")
 
-    # Reset iptables in case dns_server, out_interface or net_enable have changed
-    delete_vm_iptables(vm_id)
-
     add_iptable_rule(
         f"DRAKRUN_INP -i {bridge_name} -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
     )
 
-    if dns_server == "use-gateway-address":
+    if network_info.dns_server == network_info.gateway_address:
         add_iptable_rule(f"DRAKRUN_INP -i {bridge_name} -p udp --dport 53 -j ACCEPT")
 
     add_iptable_rule(f"DRAKRUN_INP -i {bridge_name} -d 0.0.0.0/0 -j DROP")
 
-    if net_enable:
+    if network_info.net_enable:
+        out_interface = network_info.out_interface
         if not interface_exists(out_interface):
             raise ValueError(f"Invalid network interface: {repr(out_interface)}")
 
@@ -235,13 +226,23 @@ def setup_vm_network(
             f.write("1\n")
 
         add_iptable_rule(
-            f"DRAKRUN_PRT -t nat -s 10.13.{vm_id}.0/24 -o {out_interface} -j MASQUERADE"
+            f"DRAKRUN_PRT -t nat -s {network_info.network_address} -o {out_interface} -j MASQUERADE"
         )
         add_iptable_rule(f"DRAKRUN_FWD -i {bridge_name} -o {out_interface} -j ACCEPT")
         add_iptable_rule(f"DRAKRUN_FWD -i {out_interface} -o {bridge_name} -j ACCEPT")
 
+    start_dnsmasq(
+        network_info.dns_server,
+        network_info.bridge_name,
+        network_info.vm_address,
+        network_info.dnsmasq_pidfile,
+    )
 
-def delete_vm_bridge(bridge_name: str) -> None:
+    network_info.save(network_info_path)
+    return network_info
+
+
+def delete_vm_bridge(bridge_name: str):
     try:
         subprocess.run(
             f"ip link set dev {bridge_name} down",
@@ -260,8 +261,24 @@ def delete_vm_bridge(bridge_name: str) -> None:
         log.info(f"Deleted {bridge_name} bridge")
 
 
-def delete_vm_iptables(vm_id) -> None:
-    bridge_name = f"drak{vm_id}"
+def vm_network_exists(vm_id: int):
+    network_info_path = get_network_info_path(vm_id)
+    return network_info_path.exists()
+
+
+def stop_vm_network(vm_id: int):
+    if not vm_network_exists(vm_id):
+        log.info(f"VM network for vm-{vm_id} is not running")
+        return
+
+    network_info_path = get_network_info_path(vm_id)
+    network_info = NetworkInfo.load(network_info_path)
+
+    stop_dnsmasq(network_info.dnsmasq_pidfile)
+
+    bridge_name = network_info.bridge_name
+    delete_vm_bridge(bridge_name)
+
     del_iptable_rule(
         f"DRAKRUN_INP -i {bridge_name} -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
     )
@@ -270,28 +287,16 @@ def delete_vm_iptables(vm_id) -> None:
 
     del_iptable_rule(f"DRAKRUN_INP -i {bridge_name} -d 0.0.0.0/0 -j DROP")
 
-    # List net_enable entries
-    iptables_rules = list_iptables_rules()
-    pattern = rf"-A DRAKRUN_FWD -i {bridge_name} -o (\S+) -j ACCEPT"
-    out_interface = None
-    for rule in iptables_rules:
-        m = re.match(pattern, rule)
-        if m:
-            out_interface = m.group(1)
-
-    if out_interface is not None:
+    if network_info.net_enable:
+        out_interface = network_info.out_interface
         # Clean net_enable entries if they exist
         del_iptable_rule(
-            f"DRAKRUN_PRT -t nat -s 10.13.{vm_id}.0/24 -o {out_interface} -j MASQUERADE"
+            f"DRAKRUN_PRT -t nat -s {network_info.network_address} -o {out_interface} -j MASQUERADE"
         )
         del_iptable_rule(f"DRAKRUN_FWD -i {bridge_name} -o {out_interface} -j ACCEPT")
         del_iptable_rule(f"DRAKRUN_FWD -i {out_interface} -o {bridge_name} -j ACCEPT")
 
-
-def delete_vm_network(vm_id) -> None:
-    bridge_name = f"drak{vm_id}"
-    delete_vm_bridge(bridge_name)
-    delete_vm_iptables(vm_id)
+    network_info_path.unlink()
 
 
 def list_vm_bridges() -> List[str]:
@@ -308,14 +313,18 @@ def list_vm_bridges() -> List[str]:
     return bridge_names
 
 
-def delete_all_vm_networks() -> None:
+def stop_all_vm_networks() -> None:
     """
-    Deletes all iptables rules and bridges.
+    Cleans all networks
     """
+    for dnsmasq_pidfile in RUN_DIR.glob("dnsmasq-vm*.pid"):
+        stop_dnsmasq(dnsmasq_pidfile.as_posix())
     flush_iptables_chains()
     delete_iptables_chains()
     for bridge_name in list_vm_bridges():
         delete_vm_bridge(bridge_name)
+    for network_info_path in RUN_DIR.glob("vmnet-*.json"):
+        network_info_path.unlink()
 
 
 def delete_legacy_iptables() -> None:
