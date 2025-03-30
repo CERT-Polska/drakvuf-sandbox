@@ -1,16 +1,17 @@
 import subprocess
 from typing import List
 
-from drakrun.lib.util import RuntimeInfo
+from .drakvuf_cmdline import get_base_injector_cmdline
+from .libvmi import VmiInfo
 
 
 class Injector:
     """Helper class, simplifying usage of DRAKVUF Injector"""
 
-    def __init__(self, vm_name: str, runtime_info: RuntimeInfo, kernel_profile: str):
+    def __init__(self, vm_name: str, vmi_info: VmiInfo, kernel_profile_path: str):
         self.vm_name = vm_name
-        self.kernel_profile = kernel_profile
-        self.runtime_info = runtime_info
+        self.kernel_profile_path = kernel_profile_path
+        self.vmi_info = vmi_info
 
     def _run_with_timeout(
         self,
@@ -44,47 +45,25 @@ class Injector:
                 )
             return subprocess.CompletedProcess(proc.args, retcode, outs, errs)
 
-    def _get_cmdline_generic(self, method: str) -> List[str]:
+    def get_cmdline_generic(self, method: str, args: List[str]) -> List[str]:
         """Build base command line for all injection methods"""
-        return [
-            "injector",
-            "-o",
-            "json",
-            "-d",
-            self.vm_name,
-            "-r",
-            self.kernel_profile,
-            "-i",
-            str(self.runtime_info.inject_pid),
-            "-k",
-            hex(self.runtime_info.vmi_offsets.kpgd),
-            "-m",
-            method,
-            *(
-                ["-I", str(self.runtime_info.inject_tid)]
-                if self.runtime_info.inject_tid is not None
-                else []
-            ),
-        ]
+        return get_base_injector_cmdline(
+            self.vm_name, self.kernel_profile_path, self.vmi_info, method, args
+        )
 
-    def _get_cmdline_writefile(self, local: str, remote: str) -> List[str]:
-        cmd = self._get_cmdline_generic("writefile")
-        cmd.extend(["-e", remote])
-        cmd.extend(["-B", local])
-        return cmd
+    def get_cmdline_writefile(self, local: str, remote: str) -> List[str]:
+        return self.get_cmdline_generic("writefile", ["-e", remote, "-B", local])
 
-    def _get_cmdline_readfile(self, remote: str, local: str) -> List[str]:
-        cmd = self._get_cmdline_generic("readfile")
-        cmd.extend(["-e", remote])
-        cmd.extend(["-B", local])
-        return cmd
+    def get_cmdline_readfile(self, remote: str, local: str) -> List[str]:
+        return self.get_cmdline_generic("readfile", ["-e", remote, "-B", local])
 
-    def _get_cmdline_createproc(self, exec_cmd: str, wait: bool = False) -> List[str]:
-        cmd = self._get_cmdline_generic("createproc")
-        cmd.extend(["-e", exec_cmd])
-        if wait:
-            cmd.append("-w")
-        return cmd
+    def get_cmdline_createproc(self, exec_cmd: str, wait: bool = False) -> List[str]:
+        return self.get_cmdline_generic(
+            "createproc", ["-e", exec_cmd, *(["-w"] if wait else [])]
+        )
+
+    def get_cmdline_shellcode(self, shellcode_path: str) -> List[str]:
+        return self.get_cmdline_generic("shellcode", ["-e", shellcode_path])
 
     def write_file(
         self, local_path: str, remote_path: str, timeout: int = 60
@@ -92,7 +71,7 @@ class Injector:
         """
         Copy local file to the VM
         """
-        injector_cmd = self._get_cmdline_writefile(local_path, remote_path)
+        injector_cmd = self.get_cmdline_writefile(local_path, remote_path)
         return self._run_with_timeout(
             injector_cmd, timeout=timeout, check=True, capture_output=True
         )
@@ -103,7 +82,7 @@ class Injector:
         """
         Copy VM file to local
         """
-        injector_cmd = self._get_cmdline_readfile(remote_path, local_path)
+        injector_cmd = self.get_cmdline_readfile(remote_path, local_path)
         return self._run_with_timeout(
             injector_cmd, timeout=timeout, capture_output=True
         )
@@ -114,5 +93,9 @@ class Injector:
         """
         Create a process inside the VM with given command line
         """
-        injector_cmd = self._get_cmdline_createproc(cmdline, wait=wait)
+        injector_cmd = self.get_cmdline_createproc(cmdline, wait=wait)
+        return self._run_with_timeout(injector_cmd, timeout=timeout, check=True)
+
+    def inject_shellcode(self, shellcode_path: str, timeout: int = 60):
+        injector_cmd = self.get_cmdline_shellcode(shellcode_path)
         return self._run_with_timeout(injector_cmd, timeout=timeout, check=True)

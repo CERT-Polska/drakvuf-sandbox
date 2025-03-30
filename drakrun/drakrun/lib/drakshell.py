@@ -1,0 +1,3 @@
+def get_drakshell(vm, injector):
+    # Just a mock...
+    return None, {"pid": 0, "tid": 0}

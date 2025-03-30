@@ -16,7 +16,7 @@ from drakrun.lib.paths import (
 from drakrun.lib.storage import REGISTERED_BACKEND_NAMES, get_storage_backend
 from drakrun.lib.vm import VirtualMachine
 
-from .util.sanity_check import sanity_check
+from .sanity_check import sanity_check
 
 log = logging.getLogger(__name__)
 
