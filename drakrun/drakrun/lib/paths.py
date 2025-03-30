@@ -25,6 +25,7 @@ RUN_DIR = pathlib.Path("/var/run/drakrun")
 SNAPSHOT_DIR = pathlib.Path(VOLUME_DIR)
 XL_CFG_TEMPLATE_PATH = pathlib.Path(ETC_DIR) / "cfg.template"
 
+
 def make_dirs():
     pathlib.Path(ETC_DIR).mkdir(exist_ok=True)
     pathlib.Path(LIB_DIR).mkdir(exist_ok=True)
