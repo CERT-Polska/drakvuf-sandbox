@@ -113,3 +113,7 @@ def get_xen_info() -> Dict[str, str]:
 
 def xen_insert_cd(domain, drive, iso):
     subprocess.run(["xl", "cd-insert", domain, drive, iso], check=True)
+
+
+def xen_eject_cd(domain, drive):
+    subprocess.run(["xl", "cd-eject", domain, drive], check=True)

@@ -2,8 +2,8 @@ import os
 
 import click
 
-from drakrun.lib.bindings.xen import xen_insert_cd
 from drakrun.lib.vm import FIRST_CDROM_DRIVE
+from drakrun.lib.xen import xen_insert_cd
 
 
 @click.command(help="Mount ISO into guest", no_args_is_help=True)
