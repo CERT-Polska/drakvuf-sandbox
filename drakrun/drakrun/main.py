@@ -22,7 +22,6 @@ from drakrun.lib.analysis_status import (
     create_or_update_analysis_status,
     update_analysis_status,
 )
-from drakrun.lib.bindings.xen import get_xen_info, parse_xen_commandline
 from drakrun.lib.config import load_config
 from drakrun.lib.dll_profiles import dll_file_list
 from drakrun.lib.install_info import InstallInfo
@@ -35,6 +34,7 @@ from drakrun.lib.paths import (
 )
 from drakrun.lib.util import RuntimeInfo, file_sha256
 from drakrun.lib.vm import generate_vm_conf
+from drakrun.lib.xen import get_xen_info, parse_xen_commandline
 from drakrun.version import __version__ as DRAKRUN_VERSION
 
 MAX_TASK_TIMEOUT = 60 * 20  # Never run samples for longer than this

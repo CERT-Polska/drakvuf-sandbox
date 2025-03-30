@@ -6,6 +6,7 @@ VM_CONFIG_DIR = os.path.join(ETC_DIR, "configs")
 SCRIPTS_DIR = os.path.join(ETC_DIR, "scripts")
 
 LIB_DIR = "/var/lib/drakrun"
+CONFIGS_DIR = pathlib.Path(LIB_DIR) / "configs"
 PROFILE_DIR = os.path.join(LIB_DIR, "profiles")
 RUNTIME_FILE = os.path.join(PROFILE_DIR, "runtime.json")
 APISCOUT_PROFILE_DIR = os.path.join(LIB_DIR, "apiscout_profile")
