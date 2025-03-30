@@ -7,6 +7,7 @@ from .drakshell import drakshell
 from .drakvuf_cmdline import drakvuf_cmdline
 from .injector import injector
 from .install import install
+from .make_profile import make_profile
 from .modify_vm0 import modify_vm0
 from .mount import mount
 from .postinstall import postinstall
@@ -25,13 +26,13 @@ def main():
         logging.error("You need to have root privileges to run this command.")
         raise click.Abort()
 
-
-main.add_command(drakshell)
-main.add_command(drakvuf_cmdline)
 main.add_command(install)
 main.add_command(postinstall)
 main.add_command(vm_start)
 main.add_command(vm_stop)
-main.add_command(mount)
 main.add_command(modify_vm0)
 main.add_command(injector)
+main.add_command(drakshell)
+main.add_command(drakvuf_cmdline)
+main.add_command(mount)
+main.add_command(make_profile)
