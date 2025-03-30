@@ -27,7 +27,6 @@ setup(
             "drakpostprocess = drakrun.postprocess:main",
             "draksetup = drakrun.draksetup:main",
             "drakpush = drakrun.drakpush:main",
-            "drakplayground = drakrun.playground:main",
         ]
     },
     classifiers=[
