@@ -4,7 +4,6 @@ import string
 
 import click
 
-from drakrun.draksetup.sanity_check import sanity_check
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.network_info import NetworkConfiguration
 from drakrun.lib.networking import find_default_interface
@@ -16,6 +15,8 @@ from drakrun.lib.paths import (
 )
 from drakrun.lib.storage import REGISTERED_BACKEND_NAMES, get_storage_backend
 from drakrun.lib.vm import VirtualMachine
+
+from .sanity_check import sanity_check
 
 log = logging.getLogger(__name__)
 

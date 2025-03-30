@@ -4,7 +4,7 @@
 # Please don't edit this file unless you know what you are doing.
 
 arch = 'x86_64'
-name = "vm-{{ VM_ID }}"
+name = "{{ VM_NAME }}"
 maxmem = {{ MEMORY }}
 memory = {{ MEMORY }}
 vcpus = {{ VCPUS }}
@@ -14,20 +14,21 @@ boot = "cd"
 hap = 1
 acpi = 1
 on_poweroff = "destroy"
-on_reboot = "destroy"
+on_reboot = "{{ ON_REBOOT }}"
 on_crash = "destroy"
 vnc=1
-vnclisten="[::]:{{ VM_ID }},websocket={{ VNC_PORT }}"
+vnclisten="0.0.0.0:{{ VM_ID }},websocket={{ VNC_PORT }}"
 vncpasswd="{{ VNC_PASS }}"
 usb = 1
 usbdevice = "tablet"
 altp2m = 2
 shadow_memory = 32
-audio=1
+audio = 1
 soundhw='hda'
 cpuid="host,htt=0"
 vga="stdvga"
-vif = [ 'type=ioemu,model=e1000,bridge=drak{{ VM_ID }}' ]
+vif = [ 'type=ioemu,model=e1000,bridge={{ BRIDGE_NAME }}' ]
 disk = [ {{ DISKS }} ]
-# uncomment when using IPT
-# vmtrace_buf_kb = 8192
+serial = [ "unix:/var/run/draktools/{{ VM_NAME }}.sock,server,nowait" ]
+#uncomment when using IPT
+#vmtrace_buf_kb = 8192
