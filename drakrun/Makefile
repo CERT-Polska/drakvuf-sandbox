@@ -4,7 +4,7 @@ PYTHON_SOURCE_FILES := $( wildcard *.py ) drakrun/data pyproject.toml MANIFEST.i
 .PHONY: all
 all: dist/*.whl
 
-dist/*.whl: $(PYTHON_SOURCE_FILES) drakrun/web/frontend/build drakrun/tools/get-explorer-pid
+dist/*.whl: $(PYTHON_SOURCE_FILES) drakrun/web/frontend/build drakrun/tools/get-explorer-pid drakrun/tools/drakshell/drakshell
 	rm -f dist/*.whl
 ifndef DIST
 	DRAKRUN_VERSION_TAG=$(shell git rev-parse --short HEAD) python3 setup.py bdist_wheel
@@ -20,6 +20,9 @@ drakrun/web/frontend/node_modules: drakrun/web/frontend/package.json drakrun/web
 
 drakrun/tools/get-explorer-pid: drakrun/tools/get-explorer-pid.c
 	gcc $< -o $@ -lvmi `pkg-config --cflags --libs glib-2.0`
+
+drakrun/tools/drakshell/drakshell:
+	cd drakrun/tools/drakshell && make $@
 
 .PHONY: clean
 clean:
