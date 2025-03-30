@@ -1,5 +1,6 @@
-include drakrun/tools/*
 include drakrun/test/*
 include drakrun/data/*
+include draktools/tools/get-explorer-pid
+include draktools/tools/drakshell/drakshell
 recursive-include drakrun/data/capa-rules *.yml
 recursive-include drakrun/web/frontend/build *
