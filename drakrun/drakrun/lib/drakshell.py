@@ -180,9 +180,8 @@ class DrakshellInteractiveProcess:
                         status, data = self.channel.recv_response(timeout=3)
                     except Exception as e:
                         if _exc is not None:
-                            raise ExceptionGroup(
-                                "Exception raised during exception handling", (e, _exc)
-                            )
+                            # I don't know how to handle it now
+                            raise
                         else:
                             self.terminate()
                             _exc = e
