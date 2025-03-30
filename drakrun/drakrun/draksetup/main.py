@@ -13,6 +13,8 @@ from .mount import mount
 from .postinstall import postinstall
 from .scale import scale
 from .snapshot import snapshot
+from .vm_start import vm_start
+from .vm_stop import vm_stop
 
 
 @click.group()
@@ -29,6 +31,8 @@ def main():
 
 main.add_command(install)
 main.add_command(postinstall)
+main.add_command(vm_start)
+main.add_command(vm_stop)
 main.add_command(mount)
 main.add_command(scale)
 main.add_command(snapshot)
