@@ -64,7 +64,9 @@ def analyze_file(options: AnalysisOptions):
         injector = Injector(vm.vm_name, vmi_info, kernel_profile_path)
         drakshell = Drakshell(vm.vm_name)
         drakshell.connect(timeout=10)
-
+        info = drakshell.get_info()
+        log.info(f"Drakshell active on: {str(info)}")
+        log.info(f"Running post-restore command...")
         post_restore_cmd = get_post_restore_command(network_conf.net_enable)
         drakshell.check_call(post_restore_cmd)
 
