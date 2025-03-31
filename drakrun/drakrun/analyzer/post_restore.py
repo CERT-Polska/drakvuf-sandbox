@@ -6,7 +6,7 @@ from drakrun.lib.paths import ETC_DIR, PACKAGE_DATA_PATH
 
 def prepare_ps_command(script: str):
     encoded_cmd = base64.b64encode(script.encode("utf-16le")).decode()
-    return "powershell.exe -EncodedCommand " + encoded_cmd
+    return ["powershell.exe", "-EncodedCommand", encoded_cmd]
 
 
 def get_post_restore_command(net_enable: bool):
