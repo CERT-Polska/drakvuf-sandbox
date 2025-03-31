@@ -1,7 +1,7 @@
 import pathlib
 import shutil
 
-ETC_DIR = pathlib.Path("/etc/draktools")
+ETC_DIR = pathlib.Path("/etc/drakrun")
 INSTALL_INFO_PATH = ETC_DIR / "install.json"
 NETWORK_CONF_PATH = ETC_DIR / "network.json"
 XL_CFG_TEMPLATE_PATH = ETC_DIR / "cfg.template"
