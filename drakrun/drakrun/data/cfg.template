@@ -29,6 +29,6 @@ cpuid="host,htt=0"
 vga="stdvga"
 vif = [ 'type=ioemu,model=e1000,bridge={{ BRIDGE_NAME }}' ]
 disk = [ {{ DISKS }} ]
-serial = [ "unix:/var/run/draktools/{{ VM_NAME }}.sock,server,nowait" ]
+serial = [ "unix:/var/run/drakrun/{{ VM_NAME }}.sock,server,nowait" ]
 #uncomment when using IPT
 #vmtrace_buf_kb = 8192
