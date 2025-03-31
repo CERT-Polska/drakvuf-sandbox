@@ -63,7 +63,7 @@ def analyze_file(options: AnalysisOptions):
     with run_vm(options.vm_id, install_info, network_conf) as vm:
         injector = Injector(vm.vm_name, vmi_info, kernel_profile_path)
         drakshell = Drakshell(vm.vm_name)
-        drakshell.connect()
+        drakshell.connect(timeout=10)
 
         post_restore_cmd = get_post_restore_command(network_conf.net_enable)
         drakshell.check_call(post_restore_cmd)

@@ -257,11 +257,11 @@ class Drakshell:
         unix_socket_path = RUN_DIR / f"{vm_name}.sock"
         self.channel = Channel(str(unix_socket_path))
 
-    def connect(self):
+    def connect(self, timeout: int = 3):
         self.channel.connect()
         try:
             self.channel.send_control(ReqCode.REQ_PING)
-            status, _ = self.channel.recv_response(timeout=3)
+            status, _ = self.channel.recv_response(timeout=timeout)
             if status != RespCode.RESP_PONG:
                 raise RuntimeError(
                     f"Drakshell is out of sync: got {status} instead of {RespCode.RESP_PONG}"
