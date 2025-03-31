@@ -131,7 +131,7 @@ def start_tcpdump_collector(domid: int, outfile: pathlib.Path) -> subprocess.Pop
         raise RuntimeError("Failed to start tcpdump")
 
     return subprocess.Popen(
-        ["tcpdump", "-i", f"vif{domid}.0-emu", "-w", outfile.as_posix()]
+        ["tcpdump", "-i", f"vif{domid}.0", "-w", outfile.as_posix()]
     )
 
 
