@@ -5,6 +5,7 @@
 #include <cmath>
 
 static const int NT_CREATE_THREAD_EX_SUSPENDED = 0;
+static const int WAIT_TIME = 5000;
 static const char SZ_NOTEPAD[] = "notepad.exe";
 static const WCHAR SZ_CALCAPP[] = L"CalculatorApp.exe";
 static const WCHAR SZ_CALC[] = L"calc.exe";
@@ -43,7 +44,7 @@ DrakTestStatus CreateProcFromPath(const char* path, PROCESS_INFORMATION* pi, DWO
         PRINT_DEBUG("CreateProcessA failed with code: %d\n", GetLastError());
         return DrakTestStatus::Failed;
     }
-    WaitForSingleObject(pi->hProcess, 3000);
+    WaitForSingleObject(pi->hProcess, WAIT_TIME);
 
     return DrakTestStatus::OK;
 }
@@ -85,7 +86,7 @@ DrakTestStatus ExecutePayload(HANDLE hProc, LPVOID remoteProcBuffer, int flags =
         PRINT_DEBUG("CreateRemoteThread failed with code: %d\n", GetLastError());
         return DrakTestStatus::Failed;
     }
-    WaitForSingleObject(hProc, 3000);
+    WaitForSingleObject(hProc, WAIT_TIME);
     CloseHandleErrCheck(hThread);
 
     return DrakTestStatus::OK;
@@ -479,7 +480,7 @@ DrakTestStatus NtSetInformationThreadTest()
         goto clean_exit;
     }
     // Sleep(3000);
-    WaitForSingleObject(piIExplorer.hThread, 3000);
+    WaitForSingleObject(piIExplorer.hThread, WAIT_TIME);
 
     if (!TerminateProcess(piIExplorer.hProcess, exitCode))
     {
