@@ -3,6 +3,7 @@ import os
 
 import click
 
+from .analyze import analyze
 from .drakshell import drakshell
 from .drakvuf_cmdline import drakvuf_cmdline
 from .injector import injector
@@ -27,6 +28,7 @@ def main():
         raise click.Abort()
 
 
+main.add_command(analyze)
 main.add_command(install)
 main.add_command(postinstall)
 main.add_command(vm_start)
