@@ -66,12 +66,12 @@ def analyze_file(options: AnalysisOptions):
         drakshell.connect(timeout=10)
         info = drakshell.get_info()
         log.info(f"Drakshell active on: {str(info)}")
-        log.info(f"Running post-restore command...")
+        log.info("Running post-restore command...")
         post_restore_cmd = get_post_restore_command(network_conf.net_enable)
         drakshell.check_call(post_restore_cmd)
 
         if options.sample_path is not None:
-            log.info(f"Copying sample to the VM...")
+            log.info("Copying sample to the VM...")
             guest_path = drop_sample_to_vm(
                 injector, options.sample_path, options.target_filename
             )
@@ -88,5 +88,5 @@ def analyze_file(options: AnalysisOptions):
                 drakshell.run([guest_path], terminate_drakshell=True)
             else:
                 drakshell.finish()
-            log.info(f"Analysis started...")
+            log.info("Analysis started...")
             drakvuf.wait()

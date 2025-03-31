@@ -23,6 +23,7 @@ def process_graceful_exit(proc: subprocess.Popen, termination_timeout: int = 5):
             proc.kill()
             proc.wait(termination_timeout)
 
+
 def run_tcpdump(vm: VirtualMachine, output_file: pathlib.Path):
     return process_graceful_exit(start_tcpdump_collector(vm.get_domid(), output_file))
 
