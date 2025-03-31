@@ -284,7 +284,7 @@ class Drakshell:
 
     def finish(self):
         self.channel.send_control(ReqCode.REQ_FINISH)
-        status, info = self.channel.recv_response(timeout=3)
+        status, info = self.channel.recv_response(timeout=15)
         if status != RespCode.RESP_FINISH_START:
             raise RuntimeError(
                 f"Drakshell is out of sync: got {status} instead of {RespCode.RESP_FINISH_START}"
@@ -302,14 +302,14 @@ class Drakshell:
         }[start_code]
         self.channel.send_control(start_code)
 
-        status, _ = self.channel.recv_response(timeout=3)
+        status, _ = self.channel.recv_response(timeout=15)
         if status != expected_status:
             raise RuntimeError(
                 f"Drakshell is out of sync: got {status} instead of {expected_status}"
             )
 
         self.channel.send_data(cmdline)
-        status, code = self.channel.recv_response(timeout=3)
+        status, code = self.channel.recv_response(timeout=15)
         if status == RespCode.RESP_PROCESS_START:
             pass
         elif status == RespCode.RESP_PROCESS_ERROR:
