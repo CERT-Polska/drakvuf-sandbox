@@ -71,6 +71,7 @@ def analyze_file(options: AnalysisOptions):
         drakshell.check_call(post_restore_cmd)
 
         if options.sample_path is not None:
+            log.info(f"Copying sample to the VM...")
             guest_path = drop_sample_to_vm(
                 injector, options.sample_path, options.target_filename
             )
@@ -83,5 +84,9 @@ def analyze_file(options: AnalysisOptions):
         with run_tcpdump(vm, tcpdump_file), run_drakvuf(
             vm.vm_name, vmi_info, kernel_profile_path, drakmon_file, drakvuf_args
         ) as drakvuf:
-            drakshell.run(guest_path, terminate_drakshell=True)
+            if guest_path:
+                drakshell.run([guest_path], terminate_drakshell=True)
+            else:
+                drakshell.finish()
+            log.info(f"Analysis started...")
             drakvuf.wait()
