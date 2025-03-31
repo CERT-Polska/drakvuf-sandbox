@@ -5,7 +5,7 @@
 #include <cmath>
 
 static const int NT_CREATE_THREAD_EX_SUSPENDED = 0;
-static const int WAIT_TIME = 5000;
+static const int WAIT_TIME = 10000;
 static const char SZ_NOTEPAD[] = "notepad.exe";
 static const WCHAR SZ_CALCAPP[] = L"CalculatorApp.exe";
 static const WCHAR SZ_CALC[] = L"calc.exe";
