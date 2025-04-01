@@ -26,7 +26,7 @@ from capa.main import (
 from capa.render.result_document import MatchResults as ResultDocumentMatchResults
 from capa.rules import Rule, RuleSet, get_rules, get_rules_and_dependencies
 
-from drakrun.lib.config import DrakrunConfig, load_config
+from .capa_config import CapaConfigSection
 
 logger = logging.getLogger(__name__)
 
@@ -208,8 +208,8 @@ def static_capa_analysis(
 def static_memory_dumps_capa_analysis(
     analysis_dir: Path,
     rules: RuleSet,
-    config: DrakrunConfig,
-    malware_pids: List[int] = [],
+    worker_pool_processes: int,
+    malware_pids: List[int],
 ) -> Iterator[Tuple[Path, ResultDocumentMatchResults]]:
     malware_dumps = list(
         itertools.chain(
@@ -225,7 +225,7 @@ def static_memory_dumps_capa_analysis(
             dumps = Path(dump_extraction_directory) / "dumps"
 
         # extract the capabilities within each memory dump, one per thread
-        pool = multiprocessing.Pool(processes=config.capa.worker_pool_processes)
+        pool = multiprocessing.Pool(processes=worker_pool_processes)
         yield from pool.starmap(
             static_capa_analysis, map(lambda dump: (dumps / dump, rules), malware_dumps)
         )
@@ -297,15 +297,12 @@ def construct_ttp_blocks(
 
 
 def capa_analysis(analysis_dir: Path) -> None:
-    config: DrakrunConfig = load_config()
+    # todo: this should be filled with configuration
+    # right now only defaults are supported
+    config = CapaConfigSection()
 
     # capa rules directory
-    capa_rules_dir = config.capa.rules_directory
-
-    # analysis-related config
-    analyze_drakmon_log = config.capa.analyze_drakmon_log
-    analyze_memdumps = config.capa.analyze_memdumps
-    analyze_only_malware_pids = config.capa.analyze_only_malware_pids
+    capa_rules_dir = config.rules_directory
 
     """check and prepare the rules folder"""
     if not check_rules_directory_exist(capa_rules_dir):
@@ -320,17 +317,14 @@ def capa_analysis(analysis_dir: Path) -> None:
 
     # get malware-related pids if requested by configuration
     malware_pids = None
-    if analyze_only_malware_pids:
+    if config.analyze_only_malware_pids:
         malware_pids = get_malware_processes(
             inject_path=analysis_dir / "inject.log",
             pstree_path=analysis_dir / "process_tree.json",
         )
 
-    # make sure either static or dynamic capability extraction is on
-    assert analyze_drakmon_log or analyze_memdumps
-
     # extract capabilities from the Drakvuf report
-    if analyze_drakmon_log:
+    if config.analyze_drakmon_log:
         dynamic_capabilities = dynamic_capa_analysis(
             analysis_dir, rules, malware_pids=malware_pids
         )
@@ -346,9 +340,9 @@ def capa_analysis(analysis_dir: Path) -> None:
                 f.write(b"\n")
 
     # extract capabilities from the memory dumps
-    if analyze_memdumps:
+    if config.analyze_memdumps:
         static_capabilities_per_file = static_memory_dumps_capa_analysis(
-            analysis_dir, rules, config, malware_pids=malware_pids
+            analysis_dir, rules, config.worker_pool_processes, malware_pids=malware_pids
         )
 
         # create a folder containing the TTPs corresponding to each dump
