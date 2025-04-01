@@ -1,6 +1,6 @@
 import pathlib
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Union
 
 
 @dataclass
@@ -13,7 +13,7 @@ class AnalysisOptions:
     apimon_hooks_path: Optional[pathlib.Path] = None
     syscall_hooks_path: Optional[pathlib.Path] = None
     timeout: int = 600
-    start_command: Optional[str] = None
+    start_command: Optional[Union[List[str], str]] = None
     extension: Optional[str] = None
     dns_server: Optional[str] = None
     out_interface: Optional[str] = None
