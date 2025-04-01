@@ -1,7 +1,6 @@
 import json
 import logging
 import pathlib
-from typing import Optional
 
 from drakrun.lib.drakshell import Drakshell
 from drakrun.lib.injector import Injector
@@ -19,6 +18,7 @@ from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command
 from .postprocessing import postprocess_output_dir
 from .run_tools import run_drakvuf, run_tcpdump, run_vm
+from .startup_command import get_startup_argv, get_target_filename_from_sample_path
 
 log = logging.getLogger(__name__)
 
@@ -38,12 +38,7 @@ def get_network_configuration(options: AnalysisOptions) -> NetworkConfiguration:
     return network_conf
 
 
-def drop_sample_to_vm(
-    injector: Injector, sample_path: pathlib.Path, target_filename: Optional[str] = None
-):
-    if target_filename is None:
-        target_filename = sample_path.name
-    target_path = f"%USERPROFILE%\\Desktop\\{target_filename}"
+def drop_sample_to_vm(injector: Injector, sample_path: pathlib.Path, target_path: str):
     result = injector.write_file(str(sample_path), target_path)
     try:
         return json.loads(result.stdout)["ProcessName"]
@@ -64,6 +59,7 @@ def analyze_file(options: AnalysisOptions):
     with run_vm(options.vm_id, install_info, network_conf) as vm:
         network_info = vm.get_network_info()
         injector = Injector(vm.vm_name, vmi_info, kernel_profile_path)
+        log.info("Connecting to drakshell...")
         drakshell = Drakshell(vm.vm_name)
         drakshell.connect(timeout=10)
         info = drakshell.get_info()
@@ -74,12 +70,26 @@ def analyze_file(options: AnalysisOptions):
         drakshell.check_call(post_restore_cmd)
 
         if options.sample_path is not None:
-            log.info("Copying sample to the VM...")
+            if options.target_filename is None:
+                options.target_filename = get_target_filename_from_sample_path(
+                    options.sample_path
+                )
+            lower_target_name = options.target_filename.lower()
+            if not lower_target_name.startswith(
+                "c:"
+            ) and not lower_target_name.startswith("%"):
+                options.target_filename = (
+                    "%USERPROFILE%\\Desktop\\" + options.target_filename
+                )
+            log.info(
+                f"Copying sample to the VM ({options.sample_path.as_posix()} -> {options.target_filename})..."
+            )
             guest_path = drop_sample_to_vm(
                 injector, options.sample_path, options.target_filename
             )
-        else:
-            guest_path = None
+
+            if options.start_command is None:
+                options.start_command = get_startup_argv(guest_path)
 
         tcpdump_file = options.output_dir / "dump.pcap"
         drakmon_file = options.output_dir / "drakmon.log"
@@ -89,7 +99,8 @@ def analyze_file(options: AnalysisOptions):
             with run_tcpdump(network_info, tcpdump_file), run_drakvuf(
                 vm.vm_name, vmi_info, kernel_profile_path, drakmon_file, drakvuf_args
             ) as drakvuf:
-                if guest_path:
+                if options.start_command is not None:
+                    log.info(f"Running command: {guest_path}.")
                     drakshell.run([guest_path], terminate_drakshell=True)
                 else:
                     drakshell.finish()

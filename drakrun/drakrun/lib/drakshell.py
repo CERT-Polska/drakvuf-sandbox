@@ -291,7 +291,9 @@ class Drakshell:
             )
 
     def _start_process(self, args, start_code: ReqCode):
-        cmdline = mslex.join(args, for_cmd=False).encode("utf-16le") + b"\0\0"
+        if type(args) is list or type(args) is tuple:
+            args = mslex.join(args, for_cmd=False)
+        cmdline = args.encode("utf-16le") + b"\0\0"
         if len(cmdline) > 2048:
             raise RuntimeError("Command line too long")
 
