@@ -27,8 +27,6 @@ def get_target_filename_from_sample_path(sample_path: pathlib.Path) -> str:
     # isn't really good at handling them in logs
     file_name = (
         (unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii"))
-        + "."
-        + extension
     )
     if file_name and is_valid_filename(file_name, platform=Platform.UNIVERSAL):
         return file_name
