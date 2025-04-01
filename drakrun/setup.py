@@ -22,9 +22,7 @@ setup(
     install_requires=open("requirements.txt").read().splitlines(),
     entry_points={
         "console_scripts": [
-            "drakrun = drakrun.main:DrakrunKarton.main",
-            "draksetup = drakrun.draksetup:main",
-            "drakpush = drakrun.drakpush:main",
+            "drakrun = drakrun.cli:main",
         ]
     },
     classifiers=[
