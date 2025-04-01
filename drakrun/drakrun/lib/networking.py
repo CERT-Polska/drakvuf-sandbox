@@ -124,15 +124,15 @@ def delete_iptables_chains() -> None:
         subprocess.run(f"iptables {rule}", shell=True)
 
 
-def start_tcpdump_collector(domid: int, outfile: pathlib.Path) -> subprocess.Popen:
+def start_tcpdump_collector(
+    bridge_name: str, outfile: pathlib.Path
+) -> subprocess.Popen:
     try:
         subprocess.run("tcpdump --version", shell=True, check=True)
     except subprocess.CalledProcessError:
         raise RuntimeError("Failed to start tcpdump")
 
-    return subprocess.Popen(
-        ["tcpdump", "-i", f"vif{domid}.0", "-w", outfile.as_posix()]
-    )
+    return subprocess.Popen(["tcpdump", "-i", bridge_name, "-w", outfile.as_posix()])
 
 
 def start_dnsmasq(dns_server: str, bridge_name: str, vm_ip: str, dnsmasq_pidfile: str):

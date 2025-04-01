@@ -63,6 +63,5 @@ def drakshell(vm_id, cmd):
     log.info(f"Drakshell active on: {str(info)}")
 
     process = drakshell.run_interactive(cmd, sys.stdin, sys.stdout, sys.stderr)
-
     exit_code = process.join()
     log.info(f"Process terminated with exit code {exit_code}")

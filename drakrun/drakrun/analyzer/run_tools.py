@@ -6,7 +6,7 @@ from typing import List, Optional
 from drakrun.lib.drakvuf_cmdline import get_base_drakvuf_cmdline
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.libvmi import VmiInfo
-from drakrun.lib.network_info import NetworkConfiguration
+from drakrun.lib.network_info import NetworkConfiguration, NetworkInfo
 from drakrun.lib.networking import start_tcpdump_collector
 from drakrun.lib.vm import VirtualMachine
 
@@ -24,8 +24,10 @@ def process_graceful_exit(proc: subprocess.Popen, termination_timeout: int = 5):
             proc.wait(termination_timeout)
 
 
-def run_tcpdump(vm: VirtualMachine, output_file: pathlib.Path):
-    return process_graceful_exit(start_tcpdump_collector(vm.get_domid(), output_file))
+def run_tcpdump(network_info: NetworkInfo, output_file: pathlib.Path):
+    return process_graceful_exit(
+        start_tcpdump_collector(network_info.bridge_name, output_file)
+    )
 
 
 @contextlib.contextmanager

@@ -153,7 +153,7 @@ def run_vm(vm: DrakvufVM, options: AnalysisOptions):
 def run_tcpdump(vm: DrakvufVM, options: AnalysisOptions):
     # todo: start_tcpdump_collector should accept pathlib.Path
     return graceful_exit(
-        start_tcpdump_collector(vm.vm.get_domid(), str(options.output_dir))
+        start_tcpdump_collector(f"drak{vm.vm_id}", str(options.output_dir))
     )
 
 

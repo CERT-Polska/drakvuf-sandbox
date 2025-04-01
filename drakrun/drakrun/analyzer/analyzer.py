@@ -61,10 +61,12 @@ def analyze_file(options: AnalysisOptions):
     kernel_profile_path = VMI_KERNEL_PROFILE_PATH.as_posix()
 
     with run_vm(options.vm_id, install_info, network_conf) as vm:
+        network_info = vm.get_network_info()
         injector = Injector(vm.vm_name, vmi_info, kernel_profile_path)
         drakshell = Drakshell(vm.vm_name)
         drakshell.connect(timeout=10)
         info = drakshell.get_info()
+
         log.info(f"Drakshell active on: {str(info)}")
         log.info("Running post-restore command...")
         post_restore_cmd = get_post_restore_command(network_conf.net_enable)
@@ -81,7 +83,7 @@ def analyze_file(options: AnalysisOptions):
         tcpdump_file = options.output_dir / "dump.pcap"
         drakmon_file = options.output_dir / "drakmon.log"
         drakvuf_args = ["-a", "procmon"]
-        with run_tcpdump(vm, tcpdump_file), run_drakvuf(
+        with run_tcpdump(network_info, tcpdump_file), run_drakvuf(
             vm.vm_name, vmi_info, kernel_profile_path, drakmon_file, drakvuf_args
         ) as drakvuf:
             if guest_path:
