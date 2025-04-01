@@ -1,9 +1,4 @@
-karton-core==5.3.4
-minio==5.0.7
-redis==5.0.3
 pefile==2023.2.7
-requests==2.32.3
-tqdm==4.66.3
 python-magic==0.4.25
 dataclasses-json==0.5.6
 click==8.1.7
