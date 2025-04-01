@@ -96,6 +96,6 @@ def analyze_file(options: AnalysisOptions):
                 log.info("Analysis started...")
                 drakvuf.wait()
         except KeyboardInterrupt:
-            ...
+            log.info("Interrupted with CTRL-C, analysis finished.")
 
         postprocess_output_dir(options.output_dir)
