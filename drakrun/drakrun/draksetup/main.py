@@ -12,6 +12,7 @@ from .make_profile import make_profile
 from .modify_vm0 import modify_vm0
 from .mount import mount
 from .postinstall import postinstall
+from .postprocess import postprocess
 from .vm_start import vm_start
 from .vm_stop import vm_stop
 
@@ -29,6 +30,7 @@ def main():
 
 
 main.add_command(analyze)
+main.add_command(postprocess)
 main.add_command(install)
 main.add_command(postinstall)
 main.add_command(vm_start)
