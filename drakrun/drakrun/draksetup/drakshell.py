@@ -1,5 +1,4 @@
 import logging
-import signal
 import sys
 import time
 
@@ -64,18 +63,5 @@ def drakshell(vm_id, cmd):
     log.info(f"Drakshell active on: {str(info)}")
 
     process = drakshell.run_interactive(cmd, sys.stdin, sys.stdout, sys.stderr)
-
-    # We can't rely on KeyboardInterrupt because threads are immediately terminated
-    # when signal handler raises an Exception. I don't know why it works that way
-    # but we need to setup our own handler here.
-    orig_handler = signal.getsignal(signal.SIGINT)
-
-    def sigint_handler(sig, frame):
-        process.terminate()
-
-    signal.signal(signal.SIGINT, sigint_handler)
-    try:
-        exit_code = process.join()
-        log.info(f"Process terminated with exit code {exit_code}")
-    finally:
-        signal.signal(signal.SIGINT, orig_handler)
+    exit_code = process.join()
+    log.info(f"Process terminated with exit code {exit_code}")
