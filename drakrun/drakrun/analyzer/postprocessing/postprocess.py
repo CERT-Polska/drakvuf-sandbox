@@ -1,10 +1,10 @@
-import argparse
 import json
 import logging
 import pathlib
 from typing import Any, Dict
 
-from .lib.postprocessing import POSTPROCESS_PLUGINS, PostprocessPlugin
+from .plugins import POSTPROCESS_PLUGINS
+from .plugins.plugin_base import PostprocessPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ def check_plugin_requirements(
     return True
 
 
-def postprocess_analysis(analysis_dir: pathlib.Path):
+def run_postprocessing(analysis_dir: pathlib.Path):
     extra_metadata = {}
     for plugin in POSTPROCESS_PLUGINS:
         plugin_name = plugin.function.__name__
@@ -54,18 +54,6 @@ def append_metadata_to_analysis(
     metadata_path.write_text(json.dumps(metadata))
 
 
-def main():
-    logging.basicConfig(level=logging.INFO)
-    parser = argparse.ArgumentParser(
-        description="Re-runs postprocessing on analysis",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    parser.add_argument("analysis_path", help="Path to the analysis directory")
-    args = parser.parse_args()
-
-    analysis_path = pathlib.Path(args.analysis_path)
-    if not analysis_path.exists():
-        raise RuntimeError(f"Provided path '{str(args.analysis_path)}' does not exist")
-
-    extra_metadata = postprocess_analysis(analysis_path)
-    append_metadata_to_analysis(analysis_path, extra_metadata)
+def postprocess_output_dir(output_dir: pathlib.Path):
+    extra_metadata = run_postprocessing(output_dir)
+    append_metadata_to_analysis(output_dir, extra_metadata)

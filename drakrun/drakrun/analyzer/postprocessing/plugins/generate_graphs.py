@@ -3,7 +3,7 @@ import os
 import pathlib
 import subprocess
 
-from .utils.drakparse import parse_logs
+from .drakparse import parse_logs
 
 logger = logging.getLogger(__name__)
 

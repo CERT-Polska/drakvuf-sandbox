@@ -17,6 +17,7 @@ from drakrun.lib.paths import (
 from ..lib.libvmi import VmiInfo
 from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command
+from .postprocessing import postprocess_output_dir
 from .run_tools import run_drakvuf, run_tcpdump, run_vm
 
 log = logging.getLogger(__name__)
@@ -83,12 +84,18 @@ def analyze_file(options: AnalysisOptions):
         tcpdump_file = options.output_dir / "dump.pcap"
         drakmon_file = options.output_dir / "drakmon.log"
         drakvuf_args = ["-a", "procmon"]
-        with run_tcpdump(network_info, tcpdump_file), run_drakvuf(
-            vm.vm_name, vmi_info, kernel_profile_path, drakmon_file, drakvuf_args
-        ) as drakvuf:
-            if guest_path:
-                drakshell.run([guest_path], terminate_drakshell=True)
-            else:
-                drakshell.finish()
-            log.info("Analysis started...")
-            drakvuf.wait()
+
+        try:
+            with run_tcpdump(network_info, tcpdump_file), run_drakvuf(
+                vm.vm_name, vmi_info, kernel_profile_path, drakmon_file, drakvuf_args
+            ) as drakvuf:
+                if guest_path:
+                    drakshell.run([guest_path], terminate_drakshell=True)
+                else:
+                    drakshell.finish()
+                log.info("Analysis started...")
+                drakvuf.wait()
+        except KeyboardInterrupt:
+            ...
+
+        postprocess_output_dir(options.output_dir)
