@@ -22,7 +22,7 @@ def get_target_filename_from_sample_path(sample_path: pathlib.Path) -> str:
         raise ValueError(
             "Sample path must have extension if target filename is not provided"
         )
-    extension = extension[:1].lower()
+    extension = extension[1:].lower()
     # Normalize/remove Unicode characters as current version of Drakvuf
     # isn't really good at handling them in logs
     file_name = (
