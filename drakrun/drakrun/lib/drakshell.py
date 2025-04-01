@@ -2,6 +2,7 @@ import enum
 import logging
 import os
 import select
+import signal
 import socket
 import struct
 import sys
@@ -164,10 +165,13 @@ class DrakshellInteractiveProcess:
 
     def _handle_streams(self):
         _exc = None
+        fds = (
+            [self._stdin, self.channel._sock]
+            if self._stdin is not None
+            else [self.channel._sock]
+        )
         while True:
-            ready_list, _, _ = select.select(
-                [self._stdin, self.channel._sock], [], [], 1
-            )
+            ready_list, _, _ = select.select(fds, [], [], 1)
             for ready_thing in ready_list:
                 if ready_thing is self._stdin:
                     if self._stdin is sys.stdin:
@@ -187,17 +191,19 @@ class DrakshellInteractiveProcess:
                             _exc = e
                     else:
                         if status == RespCode.RESP_STDOUT_DATA:
-                            if hasattr(self._stdout, "send"):
-                                self._stdout.send(data)
-                            else:
-                                self._stdout.buffer.write(data)
-                                self._stdout.flush()
+                            if self._stdout is not None:
+                                if hasattr(self._stdout, "send"):
+                                    self._stdout.send(data)
+                                else:
+                                    self._stdout.buffer.write(data)
+                                    self._stdout.flush()
                         elif status == RespCode.RESP_STDERR_DATA:
-                            if hasattr(self._stderr, "send"):
-                                self._stderr.send(data)
-                            else:
-                                self._stderr.buffer.write(data)
-                                self._stderr.flush()
+                            if self._stderr is not None:
+                                if hasattr(self._stderr, "send"):
+                                    self._stderr.send(data)
+                                else:
+                                    self._stderr.buffer.write(data)
+                                    self._stderr.flush()
                         elif status == RespCode.RESP_PROCESS_EXIT:
                             self.terminated = True
                             raise InteractiveProcessExit(data)
@@ -224,7 +230,20 @@ class DrakshellInteractiveProcess:
         self.channel.send_control(ReqCode.REQ_TERMINATE_PROCESS)
 
     def join(self):
-        self._thread.join()
+        # We can't rely on KeyboardInterrupt because threads are immediately terminated
+        # when signal handler raises an Exception. I don't know why it works that way
+        # but we need to setup our own handler here.
+        orig_handler = signal.getsignal(signal.SIGINT)
+
+        def sigint_handler(sig, frame):
+            self.terminate()
+
+        try:
+            signal.signal(signal.SIGINT, sigint_handler)
+            self._thread.join()
+        finally:
+            signal.signal(signal.SIGINT, orig_handler)
+
         if self._exit_code is not None:
             return self._exit_code
         else:
@@ -238,11 +257,11 @@ class Drakshell:
         unix_socket_path = RUN_DIR / f"{vm_name}.sock"
         self.channel = Channel(str(unix_socket_path))
 
-    def connect(self):
+    def connect(self, timeout: int = 3):
         self.channel.connect()
         try:
             self.channel.send_control(ReqCode.REQ_PING)
-            status, _ = self.channel.recv_response(timeout=3)
+            status, _ = self.channel.recv_response(timeout=timeout)
             if status != RespCode.RESP_PONG:
                 raise RuntimeError(
                     f"Drakshell is out of sync: got {status} instead of {RespCode.RESP_PONG}"
@@ -263,6 +282,14 @@ class Drakshell:
             )
         return {"pid": info[0], "tid": info[1]}
 
+    def finish(self):
+        self.channel.send_control(ReqCode.REQ_FINISH)
+        status, info = self.channel.recv_response(timeout=15)
+        if status != RespCode.RESP_FINISH_START:
+            raise RuntimeError(
+                f"Drakshell is out of sync: got {status} instead of {RespCode.RESP_FINISH_START}"
+            )
+
     def _start_process(self, args, start_code: ReqCode):
         cmdline = mslex.join(args, for_cmd=False).encode("utf-16le") + b"\0\0"
         if len(cmdline) > 2048:
@@ -275,14 +302,14 @@ class Drakshell:
         }[start_code]
         self.channel.send_control(start_code)
 
-        status, _ = self.channel.recv_response(timeout=3)
+        status, _ = self.channel.recv_response(timeout=15)
         if status != expected_status:
             raise RuntimeError(
                 f"Drakshell is out of sync: got {status} instead of {expected_status}"
             )
 
         self.channel.send_data(cmdline)
-        status, code = self.channel.recv_response(timeout=3)
+        status, code = self.channel.recv_response(timeout=15)
         if status == RespCode.RESP_PROCESS_START:
             pass
         elif status == RespCode.RESP_PROCESS_ERROR:
@@ -300,9 +327,15 @@ class Drakshell:
 
         self._start_process(args, start_code)
 
-    def run_interactive(self, args, stdin, stdout, stderr):
+    def run_interactive(self, args, stdin=None, stdout=sys.stdout, stderr=sys.stderr):
         self._start_process(args, ReqCode.REQ_INTERACTIVE_EXECUTE)
         return DrakshellInteractiveProcess(self.channel, stdin, stdout, stderr)
+
+    def check_call(self, args):
+        process = self.run_interactive(args)
+        exit_code = process.join()
+        if exit_code != 0:
+            raise RuntimeError(f"Process exited with exit code {exit_code}")
 
 
 def get_drakshell(vm, injector):
