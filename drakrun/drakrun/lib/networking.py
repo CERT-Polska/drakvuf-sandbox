@@ -13,7 +13,7 @@ from .network_info import (
     get_network_info_path,
     make_network_info_for_vm,
 )
-from .paths import RUN_DIR, ETC_DIR
+from .paths import ETC_DIR, RUN_DIR
 
 log = logging.getLogger(__name__)
 
@@ -183,15 +183,16 @@ def interface_exists(iface: str) -> bool:
     proc = subprocess.run(["ip", "link", "show", iface], capture_output=True)
     return proc.returncode == 0
 
+
 def run_network_setup_script(script_name: str, network_info: NetworkInfo):
     script_path = ETC_DIR / script_name
     if not script_path.exists():
         return
     log.info("Running network setup script: %s", script_name)
     subprocess.check_call(
-        ["bash", script_path.as_posix()],
-        env=network_info.dump_for_env()
+        ["bash", script_path.as_posix()], env=network_info.dump_for_env()
     )
+
 
 def start_vm_network(vm_id: int, network_conf: NetworkConfiguration) -> NetworkInfo:
     setup_iptables_chains()
