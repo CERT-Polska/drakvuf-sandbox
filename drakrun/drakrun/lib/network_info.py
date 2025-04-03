@@ -56,6 +56,9 @@ class NetworkInfo(BaseModel):
         with path.open("w") as f:
             f.write(json.dumps(self.model_dump(mode="json"), indent=4))
 
+    def dump_for_env(self):
+        return {k.upper(): str(v) for k, v in self.model_dump(mode="json").items()}
+
 
 def network_addr_for_vm(vm_id: int) -> str:
     if not (0 <= vm_id <= 255):

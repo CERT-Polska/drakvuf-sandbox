@@ -13,7 +13,7 @@ from .network_info import (
     get_network_info_path,
     make_network_info_for_vm,
 )
-from .paths import RUN_DIR
+from .paths import ETC_DIR, RUN_DIR
 
 log = logging.getLogger(__name__)
 
@@ -184,6 +184,16 @@ def interface_exists(iface: str) -> bool:
     return proc.returncode == 0
 
 
+def run_network_setup_script(script_name: str, network_info: NetworkInfo):
+    script_path = ETC_DIR / script_name
+    if not script_path.exists():
+        return
+    log.info("Running network setup script: %s", script_name)
+    subprocess.check_call(
+        ["bash", script_path.as_posix()], env=network_info.dump_for_env()
+    )
+
+
 def start_vm_network(vm_id: int, network_conf: NetworkConfiguration) -> NetworkInfo:
     setup_iptables_chains()
 
@@ -192,6 +202,9 @@ def start_vm_network(vm_id: int, network_conf: NetworkConfiguration) -> NetworkI
         stop_vm_network(vm_id)
 
     network_info = make_network_info_for_vm(vm_id, network_conf)
+
+    run_network_setup_script("vmnet-pre.sh", network_info)
+
     bridge_name = network_info.bridge_name
     try:
         subprocess.run(
@@ -241,6 +254,8 @@ def start_vm_network(vm_id: int, network_conf: NetworkConfiguration) -> NetworkI
     )
 
     network_info.save(network_info_path)
+
+    run_network_setup_script("vmnet-post.sh", network_info)
     return network_info
 
 
