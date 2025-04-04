@@ -48,6 +48,9 @@ from drakrun.analyzer.analyzer import analyze_file
     help="File with additional analysis options",
 )
 def analyze(vm_id, output_dir, sample, timeout, options_file):
+    """
+    Run a CLI analysis using Drakvuf
+    """
     if output_dir is None:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_dir = pathlib.Path("./analysis_{}".format(timestamp))
