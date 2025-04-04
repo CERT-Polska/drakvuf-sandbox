@@ -56,7 +56,6 @@ def analyze(vm_id, output_dir, sample, timeout, options_file):
         output_dir = pathlib.Path("./analysis_{}".format(timestamp))
     if sample is not None:
         sample = pathlib.Path(sample)
-    output_dir.mkdir(exist_ok=True)
     options = AnalysisOptions(
         vm_id=vm_id,
         output_dir=output_dir,
