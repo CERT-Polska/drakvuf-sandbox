@@ -178,7 +178,10 @@ def analyze_file(options: AnalysisOptions):
                 log.info("Analysis started...")
                 try:
                     # -t should be respected, but let's give 30 more secs
-                    drakvuf.wait(options.timeout + 30)
+                    if options.timeout is not None:
+                        drakvuf.wait(options.timeout + 30)
+                    else:
+                        drakvuf.wait()
                 except subprocess.TimeoutExpired:
                     log.info("Drakvuf hard timed out - hang?")
                     drakvuf.terminate()
