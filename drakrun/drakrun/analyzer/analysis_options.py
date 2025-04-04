@@ -6,7 +6,9 @@ from pydantic import BaseModel
 
 DEFAULT_PLUGINS = [
     "apimon",
+    "clipboardmon"
     "exmon",
+    "filetracer",
     "memdump",
     "procmon",
     "regmon",
