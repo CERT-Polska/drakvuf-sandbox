@@ -11,7 +11,6 @@ DEFAULT_PLUGINS = [
     "procmon",
     "regmon",
     "socketmon",
-    "syscalls",
     "tlsmon",
 ]
 
