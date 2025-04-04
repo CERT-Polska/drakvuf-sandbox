@@ -189,4 +189,4 @@ def analyze_file(options: AnalysisOptions):
         except KeyboardInterrupt:
             log.info("Interrupted with CTRL-C, analysis finished.")
 
-        postprocess_output_dir(options.output_dir)
+    postprocess_output_dir(options.output_dir)
