@@ -58,7 +58,7 @@ def args_dict_to_list(args: Dict[str, Any]) -> List[str]:
             for item in argvalue:
                 args_list.extend([argname, item])
         else:
-            args_list.extend([argname, argvalue])
+            args_list.extend([argname, str(argvalue)])
     return args_list
 
 
