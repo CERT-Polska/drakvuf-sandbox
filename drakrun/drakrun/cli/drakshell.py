@@ -32,6 +32,9 @@ log = logging.getLogger(__name__)
 )
 @click.argument("cmd", nargs=-1, type=str)
 def drakshell(vm_id, cmd):
+    """
+    Run drakshell session
+    """
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
     network_conf = NetworkConfiguration.load(NETWORK_CONF_PATH)
     vm = VirtualMachine(vm_id, install_info, network_conf)

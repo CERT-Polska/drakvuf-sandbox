@@ -1,14 +1,18 @@
 import json
 import logging
 import pathlib
+import subprocess
+from typing import Any, Dict, List
 
 from drakrun.lib.drakshell import Drakshell
 from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.network_info import NetworkConfiguration
 from drakrun.lib.paths import (
+    ETC_DIR,
     INSTALL_INFO_PATH,
     NETWORK_CONF_PATH,
+    PACKAGE_DATA_PATH,
     VMI_INFO_PATH,
     VMI_KERNEL_PROFILE_PATH,
 )
@@ -23,8 +27,69 @@ from .startup_command import get_startup_argv, get_target_filename_from_sample_p
 log = logging.getLogger(__name__)
 
 
-def prepare_output_dir(output_dir: pathlib.Path):
-    ...
+def prepare_output_dir(options: AnalysisOptions):
+    output_dir = pathlib.Path(options.output_dir)
+
+    if output_dir.exists():
+        raise RuntimeError(f"Output directory {output_dir} already exists")
+
+    output_dir.mkdir()
+    if "memdump" in options.plugins:
+        (output_dir / "memdumps").mkdir()
+
+    if options.extra_output_subdirs is not None:
+        for dirname in options.extra_output_subdirs:
+            subdir = output_dir.joinpath(dirname).resolve()
+            if subdir.relative_to(output_dir.resolve()):
+                raise RuntimeError(
+                    f"Incorrect directory name {dirname} in extra_output_subdirs option"
+                )
+            subdir.mkdir()
+
+
+def args_dict_to_list(args: Dict[str, Any]) -> List[str]:
+    args_list = []
+    for argname, argvalue in args.items():
+        if argvalue in [None, False]:
+            continue
+        elif argvalue is True:
+            args_list.append(argname)
+        elif type(argvalue) in [list, tuple]:
+            for item in argvalue:
+                args_list.extend([argname, item])
+        else:
+            args_list.extend([argname, str(argvalue)])
+    return args_list
+
+
+def prepare_drakvuf_args(options: AnalysisOptions) -> List[str]:
+    base_args = {
+        "-a": [plugin_name for plugin_name in options.plugins],
+        "-t": options.timeout,
+    }
+    if "memdump" in options.plugins:
+        base_args["--memdump-dir"] = (
+            (options.output_dir / "memdumps").resolve().as_posix()
+        )
+    if "apimon" in options.plugins or "memdump" in options.plugins:
+        if options.apimon_hooks_path is not None:
+            dll_hooks_path = options.apimon_hooks_path.resolve()
+        elif (ETC_DIR / "hooks.txt").exists():
+            dll_hooks_path = (ETC_DIR / "hooks.txt").resolve()
+        else:
+            dll_hooks_path = (PACKAGE_DATA_PATH / "hooks.txt").resolve()
+        base_args["--dll-hooks-list"] = dll_hooks_path.as_posix()
+    if "syscalls" in options.plugins:
+        if options.syscall_hooks_path is not None:
+            syscall_hooks_path = options.syscall_hooks_path.resolve()
+        elif (ETC_DIR / "syscalls.txt").exists():
+            syscall_hooks_path = (ETC_DIR / "syscalls.txt").resolve()
+        else:
+            syscall_hooks_path = (PACKAGE_DATA_PATH / "syscalls.txt").resolve()
+        base_args["--syscall-hooks-list"] = syscall_hooks_path.as_posix()
+    if options.extra_drakvuf_args is not None:
+        base_args.update(options.extra_drakvuf_args)
+    return args_dict_to_list(base_args)
 
 
 def get_network_configuration(options: AnalysisOptions) -> NetworkConfiguration:
@@ -56,18 +121,24 @@ def analyze_file(options: AnalysisOptions):
     vmi_info = VmiInfo.load(VMI_INFO_PATH)
     kernel_profile_path = VMI_KERNEL_PROFILE_PATH.as_posix()
 
-    with run_vm(options.vm_id, install_info, network_conf) as vm:
+    prepare_output_dir(options)
+
+    with run_vm(
+        options.vm_id, install_info, network_conf, no_restore=options.no_vm_restore
+    ) as vm:
         network_info = vm.get_network_info()
         injector = Injector(vm.vm_name, vmi_info, kernel_profile_path)
+
         log.info("Connecting to drakshell...")
         drakshell = Drakshell(vm.vm_name)
         drakshell.connect(timeout=10)
         info = drakshell.get_info()
-
         log.info(f"Drakshell active on: {str(info)}")
-        log.info("Running post-restore command...")
-        post_restore_cmd = get_post_restore_command(network_conf.net_enable)
-        drakshell.check_call(post_restore_cmd)
+
+        if not options.no_post_restore:
+            log.info("Running post-restore command...")
+            post_restore_cmd = get_post_restore_command(network_conf.net_enable)
+            drakshell.check_call(post_restore_cmd)
 
         if options.sample_path is not None:
             if options.target_filename is None:
@@ -93,7 +164,7 @@ def analyze_file(options: AnalysisOptions):
 
         tcpdump_file = options.output_dir / "dump.pcap"
         drakmon_file = options.output_dir / "drakmon.log"
-        drakvuf_args = ["-a", "procmon"]
+        drakvuf_args = prepare_drakvuf_args(options)
 
         try:
             with run_tcpdump(network_info, tcpdump_file), run_drakvuf(
@@ -105,8 +176,17 @@ def analyze_file(options: AnalysisOptions):
                 else:
                     drakshell.finish()
                 log.info("Analysis started...")
-                drakvuf.wait()
+                try:
+                    # -t should be respected, but let's give 30 more secs
+                    if options.timeout is not None:
+                        drakvuf.wait(options.timeout + 30)
+                    else:
+                        drakvuf.wait()
+                except subprocess.TimeoutExpired:
+                    log.info("Drakvuf hard timed out - hang?")
+                    drakvuf.terminate()
+                    drakvuf.wait(10)
         except KeyboardInterrupt:
             log.info("Interrupted with CTRL-C, analysis finished.")
 
-        postprocess_output_dir(options.output_dir)
+    postprocess_output_dir(options.output_dir)

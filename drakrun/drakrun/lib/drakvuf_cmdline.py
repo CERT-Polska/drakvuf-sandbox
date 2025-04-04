@@ -8,7 +8,6 @@ def get_base_drakvuf_cmdline(
     kernel_profile_path: str,
     vmi_info: VmiInfo,
     exec_cmd: Optional[str] = None,
-    timeout: Optional[int] = None,
     extra_args: Optional[List[str]] = None,
 ) -> List[str]:
     args = [
@@ -41,8 +40,6 @@ def get_base_drakvuf_cmdline(
                 ),
             ]
         )
-    if timeout is not None:
-        args.extend(["-t", str(timeout)])
     if extra_args:
         args.extend(extra_args)
     return args
