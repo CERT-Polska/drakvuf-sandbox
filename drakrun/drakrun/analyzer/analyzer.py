@@ -128,7 +128,7 @@ def analyze_file(options: AnalysisOptions):
         network_info = vm.get_network_info()
         injector = Injector(vm.vm_name, vmi_info, kernel_profile_path)
 
-        if not (options.no_post_restore or options.sample_path is None):
+        if options.no_post_restore and options.sample_path is None:
             log.info("Connecting to drakshell...")
             drakshell = Drakshell(vm.vm_name)
             drakshell.connect(timeout=10)
