@@ -87,7 +87,8 @@ def prepare_drakvuf_args(options: AnalysisOptions) -> List[str]:
         else:
             syscall_hooks_path = (PACKAGE_DATA_PATH / "syscalls.txt").resolve()
         base_args["--syscall-hooks-list"] = syscall_hooks_path.as_posix()
-    base_args.update(options.extra_drakvuf_args)
+    if options.extra_drakvuf_args is not None:
+        base_args.update(options.extra_drakvuf_args)
     return args_dict_to_list(base_args)
 
 
