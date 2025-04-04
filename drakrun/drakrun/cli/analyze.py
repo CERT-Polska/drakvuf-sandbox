@@ -32,7 +32,22 @@ from drakrun.analyzer.analyzer import analyze_file
     show_default=True,
     help="Sample to inject and execute (if not provided, assumes that executable will be executed manually)",
 )
-def analyze(vm_id, output_dir, sample):
+@click.option(
+    "--timeout",
+    "timeout",
+    default=None,
+    type=int,
+    help="Analysis timeout (default is None, analysis interrupted on CTRL-C)",
+)
+@click.option(
+    "--options",
+    "options_file",
+    default=None,
+    type=click.Path(exists=True),
+    show_default=True,
+    help="File with additional analysis options",
+)
+def analyze(vm_id, output_dir, sample, timeout, options_file):
     if output_dir is None:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_dir = pathlib.Path("./analysis_{}".format(timestamp))
@@ -43,5 +58,8 @@ def analyze(vm_id, output_dir, sample):
         vm_id=vm_id,
         output_dir=output_dir,
         sample_path=sample,
+        timeout=timeout,
     )
+    if options_file is not None:
+        options = options.load(options_file)
     analyze_file(options)

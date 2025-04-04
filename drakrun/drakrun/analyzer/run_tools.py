@@ -1,7 +1,7 @@
 import contextlib
 import pathlib
 import subprocess
-from typing import List, Optional
+from typing import List
 
 from drakrun.lib.drakvuf_cmdline import get_base_drakvuf_cmdline
 from drakrun.lib.install_info import InstallInfo
@@ -37,13 +37,11 @@ def run_drakvuf(
     kernel_profile_path: str,
     output_file: pathlib.Path,
     drakvuf_args: List[str],
-    drakvuf_timeout: Optional[int] = None,
 ):
     drakvuf_cmdline = get_base_drakvuf_cmdline(
         vm_name,
         kernel_profile_path,
         vmi_info,
-        timeout=drakvuf_timeout,
         extra_args=drakvuf_args,
     )
 
@@ -54,10 +52,20 @@ def run_drakvuf(
 
 
 @contextlib.contextmanager
-def run_vm(vm_id: int, install_info: InstallInfo, network_conf: NetworkConfiguration):
+def run_vm(
+    vm_id: int,
+    install_info: InstallInfo,
+    network_conf: NetworkConfiguration,
+    no_restore: bool = False,
+):
     vm = VirtualMachine(vm_id, install_info, network_conf)
-    vm.restore()
-    try:
+    if no_restore:
+        if not vm.is_running:
+            raise RuntimeError(f"Virtual machine {vm.vm_name} is not running")
         yield vm
-    finally:
-        vm.destroy()
+    else:
+        vm.restore()
+        try:
+            yield vm
+        finally:
+            vm.destroy()
