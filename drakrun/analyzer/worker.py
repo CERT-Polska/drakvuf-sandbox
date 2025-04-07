@@ -27,10 +27,9 @@ def worker_analyze(options: AnalysisOptions):
     job.meta["vm_id"] = _WORKER_VM_ID
     job.save_meta()
 
-    ANALYSES_DIR.mkdir(exist_ok=True)
-
     vm_id = _WORKER_VM_ID
     output_dir = ANALYSES_DIR / job.id
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     def substatus_callback(
         substatus: AnalysisSubstatus, updated_options: Optional[AnalysisOptions] = None
