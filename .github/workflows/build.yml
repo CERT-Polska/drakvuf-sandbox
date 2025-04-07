@@ -26,10 +26,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install web dependencies
-        working-directory: drakrun/drakrun/web/frontend
+        working-directory: drakrun/web/frontend
         run: npm ci
       - name: Check with prettier
-        working-directory: drakrun/drakrun/web/frontend
+        working-directory: drakrun/web/frontend
         run: npx prettier --check src/
   lint_drakrun:
     runs-on: ubuntu-latest
@@ -38,4 +38,3 @@ jobs:
       - uses: CERT-Polska/lint-python-action@v2
         with:
           python-version: 3.8
-          working-directory: drakrun
