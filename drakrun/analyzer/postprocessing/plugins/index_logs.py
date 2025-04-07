@@ -9,6 +9,7 @@ some reasonable size. Unfortunately, length of JSON records is also variable
 so we build and index, to quickly look up where n-th line begins.
 
 """
+
 import json
 import pathlib
 from typing import List, TypedDict
