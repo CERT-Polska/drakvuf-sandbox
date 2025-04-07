@@ -5,3 +5,5 @@
 .vscode/
 *.egg-info/
 __pycache__/
+build/
+dist/

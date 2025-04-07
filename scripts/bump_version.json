@@ -1,8 +1,8 @@
 {
     "files": {
-        "drakrun/drakrun/web/frontend/package.json": "\"version\": \"$VERSION\"",
-        "drakrun/drakrun/web/frontend/package-lock.json": "\"version\": \"$VERSION\"",
-        "drakrun/drakrun/version.py": "__version__ = \"$VERSION\"",
+        "drakrun/web/frontend/package.json": "\"version\": \"$VERSION\"",
+        "drakrun/web/frontend/package-lock.json": "\"version\": \"$VERSION\"",
+        "drakrun/version.py": "__version__ = \"$VERSION\"",
         "docs/conf.py": "release = 'v$VERSION'"
     },
     "regex": "(\\d+\\.\\d+\\.\\d+(?:-(post|dev|alpha|beta|rc)[0-9]?)?)"
