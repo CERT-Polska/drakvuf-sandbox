@@ -1,8 +1,9 @@
+import enum
 import json
 import logging
 import pathlib
 import subprocess
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Protocol
 
 from drakrun.lib.drakshell import Drakshell
 from drakrun.lib.injector import Injector
@@ -25,6 +26,23 @@ from .run_tools import run_drakvuf, run_tcpdump, run_vm
 from .startup_command import get_startup_argv, get_target_filename_from_sample_path
 
 log = logging.getLogger(__name__)
+
+
+class AnalysisSubstatus(enum.Enum):
+    starting_vm = "starting_vm"
+    preparing_vm = "preparing_vm"
+    analyzing = "analyzing"
+    postprocessing = "postprocessing"
+    done = "done"
+
+
+class AnalysisSubstatusCallback(Protocol):
+    def __call__(
+        self,
+        substatus: AnalysisSubstatus,
+        updated_options: Optional[AnalysisOptions] = None,
+    ) -> None:
+        ...
 
 
 def prepare_output_dir(output_dir: pathlib.Path, options: AnalysisOptions) -> None:
@@ -109,7 +127,12 @@ def drop_sample_to_vm(injector: Injector, sample_path: pathlib.Path, target_path
         raise e
 
 
-def analyze_file(vm_id: int, output_dir: pathlib.Path, options: AnalysisOptions):
+def analyze_file(
+    vm_id: int,
+    output_dir: pathlib.Path,
+    options: AnalysisOptions,
+    substatus_callback: Optional[AnalysisSubstatusCallback] = None,
+):
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
     network_conf = get_network_configuration(options)
     vmi_info = VmiInfo.load(VMI_INFO_PATH)
@@ -117,11 +140,17 @@ def analyze_file(vm_id: int, output_dir: pathlib.Path, options: AnalysisOptions)
 
     prepare_output_dir(output_dir, options)
 
+    if substatus_callback is not None:
+        substatus_callback(AnalysisSubstatus.starting_vm)
+
     with run_vm(
         vm_id, install_info, network_conf, no_restore=options.no_vm_restore
     ) as vm:
         network_info = vm.get_network_info()
         injector = Injector(vm.vm_name, vmi_info, kernel_profile_path)
+
+        if substatus_callback is not None:
+            substatus_callback(AnalysisSubstatus.preparing_vm)
 
         log.info("Connecting to drakshell...")
         drakshell = Drakshell(vm.vm_name)
@@ -161,6 +190,9 @@ def analyze_file(vm_id: int, output_dir: pathlib.Path, options: AnalysisOptions)
         drakvuf_args = prepare_drakvuf_args(output_dir, options)
 
         try:
+            if substatus_callback is not None:
+                substatus_callback(AnalysisSubstatus.analyzing, updated_options=options)
+
             with run_tcpdump(network_info, tcpdump_file), run_drakvuf(
                 vm.vm_name, vmi_info, kernel_profile_path, drakmon_file, drakvuf_args
             ) as drakvuf:
@@ -183,4 +215,10 @@ def analyze_file(vm_id: int, output_dir: pathlib.Path, options: AnalysisOptions)
         except KeyboardInterrupt:
             log.info("Interrupted with CTRL-C, analysis finished.")
 
+    if substatus_callback is not None:
+        substatus_callback(AnalysisSubstatus.postprocessing)
+
     postprocess_output_dir(output_dir)
+
+    if substatus_callback is not None:
+        substatus_callback(AnalysisSubstatus.done)

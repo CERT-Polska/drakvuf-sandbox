@@ -11,6 +11,7 @@ SNAPSHOT_DIR = LIB_DIR / "volumes"
 CONFIGS_DIR = LIB_DIR / "configs"
 VMI_PROFILES_DIR = LIB_DIR / "profiles"
 PDB_CACHE_DIR = LIB_DIR / "pdb_cache"
+ANALYSES_DIR = LIB_DIR / "analyses"
 
 VMI_INFO_PATH = VMI_PROFILES_DIR / "runtime.json"
 VMI_KERNEL_PROFILE_PATH = VMI_PROFILES_DIR / "kernel.json"
@@ -27,6 +28,9 @@ def make_dirs():
     pathlib.Path(LIB_DIR).mkdir(exist_ok=True)
     SNAPSHOT_DIR.mkdir(exist_ok=True)
     CONFIGS_DIR.mkdir(exist_ok=True)
+    VMI_PROFILES_DIR.mkdir(exist_ok=True)
+    PDB_CACHE_DIR.mkdir(exist_ok=True)
+    ANALYSES_DIR.mkdir(exist_ok=True)
 
 
 def initialize_config_files():
