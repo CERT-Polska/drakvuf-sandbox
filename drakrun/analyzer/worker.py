@@ -34,9 +34,9 @@ def worker_analyze(options: AnalysisOptions):
     def substatus_callback(
         substatus: AnalysisSubstatus, updated_options: Optional[AnalysisOptions] = None
     ):
-        job.meta["substatus"] = substatus
+        job.meta["substatus"] = substatus.value
         if updated_options is not None:
-            job.meta["options"] = updated_options
+            job.meta["options"] = updated_options.to_dict(exclude_none=True)
         job.save_meta()
 
     analyze_file(vm_id, output_dir, options, substatus_callback=substatus_callback)
@@ -55,4 +55,17 @@ def worker_main(vm_id: int):
 
 def spawn_analysis(options: AnalysisOptions, connection: Redis) -> Job:
     queue = Queue(name=ANALYSIS_QUEUE_NAME, connection=connection)
-    return queue.enqueue(worker_analyze, options, meta={"options": options})
+    if options.sample_path is None:
+        raise RuntimeError("Sample path is required when spawning analysis to worker")
+    if options.timeout is None:
+        raise RuntimeError("Timeout is required when spawning analysis to worker")
+    # Give extra 5 minutes as a timeout for whole analysis process
+    # including VM restore, post-restore, drakvuf hard timeout and
+    # postprocessing.
+    # TODO: job_timeout offset should be configurable.
+    return queue.enqueue(
+        worker_analyze,
+        options,
+        meta={"options": options.to_dict(exclude_none=True)},
+        job_timeout=options.timeout + 300,
+    )
