@@ -172,7 +172,6 @@ def get_process_memory_dumps(analysis_dir: Path, pid: int) -> Iterator[str]:
 def static_capa_analysis(
     dump_path: Path, rules: RuleSet
 ) -> Tuple[Path, ResultDocumentMatchResults]:
-
     """get the input file's capa format"""
     try:
         input_format = get_auto_format(dump_path)

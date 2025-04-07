@@ -18,10 +18,6 @@ DEFAULT_PLUGINS = [
 
 
 class AnalysisOptions(BaseModel):
-    # VM id to use for analysis
-    vm_id: int
-    # Output directory for analysis artifacts
-    output_dir: pathlib.Path
     # Host sample path
     sample_path: Optional[pathlib.Path] = None
     # Target file name on guest VM

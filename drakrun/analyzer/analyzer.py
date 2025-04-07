@@ -27,13 +27,7 @@ from .startup_command import get_startup_argv, get_target_filename_from_sample_p
 log = logging.getLogger(__name__)
 
 
-def prepare_output_dir(options: AnalysisOptions):
-    output_dir = pathlib.Path(options.output_dir)
-
-    if output_dir.exists():
-        raise RuntimeError(f"Output directory {output_dir} already exists")
-
-    output_dir.mkdir()
+def prepare_output_dir(output_dir: pathlib.Path, options: AnalysisOptions) -> None:
     if "memdump" in options.plugins:
         (output_dir / "memdumps").mkdir()
 
@@ -62,15 +56,15 @@ def args_dict_to_list(args: Dict[str, Any]) -> List[str]:
     return args_list
 
 
-def prepare_drakvuf_args(options: AnalysisOptions) -> List[str]:
+def prepare_drakvuf_args(
+    output_dir: pathlib.Path, options: AnalysisOptions
+) -> List[str]:
     base_args = {
         "-a": [plugin_name for plugin_name in options.plugins],
         "-t": options.timeout,
     }
     if "memdump" in options.plugins:
-        base_args["--memdump-dir"] = (
-            (options.output_dir / "memdumps").resolve().as_posix()
-        )
+        base_args["--memdump-dir"] = (output_dir / "memdumps").resolve().as_posix()
     if "apimon" in options.plugins or "memdump" in options.plugins:
         if options.apimon_hooks_path is not None:
             dll_hooks_path = options.apimon_hooks_path.resolve()
@@ -115,16 +109,16 @@ def drop_sample_to_vm(injector: Injector, sample_path: pathlib.Path, target_path
         raise e
 
 
-def analyze_file(options: AnalysisOptions):
+def analyze_file(vm_id: int, output_dir: pathlib.Path, options: AnalysisOptions):
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
     network_conf = get_network_configuration(options)
     vmi_info = VmiInfo.load(VMI_INFO_PATH)
     kernel_profile_path = VMI_KERNEL_PROFILE_PATH.as_posix()
 
-    prepare_output_dir(options)
+    prepare_output_dir(output_dir, options)
 
     with run_vm(
-        options.vm_id, install_info, network_conf, no_restore=options.no_vm_restore
+        vm_id, install_info, network_conf, no_restore=options.no_vm_restore
     ) as vm:
         network_info = vm.get_network_info()
         injector = Injector(vm.vm_name, vmi_info, kernel_profile_path)
@@ -162,9 +156,9 @@ def analyze_file(options: AnalysisOptions):
             if options.start_command is None:
                 options.start_command = get_startup_argv(guest_path)
 
-        tcpdump_file = options.output_dir / "dump.pcap"
-        drakmon_file = options.output_dir / "drakmon.log"
-        drakvuf_args = prepare_drakvuf_args(options)
+        tcpdump_file = output_dir / "dump.pcap"
+        drakmon_file = output_dir / "drakmon.log"
+        drakvuf_args = prepare_drakvuf_args(output_dir, options)
 
         try:
             with run_tcpdump(network_info, tcpdump_file), run_drakvuf(
@@ -189,4 +183,4 @@ def analyze_file(options: AnalysisOptions):
         except KeyboardInterrupt:
             log.info("Interrupted with CTRL-C, analysis finished.")
 
-    postprocess_output_dir(options.output_dir)
+    postprocess_output_dir(output_dir)

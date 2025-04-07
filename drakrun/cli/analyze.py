@@ -40,6 +40,45 @@ from drakrun.analyzer.analyzer import analyze_file
     help="Analysis timeout (default is None, analysis interrupted on CTRL-C)",
 )
 @click.option(
+    "--target-filename",
+    "target_filename",
+    default=None,
+    type=str,
+    help="Target file name where sample will be copied on a VM",
+)
+@click.option(
+    "--start-command",
+    "start_command",
+    default=None,
+    type=str,
+    help="Start command to use for sample execution",
+)
+@click.option(
+    "--plugin",
+    "plugins",
+    default=None,
+    multiple=True,
+    help="Plugin name to use instead of default list (you can provide multiple ones)",
+)
+@click.option(
+    "--net-enable/--net-disable",
+    "net_enable",
+    default=None,
+    help="Enable/disable Internet access for analysis",
+)
+@click.option(
+    "--no-restore",
+    "no_restore",
+    is_flag=True,
+    help="Don't restore VM for analysis (assume it's already running)",
+)
+@click.option(
+    "--no-post-restore",
+    "no_post_restore",
+    is_flag=True,
+    help="Don't run a post-restore script",
+)
+@click.option(
     "--options",
     "options_file",
     default=None,
@@ -47,21 +86,48 @@ from drakrun.analyzer.analyzer import analyze_file
     show_default=True,
     help="File with additional analysis options",
 )
-def analyze(vm_id, output_dir, sample, timeout, options_file):
+def analyze(
+    vm_id,
+    output_dir,
+    sample,
+    timeout,
+    target_filename,
+    start_command,
+    plugins,
+    net_enable,
+    no_restore,
+    no_post_restore,
+    options_file,
+):
     """
     Run a CLI analysis using Drakvuf
     """
     if output_dir is None:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_dir = pathlib.Path("./analysis_{}".format(timestamp))
+    else:
+        output_dir = pathlib.Path(output_dir)
+        if output_dir.exists():
+            click.echo(f"{output_dir} already exists.")
+            raise click.Abort()
+
+    output_dir.mkdir()
+
     if sample is not None:
         sample = pathlib.Path(sample)
+
     options = AnalysisOptions(
-        vm_id=vm_id,
-        output_dir=output_dir,
         sample_path=sample,
         timeout=timeout,
+        net_enable=net_enable,
+        target_filename=target_filename,
+        start_command=start_command,
+        plugins=plugins,
+        no_vm_restore=no_restore,
+        no_post_restore=no_post_restore,
     )
+
     if options_file is not None:
         options = options.load(options_file)
-    analyze_file(options)
+
+    analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)
