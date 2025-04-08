@@ -4,9 +4,11 @@ import pathlib
 import subprocess
 from typing import Any, Dict, List
 
+from drakrun.lib.config import NetworkConfigSection, load_config
 from drakrun.lib.drakshell import Drakshell
 from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
+from drakrun.lib.libvmi import VmiInfo
 from drakrun.lib.paths import (
     ETC_DIR,
     INSTALL_INFO_PATH,
@@ -15,8 +17,6 @@ from drakrun.lib.paths import (
     VMI_KERNEL_PROFILE_PATH,
 )
 
-from ..lib.config import NetworkConfigSection, load_config
-from ..lib.libvmi import VmiInfo
 from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command
 from .postprocessing import postprocess_output_dir

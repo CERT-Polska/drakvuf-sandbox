@@ -4,12 +4,12 @@ import string
 
 import click
 
+from drakrun.lib.config import load_config
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.paths import INSTALL_INFO_PATH, initialize_config_files, make_dirs
 from drakrun.lib.storage import REGISTERED_BACKEND_NAMES, get_storage_backend
 from drakrun.lib.vm import VirtualMachine
 
-from ..lib.config import load_config
 from .sanity_check import sanity_check
 
 log = logging.getLogger(__name__)
