@@ -5,9 +5,9 @@ import tempfile
 
 import click
 
+from drakrun.lib.config import load_config
 from drakrun.lib.install_info import InstallInfo
-from drakrun.lib.network_info import NetworkConfiguration
-from drakrun.lib.paths import INSTALL_INFO_PATH, NETWORK_CONF_PATH
+from drakrun.lib.paths import INSTALL_INFO_PATH
 from drakrun.lib.vm import VirtualMachine
 from drakrun.lib.vmi_profile import create_vmi_info, create_vmi_json_profile
 
@@ -21,10 +21,10 @@ def modify_vm0():
 
 @modify_vm0.command(name="begin", help="Safely restore vm-0 for modification")
 def begin_modify_vm0():
+    config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
-    network_conf = NetworkConfiguration.load(NETWORK_CONF_PATH)
 
-    vm0 = VirtualMachine(0, install_info, network_conf)
+    vm0 = VirtualMachine(0, install_info, config.network)
 
     # Internally, it's expected to restore VM-0 from vm-modify snapshot
     vm0.restore()
@@ -43,10 +43,10 @@ def begin_modify_vm0():
 
 @modify_vm0.command(name="commit", help="Commit changes made during vm-0 modification")
 def commit_modify_vm0():
+    config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
-    network_conf = NetworkConfiguration.load(NETWORK_CONF_PATH)
 
-    vm0 = VirtualMachine(0, install_info, network_conf)
+    vm0 = VirtualMachine(0, install_info, config.network)
     tmp_path = pathlib.Path(tempfile.gettempdir())
     temporary_snapshot_path = tmp_path / "snapshot.sav"
     target_snapshot_path = pathlib.Path(install_info.snapshot_dir) / "snapshot.sav"
@@ -62,7 +62,7 @@ def commit_modify_vm0():
     finally:
         temporary_snapshot_path.unlink(missing_ok=True)
 
-    vm = VirtualMachine(1, install_info, network_conf)
+    vm = VirtualMachine(1, install_info, config.network)
     vm.restore()
     try:
         create_vmi_json_profile(vm, vmi_info)
@@ -75,9 +75,9 @@ def commit_modify_vm0():
     name="rollback", help="Rollback changes made during vm-0 modification"
 )
 def rollback_modify_vm0():
+    config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
-    network_conf = NetworkConfiguration.load(NETWORK_CONF_PATH)
 
-    vm0 = VirtualMachine(0, install_info, network_conf)
+    vm0 = VirtualMachine(0, install_info, config.network)
     vm0.destroy()
     vm0.storage.delete_vm0_modify_storage()

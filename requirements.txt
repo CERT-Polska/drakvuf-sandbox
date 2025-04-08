@@ -5,7 +5,7 @@ orjson==3.9.15
 mslex==1.1.0
 pydantic==2.10.6
 pathvalidate==3.2.0
-configupdater==3.2
 drakpdb==0.2.2
+tomli==2.2.1
 # Web analyzer dependencies
 rq==2.3.1

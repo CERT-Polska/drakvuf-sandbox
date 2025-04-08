@@ -5,6 +5,7 @@ import click
 
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.analyzer import analyze_file
+from drakrun.lib.config import load_config
 
 
 @click.command("analyze")
@@ -78,14 +79,6 @@ from drakrun.analyzer.analyzer import analyze_file
     is_flag=True,
     help="Don't run a post-restore script",
 )
-@click.option(
-    "--options",
-    "options_file",
-    default=None,
-    type=click.Path(exists=True),
-    show_default=True,
-    help="File with additional analysis options",
-)
 def analyze(
     vm_id,
     output_dir,
@@ -97,11 +90,11 @@ def analyze(
     net_enable,
     no_restore,
     no_post_restore,
-    options_file,
 ):
     """
     Run a CLI analysis using Drakvuf
     """
+    config = load_config()
     if output_dir is None:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_dir = pathlib.Path("./analysis_{}".format(timestamp))
@@ -117,6 +110,7 @@ def analyze(
         sample = pathlib.Path(sample)
 
     options = AnalysisOptions(
+        config=config,
         sample_path=sample,
         timeout=timeout,
         net_enable=net_enable,
@@ -126,8 +120,5 @@ def analyze(
         no_vm_restore=no_restore,
         no_post_restore=no_post_restore,
     )
-
-    if options_file is not None:
-        options = options.load(options_file)
 
     analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)

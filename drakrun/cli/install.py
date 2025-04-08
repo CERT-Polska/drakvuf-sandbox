@@ -4,15 +4,9 @@ import string
 
 import click
 
+from drakrun.lib.config import load_config
 from drakrun.lib.install_info import InstallInfo
-from drakrun.lib.network_info import NetworkConfiguration
-from drakrun.lib.networking import find_default_interface
-from drakrun.lib.paths import (
-    INSTALL_INFO_PATH,
-    NETWORK_CONF_PATH,
-    initialize_config_files,
-    make_dirs,
-)
+from drakrun.lib.paths import INSTALL_INFO_PATH, initialize_config_files, make_dirs
 from drakrun.lib.storage import REGISTERED_BACKEND_NAMES, get_storage_backend
 from drakrun.lib.vm import VirtualMachine
 
@@ -81,6 +75,8 @@ def install(
     make_dirs()
     initialize_config_files()
 
+    config = load_config()
+
     log.info("Performing installation...")
     passwd_characters = string.ascii_letters + string.digits
     vnc_passwd = "".join(secrets.choice(passwd_characters) for _ in range(20))
@@ -95,13 +91,11 @@ def install(
     )
     install_info.save(INSTALL_INFO_PATH)
 
-    out_interface = find_default_interface()
-    network_conf = NetworkConfiguration(out_interface=out_interface)
-    network_conf.save(NETWORK_CONF_PATH)
-
     backend = get_storage_backend(install_info)
 
-    vm0 = VirtualMachine(vm_id=0, install_info=install_info, network_conf=network_conf)
+    vm0 = VirtualMachine(
+        vm_id=0, install_info=install_info, network_conf=config.network
+    )
     # Ensure VM0 is destroyed
     vm0.destroy()
 

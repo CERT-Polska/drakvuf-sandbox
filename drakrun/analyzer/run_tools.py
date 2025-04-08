@@ -3,10 +3,11 @@ import pathlib
 import subprocess
 from typing import List
 
+from drakrun.lib.config import NetworkConfigSection
 from drakrun.lib.drakvuf_cmdline import get_base_drakvuf_cmdline
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.libvmi import VmiInfo
-from drakrun.lib.network_info import NetworkConfiguration, NetworkInfo
+from drakrun.lib.network_info import NetworkInfo
 from drakrun.lib.networking import start_tcpdump_collector
 from drakrun.lib.vm import VirtualMachine
 
@@ -55,7 +56,7 @@ def run_drakvuf(
 def run_vm(
     vm_id: int,
     install_info: InstallInfo,
-    network_conf: NetworkConfiguration,
+    network_conf: NetworkConfigSection,
     no_restore: bool = False,
 ):
     vm = VirtualMachine(vm_id, install_info, network_conf)

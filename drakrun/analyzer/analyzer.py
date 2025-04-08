@@ -5,20 +5,19 @@ import pathlib
 import subprocess
 from typing import Any, Dict, List, Optional, Protocol
 
+from drakrun.lib.config import NetworkConfigSection, load_config
 from drakrun.lib.drakshell import Drakshell
 from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
-from drakrun.lib.network_info import NetworkConfiguration
+from drakrun.lib.libvmi import VmiInfo
 from drakrun.lib.paths import (
     ETC_DIR,
     INSTALL_INFO_PATH,
-    NETWORK_CONF_PATH,
     PACKAGE_DATA_PATH,
     VMI_INFO_PATH,
     VMI_KERNEL_PROFILE_PATH,
 )
 
-from ..lib.libvmi import VmiInfo
 from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command
 from .postprocessing import postprocess_output_dir
@@ -104,17 +103,6 @@ def prepare_drakvuf_args(
     return args_dict_to_list(base_args)
 
 
-def get_network_configuration(options: AnalysisOptions) -> NetworkConfiguration:
-    network_conf = NetworkConfiguration.load(NETWORK_CONF_PATH)
-    if options.dns_server is not None:
-        network_conf.dns_server = options.dns_server
-    if options.out_interface is not None:
-        network_conf.out_interface = options.out_interface
-    if options.net_enable is not None:
-        network_conf.net_enable = options.net_enable
-    return network_conf
-
-
 def drop_sample_to_vm(injector: Injector, sample_path: pathlib.Path, target_path: str):
     result = injector.write_file(str(sample_path), target_path)
     try:
@@ -133,12 +121,18 @@ def analyze_file(
     options: AnalysisOptions,
     substatus_callback: Optional[AnalysisSubstatusCallback] = None,
 ):
+    config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
-    network_conf = get_network_configuration(options)
     vmi_info = VmiInfo.load(VMI_INFO_PATH)
     kernel_profile_path = VMI_KERNEL_PROFILE_PATH.as_posix()
 
     prepare_output_dir(output_dir, options)
+
+    network_conf = NetworkConfigSection(
+        out_interface=config.network.out_interface,
+        dns_server=config.network.dns_server,
+        net_enable=options.net_enable,
+    )
 
     if substatus_callback is not None:
         substatus_callback(AnalysisSubstatus.starting_vm)
