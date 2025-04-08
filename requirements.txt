@@ -9,4 +9,4 @@ drakpdb==0.2.2
 tomli==2.2.1
 # Web analyzer dependencies
 rq==2.3.1
-Flask==3.1.0
+Flask==3.0.3
