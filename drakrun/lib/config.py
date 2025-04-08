@@ -32,7 +32,7 @@ class DrakrunConfig(BaseModel):
 
     @staticmethod
     def load(filename: str) -> "DrakrunConfig":
-        with open(filename, "r") as f:
+        with open(filename, "rb") as f:
             config = tomli.load(f)
         return DrakrunConfig.model_validate(config)
 
