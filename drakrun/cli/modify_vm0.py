@@ -62,7 +62,7 @@ def commit_modify_vm0():
     finally:
         temporary_snapshot_path.unlink(missing_ok=True)
 
-    vm = VirtualMachine(1, install_info, network_conf)
+    vm = VirtualMachine(1, install_info, config.network)
     vm.restore()
     try:
         create_vmi_json_profile(vm, vmi_info)

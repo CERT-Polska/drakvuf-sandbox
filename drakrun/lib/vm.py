@@ -5,7 +5,7 @@ from typing import List, Optional
 from .config import NetworkConfigSection
 from .install_info import InstallInfo
 from .network_info import NetworkInfo
-from .networking import start_vm_network, stop_vm_network, get_network_info_path
+from .networking import get_network_info_path, start_vm_network, stop_vm_network
 from .paths import CONFIGS_DIR
 from .storage import get_storage_backend
 from .xen import (

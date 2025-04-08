@@ -1,0 +1,7 @@
+[network]
+dns_server = "use-gateway-address"
+out_interface = "default"
+net_enable = false
+
+[drakrun]
+plugins = ["apimon", "clipboardmon", "exmon", "filetracer", "memdump", "procmon", "regmon", "socketmon", "tlsmon"]

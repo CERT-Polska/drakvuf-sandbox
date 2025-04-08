@@ -4,7 +4,7 @@ import shutil
 ETC_DIR = pathlib.Path("/etc/drakrun")
 INSTALL_INFO_PATH = ETC_DIR / "install.json"
 XL_CFG_TEMPLATE_PATH = ETC_DIR / "cfg.template"
-CONFIG_PATH = ETC_DIR / "config.ini"
+CONFIG_PATH = ETC_DIR / "config.toml"
 
 LIB_DIR = pathlib.Path("/var/lib/drakrun")
 SNAPSHOT_DIR = LIB_DIR / "volumes"
@@ -34,5 +34,5 @@ def initialize_config_files():
         source_file = PACKAGE_DATA_PATH / "cfg.template"
         shutil.copy(source_file, XL_CFG_TEMPLATE_PATH)
     if not CONFIG_PATH.exists():
-        source_file = PACKAGE_DATA_PATH / "config.ini"
+        source_file = PACKAGE_DATA_PATH / "config.toml"
         shutil.copy(source_file, CONFIG_PATH)

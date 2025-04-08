@@ -7,11 +7,7 @@ from drakrun.lib.config import load_config
 from drakrun.lib.drakvuf_cmdline import get_base_drakvuf_cmdline
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.libvmi import VmiInfo
-from drakrun.lib.paths import (
-    INSTALL_INFO_PATH,
-    VMI_INFO_PATH,
-    VMI_KERNEL_PROFILE_PATH,
-)
+from drakrun.lib.paths import INSTALL_INFO_PATH, VMI_INFO_PATH, VMI_KERNEL_PROFILE_PATH
 from drakrun.lib.vm import VirtualMachine
 
 log = logging.getLogger(__name__)

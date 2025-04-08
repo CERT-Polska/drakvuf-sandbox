@@ -78,14 +78,6 @@ from drakrun.analyzer.analyzer import analyze_file
     is_flag=True,
     help="Don't run a post-restore script",
 )
-@click.option(
-    "--options",
-    "options_file",
-    default=None,
-    type=click.Path(exists=True),
-    show_default=True,
-    help="File with additional analysis options",
-)
 def analyze(
     vm_id,
     output_dir,
@@ -97,7 +89,6 @@ def analyze(
     net_enable,
     no_restore,
     no_post_restore,
-    options_file,
 ):
     """
     Run a CLI analysis using Drakvuf
@@ -126,8 +117,5 @@ def analyze(
         no_vm_restore=no_restore,
         no_post_restore=no_post_restore,
     )
-
-    if options_file is not None:
-        options = options.load(options_file)
 
     analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)

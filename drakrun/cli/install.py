@@ -5,16 +5,12 @@ import string
 import click
 
 from drakrun.lib.install_info import InstallInfo
-from drakrun.lib.paths import (
-    INSTALL_INFO_PATH,
-    initialize_config_files,
-    make_dirs,
-)
+from drakrun.lib.paths import INSTALL_INFO_PATH, initialize_config_files, make_dirs
 from drakrun.lib.storage import REGISTERED_BACKEND_NAMES, get_storage_backend
 from drakrun.lib.vm import VirtualMachine
 
-from .sanity_check import sanity_check
 from ..lib.config import load_config
+from .sanity_check import sanity_check
 
 log = logging.getLogger(__name__)
 
@@ -97,7 +93,9 @@ def install(
 
     backend = get_storage_backend(install_info)
 
-    vm0 = VirtualMachine(vm_id=0, install_info=install_info, network_conf=config.network)
+    vm0 = VirtualMachine(
+        vm_id=0, install_info=install_info, network_conf=config.network
+    )
     # Ensure VM0 is destroyed
     vm0.destroy()
 

@@ -1,20 +1,9 @@
-import json
 import pathlib
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
-DEFAULT_PLUGINS = [
-    "apimon",
-    "clipboardmon",
-    "exmon",
-    "filetracer",
-    "memdump",
-    "procmon",
-    "regmon",
-    "socketmon",
-    "tlsmon",
-]
+from drakrun.lib.config import DrakrunConfig
 
 
 class AnalysisOptions(BaseModel):
@@ -25,7 +14,7 @@ class AnalysisOptions(BaseModel):
     # Start command to run on the VM
     start_command: Optional[Union[List[str], str]] = None
     # Plugins to enable
-    plugins: List[str] = DEFAULT_PLUGINS
+    plugins: Optional[List[str]] = None
     # Alternative hooks list for apimon
     apimon_hooks_path: Optional[pathlib.Path] = None
     # Alternative syscall list for apimon
@@ -43,12 +32,19 @@ class AnalysisOptions(BaseModel):
     # Don't run a post-restore script
     no_post_restore: Optional[bool] = None
 
-    def load(self, path: pathlib.Path) -> "AnalysisOptions":
-        """Loads additional AnalysisOptions from file"""
-        obj = self.model_dump()
-        with path.open("r") as f:
-            obj.update(json.loads(f.read()))
-        return AnalysisOptions.model_validate(obj)
+    def apply_config_defaults(self, config: DrakrunConfig):
+        if self.plugins is None:
+            self.plugins = config.drakrun.plugins
+        if self.apimon_hooks_path is None:
+            self.apimon_hooks_path = config.drakrun.apimon_hooks_path
+        if self.syscall_hooks_path is None:
+            self.syscall_hooks_path = config.drakrun.syscall_hooks_path
+        if self.extra_drakvuf_args is None:
+            self.extra_drakvuf_args = config.drakrun.extra_drakvuf_args
+        if self.extra_output_subdirs is None:
+            self.extra_output_subdirs = config.drakrun.extra_output_subdirs
+        if self.net_enable is None:
+            self.net_enable = config.network.net_enable
 
     def to_dict(self, exclude_none=True):
         return self.model_dump(
@@ -56,8 +52,3 @@ class AnalysisOptions(BaseModel):
             exclude={"vm_id", "output_dir"},
             exclude_none=exclude_none,
         )
-
-    def save(self, path: pathlib.Path) -> None:
-        """Serializes self and writes to the provided path"""
-        with path.open("w") as f:
-            f.write(json.dumps(self.to_dict()))

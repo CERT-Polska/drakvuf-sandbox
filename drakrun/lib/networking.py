@@ -8,7 +8,7 @@ import subprocess
 import time
 from typing import List, Optional
 
-from .config import NetworkConfigSection, DNS_USE_GATEWAY_ADDRESS, OUT_INTERFACE_DEFAULT
+from .config import DNS_USE_GATEWAY_ADDRESS, OUT_INTERFACE_DEFAULT, NetworkConfigSection
 from .network_info import NetworkInfo
 from .paths import ETC_DIR, RUN_DIR
 
@@ -33,6 +33,7 @@ def find_default_interface() -> Optional[str]:
 
     return None
 
+
 def network_addr_for_vm(vm_id: int) -> str:
     if not (0 <= vm_id <= 255):
         raise ValueError(f"VM id out of range: {vm_id}")
@@ -47,6 +48,7 @@ def get_dnsmasq_pidfile_path(vm_id: int) -> str:
 def get_network_info_path(vm_id: int) -> pathlib.Path:
     RUN_DIR.mkdir(exist_ok=True)
     return RUN_DIR / f"vmnet-{vm_id}.json"
+
 
 def make_network_info_for_vm(
     vm_id: int, network_conf: NetworkConfigSection
@@ -82,6 +84,7 @@ def make_network_info_for_vm(
         vm_address=vm_address,
         dnsmasq_pidfile=dnsmasq_pidfile,
     )
+
 
 def iptable_rule_exists(rule) -> bool:
     try:

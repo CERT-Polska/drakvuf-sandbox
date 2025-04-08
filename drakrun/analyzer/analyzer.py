@@ -14,8 +14,8 @@ from drakrun.lib.paths import (
     VMI_INFO_PATH,
     VMI_KERNEL_PROFILE_PATH,
 )
-from ..lib.config import load_config, NetworkConfigSection
 
+from ..lib.config import NetworkConfigSection, load_config
 from ..lib.libvmi import VmiInfo
 from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command
@@ -105,10 +105,11 @@ def analyze_file(vm_id: int, output_dir: pathlib.Path, options: AnalysisOptions)
 
     prepare_output_dir(output_dir, options)
 
+    options.apply_config_defaults(config)
     network_conf = NetworkConfigSection(
         out_interface=config.network.out_interface,
         dns_server=config.network.dns_server,
-        net_enable=options.net_enable if options.net_enable is not None else config.network.net_enable,
+        net_enable=options.net_enable,
     )
 
     with run_vm(
