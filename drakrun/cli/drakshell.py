@@ -4,14 +4,13 @@ import time
 
 import click
 
+from drakrun.lib.config import load_config
 from drakrun.lib.drakshell import Drakshell
 from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.libvmi import VmiInfo
-from drakrun.lib.network_info import NetworkConfiguration
 from drakrun.lib.paths import (
     INSTALL_INFO_PATH,
-    NETWORK_CONF_PATH,
     PACKAGE_TOOLS_PATH,
     VMI_INFO_PATH,
     VMI_KERNEL_PROFILE_PATH,
@@ -35,9 +34,9 @@ def drakshell(vm_id, cmd):
     """
     Run drakshell session
     """
+    config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
-    network_conf = NetworkConfiguration.load(NETWORK_CONF_PATH)
-    vm = VirtualMachine(vm_id, install_info, network_conf)
+    vm = VirtualMachine(vm_id, install_info, config.network)
     if not vm.is_running:
         click.echo("VM is not running", err=True)
         raise click.Abort()

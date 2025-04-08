@@ -2,10 +2,10 @@ import logging
 
 import click
 
+from drakrun.lib.config import load_config
 from drakrun.lib.drakshell import Drakshell
 from drakrun.lib.install_info import InstallInfo
-from drakrun.lib.network_info import NetworkConfiguration
-from drakrun.lib.paths import INSTALL_INFO_PATH, NETWORK_CONF_PATH, VMI_INFO_PATH
+from drakrun.lib.paths import INSTALL_INFO_PATH, VMI_INFO_PATH
 from drakrun.lib.vm import VirtualMachine
 from drakrun.lib.vmi_profile import create_vmi_info, create_vmi_json_profile
 
@@ -29,10 +29,10 @@ log = logging.getLogger(__name__)
     help="Don't restore VM before making profile and don't destroy after, assume it's already running",
 )
 def make_profile(vm_id, no_restore):
+    config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
-    network_conf = NetworkConfiguration.load(NETWORK_CONF_PATH)
 
-    vm = VirtualMachine(vm_id, install_info, network_conf)
+    vm = VirtualMachine(vm_id, install_info, config.network)
     if not no_restore:
         vm.restore()
     try:

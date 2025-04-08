@@ -32,10 +32,6 @@ class AnalysisOptions(BaseModel):
     syscall_hooks_path: Optional[pathlib.Path] = None
     # Analysis timeout
     timeout: Optional[int] = None
-    # networking: DNS server
-    dns_server: Optional[str] = None
-    # networking: Output interface
-    out_interface: Optional[str] = None
     # networking: Enable Internet access
     net_enable: Optional[bool] = None
     # extra arguments for Drakvuf command line
