@@ -52,20 +52,6 @@ class AnalysisOptions(BaseModel):
             },
         )
 
-    def apply_config_defaults(self, config: DrakrunConfig):
-        if self.plugins is None:
-            self.plugins = config.drakrun.plugins
-        if self.apimon_hooks_path is None:
-            self.apimon_hooks_path = config.drakrun.apimon_hooks_path
-        if self.syscall_hooks_path is None:
-            self.syscall_hooks_path = config.drakrun.syscall_hooks_path
-        if self.extra_drakvuf_args is None:
-            self.extra_drakvuf_args = config.drakrun.extra_drakvuf_args
-        if self.extra_output_subdirs is None:
-            self.extra_output_subdirs = config.drakrun.extra_output_subdirs
-        if self.net_enable is None:
-            self.net_enable = config.network.net_enable
-
     def to_dict(self, exclude_none=True):
         return self.model_dump(
             mode="json",
