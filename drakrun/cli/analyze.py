@@ -109,12 +109,6 @@ def analyze(
     if sample is not None:
         sample = pathlib.Path(sample)
 
-    if not plugins:
-        # Plugins are set to [] if none provided
-        # We need to indicate that we want a
-        # default value here
-        plugins = None
-
     options = AnalysisOptions(
         config=config,
         sample_path=sample,
