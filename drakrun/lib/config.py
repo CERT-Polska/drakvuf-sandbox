@@ -19,6 +19,10 @@ class NetworkConfigSection(BaseModel):
 class DrakrunConfigSection(BaseModel):
     model_config = ConfigDict(extra="ignore")
     plugins: List[str]
+    job_timeout_leeway: int = 300
+    """Give extra 5 minutes as a timeout for whole analysis process
+    including VM restore, post-restore, drakvuf hard timeout and
+    postprocessing."""
     apimon_hooks_path: Optional[pathlib.Path] = None
     syscall_hooks_path: Optional[pathlib.Path] = None
     extra_drakvuf_args: Optional[Dict[str, Any]] = None

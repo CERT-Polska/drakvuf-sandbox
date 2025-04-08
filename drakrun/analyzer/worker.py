@@ -4,6 +4,7 @@ from redis import Redis
 from rq import Queue, Worker, get_current_job
 from rq.job import Job
 
+from drakrun.lib.config import load_config
 from drakrun.lib.paths import ANALYSES_DIR
 
 from .analysis_options import AnalysisOptions
@@ -54,18 +55,15 @@ def worker_main(vm_id: int):
 
 
 def spawn_analysis(options: AnalysisOptions, connection: Redis) -> Job:
+    config = load_config()
     queue = Queue(name=ANALYSIS_QUEUE_NAME, connection=connection)
     if options.sample_path is None:
         raise RuntimeError("Sample path is required when spawning analysis to worker")
     if options.timeout is None:
         raise RuntimeError("Timeout is required when spawning analysis to worker")
-    # Give extra 5 minutes as a timeout for whole analysis process
-    # including VM restore, post-restore, drakvuf hard timeout and
-    # postprocessing.
-    # TODO: job_timeout offset should be configurable.
     return queue.enqueue(
         worker_analyze,
         options,
         meta={"options": options.to_dict(exclude_none=True)},
-        job_timeout=options.timeout + 300,
+        job_timeout=options.timeout + config.job_timeout_leeway,
     )

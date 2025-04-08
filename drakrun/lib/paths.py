@@ -28,8 +28,6 @@ def make_dirs():
     pathlib.Path(LIB_DIR).mkdir(exist_ok=True)
     SNAPSHOT_DIR.mkdir(exist_ok=True)
     CONFIGS_DIR.mkdir(exist_ok=True)
-    VMI_PROFILES_DIR.mkdir(exist_ok=True)
-    PDB_CACHE_DIR.mkdir(exist_ok=True)
     ANALYSES_DIR.mkdir(exist_ok=True)
 
 
