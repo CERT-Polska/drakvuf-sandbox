@@ -5,6 +5,7 @@ import click
 
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.analyzer import analyze_file
+from drakrun.lib.config import load_config
 
 
 @click.command("analyze")
@@ -93,6 +94,7 @@ def analyze(
     """
     Run a CLI analysis using Drakvuf
     """
+    config = load_config()
     if output_dir is None:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         output_dir = pathlib.Path("./analysis_{}".format(timestamp))
@@ -114,6 +116,7 @@ def analyze(
         plugins = None
 
     options = AnalysisOptions(
+        config=config,
         sample_path=sample,
         timeout=timeout,
         net_enable=net_enable,

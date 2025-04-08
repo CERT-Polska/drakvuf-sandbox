@@ -105,7 +105,6 @@ def analyze_file(vm_id: int, output_dir: pathlib.Path, options: AnalysisOptions)
 
     prepare_output_dir(output_dir, options)
 
-    options.apply_config_defaults(config)
     network_conf = NetworkConfigSection(
         out_interface=config.network.out_interface,
         dns_server=config.network.dns_server,
