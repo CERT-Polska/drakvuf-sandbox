@@ -2,9 +2,10 @@ import logging
 from pathlib import Path
 from typing import List, Optional
 
+from .config import NetworkConfigSection
 from .install_info import InstallInfo
-from .network_info import NetworkConfiguration, NetworkInfo, get_network_info_path
-from .networking import start_vm_network, stop_vm_network
+from .network_info import NetworkInfo
+from .networking import get_network_info_path, start_vm_network, stop_vm_network
 from .paths import CONFIGS_DIR
 from .storage import get_storage_backend
 from .xen import (
@@ -28,7 +29,7 @@ class VirtualMachine:
         self,
         vm_id: int,
         install_info: InstallInfo,
-        network_conf: NetworkConfiguration,
+        network_conf: NetworkConfigSection,
     ):
         self.vm_id = vm_id
         self.install_info = install_info

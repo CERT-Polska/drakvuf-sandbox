@@ -1,8 +1,8 @@
 import click
 
+from drakrun.lib.config import load_config
 from drakrun.lib.install_info import InstallInfo
-from drakrun.lib.network_info import NetworkConfiguration
-from drakrun.lib.paths import INSTALL_INFO_PATH, NETWORK_CONF_PATH
+from drakrun.lib.paths import INSTALL_INFO_PATH
 from drakrun.lib.vm import VirtualMachine
 
 
@@ -16,7 +16,7 @@ from drakrun.lib.vm import VirtualMachine
     help="VM id to use for generating profile",
 )
 def vm_start(vm_id: int):
+    config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
-    network_conf = NetworkConfiguration.load(NETWORK_CONF_PATH)
-    vm = VirtualMachine(vm_id, install_info, network_conf)
+    vm = VirtualMachine(vm_id, install_info, config.network)
     vm.restore()

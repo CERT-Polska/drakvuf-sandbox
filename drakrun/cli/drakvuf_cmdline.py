@@ -3,16 +3,11 @@ import shlex
 
 import click
 
+from drakrun.lib.config import load_config
 from drakrun.lib.drakvuf_cmdline import get_base_drakvuf_cmdline
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.libvmi import VmiInfo
-from drakrun.lib.network_info import NetworkConfiguration
-from drakrun.lib.paths import (
-    INSTALL_INFO_PATH,
-    NETWORK_CONF_PATH,
-    VMI_INFO_PATH,
-    VMI_KERNEL_PROFILE_PATH,
-)
+from drakrun.lib.paths import INSTALL_INFO_PATH, VMI_INFO_PATH, VMI_KERNEL_PROFILE_PATH
 from drakrun.lib.vm import VirtualMachine
 
 log = logging.getLogger(__name__)
@@ -33,10 +28,10 @@ log = logging.getLogger(__name__)
     help="Command line to inject for execution",
 )
 def drakvuf_cmdline(vm_id, cmd):
+    config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
-    network_conf = NetworkConfiguration.load(NETWORK_CONF_PATH)
 
-    vm = VirtualMachine(vm_id, install_info, network_conf)
+    vm = VirtualMachine(vm_id, install_info, config.network)
     if not vm.is_running:
         raise RuntimeError("VM is not running")
 

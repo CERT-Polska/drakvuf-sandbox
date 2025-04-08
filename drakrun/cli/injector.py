@@ -6,16 +6,11 @@ from subprocess import CalledProcessError
 import click
 import mslex
 
+from drakrun.lib.config import load_config
 from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.libvmi import VmiInfo
-from drakrun.lib.network_info import NetworkConfiguration
-from drakrun.lib.paths import (
-    INSTALL_INFO_PATH,
-    NETWORK_CONF_PATH,
-    VMI_INFO_PATH,
-    VMI_KERNEL_PROFILE_PATH,
-)
+from drakrun.lib.paths import INSTALL_INFO_PATH, VMI_INFO_PATH, VMI_KERNEL_PROFILE_PATH
 from drakrun.lib.vm import VirtualMachine
 
 log = logging.getLogger(__name__)
@@ -57,9 +52,9 @@ def copy_file(src, dst):
 
     vm_id = dst_target if dst_target is not None else src_target
 
+    config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
-    network_conf = NetworkConfiguration.load(NETWORK_CONF_PATH)
-    vm = VirtualMachine(vm_id, install_info, network_conf)
+    vm = VirtualMachine(vm_id, install_info, config.network)
     if not vm.is_running:
         click.echo("VM is not running", err=True)
         raise click.Abort()
@@ -139,9 +134,9 @@ def copy_file(src, dst):
 )
 @click.argument("cmd", nargs=-1, type=str)
 def exec_cmd(vm_id, wait, timeout, shell_cmd, cmd):
+    config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
-    network_conf = NetworkConfiguration.load(NETWORK_CONF_PATH)
-    vm = VirtualMachine(vm_id, install_info, network_conf)
+    vm = VirtualMachine(vm_id, install_info, config.network)
     if not vm.is_running:
         click.echo("VM is not running", err=True)
         raise click.Abort()

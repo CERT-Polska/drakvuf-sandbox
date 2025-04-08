@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 import os
 import pathlib
@@ -7,12 +8,8 @@ import subprocess
 import time
 from typing import List, Optional
 
-from .network_info import (
-    NetworkConfiguration,
-    NetworkInfo,
-    get_network_info_path,
-    make_network_info_for_vm,
-)
+from .config import DNS_USE_GATEWAY_ADDRESS, OUT_INTERFACE_DEFAULT, NetworkConfigSection
+from .network_info import NetworkInfo
 from .paths import ETC_DIR, RUN_DIR
 
 log = logging.getLogger(__name__)
@@ -35,6 +32,58 @@ def find_default_interface() -> Optional[str]:
             return m.group(1)
 
     return None
+
+
+def network_addr_for_vm(vm_id: int) -> str:
+    if not (0 <= vm_id <= 255):
+        raise ValueError(f"VM id out of range: {vm_id}")
+    return f"10.13.{vm_id}.0/24"
+
+
+def get_dnsmasq_pidfile_path(vm_id: int) -> str:
+    RUN_DIR.mkdir(exist_ok=True)
+    return (RUN_DIR / f"dnsmasq-vm{vm_id}.pid").as_posix()
+
+
+def get_network_info_path(vm_id: int) -> pathlib.Path:
+    RUN_DIR.mkdir(exist_ok=True)
+    return RUN_DIR / f"vmnet-{vm_id}.json"
+
+
+def make_network_info_for_vm(
+    vm_id: int, network_conf: NetworkConfigSection
+) -> NetworkInfo:
+    bridge_name = f"drak{vm_id}"
+
+    network_address = network_addr_for_vm(vm_id)
+    network = ipaddress.IPv4Network(network_address)
+    hosts = network.hosts()
+    gateway_address = str(next(hosts))
+    vm_address = str(next(hosts))
+
+    if network_conf.dns_server == DNS_USE_GATEWAY_ADDRESS:
+        dns_server = gateway_address
+    else:
+        dns_server = network_conf.dns_server
+
+    if network_conf.out_interface == OUT_INTERFACE_DEFAULT:
+        out_interface = find_default_interface()
+    else:
+        out_interface = network_conf.out_interface
+
+    # Xen OUI
+    dnsmasq_pidfile = get_dnsmasq_pidfile_path(vm_id)
+
+    return NetworkInfo(
+        out_interface=out_interface,
+        dns_server=dns_server,
+        net_enable=network_conf.net_enable,
+        bridge_name=bridge_name,
+        network_address=network_address,
+        gateway_address=gateway_address,
+        vm_address=vm_address,
+        dnsmasq_pidfile=dnsmasq_pidfile,
+    )
 
 
 def iptable_rule_exists(rule) -> bool:
@@ -194,7 +243,7 @@ def run_network_setup_script(script_name: str, network_info: NetworkInfo):
     )
 
 
-def start_vm_network(vm_id: int, network_conf: NetworkConfiguration) -> NetworkInfo:
+def start_vm_network(vm_id: int, network_conf: NetworkConfigSection) -> NetworkInfo:
     setup_iptables_chains()
 
     network_info_path = get_network_info_path(vm_id)
