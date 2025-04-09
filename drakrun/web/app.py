@@ -1,98 +1,90 @@
+import hashlib
 import json
-import os
-import re
+import shutil
+import uuid
 from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
+import magic
 from flask import Flask, abort, jsonify, request, send_file, send_from_directory
-from karton.core import Config, Producer, Resource, Task
-from karton.core.backend import KartonBackend
-from karton.core.task import TaskState
-from minio.error import NoSuchKey
 
+from drakrun.analyzer.analysis_options import AnalysisOptions
+from drakrun.analyzer.file_metadata import FileMetadata
+from drakrun.analyzer.worker import enqueue_analysis, get_redis_connection
 from drakrun.lib.analysis_status import (
     AnalysisStatus,
     create_analysis_status,
     get_analysis_status_list,
 )
 from drakrun.lib.config import load_config
-from drakrun.lib.minio import get_minio_client
-from drakrun.lib.paths import ETC_DIR
+from drakrun.lib.paths import ANALYSES_DIR
 from drakrun.web.analysis import AnalysisProxy
 
 app = Flask(__name__, static_folder="frontend/build/static")
-karton_conf_path = os.path.join(ETC_DIR, "config.ini")
-karton_conf = Config(karton_conf_path)
-backend = KartonBackend(karton_conf)
-
 drakrun_conf = load_config()
-minio = get_minio_client(drakrun_conf)
+redis = get_redis_connection(drakrun_conf.redis)
 
 
-@app.errorhandler(NoSuchKey)
+@app.errorhandler(404)
 def resource_not_found(e):
     return jsonify(error="Object not found"), 404
 
 
-@app.after_request
-def add_header(response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "Range"
-    return response
-
-
 @app.route("/upload", methods=["POST"])
 def upload():
-    producer = Producer(karton_conf)
+    if "file" not in request.files:
+        return jsonify(error="No file part"), 400
 
-    with NamedTemporaryFile() as f:
-        request.files["file"].save(f.name)
+    request_file = request.files["file"]
+    job_id = str(uuid.uuid4())
 
-        with open(f.name, "rb") as fr:
-            sample = Resource("sample", fr.read())
+    analysis_path = ANALYSES_DIR / job_id
+    analysis_path.mkdir()
 
-    task = Task({"type": "sample", "stage": "recognized", "platform": "win32"})
-    task.add_payload("override_uid", task.uid)
+    sample_path = analysis_path / "sample"
+    sample_sha256 = hashlib.sha256()
+    try:
+        with sample_path.open("wb") as f:
+            for chunk in iter(lambda: request_file.read(32 * 4096), b""):
+                f.write(chunk)
+                sample_sha256.update(chunk)
+        sample_magic = magic.from_file(sample_path.as_posix())
 
-    # Add analysis timeout to task
-    timeout = request.form.get("timeout")
-    if timeout:
-        task.add_payload("timeout", int(timeout))
-
-    # Add filename override to task
-    if request.form.get("file_name"):
+        timeout = request.form.get("timeout")
+        if not timeout:
+            ...
         filename = request.form.get("file_name")
-    else:
-        filename = request.files["file"].filename
-    if not re.fullmatch(
-        r"^((?![\\/><|:&])[\x20-\xfe])+\.(?:dll|exe|ps1|bat|doc|docm|docx|dotm|xls|xlsx|xlsm|xltx|xltm|ppt|pptx|vbs|js|jse|hta|html|htm)$",
-        filename,
-        flags=re.IGNORECASE,
-    ):
-        return jsonify({"error": "invalid file_name"}), 400
-    task.add_payload("file_name", os.path.splitext(filename)[0])
+        if not filename:
+            filename = request_file.filename
+        start_command = request.form.get("start_command")
+        plugins = request.form.get("plugins")
+        if plugins:
+            plugins = json.loads(plugins)
 
-    # Extract and add extension
-    extension = os.path.splitext(filename)[1][1:]
-    if extension:
-        task.headers["extension"] = extension
-
-    # Add startup command to task
-    start_command = request.form.get("start_command")
-    if start_command:
-        task.add_payload("start_command", start_command)
-
-    # Add plugins to task
-    plugins = request.form.get("plugins")
-    if plugins:
-        plugins = json.loads(plugins)
-        task.add_payload("plugins", plugins)
-
-    task.add_resource("sample", sample)
-
-    producer.send_task(task)
-    create_analysis_status(backend.redis, task.uid, AnalysisStatus.PENDING)
-    return jsonify({"task_uid": task.uid})
+        file_metadata = FileMetadata(
+            name=filename,
+            type=sample_magic,
+            sha256=sample_sha256.hexdigest(),
+        )
+        analysis_options = AnalysisOptions(
+            config=drakrun_conf,
+            sample_path=sample_path,
+            target_filename=filename,
+            start_command=start_command,
+            plugins=plugins,
+            timeout=timeout,
+            job_timeout_leeway=drakrun_conf.job_timeout_leeway,
+        )
+        enqueue_analysis(
+            job_id=job_id,
+            file_metadata=file_metadata,
+            options=analysis_options,
+            connection=redis,
+        )
+        return jsonify({"task_uid": job_id})
+    except Exception:
+        shutil.rmtree(analysis_path)
+        raise
 
 
 def get_analysis_metadata(analysis_uid):

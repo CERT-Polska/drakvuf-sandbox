@@ -10,6 +10,19 @@ DNS_USE_GATEWAY_ADDRESS = "use-gateway-address"
 OUT_INTERFACE_DEFAULT = "default"
 
 
+class RedisConfigSection(BaseModel):
+    host: str = "localhost"
+    port: int = 6379
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+    def make_url(self):
+        if self.username is not None and self.password is not None:
+            return f"redis://{self.username}:{self.password}@{self.host}:{self.port}"
+        else:
+            return f"redis://{self.host}:{self.port}"
+
+
 class NetworkConfigSection(BaseModel):
     dns_server: str
     out_interface: str
@@ -31,6 +44,7 @@ class DrakrunConfigSection(BaseModel):
 
 class DrakrunConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
+    redis: RedisConfigSection
     network: NetworkConfigSection
     drakrun: DrakrunConfigSection
 
