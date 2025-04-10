@@ -32,6 +32,7 @@ class NetworkConfigSection(BaseModel):
 class DrakrunConfigSection(BaseModel):
     model_config = ConfigDict(extra="ignore")
     plugins: List[str]
+    default_timeout: int
     job_timeout_leeway: int = 300
     """Give extra 5 minutes as a timeout for whole analysis process
     including VM restore, post-restore, drakvuf hard timeout and

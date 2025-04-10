@@ -6,19 +6,18 @@ from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import magic
-from flask import Flask, abort, jsonify, request, send_file, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory
+from rq.exceptions import NoSuchJobError
+from rq.job import Job
 
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.file_metadata import FileMetadata
 from drakrun.analyzer.worker import enqueue_analysis, get_redis_connection
-from drakrun.lib.analysis_status import (
-    AnalysisStatus,
-    create_analysis_status,
-    get_analysis_status_list,
-)
 from drakrun.lib.config import load_config
 from drakrun.lib.paths import ANALYSES_DIR
-from drakrun.web.analysis import AnalysisProxy
+
+from .analysis import get_analysis_data
+from .analysis_list import add_analysis_to_recent, get_recent_analysis_list
 
 app = Flask(__name__, static_folder="frontend/build/static")
 drakrun_conf = load_config()
@@ -31,7 +30,7 @@ def resource_not_found(e):
 
 
 @app.route("/upload", methods=["POST"])
-def upload():
+def upload_sample():
     if "file" not in request.files:
         return jsonify(error="No file part"), 400
 
@@ -52,7 +51,7 @@ def upload():
 
         timeout = request.form.get("timeout")
         if not timeout:
-            ...
+            timeout = drakrun_conf.default_timeout
         filename = request.form.get("file_name")
         if not filename:
             filename = request_file.filename
@@ -81,56 +80,71 @@ def upload():
             options=analysis_options,
             connection=redis,
         )
+        add_analysis_to_recent(connection=redis, analysis_id=job_id)
         return jsonify({"task_uid": job_id})
     except Exception:
         shutil.rmtree(analysis_path)
         raise
 
 
-def get_analysis_metadata(analysis_uid):
-    analysis = AnalysisProxy(minio, analysis_uid)
-    return analysis.get_metadata()
+def analysis_job_to_dict(job: Job):
+    job_status = job.get_status()
+    job_meta = job.get_meta()
+    job_status = str(job_status)
+    if "substatus" in job_meta:
+        job_status += " ({})".format(job_meta["substatus"])
+
+    return {
+        "id": job.id,
+        "status": job_status,
+        "file": job_meta.get("file"),
+        "options": job_meta.get("options"),
+    }
 
 
 @app.route("/list")
-def route_list():
-    return jsonify(get_analysis_status_list(backend.redis))
+def list_analyses():
+    analysis_list = get_recent_analysis_list(redis)
+    return jsonify([analysis_job_to_dict(job) for job in analysis_list])
+
+
+@app.route("/status/<task_uid>")
+def status(task_uid):
+    try:
+        job = Job.fetch(task_uid, connection=redis)
+        return jsonify(analysis_job_to_dict(job))
+    except NoSuchJobError:
+        # TODO: If job no longer stored in redis, we should check the storage
+        ...
+        return jsonify({"error": "Job not found"}), 404
 
 
 @app.route("/processed/<task_uid>/<which>")
 def processed(task_uid, which):
-    analysis = AnalysisProxy(minio, task_uid)
-    with NamedTemporaryFile() as f:
-        analysis.get_processed(f, which)
-        return send_file(f.name, mimetype="application/json")
+    analysis = get_analysis_data(task_uid)
+    path = analysis.get_processed(which)
+    return send_file(path, mimetype="application/json")
 
 
 @app.route("/processed/<task_uid>/apicall/<pid>")
 def apicall(task_uid, pid):
-    analysis = AnalysisProxy(minio, task_uid)
-    with NamedTemporaryFile() as f:
-        analysis.get_apicalls(f, pid)
-        return send_file(f.name)
+    analysis = get_analysis_data(task_uid)
+    path = analysis.get_apicalls(pid)
+    return send_file(path, mimetype="application/json")
 
 
 @app.route("/logs/<task_uid>/<log_type>")
 def logs(task_uid, log_type):
-    analysis = AnalysisProxy(minio, task_uid)
-    with NamedTemporaryFile() as f:
-        # Copy Range header if it exists
-        headers = {}
-        if "Range" in request.headers:
-            headers["Range"] = request.headers["Range"]
-        analysis.get_log(log_type, f, headers=headers)
-        return send_file(f.name, mimetype="text/plain")
+    analysis = get_analysis_data(task_uid)
+    path = analysis.get_log(log_type)
+    return send_file(path, mimetype="application/json")
 
 
 @app.route("/logindex/<task_uid>/<log_type>")
 def logindex(task_uid, log_type):
-    analysis = AnalysisProxy(minio, task_uid)
-    with NamedTemporaryFile() as f:
-        analysis.get_log_index(log_type, f)
-        return send_file(f.name)
+    analysis = get_analysis_data(task_uid)
+    path = analysis.get_log_index(log_type)
+    return send_file(path, mimetype="application/json")
 
 
 @app.route("/pcap_dump/<task_uid>")
@@ -139,63 +153,42 @@ def pcap_dump(task_uid):
     Return archaive containing dump.pcap along with extracted tls sessions
     keys in format acceptable by wireshark.
     """
-    analysis = AnalysisProxy(minio, task_uid)
-    try:
-        with NamedTemporaryFile() as f_pcap, NamedTemporaryFile() as f_keys, NamedTemporaryFile() as f_archive:
-            with ZipFile(f_archive, "w", ZIP_DEFLATED) as archive:
-                analysis.get_pcap_dump(f_pcap)
-                archive.write(f_pcap.name, "dump.pcap")
-                try:
-                    analysis.get_wireshark_key_file(f_keys)
-                    archive.write(f_keys.name, "dump.keys")
-                except NoSuchKey:
-                    # No dumped keys.
-                    pass
-            f_archive.seek(0)
-            return send_file(f_archive.name, mimetype="application/zip")
-    except NoSuchKey:
-        abort(404, description="No network traffic avaible.")
+    analysis = get_analysis_data(task_uid)
+    with NamedTemporaryFile() as f_archive:
+        with ZipFile(f_archive, "w", ZIP_DEFLATED) as archive:
+            path = analysis.get_pcap_dump()
+            archive.write(path, "dump.pcap")
+            path = analysis.get_wireshark_key_file()
+            if path.exists():
+                archive.write(path, "dump.keys")
+        f_archive.seek(0)
+        return send_file(f_archive.name, mimetype="application/zip")
 
 
 @app.route("/dumps/<task_uid>")
 def dumps(task_uid):
-    analysis = AnalysisProxy(minio, task_uid)
-    with NamedTemporaryFile() as tmp:
-        analysis.get_dumps(tmp)
-        return send_file(tmp.name, mimetype="application/zip")
+    analysis = get_analysis_data(task_uid)
+    path = analysis.get_dumps()
+    return send_file(path, mimetype="application/zip")
 
 
 @app.route("/logs/<task_uid>")
 def list_logs(task_uid):
-    analysis = AnalysisProxy(minio, task_uid)
+    analysis = get_analysis_data(task_uid)
     return jsonify(list(analysis.list_logs()))
 
 
 @app.route("/graph/<task_uid>")
 def graph(task_uid):
-    analysis = AnalysisProxy(minio, task_uid)
-    with NamedTemporaryFile() as tmp:
-        analysis.get_graph(tmp)
-        return send_file(tmp.name, mimetype="text/plain")
+    analysis = get_analysis_data(task_uid)
+    path = analysis.get_graph()
+    return send_file(path, mimetype="text/plain")
 
 
 @app.route("/metadata/<task_uid>")
 def metadata(task_uid):
-    return jsonify(get_analysis_metadata(task_uid))
-
-
-@app.route("/status/<task_uid>")
-def status(task_uid):
-    res = {"status": "done"}
-
-    for task in backend.get_all_tasks():
-        if task.root_uid == task_uid:
-            if task.status != TaskState.FINISHED:
-                res["status"] = "pending"
-                break
-
-    res["vm_id"] = backend.redis.get(f"drakvnc:{task_uid}")
-    return jsonify(res)
+    analysis = get_analysis_data(task_uid)
+    return jsonify(analysis.get_metadata())
 
 
 @app.route("/")
