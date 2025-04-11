@@ -22,13 +22,14 @@ drakrun/tools/get-explorer-pid: drakrun/tools/get-explorer-pid.c
 	gcc $< -o $@ -lvmi `pkg-config --cflags --libs glib-2.0`
 
 drakrun/tools/drakshell/drakshell:
-	cd drakrun/tools/drakshell && make $@
+	$(MAKE) -C drakrun/tools/drakshell
 
 .PHONY: clean
 clean:
 	rm -rf dist drakvuf_sandbox.egg-info build
 	rm -rf drakrun/web/frontend/build drakrun/web/frontend/node_modules
 	rm -f drakrun/tools/get-explorer-pid drakrun/tools/test-altp2m
+	rm -f drakrun/tools/drakshell/drakshell
 
 .PHONY: install
 install: all
