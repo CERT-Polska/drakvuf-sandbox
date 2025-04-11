@@ -15,6 +15,7 @@ from .postinstall import postinstall
 from .postprocess import postprocess
 from .vm_start import vm_start
 from .vm_stop import vm_stop
+from .worker import worker
 
 
 @click.group()
@@ -35,6 +36,7 @@ main.add_command(install)
 main.add_command(postinstall)
 main.add_command(vm_start)
 main.add_command(vm_stop)
+main.add_command(worker)
 main.add_command(modify_vm0)
 main.add_command(injector)
 main.add_command(drakshell)

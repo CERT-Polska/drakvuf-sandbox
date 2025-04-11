@@ -21,6 +21,8 @@ class AnalysisOptions(BaseModel):
     syscall_hooks_path: Optional[pathlib.Path] = None
     # Analysis timeout
     timeout: Optional[int] = None
+    # Job timeout leeway for worker
+    job_timeout_leeway: Optional[int] = None
     # networking: Enable Internet access
     net_enable: bool
     # extra arguments for Drakvuf command line
@@ -33,7 +35,6 @@ class AnalysisOptions(BaseModel):
     no_post_restore: Optional[bool] = None
 
     def __init__(self, config: DrakrunConfig, **kwargs):
-
         net_enable = kwargs.get("net_enable")
         if net_enable is None:
             net_enable = config.network.net_enable

@@ -18,17 +18,6 @@ class AnalysisList extends Component {
     if (response.data) this.setState({ analyses: response.data });
   }
 
-  formatTimestamp(ts) {
-    if (!ts) {
-      return "-";
-    }
-
-    return new Date(ts * 1000)
-      .toISOString()
-      .replace("T", " ")
-      .replace(".000Z", "");
-  }
-
   render() {
     return (
       <div className="App container-fluid">
@@ -57,12 +46,12 @@ class AnalysisList extends Component {
                     <Link to={"/progress/" + val.id}>{val.id}</Link>
                   </td>
                   <td>{val.status}</td>
-                  <td className="text-hash">{val.meta.sample_sha256}</td>
-                  <td>{val.meta.magic_output}</td>
-                  <td>{this.formatTimestamp(val.meta.time_started)}</td>
-                  <td>{this.formatTimestamp(val.meta.time_finished)}</td>
+                  <td className="text-hash">{val.file.sha256}</td>
+                  <td>{val.file.type}</td>
+                  <td>{val.time_started}</td>
+                  <td>{val.time_finished}</td>
                   <td>
-                    <code>{val.meta.start_command}</code>
+                    <code>{val.options.start_command}</code>
                   </td>
                   <td>
                     <Link to={"/analysis/" + val.id}>
