@@ -99,6 +99,8 @@ def analysis_job_to_dict(job: Job):
         "status": job_status,
         "file": job_meta.get("file"),
         "options": job_meta.get("options"),
+        "time_started": job.started_at.isoformat() if job.started_at is not None else None,
+        "time_finished": job.ended_at.isoformat() if job.ended_at is not None else None,
     }
 
 
