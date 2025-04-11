@@ -72,7 +72,7 @@ def upload_sample():
             start_command=start_command,
             plugins=plugins,
             timeout=timeout,
-            job_timeout_leeway=drakrun_conf.job_timeout_leeway,
+            job_timeout_leeway=drakrun_conf.drakrun.job_timeout_leeway,
         )
         enqueue_analysis(
             job_id=job_id,
