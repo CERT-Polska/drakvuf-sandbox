@@ -46,7 +46,7 @@ class AnalysisList extends Component {
                     <Link to={"/progress/" + val.id}>{val.id}</Link>
                   </td>
                   <td>{val.status}</td>
-                  <td className="text-hash">{val.file.name}</td>
+                  <td className="text-hash">{val.file.sha256}</td>
                   <td>{val.file.type}</td>
                   <td>{val.time_started}</td>
                   <td>{val.time_finished}</td>

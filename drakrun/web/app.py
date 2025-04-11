@@ -90,15 +90,13 @@ def upload_sample():
 def analysis_job_to_dict(job: Job):
     job_status = job.get_status()
     job_meta = job.get_meta()
-    job_status = str(job_status)
-    if "substatus" in job_meta:
-        job_status += " ({})".format(job_meta["substatus"])
-
     return {
         "id": job.id,
-        "status": job_status,
+        "status": job_status.value if job_status is not None else None,
+        "substatus": job.meta.get("substatus"),
         "file": job_meta.get("file"),
         "options": job_meta.get("options"),
+        "vm_id": job_meta.get("vm_id"),
         "time_started": job.started_at.isoformat() if job.started_at is not None else None,
         "time_finished": job.ended_at.isoformat() if job.ended_at is not None else None,
     }

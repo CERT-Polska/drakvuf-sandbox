@@ -62,6 +62,7 @@ class AnalysisStatus extends Component {
 
     this.state = {
       status: "unknown",
+      substatus: null,
       spinner: "oO",
       password: "",
       vnc_port: null,
@@ -87,6 +88,7 @@ class AnalysisStatus extends Component {
         let newSpinner = this.state.spinner === "oO" ? "Oo" : "oO";
         this.setState({
           status: response.data.status,
+          substatus: response.data.substatus,
           vnc_port: 6400 + parseInt(response.data.vm_id),
           updated: true,
           spinner: newSpinner,
@@ -134,7 +136,7 @@ class AnalysisStatus extends Component {
   }
 
   render() {
-    if (this.state.status === "done") {
+    if (this.state.status === "finished" || this.state.status === "failed") {
       return <Redirect to={"/analysis/" + this.props.match.params.analysis} />;
     }
 
