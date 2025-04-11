@@ -29,6 +29,8 @@ def add_analysis_to_recent(
 
 
 def get_recent_analysis_list(connection: Redis) -> List[Job]:
-    analysis_ids = [analysis_id.decode() for analysis_id in connection.lrange(ANALYSES_LIST, 0, -1)]
+    analysis_ids = [
+        analysis_id.decode() for analysis_id in connection.lrange(ANALYSES_LIST, 0, -1)
+    ]
     jobs = Job.fetch_many(analysis_ids, connection)
     return [job for job in jobs if job is not None]

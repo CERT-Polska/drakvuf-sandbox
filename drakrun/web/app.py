@@ -97,7 +97,9 @@ def analysis_job_to_dict(job: Job):
         "file": job_meta.get("file"),
         "options": job_meta.get("options"),
         "vm_id": job_meta.get("vm_id"),
-        "time_started": job.started_at.isoformat() if job.started_at is not None else None,
+        "time_started": job.started_at.isoformat()
+        if job.started_at is not None
+        else None,
         "time_finished": job.ended_at.isoformat() if job.ended_at is not None else None,
     }
 
