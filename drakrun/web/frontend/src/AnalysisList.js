@@ -18,17 +18,6 @@ class AnalysisList extends Component {
     if (response.data) this.setState({ analyses: response.data });
   }
 
-  formatTimestamp(ts) {
-    if (!ts) {
-      return "-";
-    }
-
-    return new Date(ts * 1000)
-      .toISOString()
-      .replace("T", " ")
-      .replace(".000Z", "");
-  }
-
   render() {
     return (
       <div className="App container-fluid">
@@ -59,8 +48,8 @@ class AnalysisList extends Component {
                   <td>{val.status}</td>
                   <td className="text-hash">{val.file.name}</td>
                   <td>{val.file.type}</td>
-                  <td>{this.formatTimestamp(val.time_started)}</td>
-                  <td>{this.formatTimestamp(val.time_finished)}</td>
+                  <td>{val.time_started}</td>
+                  <td>{val.time_finished}</td>
                   <td>
                     <code>{val.options.start_command}</code>
                   </td>
