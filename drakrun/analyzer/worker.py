@@ -51,11 +51,13 @@ def worker_analyze(options: AnalysisOptions):
             job.meta["options"] = updated_options.to_dict(exclude_none=True)
         job.save_meta()
 
-    file_handler = logging.FileHandler(ANALYSES_DIR / "drakrun.log")
+    file_handler = logging.FileHandler(output_dir / "drakrun.log")
+    formatter = logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
+    file_handler.setFormatter(formatter)
     drakrun_logger = logging.getLogger("drakrun")
     drakrun_logger.addHandler(file_handler)
 
-    metadata_file = ANALYSES_DIR / "metadata.json"
+    metadata_file = output_dir / "metadata.json"
     metadata_file.write_text(
         json.dumps(
             {
