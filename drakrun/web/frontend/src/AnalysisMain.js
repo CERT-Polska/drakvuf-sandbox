@@ -212,10 +212,8 @@ class AnalysisMain extends Component {
 
     try {
       const process_tree = await api.getProcessTree(this.analysisID);
-      const inject_log = await api.getLog(this.analysisID, "inject");
-      if (process_tree && inject_log) {
-        const injectedPid = inject_log.data["InjectedPid"];
-        this.setState({ processTree: process_tree.data, injectedPid });
+      if (process_tree) {
+        this.setState({ processTree: process_tree.data });
       }
     } catch (error) {
       console.log(error);
@@ -334,7 +332,9 @@ class AnalysisMain extends Component {
                     return (
                       <a
                         key={val}
-                        href={`/logs/${this.getPathWithoutExt(val)}`}
+                        href={`/logs/${
+                          this.analysisID
+                        }/${this.getPathWithoutExt(val)}`}
                         className="list-group-item list-group-item-action"
                       >
                         {this.getFileNameWithoutExt(val)}

@@ -148,7 +148,9 @@ class AnalysisStatus extends Component {
 
         <p>Please wait until analysis is completed (usually 10 minutes).</p>
         <p>
-          Current status: {this.state.status}{this.state.substatus ? ` (${this.state.substatus})` : ''}... {this.state.spinner}
+          Current status: {this.state.status}
+          {this.state.substatus ? ` (${this.state.substatus})` : ""}...{" "}
+          {this.state.spinner}
         </p>
 
         <div className="progress">
