@@ -3,10 +3,12 @@ import pathlib
 
 from drakrun.lib.paths import ANALYSES_DIR
 
+
 def check_path(path: pathlib.Path, base: pathlib.Path) -> pathlib.Path:
     # Throws ValueError if not relative
     path.resolve().relative_to(base.resolve())
     return path
+
 
 class AnalysisStorage:
     """Abstraction over remote analysis data stored in MinIO"""
@@ -63,6 +65,8 @@ class AnalysisStorage:
     def get_metadata(self):
         """Download metadata.json"""
         path = self.analysis_dir / "metadata.json"
+        if not path.exists():
+            return None
         return json.loads(path.read_text())
 
 

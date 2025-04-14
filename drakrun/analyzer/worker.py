@@ -61,7 +61,7 @@ def worker_analyze(options: AnalysisOptions):
     metadata_file.write_text(
         json.dumps(
             {
-                "started_at": job.started_at.isoformat(),
+                "time_started": job.started_at.isoformat(),
                 **job.meta,
             }
         )
@@ -77,12 +77,12 @@ def worker_analyze(options: AnalysisOptions):
     finally:
         drakrun_logger.removeHandler(file_handler)
         file_handler.close()
-        job.meta["ended_at"] = datetime.datetime.now(datetime.UTC).isoformat()
-        job.meta["success"] = job_success
+        job.meta["time_finished"] = datetime.datetime.now(datetime.UTC).isoformat()
         metadata_file.write_text(
             json.dumps(
                 {
-                    "started_at": job.started_at.isoformat(),
+                    "time_started": job.started_at.isoformat(),
+                    "status": "finished" if job_success else "failed",
                     **job.meta,
                 }
             )

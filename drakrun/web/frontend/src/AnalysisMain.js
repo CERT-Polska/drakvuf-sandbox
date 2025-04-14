@@ -267,21 +267,21 @@ class AnalysisMain extends Component {
               <tr>
                 <td>SHA256</td>
                 <td style={{ wordBreak: "break-word" }}>
-                  {this.state.metadata.sample_sha256}
+                  {this.state.metadata.file?.sha256}
                 </td>
               </tr>
               <tr>
-                <td>Magic bytes</td>
-                <td>{this.state.metadata.magic_output}</td>
+                <td>File type</td>
+                <td>{this.state.metadata.file?.type}</td>
               </tr>
               <tr>
                 <td>Start command</td>
-                <td>{this.state.metadata.start_command}</td>
+                <td>{this.state.metadata.options?.start_command}</td>
               </tr>
-              {this.state.metadata.plugins ? (
+              {this.state.metadata.options?.plugins ? (
                 <tr>
                   <td>Plugins</td>
-                  <td>{this.state.metadata.plugins.join(", ")}</td>
+                  <td>{this.state.metadata.options?.plugins?.join(", ")}</td>
                 </tr>
               ) : (
                 []

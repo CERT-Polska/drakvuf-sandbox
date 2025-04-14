@@ -125,6 +125,8 @@ def status(task_uid):
 def processed(task_uid, which):
     analysis = get_analysis_data(task_uid)
     path = analysis.get_processed(which)
+    if not path.exists():
+        return dict(error="Data not found"), 404
     return send_file(path, mimetype="application/json")
 
 
@@ -132,6 +134,8 @@ def processed(task_uid, which):
 def apicall(task_uid, pid):
     analysis = get_analysis_data(task_uid)
     path = analysis.get_apicalls(pid)
+    if not path.exists():
+        return dict(error="Data not found"), 404
     return send_file(path, mimetype="application/json")
 
 
@@ -139,6 +143,8 @@ def apicall(task_uid, pid):
 def logs(task_uid, log_type):
     analysis = get_analysis_data(task_uid)
     path = analysis.get_log(log_type)
+    if not path.exists():
+        return dict(error="Data not found"), 404
     return send_file(path, mimetype="application/json")
 
 
@@ -146,6 +152,8 @@ def logs(task_uid, log_type):
 def logindex(task_uid, log_type):
     analysis = get_analysis_data(task_uid)
     path = analysis.get_log_index(log_type)
+    if not path.exists():
+        return dict(error="Data not found"), 404
     return send_file(path, mimetype="application/json")
 
 
@@ -156,9 +164,11 @@ def pcap_dump(task_uid):
     keys in format acceptable by wireshark.
     """
     analysis = get_analysis_data(task_uid)
+    path = analysis.get_pcap_dump()
+    if not path.exists():
+        return dict(error="Data not found"), 404
     with NamedTemporaryFile() as f_archive:
         with ZipFile(f_archive, "w", ZIP_DEFLATED) as archive:
-            path = analysis.get_pcap_dump()
             archive.write(path, "dump.pcap")
             path = analysis.get_wireshark_key_file()
             if path.exists():
@@ -171,6 +181,8 @@ def pcap_dump(task_uid):
 def dumps(task_uid):
     analysis = get_analysis_data(task_uid)
     path = analysis.get_dumps()
+    if not path.exists():
+        return dict(error="Data not found"), 404
     return send_file(path, mimetype="application/zip")
 
 
@@ -184,13 +196,18 @@ def list_logs(task_uid):
 def graph(task_uid):
     analysis = get_analysis_data(task_uid)
     path = analysis.get_graph()
+    if not path.exists():
+        return dict(error="Data not found"), 404
     return send_file(path, mimetype="text/plain")
 
 
 @app.route("/metadata/<task_uid>")
 def metadata(task_uid):
     analysis = get_analysis_data(task_uid)
-    return jsonify(analysis.get_metadata())
+    metadata = analysis.get_metadata()
+    if metadata is None:
+        return dict(error="Data not found"), 404
+    return jsonify(metadata)
 
 
 @app.route("/")
