@@ -1,3 +1,6 @@
+import datetime
+import json
+import logging
 from typing import Optional
 
 from redis import Redis
@@ -13,6 +16,8 @@ from .file_metadata import FileMetadata
 
 ANALYSIS_QUEUE_NAME = "drakrun-analysis"
 _WORKER_VM_ID: Optional[int] = None
+
+logger = logging.getLogger(__name__)
 
 
 def get_redis_connection(config: RedisConfigSection):
@@ -46,7 +51,41 @@ def worker_analyze(options: AnalysisOptions):
             job.meta["options"] = updated_options.to_dict(exclude_none=True)
         job.save_meta()
 
-    analyze_file(vm_id, output_dir, options, substatus_callback=substatus_callback)
+    file_handler = logging.FileHandler(ANALYSES_DIR / "drakrun.log")
+    drakrun_logger = logging.getLogger("drakrun")
+    drakrun_logger.addHandler(file_handler)
+
+    metadata_file = ANALYSES_DIR / "metadata.json"
+    metadata_file.write_text(
+        json.dumps(
+            {
+                "started_at": job.started_at.isoformat(),
+                **job.meta,
+            }
+        )
+    )
+
+    job_success = True
+    try:
+        analyze_file(vm_id, output_dir, options, substatus_callback=substatus_callback)
+    except BaseException:
+        job_success = False
+        logger.exception("Failed to analyze sample")
+        raise
+    finally:
+        drakrun_logger.removeHandler(file_handler)
+        file_handler.close()
+        job.meta["ended_at"] = datetime.datetime.now(datetime.UTC).isoformat()
+        job.meta["success"] = job_success
+        metadata_file.write_text(
+            json.dumps(
+                {
+                    "started_at": job.started_at.isoformat(),
+                    **job.meta,
+                }
+            )
+        )
+        job.save_meta()
 
 
 def worker_main(vm_id: int):
