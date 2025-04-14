@@ -145,7 +145,7 @@ def logs(task_uid, log_type):
     path = analysis.get_log(log_type)
     if not path.exists():
         return dict(error="Data not found"), 404
-    return send_file(path, mimetype="application/json")
+    return send_file(path, mimetype="text/plain")
 
 
 @app.route("/logindex/<task_uid>/<log_type>")
