@@ -3,6 +3,10 @@ import pathlib
 
 from drakrun.lib.paths import ANALYSES_DIR
 
+def check_path(path: pathlib.Path, base: pathlib.Path) -> pathlib.Path:
+    # Throws ValueError if not relative
+    path.resolve().relative_to(base.resolve())
+    return path
 
 class AnalysisStorage:
     """Abstraction over remote analysis data stored in MinIO"""
@@ -10,12 +14,10 @@ class AnalysisStorage:
     MINIO_BUCKET = "drakrun"
 
     def __init__(self, analysis_dir: pathlib.Path):
-        self.analysis_dir = self._check_path(analysis_dir)
+        self.analysis_dir = check_path(analysis_dir, ANALYSES_DIR)
 
     def _check_path(self, path):
-        # Throws ValueError if not relative
-        path.resolve().relative_to(ANALYSES_DIR.resolve())
-        return path
+        return check_path(path, self.analysis_dir)
 
     def get_apicalls(self, pid):
         """Download API calls of this process"""
