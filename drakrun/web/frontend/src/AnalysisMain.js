@@ -288,11 +288,11 @@ class AnalysisMain extends Component {
               )}
               <tr>
                 <td>Started at</td>
-                <td>{formatTimestamp(this.state.metadata.time_started)}</td>
+                <td>{this.state.metadata.time_started}</td>
               </tr>
               <tr>
                 <td>Finished at</td>
-                <td>{formatTimestamp(this.state.metadata.time_finished)}</td>
+                <td>{this.state.metadata.time_finished}</td>
               </tr>
             </tbody>
           </table>
