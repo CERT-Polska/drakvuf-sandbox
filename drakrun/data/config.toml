@@ -1,7 +1,12 @@
+[redis]
+host = "localhost"
+port = 6379
+
 [network]
 dns_server = "use-gateway-address"
 out_interface = "default"
 net_enable = false
 
 [drakrun]
+default_timeout = 300
 plugins = ["apimon", "clipboardmon", "exmon", "filetracer", "memdump", "procmon", "regmon", "socketmon", "tlsmon"]

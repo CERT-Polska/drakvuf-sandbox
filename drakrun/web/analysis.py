@@ -1,86 +1,77 @@
 import json
+import pathlib
+
+from drakrun.lib.paths import ANALYSES_DIR
 
 
-class AnalysisProxy:
+def check_path(path: pathlib.Path, base: pathlib.Path) -> pathlib.Path:
+    # Throws ValueError if not relative
+    path.resolve().relative_to(base.resolve())
+    return path
+
+
+class AnalysisStorage:
     """Abstraction over remote analysis data stored in MinIO"""
 
     MINIO_BUCKET = "drakrun"
 
-    def __init__(self, minio, analysis_uid, bucket=MINIO_BUCKET):
-        self.minio = minio
-        self.bucket = bucket
-        if analysis_uid is not None:
-            self.uid = analysis_uid
+    def __init__(self, analysis_dir: pathlib.Path):
+        self.analysis_dir = check_path(analysis_dir, ANALYSES_DIR)
 
-    def get_apicalls(self, output_file, pid):
+    def _check_path(self, path):
+        return check_path(path, self.analysis_dir)
+
+    def get_apicalls(self, pid):
         """Download API calls of this process"""
-        return self.minio.fget_object(
-            self.bucket, f"{self.uid}/apicall/{pid}.json", output_file.name
-        )
+        return self._check_path(self.analysis_dir / "apicall" / f"{pid}.json")
 
-    def get_processed(self, output_file, name):
+    def get_processed(self, name):
         """Download post-process results"""
-        return self.minio.fget_object(
-            self.bucket, f"{self.uid}/{name}.json", output_file.name
-        )
+        return self._check_path(self.analysis_dir / f"{name}.json")
 
     def list_logs(self):
         """List DRAKVUF logs"""
-        objects = self.minio.list_objects_v2(self.bucket, f"{self.uid}/")
-        return [x.object_name for x in objects if x.object_name.endswith(".log")]
+        return [path.name for path in self.analysis_dir.glob("*.log")]
 
-    def get_log(self, log_type, output_file, headers=None):
+    def get_log(self, log_type):
         """Download DRAKVUF log"""
-        return self.minio.fget_object(
-            self.bucket,
-            f"{self.uid}/{log_type}.log",
-            output_file.name,
-            request_headers=headers,
-        )
+        return self._check_path(self.analysis_dir / f"{log_type}.log")
 
-    def get_log_index(self, log_type, output_file):
+    def get_log_index(self, log_type):
         """
         Download log index, useful for quickly accessing n-th
         log line
         """
-        return self.minio.fget_object(
-            self.bucket, f"{self.uid}/index/{log_type}", output_file.name
-        )
+        return self._check_path(self.analysis_dir / "index" / log_type)
 
-    def get_pcap_dump(self, output_file):
+    def get_pcap_dump(self):
         """Download dump.pcap file."""
-        return self.minio.fget_object(
-            self.bucket, f"{self.uid}/dump.pcap", output_file.name
-        )
+        return self.analysis_dir / "dump.pcap"
 
-    def get_wireshark_key_file(self, output_file):
+    def get_wireshark_key_file(self):
         """
         Download tls session keys in format that is accepted by wireshark.
         """
-        return self.minio.fget_object(
-            self.bucket, f"{self.uid}/wireshark_key_file.txt", output_file.name
-        )
+        return self.analysis_dir / "wireshark_key_file.txt"
 
-    def get_dumps(self, output_file):
+    def get_dumps(self):
         """Download memory dumps"""
-        return self.minio.fget_object(
-            self.bucket, f"{self.uid}/dumps.zip", output_file.name
-        )
+        return self.analysis_dir / "dumps.zip"
 
-    def get_graph(self, output_file):
+    def get_graph(self):
         """Download ProcDOT graph"""
-        return self.minio.fget_object(
-            self.bucket, f"{self.uid}/graph.dot", output_file.name
-        )
+        return self.analysis_dir / "graph.dot"
 
     def get_metadata(self):
         """Download metadata.json"""
-        try:
-            response = None
-            response = self.minio.get_object(self.bucket, f"{self.uid}/metadata.json")
-            return json.load(response)
-        finally:
-            # release network resources
-            if response is not None:
-                response.close()
-                response.release_conn()
+        path = self.analysis_dir / "metadata.json"
+        if not path.exists():
+            return None
+        return json.loads(path.read_text())
+
+
+def get_analysis_data(uid: str):
+    analysis_dir = ANALYSES_DIR / uid
+    if not analysis_dir.exists():
+        raise RuntimeError(f"Analysis directory {analysis_dir} does not exist")
+    return AnalysisStorage(analysis_dir)
