@@ -25,6 +25,8 @@ void PrintBytesFromMem(LPVOID buffer, SIZE_T bufferSize);
 DWORD FindProc(const WCHAR* procname);
 void CheckProcStatus(HANDLE hProc);
 void ReadRemoteBuffer(HANDLE hProc, LPVOID remoteProcBuffer, size_t buffSize);
+void PrintProtectionFlags(DWORD protection);
+void ReadPageProtections(HANDLE hProcess, DWORD targetAddress);
 
 typedef NTSTATUS (NTAPI* pNtFreeVirtualMemory)
 (

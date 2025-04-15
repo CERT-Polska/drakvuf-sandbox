@@ -6,7 +6,8 @@
 
 static const int NT_CREATE_THREAD_EX_SUSPENDED = 0;
 static const int WAIT_TIME = 10000;
-static const char SZ_NOTEPAD[] = "notepad.exe";
+static const char SZ_NOTEPAD[] = "C:\\Windows\\SysWOW64\\notepad.exe";
+// static const char SZ_NOTEPAD[] = "notepad.exe";
 static const WCHAR SZ_CALCAPP[] = L"CalculatorApp.exe";
 static const WCHAR SZ_CALC[] = L"calc.exe";
 static const char SZ_IEXPLORER[] = "C:\\Program Files (x86)\\Internet Explorer\\iexplore.exe";
@@ -396,6 +397,7 @@ DrakTestStatus NtCreateThreadExTest()
     return status;
 }
 
+// TODO try NtSetContextThread and SetThreadContext
 /* 
 NtSetInformationThread
     - needs to be called with "ThreadWow64Context" as a second argument: "IN THREADINFOCLASS ThreadInformationClass,"
@@ -405,7 +407,7 @@ DrakTestStatus NtSetInformationThreadTest()
 {
     PRINT_DEBUG("NtSetInformationThreadTest start\n");
 
-    PROCESS_INFORMATION piIExplorer;
+    PROCESS_INFORMATION pi;
     HMODULE hNtdll;
     pNtSetInformationThread myNtSetInformationThread;
     pNtQueryInformationThread myNtQueryInformationThread;
@@ -416,15 +418,16 @@ DrakTestStatus NtSetInformationThreadTest()
     BOOL isWow64;
     DrakTestStatus drakStatus;
     UINT exitCode = 0;
+    const char* procName = SZ_NOTEPAD;
 
-    drakStatus = CreateProcFromPath(SZ_IEXPLORER, &piIExplorer, CREATE_SUSPENDED);
+    drakStatus = CreateProcFromPath(procName, &pi, CREATE_SUSPENDED);
     if (drakStatus == DrakTestStatus::Failed)
     {
         PRINT_DEBUG("CreateProcFromPath failed in test %s: \n", __FUNCTION__);
         goto clean_exit;
     }
 
-    if (!IsWow64Process(piIExplorer.hProcess, &isWow64))
+    if (!IsWow64Process(pi.hProcess, &isWow64))
     {
         PRINT_DEBUG("IsWow64Process failed with err: %d\n", GetLastError());
         drakStatus = DrakTestStatus::Failed;
@@ -433,20 +436,20 @@ DrakTestStatus NtSetInformationThreadTest()
 
     if (!isWow64)
     {
-        PRINT_DEBUG("Process %s not Wow64Process. Exiting.\n", SZ_IEXPLORER);
+        PRINT_DEBUG("Process %s not Wow64Process. Exiting.\n", procName);
         drakStatus = DrakTestStatus::Failed;
         goto clean_exit;
     }
 
-    status = Wow64SuspendThread(piIExplorer.hThread);
-    if (status < 0)
-    {
-        PRINT_DEBUG("Wow64SuspendThread failed with status: %d\n", status);
-        drakStatus = DrakTestStatus::Failed;
-        goto clean_exit;
-    }
+    // status = Wow64SuspendThread(pi.hThread);
+    // if (status < 0)
+    // {
+    //     PRINT_DEBUG("Wow64SuspendThread failed with status: %d\n", status);
+    //     drakStatus = DrakTestStatus::Failed;
+    //     goto clean_exit;
+    // }
 
-    if (!Wow64GetThreadContext(piIExplorer.hThread, &wow64Context))
+    if (!Wow64GetThreadContext(pi.hThread, &wow64Context))
     {
         PRINT_DEBUG("Wow64GetThreadContext failed with err: %d\n", GetLastError());
         drakStatus = DrakTestStatus::Failed;
@@ -457,7 +460,7 @@ DrakTestStatus NtSetInformationThreadTest()
     myNtSetInformationThread = (pNtSetInformationThread) GetProcAddress(hNtdll, "NtSetInformationThread");
     myNtQueryInformationThread = (pNtQueryInformationThread) GetProcAddress(hNtdll, "NtQueryInformationThread");
 
-    ntStatus = myNtQueryInformationThread(piIExplorer.hThread, (THREADINFOCLASS) ThreadWow64Context, &wow64Context, sizeof(wow64Context), NULL);
+    ntStatus = myNtQueryInformationThread(pi.hThread, (THREADINFOCLASS) ThreadWow64Context, &wow64Context, sizeof(wow64Context), NULL);
 
     if (!NT_SUCCESS(ntStatus))
     {
@@ -465,30 +468,34 @@ DrakTestStatus NtSetInformationThreadTest()
         drakStatus = DrakTestStatus::Failed;
         goto clean_exit;
     }
-    ntStatus = myNtSetInformationThread(piIExplorer.hThread, (THREADINFOCLASS) ThreadWow64Context, &wow64Context, sizeof(wow64Context));
+
+    // ReadPageProtections(pi.hProcess, wow64Context.Eax);
+    // ReadPageProtections(pi.hProcess, wow64Context.Eip);
+    
+    ntStatus = myNtSetInformationThread(pi.hThread, (THREADINFOCLASS) ThreadWow64Context, &wow64Context, sizeof(wow64Context));
+
     if (!NT_SUCCESS(ntStatus))
     {
         PRINT_DEBUG("NtSetInformationThread failed with status: %x\n", ntStatus);
         drakStatus = DrakTestStatus::Failed;
         goto clean_exit;
     }
-    status = ResumeThread(piIExplorer.hThread);
+    status = ResumeThread(pi.hThread);
     if (!NT_SUCCESS(ntStatus))
     {
         PRINT_DEBUG("ResumeThread failed with status: %x\n", ntStatus);
         drakStatus = DrakTestStatus::Failed;
         goto clean_exit;
     }
-    // Sleep(3000);
-    WaitForSingleObject(piIExplorer.hThread, WAIT_TIME);
+    WaitForSingleObject(pi.hThread, WAIT_TIME);
 
-    if (!TerminateProcess(piIExplorer.hProcess, exitCode))
+    if (!TerminateProcess(pi.hProcess, exitCode))
     {
         PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
     }
     clean_exit:
-    CloseHandleErrCheck(piIExplorer.hThread);
-    CloseHandleErrCheck(piIExplorer.hProcess);
+    CloseHandleErrCheck(pi.hThread);
+    CloseHandleErrCheck(pi.hProcess);
 
     PRINT_DEBUG("NtSetInformationThreadTest end\n\n");
     return drakStatus;
@@ -576,6 +583,10 @@ int main(int argc, char* argv[])
     {
         PRINT_DEBUG("Press any key to exit.\n");
         getch();
+    }
+    else
+    {
+        Sleep(WAIT_TIME);
     }
 
     return 0;

@@ -71,3 +71,73 @@ void ReadRemoteBuffer(HANDLE hProc, LPVOID remoteProcBuffer, size_t buffSize)
 
     free(localRemoteProcBuffer);
 }
+
+void PrintProtectionFlags(DWORD protection) {
+    printf("Protection: ");
+    if (protection & PAGE_EXECUTE_READWRITE)
+    {
+        printf("EXECUTE_READWRITE ");
+    }
+    if (protection & PAGE_EXECUTE_READ)
+    {
+        printf("EXECUTE_READ ");
+    }
+    if (protection & PAGE_READWRITE)
+    {
+        printf("READWRITE ");
+    }
+    if (protection & PAGE_READONLY)
+    {
+        printf("READONLY ");
+    }
+    if (protection & PAGE_WRITECOPY)
+    {
+        printf("WRITECOPY ");
+    }
+    if (protection & PAGE_EXECUTE_WRITECOPY)
+    {
+        printf("EXECUTE_WRITECOPY ");
+    }
+    if (protection & PAGE_NOACCESS)
+    {
+        printf("NOACCESS ");
+    }
+    if (protection & PAGE_GUARD)
+    {
+        printf("GUARD ");
+    }
+    printf("\n");
+}
+
+void ReadPageProtections(HANDLE hProcess, DWORD targetAddress) {
+    MEMORY_BASIC_INFORMATION mbi;
+    LPVOID addr = 0;
+
+    printf("reading page protection for address: %x\n", targetAddress);
+    // while (VirtualQueryEx(hProcess, addr, &mbi, sizeof(mbi)))
+    // {
+    //     if (mbi.State == MEM_COMMIT)
+    //     {
+    //         printf("Base: %p | Size: %zu | ", mbi.BaseAddress, mbi.RegionSize);
+    //         PrintProtectionFlags(mbi.Protect);
+    //     }
+        
+    //     addr = (LPBYTE)mbi.BaseAddress + mbi.RegionSize;
+    // }
+    SIZE_T result = VirtualQueryEx(hProcess, (LPCVOID) (DWORD_PTR) targetAddress, &mbi, sizeof(mbi));
+
+    if (result == 0)
+    {
+        printf("VirtualQueryEx failed: %lu\n", GetLastError());
+        return;
+    }
+
+    if (mbi.State != MEM_COMMIT)
+    {
+        printf("Address not in committed memory\n");
+        return;
+    }
+
+    PrintProtectionFlags(mbi.Protect);
+    return;
+}
