@@ -55,7 +55,7 @@ jobs:
           cd drakvuf/libvmi
           autoreconf -vif
           ./configure --disable-kvm --disable-bareflank --disable-file
-          make
+          make install
   build_drakrun:
     runs-on: ubuntu-latest
     container: "python:3.8"
