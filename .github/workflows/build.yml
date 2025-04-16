@@ -51,6 +51,7 @@ jobs:
           submodules: recursive
       - name: Build libvmi
         run: |
+          apt install -y make pkg-config gcc libglib2.0-dev libjson-c-dev autotools-dev
           cd drakvuf/libvmi
           autoreconf -vif
           ./configure --disable-kvm --disable-bareflank --disable-file
