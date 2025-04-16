@@ -42,6 +42,10 @@ jobs:
     runs-on: ubuntu-latest
     container: "debian:bookworm"
     steps:
+      - name: Install git and wget
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update && apt-get install -y -q git wget
       - uses: actions/checkout@v4
         with:
           submodules: recursive
