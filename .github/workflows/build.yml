@@ -74,3 +74,25 @@ jobs:
           name: drakrun-web
           path: |
             drakrun/web/frontend/build/*
+  build_drakrun:
+    - needs: [ build_drakrun_tools, build_drakrun_web ]
+    - runs-on: ubuntu-latest
+    - container: "python:3.8"
+    - name: Download tools
+      uses: actions/download-artifact@v4
+      with:
+        name: drakrun-tools
+        path: drakrun/tools
+    - name: Download web bundle
+      uses: actions/download-artifact@v4
+      with:
+        name: drakrun-web
+        path: drakrun/web/frontend/build
+    - name: Build package
+      run:
+        - chmod +x drakrun/tools/get-explorer-pid  # gh artifacts don't keep file permissions
+        - make DIST=1
+    - uses: actions/upload-artifact@v4
+      with:
+      - name: drakvuf-sandbox-whl
+      - path: ./dist/drakvuf_sandbox-*.whl
