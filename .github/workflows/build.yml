@@ -54,7 +54,7 @@ jobs:
           name: drakrun-tools
           path: |
             drakrun/tools/get-explorer-pid
-            drakrun/tools/drakshell/drakshel
+            drakrun/tools/drakshell/drakshell
   build_drakrun_web:
     runs-on: ubuntu-latest
     container: "node:18"
@@ -69,4 +69,8 @@ jobs:
       - name: Build web bundle
         working-directory: drakrun/web/frontend
         run: npm run build
-
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drakrun-web
+          path: |
+            drakrun/web/frontend/build/*
