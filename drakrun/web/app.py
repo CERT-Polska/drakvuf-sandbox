@@ -212,19 +212,14 @@ def metadata(task_uid):
 
 @app.route("/")
 def index():
-    return send_file("frontend/build/index.html")
-
-
-@app.route("/robots.txt")
-def robots():
-    return send_file("frontend/build/robots.txt")
+    return send_file("frontend/dist/index.html")
 
 
 @app.route("/assets/<path:path>")
 def send_assets(path):
-    return send_from_directory("frontend/build/assets", path)
+    return send_from_directory("frontend/dist/assets", path)
 
 
 @app.route("/<path:path>")
 def catchall(path):
-    return send_file("frontend/build/index.html")
+    return send_file("frontend/dist/index.html")
