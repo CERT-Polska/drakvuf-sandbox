@@ -79,6 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     container: "python:3.8"
     steps:
+      - uses: actions/checkout@v4
       - name: Download tools
         uses: actions/download-artifact@v4
         with:
