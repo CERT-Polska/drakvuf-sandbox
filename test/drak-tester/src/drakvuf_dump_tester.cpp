@@ -68,7 +68,7 @@ DrakTestStatus InjectPayload(HANDLE hProc, unsigned char* payload, size_t payloa
     }
     assert(bytesWritten == payloadSize);
 
-    if (DEBUG_VERBOSE)
+    if (DEBUG_EXTRA)
     {
         ReadRemoteBuffer(hProc, *remoteProcBuffer, payloadSize);
     }
@@ -151,7 +151,7 @@ DrakTestStatus ChangeMemProtection(HANDLE hProc, LPVOID* remoteProcBuffer, size_
         return DrakTestStatus::Failed;
     }
 
-    PRINT_DEBUG("old protection: %lu, new protection: %lu\n", oldAccessProtection, PAGE_EXECUTE_READWRITE);
+    PRINT_DEBUG_VERBOSE("old protection: %lu, new protection: %lu\n", oldAccessProtection, PAGE_EXECUTE_READWRITE);
 
     return DrakTestStatus::OK;
 }
@@ -194,28 +194,27 @@ DrakTestStatus RemoteInject(HANDLE hProc, unsigned char* payload, size_t* payloa
         }
     }
 
-    // Sleep(3000);
-    // int pid;
-    // pid = FindProc(L"calc.exe");
-    // if (pid != 0)
-    // {
-    //     HANDLE h = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
-    //     UINT exitCode = 0;
-    //     if (!TerminateProcess(h, exitCode))
-    //     {
-    //         PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
-    //     }
-    // }
-    // pid = FindProc(L"CalculatorApp.exe");
-    // if (pid != 0)
-    // {
-    //     HANDLE h = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
-    //     UINT exitCode = 0;
-    //     if (!TerminateProcess(h, exitCode))
-    //     {
-    //         PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
-    //     }
-    // }
+    int pid;
+    pid = FindProc(L"calc.exe");
+    if (pid != 0)
+    {
+        HANDLE h = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
+        UINT exitCode = 0;
+        if (!TerminateProcess(h, exitCode))
+        {
+            PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
+        }
+    }
+    pid = FindProc(L"CalculatorApp.exe");
+    if (pid != 0)
+    {
+        HANDLE h = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
+        UINT exitCode = 0;
+        if (!TerminateProcess(h, exitCode))
+        {
+            PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
+        }
+    }
 
     return DrakTestStatus::OK;
 }
@@ -344,8 +343,6 @@ DrakTestStatus NtWriteVirtualMemoryTest()
         goto clean_exit;
     }
 
-    // PostMessage(piNotepad.hProcess, )
-
     if (!TerminateProcess(piNotepad.hProcess, exitCode))
     {
         PRINT_DEBUG("TerminateProcess failed with code: %d\n", GetLastError());
@@ -469,8 +466,11 @@ DrakTestStatus NtSetInformationThreadTest()
         goto clean_exit;
     }
 
-    // ReadPageProtections(pi.hProcess, wow64Context.Eax);
-    // ReadPageProtections(pi.hProcess, wow64Context.Eip);
+    if (DEBUG_EXTRA)
+    {
+        ReadPageProtections(pi.hProcess, wow64Context.Eax);
+        ReadPageProtections(pi.hProcess, wow64Context.Eip);
+    }
     
     ntStatus = myNtSetInformationThread(pi.hThread, (THREADINFOCLASS) ThreadWow64Context, &wow64Context, sizeof(wow64Context));
 
@@ -539,6 +539,7 @@ DrakTestStatus NtFreeVirtualMemoryShellcodeTest()
     return status;
 }
 
+// todo compile to multiple single test executables
 int main(int argc, char* argv[])
 {
     bool waitOnExit = false;

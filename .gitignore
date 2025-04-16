@@ -3,3 +3,7 @@
 /*.sav
 .idea/
 .vscode/
+*.pdb
+*.exe
+*.obj
+*.ilk

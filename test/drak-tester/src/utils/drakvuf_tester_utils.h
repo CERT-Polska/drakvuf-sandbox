@@ -13,11 +13,17 @@
 #define PRINT_DEBUG(...) do {} while (0)
 #endif
 
+#ifdef DEBUG_VERBOSE
+#define PRINT_DEBUG_VERBOSE(...) do { printf(__VA_ARGS__); } while (0)
+#else
+#define PRINT_DEBUG_VERBOSE(...) do {} while (0)
+#endif
+
 #ifndef ThreadWow64Context
 #define ThreadWow64Context 0x1D
 #endif
 
-static const int DEBUG_VERBOSE = 0;
+static const int DEBUG_EXTRA = 0;
 
 void CheckProcStatus(HANDLE hProc, const char* procName);
 void CloseHandleErrCheck(HANDLE handle);

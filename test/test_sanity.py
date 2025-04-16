@@ -115,7 +115,6 @@ def drak_tester_check_memdump_hooks(memdump_log):
         d = json.loads(line)
         method = d.get(method_field)
         if method in hooks and d.get(processname_field) is not None and sample_name in d.get(processname_field):
-            print(f"{method} found")
             hooks_map[method] = True
 
     for k in hooks_map:
