@@ -38,3 +38,25 @@ jobs:
       - uses: CERT-Polska/lint-python-action@v2
         with:
           python-version: 3.8
+  build_drakrun_tools:
+    runs-on: ubuntu-latest
+    container: "debian:bookworm"
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Build libvmi
+        run: |
+          cd drakvuf/libvmi
+          autoreconf -vif
+          ./configure --disable-kvm --disable-bareflank --disable-file
+          make
+  build_drakrun:
+    runs-on: ubuntu-latest
+    container: "python:3.8"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
