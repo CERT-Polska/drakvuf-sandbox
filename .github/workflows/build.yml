@@ -95,5 +95,5 @@ jobs:
           make DIST=1
       - uses: actions/upload-artifact@v4
         with:
-        - name: drakvuf-sandbox-whl
-        - path: ./dist/drakvuf_sandbox-*.whl
+          name: drakvuf-sandbox-whl
+          path: ./dist/drakvuf_sandbox-*.whl
