@@ -21,16 +21,6 @@ jobs:
       - name: Build docs
         working-directory: docs
         run: make html
-  lint_drakrun_frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install web dependencies
-        working-directory: drakrun/web/frontend
-        run: npm ci
-      - name: Check with prettier
-        working-directory: drakrun/web/frontend
-        run: npx prettier --check src/
   lint_drakrun:
     runs-on: ubuntu-latest
     steps:
@@ -59,8 +49,24 @@ jobs:
       - name: Make drakvuf tools
         run: |
           make -C drakrun/tools
-  build_drakrun:
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drakrun-tools
+          path: |
+            drakrun/tools/get-explorer-pid
+            drakrun/tools/drakshell/drakshel
+  build_drakrun_web:
     runs-on: ubuntu-latest
-    container: "python:3.8"
+    container: "node:18"
     steps:
       - uses: actions/checkout@v4
+      - name: Install web dependencies
+        working-directory: drakrun/web/frontend
+        run: npm ci
+      - name: Check with prettier
+        working-directory: drakrun/web/frontend
+        run: npx prettier --check src/
+      - name: Build web bundle
+        working-directory: drakrun/web/frontend
+        run: npm run build
+
