@@ -51,11 +51,14 @@ jobs:
           submodules: recursive
       - name: Build libvmi
         run: |
-          apt install -y make cmake gcc libglib2.0-dev libjson-c-dev autoconf-archive libtool libxen-dev flex bison
+          apt install -y make cmake gcc libglib2.0-dev libjson-c-dev autoconf-archive libtool libxen-dev flex bison nasm
           cd drakvuf/libvmi
           autoreconf -vif
           ./configure --disable-kvm --disable-bareflank --disable-file
           make install
+      - name: Make drakvuf tools
+        run: |
+          make -C drakrun/tools
   build_drakrun:
     runs-on: ubuntu-latest
     container: "python:3.8"
