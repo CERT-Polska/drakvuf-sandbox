@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     container: "debian:bookworm"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Build libvmi
@@ -55,8 +55,4 @@ jobs:
     runs-on: ubuntu-latest
     container: "python:3.8"
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
+      - uses: actions/checkout@v4
