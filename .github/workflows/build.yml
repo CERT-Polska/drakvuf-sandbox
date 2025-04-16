@@ -80,6 +80,8 @@ jobs:
     container: "python:3.8"
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Download tools
         uses: actions/download-artifact@v4
         with:
@@ -93,7 +95,7 @@ jobs:
       - name: Build package
         run: |
           chmod +x drakrun/tools/get-explorer-pid  # gh artifacts don't keep file permissions
-          make DIST=1
+          python3 setup.py bdist_wheel
       - uses: actions/upload-artifact@v4
         with:
           name: drakvuf-sandbox-whl
