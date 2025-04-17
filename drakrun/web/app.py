@@ -1,5 +1,6 @@
 import hashlib
 import json
+import os
 import shutil
 import uuid
 from tempfile import NamedTemporaryFile
@@ -27,6 +28,15 @@ redis = get_redis_connection(drakrun_conf.redis)
 @app.errorhandler(404)
 def resource_not_found(e):
     return jsonify(error="Object not found"), 404
+
+
+if os.environ.get("DRAKRUN_CORS_ALL"):
+
+    @app.after_request
+    def add_header(response):
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "Range"
+        return response
 
 
 @app.route("/upload", methods=["POST"])
