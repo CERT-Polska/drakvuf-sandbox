@@ -1,41 +1,41 @@
 .App {
-  text-align: left;
+    text-align: left;
 }
 
 .App-logo {
-  height: 40vmin;
+    height: 40vmin;
 }
 
 .App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+    background-color: #282c34;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(10px + 2vmin);
+    color: white;
 }
 
 .App-link {
-  color: #09d3ac;
+    color: #09d3ac;
 }
 
 .text-hash {
-  font-family:
-    SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
-    monospace;
-  word-break: break-all;
+    font-family:
+        SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+        "Courier New", monospace;
+    word-break: break-all;
 }
 
 .apicallTable td {
-  padding: 0.5rem;
+    padding: 0.5rem;
 }
 
 /* Overriding element hover */
 .optionListContainer > .optionContainer li:hover,
 .optionContainer .highlight {
-  background: #e9ecef;
-  color: #6c757d;
+    background: #e9ecef;
+    color: #6c757d;
 }
 /* Ends overriding */
