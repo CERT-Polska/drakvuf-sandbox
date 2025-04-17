@@ -13,9 +13,9 @@ import { faFolder, faUpload, faGear } from "@fortawesome/free-solid-svg-icons";
 function AppHeader() {
   return (
     <nav className="sb-topnav navbar navbar-expand navbar-dark bg-dark">
-      <a className="navbar-brand ps-3" href="/">
+      <Link className="navbar-brand ps-3" to="/">
         <img alt="logo" src={logo} /> web
-      </a>
+      </Link>
     </nav>
   );
 }

@@ -21,6 +21,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^6.30.0",
+    "react-select": "^5.10.1",
     "startbootstrap-sb-admin": "^7.0.7"
   },
   "devDependencies": {
