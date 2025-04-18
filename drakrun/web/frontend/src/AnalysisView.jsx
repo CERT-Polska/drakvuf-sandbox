@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getAnalysisProcessTree, getAnalysisStatus } from "./api.js";
 import axios, { CanceledError } from "axios";
 import { AnalysisStatusBadge } from "./AnalysisStatusBadge.jsx";
@@ -9,6 +9,8 @@ import { ProcessTree } from "./ProcessTree.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { LazyLog } from "@melloware/react-logviewer";
+import { LogViewer } from "./LogViewer.jsx";
+import { TabSwitcher } from "./TabSwitcher.jsx";
 
 function isProcessInteresting(process) {
     return process.procname.endsWith("explorer.exe");
@@ -145,8 +147,33 @@ function AnalysisPendingStatusBox({ children }) {
     );
 }
 
+function AnalysisPendingTabs({ analysis }) {
+    const tabs = [
+        "metadata",
+        ...(analysis["vm_id"] ? ["live-interaction"] : []),
+    ];
+    return (
+        <TabSwitcher
+            tabIds={tabs}
+            getHeader={(tabid) => {
+                if (tabid === "metadata") {
+                    return "Analysis info";
+                } else if (tabid === "live-interaction") {
+                    return `Live interaction (vm-${analysis["vm_id"]})`;
+                }
+            }}
+            renderContent={(tabid) => {
+                if (tabid === "metadata") {
+                    return <AnalysisMetadataTable analysis={analysis} />;
+                } else if (tabid === "live-interaction") {
+                    return <AnalysisLiveInteraction vmId={analysis["vm_id"]} />;
+                }
+            }}
+        />
+    );
+}
+
 function AnalysisPendingView({ analysis }) {
-    const [currentTab, setCurrentTab] = useState("home");
     return (
         <>
             <div className="row">
@@ -166,71 +193,7 @@ function AnalysisPendingView({ analysis }) {
                 <div className="col">
                     <div className="card">
                         <div className="card-body">
-                            <nav>
-                                <div
-                                    className="nav nav-tabs"
-                                    id="nav-tab"
-                                    role="tablist"
-                                >
-                                    <button
-                                        className={`nav-link ${currentTab === "home" ? "active" : ""}`}
-                                        type="button"
-                                        role="tab"
-                                        onClick={() => setCurrentTab("home")}
-                                    >
-                                        Analysis info
-                                    </button>
-                                    {analysis["vm_id"] ? (
-                                        <button
-                                            className={`nav-link ${currentTab === "live-interaction" ? "active" : ""}`}
-                                            type="button"
-                                            role="tab"
-                                            aria-controls="nav-live-interaction"
-                                            aria-selected={
-                                                currentTab ===
-                                                "live-interaction"
-                                            }
-                                            onClick={() =>
-                                                setCurrentTab(
-                                                    "live-interaction",
-                                                )
-                                            }
-                                        >
-                                            Live interaction (vm-
-                                            {analysis["vm_id"]})
-                                        </button>
-                                    ) : (
-                                        []
-                                    )}
-                                </div>
-                            </nav>
-                            <div className="tab-content" id="nav-tabContent">
-                                {currentTab === "home" ? (
-                                    <div
-                                        className="tab-pane active"
-                                        role="tabpanel"
-                                    >
-                                        <AnalysisMetadataTable
-                                            analysis={analysis}
-                                        />
-                                    </div>
-                                ) : (
-                                    []
-                                )}
-                                {currentTab === "live-interaction" &&
-                                analysis["vm_id"] ? (
-                                    <div
-                                        className="tab-pane active"
-                                        role="tabpanel"
-                                    >
-                                        <AnalysisLiveInteraction
-                                            vmId={analysis["vm_id"]}
-                                        />
-                                    </div>
-                                ) : (
-                                    []
-                                )}
-                            </div>
+                            <AnalysisPendingTabs analysis={analysis} />
                         </div>
                     </div>
                 </div>
@@ -239,51 +202,80 @@ function AnalysisPendingView({ analysis }) {
     );
 }
 
+function AnalysisLogViewer({ analysisId }) {
+    const [inspector, setInspector] = useState(null);
+    const tabs = ["apimon", "procmon", "tlsmon", "memdump"];
+
+    const parseLine = useCallback((line) => {
+        try {
+            const data = JSON.parse(line.trimEnd());
+            setInspector(JSON.stringify(data, null, 4));
+        } catch (err) {
+            setInspector(null);
+        }
+    }, []);
+    return (
+        <div>
+            <div className="fw-bold py-2">Log type:</div>
+            <div className="d-flex align-items-start">
+                <TabSwitcher
+                    tabIds={tabs}
+                    getHeader={(tabId) => tabId}
+                    renderContent={(tabId) => {
+                        return (
+                            <LogViewer
+                                analysisId={analysisId}
+                                logType={tabId}
+                                className="flex-grow-1"
+                                onLineClick={parseLine}
+                            />
+                        );
+                    }}
+                    tabClassName="flex-column nav-pills me-3"
+                    contentClassName="flex-grow-1"
+                />
+            </div>
+            {inspector ? (
+                <div>
+                    <div
+                        className="fw-bold ps-2"
+                        style={{ borderTop: "black 1px solid" }}
+                    >
+                        JSON inspector
+                    </div>
+                    <pre>{inspector}</pre>
+                </div>
+            ) : (
+                []
+            )}
+        </div>
+    );
+}
+
 function AnalysisReportTabs({ analysis }) {
-    const [currentTab, setCurrentTab] = useState("home");
+    const [tabIds, setTabIds] = useState(["summary", "logs"]);
     return (
         <div className="card">
             <div className="card-body">
-                <nav>
-                    <div className="nav nav-tabs" id="nav-tab" role="tablist">
-                        <button
-                            className={`nav-link ${currentTab === "home" ? "active" : ""}`}
-                            type="button"
-                            role="tab"
-                            onClick={() => setCurrentTab("home")}
-                        >
-                            Summary
-                        </button>
-                        <button
-                            className={`nav-link ${currentTab === "home" ? "active" : ""}`}
-                            type="button"
-                            role="tab"
-                            onClick={() => setCurrentTab("home")}
-                        >
-                            General logs
-                        </button>
-                        <button
-                            className={`nav-link ${currentTab === "home" ? "active" : ""}`}
-                            type="button"
-                            role="tab"
-                            onClick={() => setCurrentTab("home")}
-                        >
-                            Procdot graph
-                        </button>
-                        <button
-                            className={`nav-link ${currentTab === "home" ? "active" : ""}`}
-                            type="button"
-                            role="tab"
-                            onClick={() => setCurrentTab("home")}
-                        >
-                            <span>Process powershell.exe (6012)</span>
-                            <FontAwesomeIcon icon={faXmark} className="ms-2" />
-                        </button>
-                    </div>
-                </nav>
-                <div className="tab-content" id="nav-tabContent">
-                    ...
-                </div>
+                <TabSwitcher
+                    tabIds={tabIds}
+                    getHeader={(tabId) => {
+                        if (tabId === "summary") {
+                            return "Summary";
+                        } else if (tabId === "logs") {
+                            return "General logs";
+                        }
+                    }}
+                    renderContent={(tabId) => {
+                        if (tabId === "summary") {
+                            return <div></div>;
+                        } else if (tabId === "logs") {
+                            return (
+                                <AnalysisLogViewer analysisId={analysis.id} />
+                            );
+                        }
+                    }}
+                />
             </div>
         </div>
     );

@@ -40,3 +40,13 @@ export async function getAnalysisProcessTree({
     );
     return listRequest.data;
 }
+
+export async function getLog({ analysisId, logType, rangeStart, rangeEnd }) {
+    const logRequest = await axios.get(`/logs/${analysisId}/${logType}`, {
+        responseType: "text",
+        headers: {
+            Range: `bytes=${rangeStart}-${rangeEnd}`,
+        },
+    });
+    return logRequest.data;
+}
