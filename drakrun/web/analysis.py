@@ -21,10 +21,6 @@ class AnalysisStorage:
     def _check_path(self, path):
         return check_path(path, self.analysis_dir)
 
-    def get_apicalls(self, pid):
-        """Download API calls of this process"""
-        return self._check_path(self.analysis_dir / "apicall" / f"{pid}.json")
-
     def get_processed(self, name):
         """Download post-process results"""
         return self._check_path(self.analysis_dir / f"{name}.json")

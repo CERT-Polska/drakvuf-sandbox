@@ -6,7 +6,6 @@ from .generate_graphs import generate_graphs
 from .generate_wireshark_key_file import generate_wireshark_key_file
 from .index_logs import index_logs
 from .plugin_base import PostprocessPlugin
-from .process_apimon_log import process_apimon_log
 from .split_drakmon_log import split_drakmon_log
 
 POSTPROCESS_PLUGINS = [
@@ -15,9 +14,6 @@ POSTPROCESS_PLUGINS = [
     ),
     PostprocessPlugin(
         function=split_drakmon_log, requires=["drakmon.log"], generates=[]
-    ),
-    PostprocessPlugin(
-        function=process_apimon_log, requires=["apimon.log"], generates=["apicalls"]
     ),
     PostprocessPlugin(
         function=generate_wireshark_key_file,
@@ -39,5 +35,7 @@ POSTPROCESS_PLUGINS = [
     ),
     PostprocessPlugin(function=crop_dumps, requires=["dumps"], generates=["dumps.zip"]),
     PostprocessPlugin(function=compress_ipt, requires=["ipt"], generates=["ipt.zip"]),
-    PostprocessPlugin(function=index_logs, requires=[], generates=["index"]),
+    PostprocessPlugin(
+        function=index_logs, requires=["procmon.log"], generates=["index"]
+    ),
 ]
