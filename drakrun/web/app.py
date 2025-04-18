@@ -7,7 +7,9 @@ from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import magic
-from flask import Flask, jsonify, request, send_file, send_from_directory
+from analyzer.postprocessing.indexer import scattered_read_file
+from flask import Flask, Response, jsonify, request, send_file, send_from_directory
+from orjson import orjson
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
 
@@ -140,15 +142,6 @@ def processed(task_uid, which):
     return send_file(path, mimetype="application/json")
 
 
-@app.route("/processed/<task_uid>/apicall/<pid>")
-def apicall(task_uid, pid):
-    analysis = get_analysis_data(task_uid)
-    path = analysis.get_apicalls(pid)
-    if not path.exists():
-        return dict(error="Data not found"), 404
-    return send_file(path, mimetype="application/json")
-
-
 @app.route("/logs/<task_uid>/<log_type>")
 def logs(task_uid, log_type):
     analysis = get_analysis_data(task_uid)
@@ -158,13 +151,29 @@ def logs(task_uid, log_type):
     return send_file(path, mimetype="text/plain")
 
 
-@app.route("/logindex/<task_uid>/<log_type>")
-def logindex(task_uid, log_type):
+@app.route("/logs/<task_uid>/<log_type>/process/<seqid>")
+def process_logs(task_uid, log_type, seqid):
     analysis = get_analysis_data(task_uid)
-    path = analysis.get_log_index(log_type)
-    if not path.exists():
+    index_path = analysis.get_log_index(f"{log_type}.{seqid}.json")
+    if not index_path.exists():
         return dict(error="Data not found"), 404
-    return send_file(path, mimetype="application/json")
+    index = orjson.loads(index_path.read_text())
+    blocks = index["blocks"]
+    filter_values = request.args.getlist("filter")
+    if filter_values:
+        filter_indices = [
+            index["values"].index(filter_value)
+            for filter_value in filter_values
+            if filter_value in index["values"]
+        ]
+        blocks = [
+            block
+            for (block, mapping) in zip(index["blocks"], index["mapping"])
+            if mapping in filter_indices
+        ]
+    log_path = analysis.get_log(log_type)
+    scattered_read = scattered_read_file(log_path, blocks)
+    return Response(b"".join(scattered_read), mimetype="text/plain")
 
 
 @app.route("/pcap_dump/<task_uid>")
