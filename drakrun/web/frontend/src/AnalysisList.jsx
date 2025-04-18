@@ -60,7 +60,7 @@ function AnalysisListTable() {
         return <div>Loading...</div>;
     }
 
-    if (analysisList.length == 0) {
+    if (analysisList.length === 0) {
         return (
             <div>There are no analyses. Upload sample to create a new one.</div>
         );

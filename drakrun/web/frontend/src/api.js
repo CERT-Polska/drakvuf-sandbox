@@ -11,9 +11,32 @@ export async function getAnalysisList({ abortController }) {
     return listRequest.data;
 }
 
-export async function getAnalysisStatus({ analysisId, abortController }) {
-    const listRequest = await axios.get(`/status/${analysisId}`, {
-        signal: abortController.signal,
-    });
+export async function getAnalysisStatus({
+    analysisId,
+    abortController = undefined,
+}) {
+    const listRequest = await axios.get(
+        `/status/${analysisId}`,
+        abortController
+            ? {
+                  signal: abortController.signal,
+              }
+            : {},
+    );
+    return listRequest.data;
+}
+
+export async function getAnalysisProcessTree({
+    analysisId,
+    abortController = undefined,
+}) {
+    const listRequest = await axios.get(
+        `/processed/${analysisId}/process_tree`,
+        abortController
+            ? {
+                  signal: abortController.signal,
+              }
+            : {},
+    );
     return listRequest.data;
 }

@@ -1,16 +1,90 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { getAnalysisList, getAnalysisStatus } from "./api.js";
-import { CanceledError } from "axios";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getAnalysisProcessTree, getAnalysisStatus } from "./api.js";
+import axios, { CanceledError } from "axios";
 import { AnalysisStatusBadge } from "./AnalysisStatusBadge.jsx";
+import { isStatusPending } from "./analysisStatus.js";
+import { AnalysisLiveInteraction } from "./AnalysisLiveInteraction.jsx";
+import { ProcessTree } from "./ProcessTree.jsx";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { LazyLog } from "@melloware/react-logviewer";
 
-function TreeNode({ processNode, selectedId, level = 0 }) {}
+function isProcessInteresting(process) {
+    return process.procname.endsWith("explorer.exe");
+}
 
-function ProcessTree() {
+function getInterestingProcesses(processTree) {
+    let activeSet = new Set();
+    for (let process of processTree) {
+        if (isProcessInteresting(process)) {
+            activeSet.add(process.seqid);
+        }
+        if (process.children.length > 0) {
+            const activeChildren = getInterestingProcesses(process.children);
+            if (activeChildren.size) {
+                activeSet = activeSet.union(activeChildren);
+                activeSet.add(process.seqid);
+            }
+        }
+    }
+    return activeSet;
+}
+
+function ProcessTreeView({ analysisId }) {
+    const [uncollapsed, setUncollapsed] = useState(new Set());
+    const [processTree, setProcessTree] = useState();
+    const [error, setError] = useState();
+
+    useEffect(() => {
+        getAnalysisProcessTree({ analysisId })
+            .then((data) => {
+                setProcessTree(data);
+                setUncollapsed(getInterestingProcesses(data));
+            })
+            .catch((e) => {
+                console.error(e);
+                setError(e);
+            });
+    }, []);
+
     return (
-        <ul>
-            <li>explorer.exe</li>
-        </ul>
+        <div className="card">
+            <div className="card-body">
+                {typeof processTree === "undefined" ? (
+                    <span>Loading process tree...</span>
+                ) : (
+                    []
+                )}
+                {typeof error !== "undefined" ? (
+                    <span className="text-danger">
+                        Unable to load process tree
+                    </span>
+                ) : (
+                    []
+                )}
+                {typeof processTree !== "undefined" ? (
+                    <ProcessTree
+                        processTree={processTree}
+                        uncollapsedSeqid={uncollapsed}
+                        setCollapse={(seqid) => {
+                            const collapse = uncollapsed.has(seqid);
+                            setUncollapsed((currentValue) => {
+                                let newSet = new Set(currentValue);
+                                if (!collapse) {
+                                    newSet.add(seqid);
+                                } else {
+                                    newSet.delete(seqid);
+                                }
+                                return newSet;
+                            });
+                        }}
+                    />
+                ) : (
+                    []
+                )}
+            </div>
+        </div>
     );
 }
 
@@ -51,8 +125,6 @@ function AnalysisMetadataTable({ analysis }) {
     );
 }
 
-function AnalysisLiveInteraction({ vmId }) {}
-
 function AnalysisPendingStatusBox({ children }) {
     return (
         <div className="card">
@@ -74,6 +146,7 @@ function AnalysisPendingStatusBox({ children }) {
 }
 
 function AnalysisPendingView({ analysis }) {
+    const [currentTab, setCurrentTab] = useState("home");
     return (
         <>
             <div className="row">
@@ -100,25 +173,28 @@ function AnalysisPendingView({ analysis }) {
                                     role="tablist"
                                 >
                                     <button
-                                        className="nav-link active"
-                                        data-bs-toggle="tab"
-                                        data-bs-target="#nav-metadata"
+                                        className={`nav-link ${currentTab === "home" ? "active" : ""}`}
                                         type="button"
                                         role="tab"
-                                        aria-controls="nav-home"
-                                        aria-selected="true"
+                                        onClick={() => setCurrentTab("home")}
                                     >
                                         Analysis info
                                     </button>
                                     {analysis["vm_id"] ? (
                                         <button
-                                            className="nav-link"
-                                            data-bs-toggle="tab"
-                                            data-bs-target="#nav-live-interaction"
+                                            className={`nav-link ${currentTab === "live-interaction" ? "active" : ""}`}
                                             type="button"
                                             role="tab"
-                                            aria-controls="nav-profile"
-                                            aria-selected="false"
+                                            aria-controls="nav-live-interaction"
+                                            aria-selected={
+                                                currentTab ===
+                                                "live-interaction"
+                                            }
+                                            onClick={() =>
+                                                setCurrentTab(
+                                                    "live-interaction",
+                                                )
+                                            }
                                         >
                                             Live interaction (vm-
                                             {analysis["vm_id"]})
@@ -129,21 +205,28 @@ function AnalysisPendingView({ analysis }) {
                                 </div>
                             </nav>
                             <div className="tab-content" id="nav-tabContent">
-                                <div
-                                    className="tab-pane fade show active"
-                                    id="nav-metadata"
-                                    role="tabpanel"
-                                >
-                                    <AnalysisMetadataTable
-                                        analysis={analysis}
-                                    />
-                                </div>
-                                {analysis["vm_id"] ? (
+                                {currentTab === "home" ? (
                                     <div
-                                        className="tab-pane fade"
-                                        id="nav-live-interaction"
+                                        className="tab-pane active"
                                         role="tabpanel"
-                                    ></div>
+                                    >
+                                        <AnalysisMetadataTable
+                                            analysis={analysis}
+                                        />
+                                    </div>
+                                ) : (
+                                    []
+                                )}
+                                {currentTab === "live-interaction" &&
+                                analysis["vm_id"] ? (
+                                    <div
+                                        className="tab-pane active"
+                                        role="tabpanel"
+                                    >
+                                        <AnalysisLiveInteraction
+                                            vmId={analysis["vm_id"]}
+                                        />
+                                    </div>
                                 ) : (
                                     []
                                 )}
@@ -156,15 +239,92 @@ function AnalysisPendingView({ analysis }) {
     );
 }
 
-function AnalysisReport({ analysisId }) {
+function AnalysisReportTabs({ analysis }) {
+    const [currentTab, setCurrentTab] = useState("home");
+    return (
+        <div className="card">
+            <div className="card-body">
+                <nav>
+                    <div className="nav nav-tabs" id="nav-tab" role="tablist">
+                        <button
+                            className={`nav-link ${currentTab === "home" ? "active" : ""}`}
+                            type="button"
+                            role="tab"
+                            onClick={() => setCurrentTab("home")}
+                        >
+                            Summary
+                        </button>
+                        <button
+                            className={`nav-link ${currentTab === "home" ? "active" : ""}`}
+                            type="button"
+                            role="tab"
+                            onClick={() => setCurrentTab("home")}
+                        >
+                            General logs
+                        </button>
+                        <button
+                            className={`nav-link ${currentTab === "home" ? "active" : ""}`}
+                            type="button"
+                            role="tab"
+                            onClick={() => setCurrentTab("home")}
+                        >
+                            Procdot graph
+                        </button>
+                        <button
+                            className={`nav-link ${currentTab === "home" ? "active" : ""}`}
+                            type="button"
+                            role="tab"
+                            onClick={() => setCurrentTab("home")}
+                        >
+                            <span>Process powershell.exe (6012)</span>
+                            <FontAwesomeIcon icon={faXmark} className="ms-2" />
+                        </button>
+                    </div>
+                </nav>
+                <div className="tab-content" id="nav-tabContent">
+                    ...
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function AnalysisReport({ analysis }) {
+    return (
+        <>
+            <div className="row">
+                <div className="col-6">
+                    <ProcessTreeView analysisId={analysis.id} />
+                </div>
+                <div className="col-6">
+                    <AnalysisMetadataTable analysis={analysis} />
+                </div>
+            </div>
+            <div className="row py-4">
+                <div className="col">
+                    <AnalysisReportTabs analysis={analysis} />
+                </div>
+            </div>
+        </>
+    );
+}
+
+function AnalysisViewComponent({ analysisId }) {
+    const checkInterval = useRef(null);
     const [analysisInfo, setAnalysisInfo] = useState();
     const [error, setError] = useState();
 
-    useEffect(() => {
-        const abortController = new AbortController();
-        getAnalysisStatus({ analysisId, abortController })
+    const checkStatus = useCallback(() => {
+        getAnalysisStatus({ analysisId })
             .then((response) => {
                 setAnalysisInfo(response);
+                if (isStatusPending(response?.status)) {
+                    if (!checkInterval.current)
+                        checkInterval.current = setTimeout(() => {
+                            checkInterval.current = null;
+                            checkStatus();
+                        }, 1000);
+                }
             })
             .catch((error) => {
                 if (!(error instanceof CanceledError)) {
@@ -172,10 +332,17 @@ function AnalysisReport({ analysisId }) {
                     console.error(error);
                 }
             });
-        return () => {
-            abortController.abort();
-        };
     }, [analysisId]);
+
+    useEffect(() => {
+        checkStatus();
+        return () => {
+            if (checkInterval.current) {
+                clearTimeout(checkInterval.current);
+                checkInterval.current = null;
+            }
+        };
+    }, [analysisId, checkStatus]);
 
     if (typeof error !== "undefined") {
         return <div>Error: {error.toString()}</div>;
@@ -192,8 +359,10 @@ function AnalysisReport({ analysisId }) {
             </div>
         );
     }
-
-    return <AnalysisPendingView analysis={analysisInfo} />;
+    if (isStatusPending(analysisInfo?.status)) {
+        return <AnalysisPendingView analysis={analysisInfo} />;
+    }
+    return <AnalysisReport analysis={analysisInfo} />;
 }
 
 export default function AnalysisView() {
@@ -201,7 +370,7 @@ export default function AnalysisView() {
     return (
         <div className="container-fluid px-4">
             <h1 className="m-4 h4">Analysis report</h1>
-            <AnalysisReport analysisId={jobid} />
+            <AnalysisViewComponent analysisId={jobid} />
         </div>
     );
 }
