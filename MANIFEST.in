@@ -3,4 +3,4 @@ include drakrun/data/*
 include drakrun/tools/get-explorer-pid
 include drakrun/tools/drakshell/drakshell
 recursive-include drakrun/data/capa-rules *.yml
-recursive-include drakrun/web/frontend/build *
+recursive-include drakrun/web/frontend/dist *

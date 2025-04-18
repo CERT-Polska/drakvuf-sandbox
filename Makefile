@@ -15,7 +15,7 @@ else
 	python3 setup.py bdist_wheel
 endif
 
-drakrun/web/frontend/build: drakrun/web/frontend/node_modules $(WEB_SOURCE_FILES) drakrun/web/frontend/public
+drakrun/web/frontend/dist: drakrun/web/frontend/node_modules $(WEB_SOURCE_FILES) drakrun/web/frontend/vite.config.js drakrun/web/frontend/index.html
 	cd drakrun/web/frontend ; npm run build
 
 drakrun/web/frontend/node_modules: drakrun/web/frontend/package.json drakrun/web/frontend/package-lock.json
