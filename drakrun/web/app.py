@@ -7,7 +7,6 @@ from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import magic
-from analyzer.postprocessing.indexer import scattered_read_file
 from flask import Flask, Response, jsonify, request, send_file, send_from_directory
 from orjson import orjson
 from rq.exceptions import NoSuchJobError
@@ -15,6 +14,7 @@ from rq.job import Job
 
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.file_metadata import FileMetadata
+from drakrun.analyzer.postprocessing.indexer import scattered_read_file
 from drakrun.analyzer.worker import enqueue_analysis, get_redis_connection
 from drakrun.lib.config import load_config
 from drakrun.lib.paths import ANALYSES_DIR
