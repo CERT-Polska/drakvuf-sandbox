@@ -4,8 +4,6 @@ import pathlib
 from ..indexer import index_log_file
 from ..process_tree import tree_from_log
 
-INDEX_METHOD_FOR = ["procmon", "socketmon", "filetracer", "memdump", "syscalls"]
-
 
 def index_logs(analysis_dir: pathlib.Path) -> None:
     index_dir = analysis_dir / "index"
@@ -25,7 +23,7 @@ def index_logs(analysis_dir: pathlib.Path) -> None:
         index = index_log_file(
             log_file_path,
             process_tree,
-            key=("Method" if plugin_name in INDEX_METHOD_FOR else ""),
+            key="Method",
         )
 
         for seqid in index.keys():
