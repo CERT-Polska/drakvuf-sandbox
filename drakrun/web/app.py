@@ -23,7 +23,7 @@ from drakrun.lib.paths import ANALYSES_DIR
 from .analysis import get_analysis_data
 from .analysis_list import add_analysis_to_recent, get_recent_analysis_list
 
-app = Flask(__name__, static_folder="frontend/dist")
+app = Flask(__name__, static_folder="frontend/build")
 drakrun_conf = load_config()
 redis = get_redis_connection(drakrun_conf.redis)
 app.config.update({
@@ -237,14 +237,14 @@ def metadata(task_uid):
 
 @app.route("/")
 def index():
-    return send_file("frontend/dist/index.html")
+    return send_file("frontend/build/index.html")
 
 
 @app.route("/assets/<path:path>")
 def send_assets(path):
-    return send_from_directory("frontend/dist/assets", path)
+    return send_from_directory("frontend/build/assets", path)
 
 
 @app.route("/<path:path>")
 def catchall(path):
-    return send_file("frontend/dist/index.html")
+    return send_file("frontend/build/index.html")
