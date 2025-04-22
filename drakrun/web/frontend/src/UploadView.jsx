@@ -1,135 +1,103 @@
-import CreatableSelect from "react-select/creatable";
-import { useCallback, useState } from "react";
-
-const createOption = (option) => ({ label: option, value: option });
-
-const plugins = [
-    createOption("apimon"),
-    createOption("bsodmon"),
-    createOption("clipboardmon"),
-    createOption("codemon"),
-    createOption("delaymon"),
-    createOption("exmon"),
-    createOption("fileextractor"),
-    createOption("filetracer"),
-    createOption("hidevm"),
-    createOption("hidsim"),
-    createOption("ipt"),
-    createOption("memdump"),
-    createOption("objmon"),
-    createOption("procmon"),
-    createOption("regmon"),
-    createOption("socketmon"),
-    createOption("syscalls"),
-    createOption("tlsmon"),
-    createOption("windowmon"),
-];
-
-const defaultPlugins = [
-    createOption("apimon"),
-    createOption("filetracer"),
-    createOption("memdump"),
-    createOption("procmon"),
-    createOption("socketmon"),
-    createOption("tlsmon"),
-];
-
-const pluginPickerStyles = {
-    multiValue: (styles, { data }) => {
-        if (!data.__isNew__)
-            return { ...styles, backgroundColor: "rgba(0, 82, 204, 0.1)" };
-        else return { ...styles, backgroundColor: "rgba(255, 86, 48, 0.1)" };
-    },
-    multiValueLabel: (styles, { data }) => {
-        if (!data.__isNew__) return { ...styles, color: "rgb(0, 82, 204)" };
-        else return { ...styles, color: "rgb(255, 86, 48)" };
-    },
-};
-
-function PluginPicker({ onChange }) {
-    const [chosenCustomPlugin, setChosenCustomPlugin] = useState(false);
-    const onSelectChange = useCallback(
-        (currentValue) => {
-            setChosenCustomPlugin(currentValue.some((data) => data.__isNew__));
-            if (onChange) onChange(currentValue);
-        },
-        [onChange],
-    );
-    return (
-        <div>
-            <CreatableSelect
-                isMulti
-                options={plugins}
-                styles={pluginPickerStyles}
-                onChange={onSelectChange}
-                defaultValue={defaultPlugins}
-            />
-            {chosenCustomPlugin ? (
-                <div className="text-danger small">
-                    Picked custom plugin which may be not supported by Drakvuf
-                    Sandbox
-                </div>
-            ) : (
-                []
-            )}
-        </div>
-    );
-}
+import {PluginPicker} from "./PluginPicker.jsx";
+import {useNavigate} from "react-router-dom";
+import {useCallback, useState} from "react";
+import {uploadSample} from "./api.js";
 
 export default function UploadView(props) {
+    const [submitted, setSubmitted] = useState(false);
+    const [error, setError] = useState();
+    const [analysisTime, setAnalysisTime] = useState(10);
+    const navigate = useNavigate();
+
+    const submitForm = useCallback(async (ev) => {
+        ev.preventDefault();
+        setSubmitted(true);
+        const form = new FormData(ev.target);
+        try {
+            const jobData = await uploadSample({
+                file: form.get("file"),
+                timeout: form.get("timeout")*60,
+                plugins: form.getAll("plugins"),
+                file_name: form.get("file_name"),
+                start_command: form.get("start_command"),
+            })
+            const jobId = jobData["task_uid"];
+            navigate(`/analysis/${jobId}`);
+        } catch(e) {
+            setError(e);
+            setSubmitted(false);
+            console.error(e);
+        }
+    }, [navigate])
     return (
         <div className="container-fluid px-4">
             <h1 className="m-4 h4">Upload sample</h1>
-            <div className="mb-3">
-                <label htmlFor="formFile" className="form-label">
-                    Sample file
-                </label>
-                <input className="form-control" type="file" id="formFile" />
-            </div>
-            <div className="mb-3">
-                <label htmlFor="customRange2" className="form-label">
-                    Analysis time
-                </label>
-                <input
-                    type="range"
-                    className="form-range"
-                    min="0"
-                    max="15"
-                    id="customRange2"
-                />
-            </div>
-            <div className="mb-3">
-                <label htmlFor="customRange2" className="form-label">
-                    Plugins
-                </label>
-                <PluginPicker />
-            </div>
-            <div className="mb-3">
-                <label
-                    htmlFor="exampleFormControlInput1"
-                    className="form-label"
-                >
-                    Custom file name
-                </label>
-                <input
-                    type="text"
-                    className="form-control"
-                    id="exampleFormControlInput1"
-                />
-            </div>
-            <div className="mb-3">
-                <label
-                    htmlFor="exampleFormControlInput1"
-                    className="form-label"
-                >
-                    Start command
-                </label>
-                <input
-                    type="text"
-                    className="form-control"
-                    id="exampleFormControlInput1"
-                />
-            </div>
+            {
+                error ?
+                    <div className="text-danger">Error: {error}</div> : []
+            }
+            <form onSubmit={submitForm}>
+                <div className="mb-3">
+                    <label htmlFor="formFile" className="form-label">
+                        Sample file
+                    </label>
+                    <input className="form-control" type="file" id="formFile" name="file" required/>
+                </div>
+                <div className="mb-3">
+                    <label htmlFor="form-timeout" className="form-label">
+                        Analysis time: {analysisTime} minute{analysisTime > 1 ? "s" : ""}
+                    </label>
+                    <input
+                        type="range"
+                        className="form-range"
+                        min="1"
+                        max="15"
+                        value={analysisTime}
+                        onChange={(ev) => setAnalysisTime(+ev.target.value)}
+                        id="form-timeout"
+                        name="timeout"
+                    />
+                </div>
+                <div className="mb-3">
+                    <label className="form-label">
+                        Plugins
+                    </label>
+                    <PluginPicker name="plugins"/>
+                </div>
+                <div className="mb-3">
+                    <label
+                        htmlFor="target-file-name"
+                        className="form-label"
+                    >
+                        Target file name
+                    </label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        id="target-file-name"
+                        name="file_name"
+                        placeholder="(pick automatically)"
+                    />
+                </div>
+                <div className="mb-3">
+                    <label
+                        htmlFor="custom-start-command"
+                        className="form-label"
+                    >
+                        Start command
+                    </label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        id="custom-start-command"
+                        name="start_command"
+                        placeholder="(pick automatically)"
+                    />
+                </div>
+                <div className="mb-3">
+                    <button className="btn btn-primary" disabled={submitted} type="submit">Submit</button>
+                </div>
+            </form>
         </div>
     );
 }

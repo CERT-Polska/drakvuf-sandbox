@@ -1,4 +1,4 @@
-export function AnalysisStatusBadge({ status }) {
+export function AnalysisStatusBadge({ status, substatus }) {
     const statusStyle =
         {
             queued: "bg-primary",
@@ -6,5 +6,5 @@ export function AnalysisStatusBadge({ status }) {
             finished: "bg-success",
             failed: "bg-danger",
         }[status] || "bg-secondary";
-    return <div className={`badge ${statusStyle} me-2 p-2`}>{status}</div>;
+    return <div className={`badge ${statusStyle} me-2 p-2`}>{status}{substatus ? ` (${substatus})`: ""}</div>;
 }

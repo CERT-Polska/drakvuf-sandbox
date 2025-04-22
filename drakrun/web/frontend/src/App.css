@@ -32,6 +32,36 @@
     padding: 0.5rem;
 }
 
+.plugin-badge {
+    border-radius: 2px;
+    margin: 2px;
+    font-size: 85%;
+    padding: 3px 8px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.tooltip-inner {
+    max-width: none !important;
+    white-space: nowrap;
+}
+
+.btn.btn-inline-link {
+    padding: 0;
+    margin: 0;
+}
+
+.btn.btn-inline-link:hover {
+    color: rgb(0, 82, 204);
+}
+
+li.selected {
+    background-color: rgba(0, 82, 204, 0.1);
+    border: 1px rgb(0, 82, 204) solid;
+    padding: 2px 4px;
+}
+
 /* Overriding element hover */
 .optionListContainer > .optionContainer li:hover,
 .optionContainer .highlight {

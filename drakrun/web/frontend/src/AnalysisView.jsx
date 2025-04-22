@@ -11,6 +11,7 @@ import { faXmark } from "@fortawesome/free-solid-svg-icons";
 import { LazyLog } from "@melloware/react-logviewer";
 import { LogViewer } from "./LogViewer.jsx";
 import { TabSwitcher } from "./TabSwitcher.jsx";
+import {PluginList} from "./PluginPicker.jsx";
 
 function isProcessInteresting(process) {
     return process.procname.endsWith("explorer.exe");
@@ -36,6 +37,7 @@ function getInterestingProcesses(processTree) {
 function ProcessTreeView({ analysisId }) {
     const [uncollapsed, setUncollapsed] = useState(new Set());
     const [processTree, setProcessTree] = useState();
+    const [selected, setSelected] = useState();
     const [error, setError] = useState();
 
     useEffect(() => {
@@ -81,6 +83,8 @@ function ProcessTreeView({ analysisId }) {
                                 return newSet;
                             });
                         }}
+                        selected={selected}
+                        onSelect={(seqid) => {setSelected(seqid)}}
                     />
                 ) : (
                     []
@@ -108,7 +112,11 @@ function AnalysisMetadataTable({ analysis }) {
                 </tr>
                 <tr>
                     <th>Start command</th>
-                    <td>{analysis.options["start_command"] || "-"}</td>
+                    <td>{(analysis.options["start_command"] || ["-"]).join(' ')}</td>
+                </tr>
+                <tr>
+                    <th>Analysis time</th>
+                    <td>{analysis.options["timeout"]} seconds</td>
                 </tr>
                 <tr>
                     <th>Started at</th>
@@ -120,7 +128,9 @@ function AnalysisMetadataTable({ analysis }) {
                 </tr>
                 <tr>
                     <th>Plugins</th>
-                    <td>{analysis.options["plugins"] || "-"}</td>
+                    <td>
+                        <PluginList plugins={analysis.options["plugins"]}/>
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -184,7 +194,7 @@ function AnalysisPendingView({ analysis }) {
                             <div className="me-2 py-2 d-inline-block">
                                 Current status:
                             </div>
-                            <AnalysisStatusBadge status={analysis.status} />
+                            <AnalysisStatusBadge status={analysis.status} substatus={analysis.substatus}/>
                         </div>
                     </AnalysisPendingStatusBox>
                 </div>
