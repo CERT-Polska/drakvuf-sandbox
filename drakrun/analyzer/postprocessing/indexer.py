@@ -61,7 +61,7 @@ def index_log_file(
                         value_index is None or index_entry["mapping"][-1] == value_index
                     )
                 ):
-                    # If adjacent blocks belonging to the same mapping
+                    # If adjacent blocks belong to the same mapping
                     index_entry["blocks"][-1][1] = f.tell()
                 else:
                     index_entry["blocks"].append([data_start, f.tell()])
