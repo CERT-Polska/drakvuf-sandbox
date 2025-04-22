@@ -7,7 +7,7 @@ PYTHON_SOURCE_FILES := $(call rwildcard,drakrun/,*.py) drakrun/data pyproject.to
 .PHONY: all
 all: dist/*.whl
 
-dist/*.whl: $(PYTHON_SOURCE_FILES) drakrun/web/frontend/build drakrun/tools/get-explorer-pid drakrun/tools/drakshell/drakshell
+dist/*.whl: $(PYTHON_SOURCE_FILES) drakrun/web/frontend/dist drakrun/tools/get-explorer-pid drakrun/tools/drakshell/drakshell
 	rm -f dist/*.whl
 ifndef DIST
 	DRAKRUN_VERSION_TAG=$(shell git rev-parse --short HEAD) python3 setup.py bdist_wheel
@@ -15,7 +15,7 @@ else
 	python3 setup.py bdist_wheel
 endif
 
-drakrun/web/frontend/build: drakrun/web/frontend/node_modules $(WEB_SOURCE_FILES) drakrun/web/frontend/vite.config.js drakrun/web/frontend/index.html
+drakrun/web/frontend/dist: drakrun/web/frontend/node_modules $(WEB_SOURCE_FILES) drakrun/web/frontend/vite.config.js drakrun/web/frontend/index.html
 	cd drakrun/web/frontend ; npm run build
 
 drakrun/web/frontend/node_modules: drakrun/web/frontend/package.json drakrun/web/frontend/package-lock.json
@@ -30,7 +30,7 @@ drakrun/tools/drakshell/drakshell:
 .PHONY: clean
 clean:
 	rm -rf dist drakvuf_sandbox.egg-info build
-	rm -rf drakrun/web/frontend/build drakrun/web/frontend/node_modules
+	rm -rf drakrun/web/frontend/dist drakrun/web/frontend/node_modules
 	rm -f drakrun/tools/get-explorer-pid drakrun/tools/test-altp2m
 	rm -f drakrun/tools/drakshell/drakshell
 

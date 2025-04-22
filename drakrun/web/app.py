@@ -7,7 +7,7 @@ from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import magic
-from flask import Flask, Response, jsonify, request, send_file, send_from_directory
+from flask import Flask, Response, jsonify, request, send_file
 from orjson import orjson
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
@@ -23,7 +23,7 @@ from drakrun.lib.paths import ANALYSES_DIR
 from .analysis import get_analysis_data
 from .analysis_list import add_analysis_to_recent, get_recent_analysis_list
 
-app = Flask(__name__, static_folder="frontend/build/static")
+app = Flask(__name__, static_folder="frontend/dist/assets")
 drakrun_conf = load_config()
 redis = get_redis_connection(drakrun_conf.redis)
 app.config.update({
@@ -237,14 +237,8 @@ def metadata(task_uid):
 
 @app.route("/")
 def index():
-    return send_file("frontend/build/index.html")
-
-
-@app.route("/assets/<path:path>")
-def send_assets(path):
-    return send_from_directory("frontend/build/assets", path)
-
+    return send_file("frontend/dist/index.html")
 
 @app.route("/<path:path>")
 def catchall(path):
-    return send_file("frontend/build/index.html")
+    return send_file("frontend/dist/index.html")
