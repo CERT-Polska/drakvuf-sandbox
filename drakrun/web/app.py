@@ -22,7 +22,7 @@ from drakrun.lib.paths import ANALYSES_DIR
 from .analysis import get_analysis_data
 from .analysis_list import add_analysis_to_recent, get_recent_analysis_list
 
-app = Flask(__name__, static_folder="frontend/build/static")
+app = Flask(__name__, static_folder="frontend/dist")
 drakrun_conf = load_config()
 redis = get_redis_connection(drakrun_conf.redis)
 
