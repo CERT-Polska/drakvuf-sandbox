@@ -21,7 +21,6 @@ jobs:
         with:
           path: |
             drakvuf-sandbox-whl/drakvuf_sandbox-*.whl
-            drakvuf-bundle-debs-debian-bullseye/drakvuf-bundle*.deb
           upload-release-files: true
           release-upload-url: ${{ github.event.release.upload_url }}
       - name: Publish to PyPi
