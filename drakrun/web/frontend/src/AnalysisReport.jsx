@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useState} from "react";
-import {getAnalysisProcessTree} from "./api.js";
+import {getAnalysisProcessTree, getLogList} from "./api.js";
 import {ProcessTree} from "./ProcessTree.jsx";
 import {TabSwitcher} from "./TabSwitcher.jsx";
 import {LogViewer} from "./LogViewer.jsx";
@@ -88,8 +88,8 @@ function ProcessTreeView({ analysisId }) {
 
 function AnalysisLogViewer({ analysisId }) {
     const [inspector, setInspector] = useState(null);
-    const tabs = ["apimon", "procmon", "tlsmon", "memdump"];
-
+    const [tabs, setTabs] = useState();
+    const [error, setError] = useState()
     const parseLine = useCallback((line) => {
         try {
             const data = JSON.parse(line.trimEnd());
@@ -98,6 +98,29 @@ function AnalysisLogViewer({ analysisId }) {
             setInspector(null);
         }
     }, []);
+
+    const loadLogTypes = useCallback(async () => {
+        try {
+            const logTypes = await getLogList({analysisId});
+            setTabs(logTypes.filter((logType) => logType.endsWith(".log")).map((logType) => logType.split(".")[0]));
+        } catch(err) {
+            setError(err);
+            console.error(err);
+        }
+    }, [analysisId])
+
+    useEffect(() => {
+        loadLogTypes()
+    }, [analysisId]);
+
+    if(typeof tabs === "undefined") {
+        return <div>Loading log information...</div>
+    }
+
+    if(typeof error !== "undefined") {
+        return <div className="text-danger">Error: {error.toString()}</div>
+    }
+
     return (
         <div>
             <div className="fw-bold py-2">Log type:</div>
@@ -141,7 +164,7 @@ function AnalysisReportTabs({ analysis }) {
         <div className="card">
             <div className="card-body">
                 <TabSwitcher
-                    tabIds={["summary", "process-logs", "general-logs"]}
+                    tabIds={["general-logs"]}
                     getHeader={(tabId) => {
                         if (tabId === "summary") {
                             return "Summary";

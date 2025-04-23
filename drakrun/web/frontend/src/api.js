@@ -51,6 +51,11 @@ export async function getLog({ analysisId, logType, rangeStart, rangeEnd }) {
     return logRequest.data;
 }
 
+export async function getLogList({ analysisId }){
+    const logRequest = await axios.get(`/logs/${analysisId}`)
+    return logRequest.data;
+}
+
 export async function uploadSample({file, timeout, file_name, plugins, start_command}) {
     const formData = new FormData();
     formData.append("file", file);
