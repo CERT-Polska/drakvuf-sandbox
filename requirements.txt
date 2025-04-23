@@ -11,3 +11,4 @@ tomli==2.2.1
 rq==2.3.1
 Flask==3.0.3
 python-magic==0.4.27
+rq-dashboard==0.8.2.2
