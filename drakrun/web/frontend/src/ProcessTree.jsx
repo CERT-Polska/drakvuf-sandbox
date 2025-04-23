@@ -1,25 +1,38 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlusCircle, faMinusCircle } from "@fortawesome/free-solid-svg-icons";
-import { useEffect, useRef} from "react";
+import { useEffect, useRef } from "react";
 import { Tooltip } from "bootstrap/js/index.esm.js";
 
 function trimProcessName(procname) {
     return procname.split("\\").at(-1);
 }
 
-function TooltipSpan({className, tooltip, children}) {
+function TooltipSpan({ className, tooltip, children }) {
     const node = useRef(undefined);
     useEffect(() => {
-        if(node.current) {
+        if (node.current) {
             const tooltip = new Tooltip(node.current);
             return () => tooltip.dispose();
         }
     }, []);
-    if(tooltip) {
-        return <span ref={node} className={className} data-bs-toggle={tooltip} data-bs-placement="right"
-                     data-bs-title={tooltip}>{children}</span>;
+    if (tooltip) {
+        return (
+            <span
+                ref={node}
+                className={className}
+                data-bs-toggle={tooltip}
+                data-bs-placement="right"
+                data-bs-title={tooltip}
+            >
+                {children}
+            </span>
+        );
     } else {
-        return <span ref={node} className={className}>{children}</span>;
+        return (
+            <span ref={node} className={className}>
+                {children}
+            </span>
+        );
     }
 }
 
@@ -33,19 +46,27 @@ export function ProcessNode({ node, onClick }) {
     const commandLine = (node.args || []).join(" ");
     return (
         <button className="btn btn-inline-link" onClick={onClick}>
-            <TooltipSpan className={nodeStyle} tooltip={commandLine}>{trimProcessName(node.procname)}</TooltipSpan>
+            <TooltipSpan className={nodeStyle} tooltip={commandLine}>
+                {trimProcessName(node.procname)}
+            </TooltipSpan>
             <span className="ms-1">({node.pid})</span>
         </button>
     );
 }
 
-export function ProcessTree({ processTree, uncollapsedSeqid, setCollapse, selected, onSelect = () => {}}) {
+export function ProcessTree({
+    processTree,
+    uncollapsedSeqid,
+    setCollapse,
+    selected,
+    onSelect = () => {},
+}) {
     return (
         <ul style={{ "list-style-type": "none" }}>
             {processTree.map((element) => {
                 const leaf = element.children.length === 0;
                 const collapsed = !uncollapsedSeqid.has(element.seqid);
-                const isSelected = (element.seqid === selected);
+                const isSelected = element.seqid === selected;
                 return (
                     <>
                         <li className={isSelected ? "selected" : ""}>
@@ -68,7 +89,10 @@ export function ProcessTree({ processTree, uncollapsedSeqid, setCollapse, select
                                     style={{ visibility: "hidden" }}
                                 />
                             )}
-                            <ProcessNode node={element} onClick={() => onSelect(element.seqid)}/>
+                            <ProcessNode
+                                node={element}
+                                onClick={() => onSelect(element.seqid)}
+                            />
                         </li>
                         {!leaf && !collapsed ? (
                             <ProcessTree

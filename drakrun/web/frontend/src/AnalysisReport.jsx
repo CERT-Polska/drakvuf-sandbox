@@ -1,9 +1,9 @@
-import {useCallback, useEffect, useState} from "react";
-import {getAnalysisProcessTree, getLogList} from "./api.js";
-import {ProcessTree} from "./ProcessTree.jsx";
-import {TabSwitcher} from "./TabSwitcher.jsx";
-import {LogViewer} from "./LogViewer.jsx";
-import {AnalysisMetadataTable} from "./AnalysisMetadataTable.jsx";
+import { useCallback, useEffect, useState } from "react";
+import { getAnalysisProcessTree, getLogList } from "./api.js";
+import { ProcessTree } from "./ProcessTree.jsx";
+import { TabSwitcher } from "./TabSwitcher.jsx";
+import { LogViewer } from "./LogViewer.jsx";
+import { AnalysisMetadataTable } from "./AnalysisMetadataTable.jsx";
 
 function isProcessInteresting(process) {
     return process.procname.endsWith("explorer.exe");
@@ -76,7 +76,9 @@ function ProcessTreeView({ analysisId }) {
                             });
                         }}
                         selected={selected}
-                        onSelect={(seqid) => {setSelected(seqid)}}
+                        onSelect={(seqid) => {
+                            setSelected(seqid);
+                        }}
                     />
                 ) : (
                     []
@@ -89,7 +91,7 @@ function ProcessTreeView({ analysisId }) {
 function AnalysisLogViewer({ analysisId }) {
     const [inspector, setInspector] = useState(null);
     const [tabs, setTabs] = useState();
-    const [error, setError] = useState()
+    const [error, setError] = useState();
     const parseLine = useCallback((line) => {
         try {
             const data = JSON.parse(line.trimEnd());
@@ -101,24 +103,28 @@ function AnalysisLogViewer({ analysisId }) {
 
     const loadLogTypes = useCallback(async () => {
         try {
-            const logTypes = await getLogList({analysisId});
-            setTabs(logTypes.filter((logType) => logType.endsWith(".log")).map((logType) => logType.split(".")[0]));
-        } catch(err) {
+            const logTypes = await getLogList({ analysisId });
+            setTabs(
+                logTypes
+                    .filter((logType) => logType.endsWith(".log"))
+                    .map((logType) => logType.split(".")[0]),
+            );
+        } catch (err) {
             setError(err);
             console.error(err);
         }
-    }, [analysisId])
-
-    useEffect(() => {
-        loadLogTypes()
     }, [analysisId]);
 
-    if(typeof tabs === "undefined") {
-        return <div>Loading log information...</div>
+    useEffect(() => {
+        loadLogTypes();
+    }, [analysisId]);
+
+    if (typeof tabs === "undefined") {
+        return <div>Loading log information...</div>;
     }
 
-    if(typeof error !== "undefined") {
-        return <div className="text-danger">Error: {error.toString()}</div>
+    if (typeof error !== "undefined") {
+        return <div className="text-danger">Error: {error.toString()}</div>;
     }
 
     return (
@@ -170,8 +176,7 @@ function AnalysisReportTabs({ analysis }) {
                             return "Summary";
                         } else if (tabId === "process-logs") {
                             return "Process logs";
-                        }
-                        else if (tabId === "general-logs") {
+                        } else if (tabId === "general-logs") {
                             return "General logs";
                         }
                     }}

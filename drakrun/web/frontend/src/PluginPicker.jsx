@@ -1,4 +1,4 @@
-import {useCallback, useState} from "react";
+import { useCallback, useState } from "react";
 import CreatableSelect from "react-select/creatable";
 
 const createOption = (option) => ({ label: option, value: option });
@@ -46,19 +46,23 @@ const pluginPickerStyles = {
     },
 };
 
-export function PluginList({plugins}) {
+export function PluginList({ plugins }) {
     return (
         <div className="d-flex flex-wrap flex-row">
-            {
-                plugins.map((plugin) => (
-                    <div className="plugin-badge" style={{
+            {plugins.map((plugin) => (
+                <div
+                    className="plugin-badge"
+                    style={{
                         backgroundColor: "rgba(0, 82, 204, 0.1)",
-                        color: "rgb(0, 82, 204)"
-                    }} key={plugin}>{plugin}</div>
-                ))
-            }
+                        color: "rgb(0, 82, 204)",
+                    }}
+                    key={plugin}
+                >
+                    {plugin}
+                </div>
+            ))}
         </div>
-    )
+    );
 }
 
 export function PluginPicker({ onChange, name }) {

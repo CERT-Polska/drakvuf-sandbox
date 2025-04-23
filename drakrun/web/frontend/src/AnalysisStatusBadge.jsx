@@ -6,5 +6,10 @@ export function AnalysisStatusBadge({ status, substatus }) {
             finished: "bg-success",
             failed: "bg-danger",
         }[status] || "bg-secondary";
-    return <div className={`badge ${statusStyle} me-2 p-2`}>{status}{substatus ? ` (${substatus})`: ""}</div>;
+    return (
+        <div className={`badge ${statusStyle} me-2 p-2`}>
+            {status}
+            {substatus ? ` (${substatus})` : ""}
+        </div>
+    );
 }

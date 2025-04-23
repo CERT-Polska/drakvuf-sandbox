@@ -1,7 +1,7 @@
-import {TabSwitcher} from "./TabSwitcher.jsx";
-import {AnalysisLiveInteraction} from "./AnalysisLiveInteraction.jsx";
-import {AnalysisStatusBadge} from "./AnalysisStatusBadge.jsx";
-import {AnalysisMetadataTable} from "./AnalysisMetadataTable.jsx";
+import { TabSwitcher } from "./TabSwitcher.jsx";
+import { AnalysisLiveInteraction } from "./AnalysisLiveInteraction.jsx";
+import { AnalysisStatusBadge } from "./AnalysisStatusBadge.jsx";
+import { AnalysisMetadataTable } from "./AnalysisMetadataTable.jsx";
 
 export function AnalysisPendingStatusBox({ children }) {
     return (
@@ -60,7 +60,10 @@ export function AnalysisPendingView({ analysis }) {
                             <div className="me-2 py-2 d-inline-block">
                                 Current status:
                             </div>
-                            <AnalysisStatusBadge status={analysis.status} substatus={analysis.substatus}/>
+                            <AnalysisStatusBadge
+                                status={analysis.status}
+                                substatus={analysis.substatus}
+                            />
                         </div>
                     </AnalysisPendingStatusBox>
                 </div>

@@ -1,4 +1,4 @@
-import {PluginList} from "./PluginPicker.jsx";
+import { PluginList } from "./PluginPicker.jsx";
 
 export function AnalysisMetadataTable({ analysis }) {
     return (
@@ -18,7 +18,9 @@ export function AnalysisMetadataTable({ analysis }) {
                 </tr>
                 <tr>
                     <th>Start command</th>
-                    <td>{(analysis.options["start_command"] || ["-"]).join(' ')}</td>
+                    <td>
+                        {(analysis.options["start_command"] || ["-"]).join(" ")}
+                    </td>
                 </tr>
                 <tr>
                     <th>Analysis time</th>
@@ -35,7 +37,7 @@ export function AnalysisMetadataTable({ analysis }) {
                 <tr>
                     <th>Plugins</th>
                     <td>
-                        <PluginList plugins={analysis.options["plugins"]}/>
+                        <PluginList plugins={analysis.options["plugins"]} />
                     </td>
                 </tr>
             </tbody>

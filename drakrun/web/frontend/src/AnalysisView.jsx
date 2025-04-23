@@ -3,7 +3,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getAnalysisStatus } from "./api.js";
 import { CanceledError } from "axios";
 import { isStatusPending } from "./analysisStatus.js";
-import { AnalysisPendingView, AnalysisPendingStatusBox} from "./AnalysisPendingView.jsx";
+import {
+    AnalysisPendingView,
+    AnalysisPendingStatusBox,
+} from "./AnalysisPendingView.jsx";
 import { AnalysisReport } from "./AnalysisReport.jsx";
 
 function AnalysisViewComponent({ analysisId }) {

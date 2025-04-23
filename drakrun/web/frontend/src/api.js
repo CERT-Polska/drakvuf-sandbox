@@ -51,24 +51,28 @@ export async function getLog({ analysisId, logType, rangeStart, rangeEnd }) {
     return logRequest.data;
 }
 
-export async function getLogList({ analysisId }){
-    const logRequest = await axios.get(`/logs/${analysisId}`)
+export async function getLogList({ analysisId }) {
+    const logRequest = await axios.get(`/logs/${analysisId}`);
     return logRequest.data;
 }
 
-export async function uploadSample({file, timeout, file_name, plugins, start_command}) {
+export async function uploadSample({
+    file,
+    timeout,
+    file_name,
+    plugins,
+    start_command,
+}) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("timeout", timeout);
-    formData.append("plugins", JSON.stringify(plugins))
-    if(file_name)
-        formData.append("file_name", file_name);
-    if(start_command)
-        formData.append("start_command", start_command);
+    formData.append("plugins", JSON.stringify(plugins));
+    if (file_name) formData.append("file_name", file_name);
+    if (start_command) formData.append("start_command", start_command);
     const request = await axios.post("/upload", formData, {
         headers: {
-            "Content-Type": "multipart/form-data"
-        }
-    })
+            "Content-Type": "multipart/form-data",
+        },
+    });
     return request.data;
 }
