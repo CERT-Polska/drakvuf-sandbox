@@ -7,11 +7,11 @@ from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import magic
+import rq_dashboard
 from flask import Flask, Response, jsonify, request, send_file
 from orjson import orjson
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
-import rq_dashboard
 
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.file_metadata import FileMetadata
@@ -26,9 +26,11 @@ from .analysis_list import add_analysis_to_recent, get_recent_analysis_list
 app = Flask(__name__, static_folder="frontend/dist/assets")
 drakrun_conf = load_config()
 redis = get_redis_connection(drakrun_conf.redis)
-app.config.update({
-    "RQ_DASHBOARD_REDIS_URL": drakrun_conf.redis.make_url(),
-})
+app.config.update(
+    {
+        "RQ_DASHBOARD_REDIS_URL": drakrun_conf.redis.make_url(),
+    }
+)
 rq_dashboard.web.setup_rq_connection(app)
 app.register_blueprint(rq_dashboard.blueprint, url_prefix="/rq")
 
@@ -238,6 +240,7 @@ def metadata(task_uid):
 @app.route("/")
 def index():
     return send_file("frontend/dist/index.html")
+
 
 @app.route("/<path:path>")
 def catchall(path):
