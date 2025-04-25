@@ -209,8 +209,8 @@ Check if ``drakvuf`` and ``injector`` commands load correctly:
 
 .. _creating_windows_vm:
 
-Creating Windows VM snapshot
-============================
+Creating initial Windows VM snapshot
+====================================
 
 **Step 1: Initial Windows installation**
 
@@ -275,6 +275,77 @@ When VM looks ready, we can make an initial snapshot. To do this, run ``drakrun 
 
 .. code-block:: console
     $ drakrun postinstall
+
+This command will:
+
+* retrieve VMI kernel information
+* inject drakshell helper agent
+* take the reference snapshot (vm-0)
+* restore the analysis VM (vm-1)
+* retrieve VMI information from other system modules
+
+Don't worry if you see "FileNotFoundError" in logs, we'll fix that in further steps.
+
+.. _setting_up_windows_vm:
+
+Modifying Windows VM snapshot
+=============================
+
+Now, we have freshly installed Windows VM that is almost ready for analysis. In practice, such installation isn't
+best environment for executing files because of missing dependencies, pending updates that will execute in
+the background and so on.
+
+That's why we want to make another, better reference snapshot. To do this, let's enable the Internet first.
+
+To do this, change the line ``net_enable`` in ``/etc/drakrun/config.toml`` from "false" to "true".
+
+Then we can use ``drakrun modify-vm0`` utility.
+
+.. code-block:: console
+
+    $ drakrun modify-vm0
+    Usage: drakrun modify-vm0 [OPTIONS] COMMAND [ARGS]...
+
+      Modify base VM snapshot (vm-0)
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      begin     Safely restore vm-0 for modification
+      commit    Commit changes made during vm-0 modification
+      rollback  Rollback changes made during vm-0 modification
+
+Let's use ``drakrun modify-vm0 begin`` for restoring the VM and connect once again to the 5900 port using VNC client.
+
+.. code-block:: console
+
+    $ drakrun modify-vm0 begin
+
+At this point you might optionally install additional software. You can execute:
+
+    .. code-block:: console
+
+      $ draksetup mount /path/to/some-cd.iso
+
+which would mount a virtual CD disk containing additional software into your VM.
+
+Things that are highly recommended to do are:
+
+* turn off the User Account Control <put link here>
+* turn off the Windows Defender (be aware that it turns on automatically if you just switch it off in the Control Panel)
+* run Powershell at least once to speed-up its execution
+* install Visual C++ Redistributable in various versions <put link here>
+* install .NET Framework in various versions
+* generate .NET Framework native image cache e.g. by executing the following commands in the administrative prompt of your VM.
+
+  .. code-block:: bat
+
+      cd C:\Windows\Microsoft.NET\Framework\v4.0.30319
+      ngen.exe executeQueuedItems
+      cd C:\Windows\Microsoft.NET\Framework64\v4.0.30319
+      ngen.exe executeQueuedItems
+
 
 
 <<<<< CUT HERE >>>>>>
