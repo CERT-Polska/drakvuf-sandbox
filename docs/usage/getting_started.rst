@@ -32,8 +32,8 @@ First you need to perform Xen installation and install DRAKVUF engine itself. Of
 
 It's recommended to build components from sources to include latest patches that may be crucial for the stability of the system.
 
-* Xen 4.19.2 sources: https://downloads.xenproject.org/release/xen/4.19.2/
-* Drakvuf sources: https://github.com/tklengyel/drakvuf
+* Xen 4.19.2 sources: `https://downloads.xenproject.org/release/xen/4.19.2/ <https://downloads.xenproject.org/release/xen/4.19.2/>`_
+* Drakvuf sources: `https://github.com/tklengyel/drakvuf <https://github.com/tklengyel/drakvuf>`_
 
 Perform the Xen and DRAKVUF installation without installing Windows domain and creating JSON profiles. DRAKVUF Sandbox toolkit will assist you in creating
 the snapshot and its VMI profile. DRAKVUF Sandbox requires the following LibVMI/DRAKVUF CLI commands to be available in your PATH:
@@ -44,9 +44,7 @@ the snapshot and its VMI profile. DRAKVUF Sandbox requires the following LibVMI/
 * ``vmi-win-offsets``
 * ``vmi-process-list``
 
-It's required to perform all installation activities using ``root`` user.
-
-Below you can find the installation instruction that we've followed and it's working on fresh Debian 12 installation:
+It's required to perform all installation activities using ``root`` user. Below you can find the installation instruction that we've followed and it's working on fresh Debian 12 installation:
 
 First, install build dependencies and unpack Xen 4.19.2 sources
 
@@ -60,19 +58,23 @@ First, install build dependencies and unpack Xen 4.19.2 sources
     $ tar -xvzf xen-4.19.2.tar.gz
     $ cd xen-4.19.2
 
-Note from 2025-04-24: Xen refers to old Tianocore OVMF version that refers to broken subhook submodule URL (https://github.com/tianocore/edk2/commit/4dfdca63a93497203f197ec98ba20e2327e4afe4)
+.. note::
+    **Bug noted on 2025-04-24**: Xen refers to old Tianocore OVMF version that refers to `broken subhook submodule URL <https://github.com/tianocore/edk2/commit/4dfdca63a93497203f197ec98ba20e2327e4afe4>`_.
+    If you're affected by this bug, you'll be asked for Git credentials while running ``make -j4 dist-tools`` and build process will be interrupted.
 
-To overcome this issue, we changed the OVMF version to edk2-stable202408.01 by applying this patch to Config.mk:
+    To overcome this issue, we changed the OVMF version to edk2-stable202408.01 by applying this patch to ``Config.mk``:
 
-.. code-block:: diff
-   - OVMF_UPSTREAM_URL ?= https://xenbits.xen.org/git-http/ovmf.git
-   - OVMF_UPSTREAM_REVISION ?= ba91d0292e593df8528b66f99c1b0b14fadc8e16
-   + OVMF_UPSTREAM_URL ?= https://github.com/tianocore/edk2.git
-   + OVMF_UPSTREAM_REVISION ?= 4dfdca63a93497203f197ec98ba20e2327e4afe4
+    .. code-block:: diff
+
+       - OVMF_UPSTREAM_URL ?= https://xenbits.xen.org/git-http/ovmf.git
+       - OVMF_UPSTREAM_REVISION ?= ba91d0292e593df8528b66f99c1b0b14fadc8e16
+       + OVMF_UPSTREAM_URL ?= https://github.com/tianocore/edk2.git
+       + OVMF_UPSTREAM_REVISION ?= 4dfdca63a93497203f197ec98ba20e2327e4afe4
 
 Then build and install Xen:
 
 .. code-block:: console
+
     $ chmod +x ./configure
     $ ./configure --enable-githttp --enable-systemd --enable-ovmf --disable-pvshim
     $ make -j4 dist-xen
@@ -241,7 +243,7 @@ If you want to use defaults and qcow2 storage, download Windows installation ISO
 
 .. note::
 
-    If you have only 8GB RAM on your system, the default --memory 4096 setting may not fit in the memory
+    **Hint:** If you have only 8GB RAM on your system, the default --memory 4096 setting may not fit in the memory
     and you'll see "RuntimeError: Failed to launch VM vm-0" with "can't allocate low memory for domain: Out of memory"
     message in the logs above it. In this case, provide a smaller value.
 
@@ -257,9 +259,7 @@ We will change that later.
 
 .. note::
 
-    **Troubleshooting**
-
-    If you want to change or restore the VNC password, it is stored in plaintext in /etc/drakrun/install.json file.
+    **Troubleshooting**: If you want to change or restore the VNC password, it is stored in plaintext in /etc/drakrun/install.json file.
 
     Your VNC connection will be terminated after the VM reboots. In this case, just reconnect the VNC client.
 
@@ -274,6 +274,7 @@ After finished installation, log in the user on Windows to the desktop.
 When VM looks ready, we can make an initial snapshot. To do this, run ``drakrun postinstall``
 
 .. code-block:: console
+
     $ drakrun postinstall
 
 This command will:
@@ -346,7 +347,7 @@ Things that are highly recommended to do are:
       cd C:\Windows\Microsoft.NET\Framework64\v4.0.30319
       ngen.exe executeQueuedItems
 
-You can also install Xen PV drivers if you're experiencing performance issues (https://docs.xenserver.com/en-us/xenserver/8/vms/windows/vm-tools.html).
+You can also install `Xen PV drivers <https://docs.xenserver.com/en-us/xenserver/8/vms/windows/vm-tools.html>`_ if you're experiencing performance issues.
 However, keep in mind that making such modifications can alter your environment, making it different from a typical user's setup.
 This could potentially be exploited by malware as an indicator for sandbox detection.
 
@@ -366,7 +367,7 @@ If you have any problems and you want to rollback VM to the pre-begin state, use
 
 .. note::
 
-    If you want to cold-boot VM-0 that was spinned up via "modify-vm0 begin" e.g. after unexpected shutdown
+    **Hint:** If you want to cold-boot VM-0 that was spinned up via "modify-vm0 begin" e.g. after unexpected shutdown
     or other exceptional situation, you can use ``xl create /var/lib/drakrun/configs/vm-0.cfg`` to boot it up.
 
     These configuration files are generated on VM restore by drakrun.
@@ -441,7 +442,7 @@ Create /etc/systemd/system/drakrun-web.service file (use your virtualenv path in
     [Install]
     WantedBy=default.target
 
-You can also adapt the systemd template from https://docs.gunicorn.org/en/latest/deploy.html#systemd
+You can also adapt the systemd template from `Gunicorn documentation <https://docs.gunicorn.org/en/latest/deploy.html#systemd>`_
 
 Then create /etc/systemd/system/drakrun-worker@.service file
 
@@ -497,29 +498,29 @@ Building from sources
 
     $ git clone --recursive git@github.com:CERT-Polska/drakvuf-sandbox.git
 
-2. Build and install DRAKVUF from sources just like in :ref:`Basic installation` section.
+2. Build and install DRAKVUF from sources just like in :ref:`Basic installation <basic_installation>` section.
 
 3. Install DRAKVUF Sandbox system dependencies
 
-    .. code-block:: console
+  .. code-block:: console
 
-      $ apt install tcpdump genisoimage qemu-utils bridge-utils dnsmasq libmagic1
+    $ apt install tcpdump genisoimage qemu-utils bridge-utils dnsmasq libmagic1
 
 4. Install additional Web build dependencies
 
-    .. code-block:: console
+  .. code-block:: console
 
-      $ apt install nodejs npm
+    $ apt install nodejs npm
 
 5. Make and install DRAKVUF Sandbox Python wheel. It's highly recommended to use `virtualenv <https://docs.python.org/3/library/venv.html>`_.
 
-    .. code-block:: console
+  .. code-block:: console
 
-      $ python3 -m venv venv
-      $ source venv/bin/activate
-      $ cd drakrun
-      $ make
-      $ make install
+    $ python3 -m venv venv
+    $ source venv/bin/activate
+    $ cd drakrun
+    $ make
+    $ make install
 
-6. Follow the rest of instructions, starting from :ref:`_creating_windows_vm`
+6. Follow the rest of instructions, starting from :ref:`Creating initial Windows VM <creating_windows_vm>`
 
