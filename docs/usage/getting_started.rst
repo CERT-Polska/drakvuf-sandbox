@@ -5,16 +5,13 @@ Getting started
 Supported hardware & software
 =============================
 
-In order to run DRAKVUF Sandbox, your setup must fullfill all of the listed requirements:
+In order to run DRAKVUF Sandbox, your setup must fulfill all of the listed requirements:
 
 * Processor: Intel processor with VT-x and EPT features (:ref:`how to check <check-cpu>`).
-* Host system: Debian 11 Bullseye/Ubuntu 20.04 Focal with at least 2 core CPU and 5 GB RAM, running GRUB as bootloader.
-* Guest system: Windows 7 (x64), Windows 10 (x64; experimental support)
-
-DRAKVUF Sandbox toolkit is based on `Karton project <https://karton-core.readthedocs.io/en/latest/>`_ so it also requires:
-
-* Redis server
-* S3 object storage, most recommended is `MinIO <https://min.io/>`_
+* Host system: Debian 12 Bookworm/Ubuntu 22.04 (Jammy Jellyfish) with at least 2 core CPU and 8 GB RAM, running GRUB as bootloader.
+* Host linux kernel version: 5.11+ recommended
+* Guest system: Windows 10 (x64, 22H2 recommended), Windows 7 (x64)
+* Hypervisor: Xen (at least 4.17, 4.19 recommended)
 
 Nested virtualization:
 
@@ -26,14 +23,258 @@ Nested virtualization:
 
 .. _basic_installation:
 
-Basic installation
-==================
+First steps: Basic installation
+===============================
 
-This instruction assumes that you want to create a single-node installation with the default components, which is recommended for beginners.
+**Step 1. Installation of Xen Hypervisor and DRAKVUF engine**
 
-It's also recommended to perform all installation activities using ``root`` user.
+First you need to perform Xen installation and install DRAKVUF engine itself. Official DRAKVUF installation instruction can be found on https://drakvuf.com/
 
-**Step 1. Installation of DRAKVUF engine and basic dependencies**
+It's recommended to build components from sources to include latest patches that may be crucial for the stability of the system.
+
+* Xen 4.19.2 sources: https://downloads.xenproject.org/release/xen/4.19.2/
+* Drakvuf sources: https://github.com/tklengyel/drakvuf
+
+Perform the Xen and DRAKVUF installation without installing Windows domain and creating JSON profiles. DRAKVUF Sandbox toolkit will assist you in creating
+the snapshot and its VMI profile. DRAKVUF Sandbox requires the following LibVMI/DRAKVUF CLI commands to be available in your PATH:
+
+* ``drakvuf``
+* ``injector``
+* ``vmi-win-guid``
+* ``vmi-win-offsets``
+* ``vmi-process-list``
+
+It's required to perform all installation activities using ``root`` user.
+
+Below you can find the installation instruction that we've followed and it's working on fresh Debian 12 installation:
+
+First, install build dependencies and unpack Xen 4.19.2 sources
+
+.. code-block:: console
+
+    $ apt update
+    $ apt-get install wget git bcc bin86 gawk bridge-utils iproute2 libcurl4-openssl-dev bzip2 libpci-dev build-essential make gcc clang libc6-dev linux-libc-dev zlib1g-dev libncurses5-dev patch libvncserver-dev libssl-dev libsdl1.2-dev iasl libbz2-dev e2fslibs-dev git-core uuid-dev ocaml libx11-dev bison flex ocaml-findlib xz-utils gettext libyajl-dev libpixman-1-dev libaio-dev libfdt-dev cabextract libglib2.0-dev autoconf automake libtool libjson-c-dev libfuse-dev liblzma-dev autoconf-archive kpartx python3-dev python3-pip golang libsystemd-dev nasm ninja-build llvm lld meson
+
+    $ cd /opt
+    $ wget https://downloads.xenproject.org/release/xen/4.19.2/xen-4.19.2.tar.gz
+    $ tar -xvzf xen-4.19.2.tar.gz
+    $ cd xen-4.19.2
+
+Note from 2025-04-24: Xen refers to old Tianocore OVMF version that refers to broken subhook submodule URL (https://github.com/tianocore/edk2/commit/4dfdca63a93497203f197ec98ba20e2327e4afe4)
+
+To overcome this issue, we changed the OVMF version to edk2-stable202408.01 by applying this patch to Config.mk:
+
+.. code-block:: diff
+   - OVMF_UPSTREAM_URL ?= https://xenbits.xen.org/git-http/ovmf.git
+   - OVMF_UPSTREAM_REVISION ?= ba91d0292e593df8528b66f99c1b0b14fadc8e16
+   + OVMF_UPSTREAM_URL ?= https://github.com/tianocore/edk2.git
+   + OVMF_UPSTREAM_REVISION ?= 4dfdca63a93497203f197ec98ba20e2327e4afe4
+
+Then build and install Xen:
+
+.. code-block:: console
+    $ chmod +x ./configure
+    $ ./configure --enable-githttp --enable-systemd --enable-ovmf --disable-pvshim
+    $ make -j4 dist-xen
+    $ make -j4 dist-tools
+    $ make -j4 debball
+    $ apt install ./dist/xen-upstream-4.19.2.deb
+
+Then set default Xen cmdline to run Xen with Dom0 getting 4GB RAM assigned and two dedicated CPU cores (tune it as preferred):
+
+.. code-block:: console
+
+    $ echo "GRUB_CMDLINE_XEN_DEFAULT=\"dom0_mem=4096M,max:4096M dom0_max_vcpus=2 dom0_vcpus_pin=1 force-ept=1 ept=ad=0 hap_1gb=0 hap_2mb=0 altp2m=1 hpet=legacy-replacement smt=0\"" >> /etc/default/grub
+    $ echo "/usr/local/lib" > /etc/ld.so.conf.d/xen.conf
+    $ ldconfig
+
+Then enable necessary Xen modules, update GRUB and reboot system to Xen
+
+.. code-block:: console
+
+    $ echo "none /proc/xen xenfs defaults,nofail 0 0" >> /etc/fstab
+    $ echo "xen-evtchn" >> /etc/modules
+    $ echo "xen-privcmd" >> /etc/modules
+    $ echo "xen-gntdev" >> /etc/modules
+    $ systemctl enable xencommons.service
+    $ systemctl enable xen-qemu-dom0-disk-backend.service
+    $ systemctl enable xen-init-dom0.service
+    $ systemctl enable xenconsoled.service
+    $ update-grub
+    $ reboot
+
+Once you are booted into Xen, verify that everything works as such:
+
+.. code-block:: console
+
+    $ xen-detect
+
+    Running in PV context on Xen V4.19.
+
+    $ xl list
+
+    Name                                        ID   Mem VCPUs	State	Time(s)
+    Domain-0                                     0  4096     2     r-----       6.9
+
+Since your Xen installation is ready, install Drakvuf engine, starting from installation of LibVMI:
+
+.. code-block:: console
+
+    $ git clone --recursive https://github.com/tklengyel/drakvuf
+    $ cd drakvuf/libvmi
+    $ autoreconf -vif
+    $ ./configure --disable-kvm --disable-bareflank --disable-file
+    $ make
+    $ make install
+    $ echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/usr/local/lib" >> ~/.bashrc
+    $ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+    $ ldconfig
+
+Check if ``vmi-win-guid`` command loads correctly
+
+.. code-block:: console
+
+    $ vmi-win-guid
+    Usage: vmi-win-guid name|domid <domain name|domain id> [<socket>]
+
+Then install DRAKVUF itself:
+
+.. code-block:: console
+
+    $ cd /opt/drakvuf
+    $ meson setup build --native-file llvm.ini
+    $ ninja -C build
+    $ mv build/drakvuf build/injector /usr/local/bin/
+
+Check if ``drakvuf`` and ``injector`` commands load correctly:
+
+.. code-block:: console
+
+    $ drakvuf
+    1745511832.661881 DRAKVUF v1.1-f46a733 Copyright (C) 2014-2024 Tamas K Lengyel
+    No domain name specified (-d)!
+
+    $ injector
+    DRAKVUF injector v1.1-f46a733 Copyright (C) 2014-2024 Tamas K Lengyel
+    Required input:
+      ... (truncated help message)
+
+**Step 2. Installation of DRAKVUF Sandbox**
+
+1. Install additional DRAKVUF Sandbox dependencies
+
+.. code-block:: console
+
+    $ apt update
+    $ apt install iptables tcpdump dnsmasq qemu-utils bridge-utils libmagic1 python3-venv redis-server
+
+2. Prepare virtualenv
+
+.. code-block:: console
+
+    $ cd /opt
+    $ python3 -m venv venv
+    $ . venv/bin/activate
+    $ pip install wheel
+
+3. Install DRAKVUF Sandbox package
+
+.. code-block:: console
+    $ pip install drakvuf-sandbox
+
+4. ``drakrun`` command should be available within created virtualenv
+
+.. code-block:: console
+
+    $ drakrun
+    Usage: drakrun [OPTIONS] COMMAND [ARGS]...
+
+    Options:
+        --help  Show this message and exit.
+
+    Commands:
+        analyze          Run a CLI analysis using Drakvuf
+        drakshell        Run drakshell session
+        drakvuf-cmdline  Get base Drakvuf cmdline
+        injector         Copy files and execute commands on VM using injector
+        install          Install guest Virtual Machine
+        make-profile     Make VMI profile
+        modify-vm0       Modify base VM snapshot (vm-0)
+        mount            Mount ISO into guest
+        postinstall      Finalize VM installation
+        postprocess      Run postprocessing on analysis output
+        vm-start         Start VM from snapshot
+        vm-stop          Stop VM and cleanup network
+        worker           Start drakrun analysis worker
+
+.. _creating_windows_vm:
+
+Creating Windows VM snapshot
+============================
+
+**Step 1: Initial Windows installation**
+
+After all tools are installed correctly, we can proceed to actual VM installation. The command that start VM installation is ``drakrun install``.
+
+.. code-block:: console
+
+    $ drakrun install
+    Usage: drakrun install [OPTIONS] ISO_PATH
+
+    Install guest Virtual Machine
+
+    Options:
+      --vcpus INTEGER                 Number of vCPUs per single VM  [default: 2]
+      --memory INTEGER                Memory per single VM (in MB)  [default:
+                                      4096]
+      --storage-backend [qcow2|zfs|lvm]
+                                      Storage backend type  [default: qcow2]
+      --disk-size TEXT                Disk size  [default: 100G]
+      --zfs-tank-name TEXT            Tank name (only for ZFS storage backend)
+      --lvm-volume-group TEXT         Volume group (only for lvm storage backend)
+      --help                          Show this message and exit.
+
+If you want to use defaults and qcow2 storage, download Windows installation ISO file into Dom0 and run:
+
+.. code-block:: console
+    $ drakrun install ./Win10_22H2.iso
+
+.. note::
+
+    If you have only 8GB RAM on your system, the default --memory 4096 setting may not fit in the memory
+    and you'll see "RuntimeError: Failed to launch VM vm-0" with "can't allocate low memory for domain: Out of memory"
+    message in the logs above it. In this case, provide a smaller value.
+
+    If you are struggling with another type of error, check out the /var/log/xen directory for extra logs, especially
+    these ending with vm-0.log.
+
+This command will initialize all necessary configuration files and will create the template VM called **vm-0**.
+
+Then proceed to Windows installation via VNC client connected to <ip>:5900, with password provided in the message.
+
+Initial configuration turns off the Internet access for the VM to not be bothered with setting up a Microsoft account.
+We will change that later.
+
+.. note::
+
+    **Troubleshooting**
+
+    If you want to change or restore the VNC password, it is stored in plaintext in /etc/drakrun/install.json file.
+
+    Your VNC connection will be terminated after the VM reboots. In this case, just reconnect the VNC client.
+
+    If you can't, check if vm-0 is running using **xl list**. If you can't find it there, check the logs in /var/log/xen for possible errors.
+
+    When you're ready to recover the VM: run ``xl create /var/lib/drakrun/configs/vm-0.cfg`` to cold boot the VM manually.
+
+After finished installation, log in the user on Windows to the desktop.
+
+**Step 2: Making initial snapshot and VMI profile**
+
+
+
+<<<<< CUT HERE >>>>>>
+
 
 1. Download `latest release assets <https://github.com/CERT-Polska/drakvuf-sandbox/releases>`_.
 2. Install DRAKVUF:
