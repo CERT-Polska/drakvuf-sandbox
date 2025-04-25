@@ -1,4 +1,5 @@
 import logging
+import os.path
 import secrets
 import string
 
@@ -100,6 +101,8 @@ def install(
     vm0.destroy()
 
     backend.initialize_vm0_volume(disk_size)
+
+    iso_path = os.path.abspath(iso_path)
     vm0.create(iso_path=iso_path)
 
     log.info("-" * 80)
