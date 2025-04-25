@@ -523,4 +523,3 @@ Building from sources
     $ make install
 
 6. Follow the rest of instructions, starting from :ref:`Creating initial Windows VM <creating_windows_vm>`
-
