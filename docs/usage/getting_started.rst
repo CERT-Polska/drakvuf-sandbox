@@ -286,7 +286,7 @@ This command will:
 
 Don't worry if you see "FileNotFoundError" in logs, we'll fix that in further steps.
 
-.. _setting_up_windows_vm:
+.. _modifying_windows_vm:
 
 Modifying Windows VM snapshot
 =============================
@@ -326,7 +326,7 @@ At this point you might optionally install additional software. You can execute:
 
     .. code-block:: console
 
-      $ draksetup mount /path/to/some-cd.iso
+      $ drakrun mount /path/to/some-cd.iso
 
 which would mount a virtual CD disk containing additional software into your VM.
 
@@ -346,7 +346,55 @@ Things that are highly recommended to do are:
       cd C:\Windows\Microsoft.NET\Framework64\v4.0.30319
       ngen.exe executeQueuedItems
 
+You can also install Xen PV drivers if you're experiencing performance issues (https://docs.xenserver.com/en-us/xenserver/8/vms/windows/vm-tools.html).
+However, keep in mind that making such modifications can alter your environment, making it different from a typical user's setup.
+This could potentially be exploited by malware as an indicator for sandbox detection.
 
+If your VM is ready to go, run ``drakrun modify-vm0 commit``
+
+.. code-block:: console
+
+    $ drakrun modify-vm0 commit
+
+It does similar thing as ``drakrun postinstall`` by safely applying your changes onto reference snapshot and recreating VM profile.
+
+If you have any problems and you want to rollback VM to the pre-begin state, use ``rollback`` subcommand:
+
+.. code-block:: console
+
+    $ drakrun modify-vm0 rollback
+
+.. note::
+
+    If you want to cold-boot VM-0 that was spinned up via "modify-vm0 begin" e.g. after unexpected shutdown
+    or other exceptional situation, you can use ``xl create /var/lib/drakrun/configs/vm-0.cfg`` to boot it up.
+
+    These configuration files are generated on VM restore by drakrun.
+
+Checking if Drakvuf works correctly
+===================================
+
+To ensure that everything works, use ``drakrun vm-start`` command to start the vm-1. You can also connect via VNC to the
+port 5901 to check if the Windows is in correct state.
+
+Then, run drakvuf tool with "procmon" plugin. Drakvuf Sandbox will help you do that by generating a base command-line.
+
+.. code-block::
+
+    $ drakrun drakvuf-cmdline
+    drakvuf -o json -F -k 0x1aa002 -r /var/lib/drakrun/profiles/kernel.json -d vm-1 --json-ntdll /var/lib/drakrun/profiles/native_ntdll_profile.json --json-wow /var/lib/drakrun/profiles/wow64_ntdll_profile.json --json-win32k /var/lib/drakrun/profiles/native_win32k_profile.json --json-kernel32 /var/lib/drakrun/profiles/native_kernel32_profile.json --json-wow-kernel32 /var/lib/drakrun/profiles/wow64_kernel32_profile.json --json-tcpip /var/lib/drakrun/profiles/native_tcpip_profile.json --json-sspicli /var/lib/drakrun/profiles/native_sspicli_profile.json --json-kernelbase /var/lib/drakrun/profiles/native_kernelbase_profile.json --json-iphlpapi /var/lib/drakrun/profiles/native_iphlpapi_profile.json --json-mpr /var/lib/drakrun/profiles/native_mpr_profile.json --json-clr /var/lib/drakrun/profiles/native_clr_profile.json
+    $ $(drakrun drakvuf-cmdline) -a procmon
+
+After running the second command, you should see a stream of JSONs from "procmon" plugin. You can try to run new processes via VNC to check if Windows is responsive and you're correctly notified about new events.
+
+If you finished, press CTRL-C to interrupt the Drakvuf trace and then destroy the VM using ``drakrun vm-stop`` command.
+
+.. code-block::
+
+    $ drakrun vm-stop
+
+Setting up analysis queue and web UI
+====================================
 
 <<<<< CUT HERE >>>>>>
 
