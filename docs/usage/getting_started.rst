@@ -393,148 +393,100 @@ If you finished, press CTRL-C to interrupt the Drakvuf trace and then destroy th
 
     $ drakrun vm-stop
 
-Setting up analysis queue and web UI
-====================================
+Setting up analysis worker and web UI
+=====================================
 
-<<<<< CUT HERE >>>>>>
+An important components of every sandbox are analysis queue, API and dashboard. v0.19.0 comes with Flask-based web application and rq-based worker for running analyses.
+
+If you want to quickly start the whole stack, run these two commands in separate shells:
+
+.. code-block:: console
+
+    $ drakrun worker --vm-id 1
+
+    $ flask --app drakrun.web.app:app run --with-threads --host 0.0.0.0
+
+The first command starts a worker that executes analyses using Drakvuf. The second command starts a web server on port :5000. Both elements communicate using Redis server that is running by default on localhost:6379.
+
+But you probably see the warnings about "development" server and you suspect that this is not how production setup should be built. Therefore recommended setup is to use the production-ready WSGI server like Gunicorn.
+
+.. code-block:: console
+
+    $ pip install gunicorn
+
+    $ gunicorn -w 4 drakrun.web.app:app -b 0.0.0.0:5000
+
+Instead of running it in the terminal session, you can create systemd services that will run the web and the worker parts in the background.
+
+Create /etc/systemd/system/drakrun-web.service file (use your virtualenv path instead of ``/opt/venv``)
+
+.. code-block:: ini
+
+    [Unit]
+    Description=Drakrun web service
+    After=network.target
+
+    [Service]
+    Type=simple
+    ExecStart=/opt/venv/bin/gunicorn -w 4 drakrun.web.app:app -b 0.0.0.0:5000
+    User=root
+    Group=root
+    Restart=on-failure
+    RestartSec=5
+    StartLimitInterval=60s
+    StartLimitBurst=0
+    WorkingDirectory=/var/lib/drakrun
+    KillMode=process
+
+    [Install]
+    WantedBy=default.target
+
+You can also adapt the systemd template from https://docs.gunicorn.org/en/latest/deploy.html#systemd
+
+Then create /etc/systemd/system/drakrun-worker@.service file
+
+.. code-block:: ini
+
+    [Unit]
+    Description=Drakvuf-Sandbox worker service
+    After=network.target
+
+    [Service]
+    Type=simple
+    ExecStart=/opt/venv/bin/drakrun worker --vm-id %i
+    User=root
+    Group=root
+    Restart=on-failure
+    RestartSec=5
+    StartLimitInterval=60s
+    StartLimitBurst=0
+    WorkingDirectory=/var/lib/drakrun
+    KillMode=process
+    TimeoutStopSec=120
+
+    [Install]
+    WantedBy=default.target
 
 
-1. Download `latest release assets <https://github.com/CERT-Polska/drakvuf-sandbox/releases>`_.
-2. Install DRAKVUF:
+.. code-block:: console
 
-    .. code-block:: console
+    $ systemctl daemon-reload
+    $ systemctl enable drakrun-web
+    $ systemctl start drakrun-web
 
-      $ apt update
-      $ apt install ./drakvuf-bundle*.deb
-      $ reboot
+    $ systemctl enable drakrun-worker@1
+    $ systemctl start drakrun-worker@1
 
-3. Install DRAKVUF Sandbox system dependencies
-
-    .. code-block:: console
-    
-      $ apt install tcpdump genisoimage qemu-utils bridge-utils dnsmasq libmagic1
-
-4. Install DRAKVUF Sandbox Python wheel. It's highly recommended to use `virtualenv <https://docs.python.org/3/library/venv.html>`_.
-
-    .. code-block:: console
-
-      $ python3 -m venv venv
-      $ source venv/bin/activate
-      $ pip install ./drakvuf_sandbox*.whl
-
-5. Check if your Xen installation is compliant. This command should print "All tests passed":
-
-    .. code-block:: console
-    
-      $ draksetup test
-
-**Step 2. Redis, MinIO and Drakvuf Sandbox configuration**
-
-6. Redis configuration can be done just by installing ``redis-server`` package from apt.
-
-    .. code-block:: console
-
-      $ apt install redis-server
-
-7. For MinIO, we recommend to follow installation instructions in `MinIO documentation (Deploy: MinIO Single-Node Single-Drive) <https://min.io/docs/minio/linux/operations/install-deploy-manage/deploy-minio-single-node-single-drive.html>`_.
-
-    If you're too busy to bother with MinIO installation or you just want to quickly setup Drakvuf Sandbox for testing/development, you can also use
-    draksetup quick MinIO installer. Just keep in mind that it's not really recommended for production usage.
-
-        .. code-block:: console
-
-          $ draksetup install-minio
-
-8. After setting up Redis and MinIO, you're finally ready to configure your DRAKVUF Sandbox installation using ``draksetup init``
-
-    In the process, you'll be asked for Redis and MinIO connection details.
-
-        .. code-block:: console
-
-          $ draksetup init
-
-          [2024-07-01 09:17:59,091][INFO] /etc/drakrun/config.ini already created.
-          Provide redis hostname [...]:
-          Provide redis port [...]:
-          Provide S3 (MinIO) address [...]:
-          Provide S3 (MinIO) access key [...]:
-          Provide S3 (MinIO) secret key [...]:
-
-    If your S3 storage uses secure (TLS) connection, run ``draksetup init --s3-secure``
-
-9. Finally, review configuration file ``cat /etc/drakrun/config.ini`` and check if all settings are suitable for your environment
+If you want to run more VMs in parallel, you can also enable and start services ``drakrun-worker@2``, ``drakrun-worker@3`` and so on,
+depending on the available resources on your machine. Each worker will run analyses on ``vm-%i``, so e.g. ``drakrun-worker@10`` will use ``vm-10``.
 
 .. note::
 
-    If you want to configure Drakvuf Sandbox to work with existing Karton configuration from the start,
-    you can omit configuring ``drak-system`` service by running ``draksetup init`` with these flags:
+    You can harden your installation by dropping the permissions of drakrun-web from root to less privileged user.
 
-    .. code-block:: console
+    Just make sure that it has read-write access to ``/var/lib/drakrun/analyses``.
 
-        $ draksetup init --only web --only drakrun
-
-**Step 3. Windows installation**
-
-10. Execute:
-
-    .. code-block:: console
-
-      # draksetup install /opt/path_to_windows.iso
-
-   Read the command's output carefully. This command will run a virtual machine with Windows system installation process.
-   
-   **Customize vCPUs/memory:** You can pass additional options in order to customize number of vCPUs (``--vcpus <number>``) and amount of memory (``--memory <num_mbytes>``) per single VM. For instance: ``--vcpus 1 --memory 2048``.
-   
-   *Recommended minimal values that are known to work properly with DRAKVUF Sandbox:*
-
-   +-----------------+---------------+-------------+
-   | System version  | Minimal vCPUs | Minimal RAM |
-   +=================+===============+=============+
-   | Windows 7       | 1             | 1536        |
-   +-----------------+---------------+-------------+
-   | Windows 10      | 2             | 3072        |
-   +-----------------+---------------+-------------+
-   
-   **Unattended installation:** If you have ``autounattend.xml`` matching your Windows ISO, you can request unattended installation by adding ``--unattended-xml /path/to/autounattend.xml``. Unattended install configuration can be generated with `Windows Answer File Generator <https://www.windowsafg.com/win10x86_x64.html>`_.
-   
-  .. note::
-   By default, DRAKVUF Sandbox will store virtual machine's HDD in a ``qcow2`` file. If you want to use ZFS instead, please check the :ref:`ZFS storage backend<zfs-backend>` docs.
-
-11. Use VNC to connect to the installation process:
-
-    .. code-block:: console
-
-      $ vncviewer localhost:5900
-
-12. Perform Windows installation until you are booted to the desktop.
-
-13. **Optional:** At this point you might optionally install additional software. You can execute:
-
-    .. code-block:: console
-
-      # draksetup mount /path/to/some-cd.iso
-
-   which would mount a virtual CD disk containing additional software into your VM.
-
-14. **Optional:** Generate .NET Framework native image cache by executing the following commands in the administrative prompt of your VM.
-
-    .. code-block:: bat
-
-      cd C:\Windows\Microsoft.NET\Framework\v4.0.30319
-      ngen.exe executeQueuedItems
-      cd C:\Windows\Microsoft.NET\Framework64\v4.0.30319
-      ngen.exe executeQueuedItems
-
-15. In order to finalize the VM setup process, execute:
-
-  .. code-block:: console
-
-    # draksetup postinstall
-
-  .. note ::
-    Add ``--no-report`` if you don't want ``draksetup`` to send `basic usage report <https://github.com/CERT-Polska/drakvuf-sandbox/blob/master/USAGE_STATISTICS.md>`_. 
-
-16. Test your installation by navigating to the web interface ( http://localhost:6300/ ) and uploading some samples. The default analysis time is 10 minutes.
+    drakrun-worker needs root permissions to work properly
 
 Building from sources
 =====================
@@ -545,7 +497,7 @@ Building from sources
 
     $ git clone --recursive git@github.com:CERT-Polska/drakvuf-sandbox.git
 
-2. Build and install Drakvuf from sources using `instructions from the official Drakvuf documentation <https://drakvuf.com/>`_. It's recommended to use version pinned to the submodule.
+2. Build and install DRAKVUF from sources just like in :ref:`Basic installation` section.
 
 3. Install DRAKVUF Sandbox system dependencies
 
@@ -569,4 +521,5 @@ Building from sources
       $ make
       $ make install
 
-6. Follow the :ref:`Basic installation` starting from the Step 2. Redis, MinIO and Drakvuf Sandbox configuration.
+6. Follow the rest of instructions, starting from :ref:`_creating_windows_vm`
+
