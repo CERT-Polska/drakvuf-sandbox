@@ -271,6 +271,10 @@ After finished installation, log in the user on Windows to the desktop.
 
 **Step 2: Making initial snapshot and VMI profile**
 
+When VM looks ready, we can make an initial snapshot. To do this, run ``drakrun postinstall``
+
+.. code-block:: console
+    $ drakrun postinstall
 
 
 <<<<< CUT HERE >>>>>>
