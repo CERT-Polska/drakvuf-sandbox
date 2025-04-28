@@ -135,7 +135,7 @@ typedef struct _OVERLAPPED {
 
 #define WINAPI __attribute__((ms_abi))
 
-typedef int (WINAPI* PCreateThread)(
+typedef HANDLE (WINAPI* PCreateThread)(
     LPVOID lpThreadAttributes,
     SIZE_T dwStackSize,
     LPVOID lpStartAddress,
