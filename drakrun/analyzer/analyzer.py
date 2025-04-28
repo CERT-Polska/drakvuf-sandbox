@@ -5,6 +5,8 @@ import pathlib
 import subprocess
 from typing import Any, Dict, List, Optional, Protocol
 
+import mslex
+
 from drakrun.lib.config import NetworkConfigSection, load_config
 from drakrun.lib.drakshell import Drakshell
 from drakrun.lib.injector import Injector
@@ -187,14 +189,22 @@ def analyze_file(
             if substatus_callback is not None:
                 substatus_callback(AnalysisSubstatus.analyzing, updated_options=options)
 
+            if options.start_command is not None:
+                exec_cmd = mslex.join(options.start_command, for_cmd=False)
+            else:
+                # If we don't inject the command to run:
+                # evacuate the drakshell before running anything
+                drakshell.finish()
+                exec_cmd = None
+
             with run_tcpdump(network_info, tcpdump_file), run_drakvuf(
-                vm.vm_name, vmi_info, kernel_profile_path, drakmon_file, drakvuf_args
+                vm.vm_name,
+                vmi_info,
+                kernel_profile_path,
+                drakmon_file,
+                drakvuf_args,
+                exec_cmd=exec_cmd,
             ) as drakvuf:
-                if options.start_command is not None:
-                    log.info(f"Running command: {guest_path}.")
-                    drakshell.run([guest_path], terminate_drakshell=True)
-                else:
-                    drakshell.finish()
                 log.info("Analysis started...")
                 try:
                     # -t should be respected, but let's give 30 more secs
