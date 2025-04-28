@@ -239,7 +239,7 @@ PBuildCommDCB pBuildCommDCB;
 bool load_winapi() {
     HANDLE hKernel32, hUser32;
 
-	pCreateThread = get_func_from_peb(L"kernel32.dll", "CreateThread");
+    pCreateThread = get_func_from_peb(L"kernel32.dll", "CreateThread");
     pLoadLibraryW = get_func_from_peb(L"kernel32.dll", "LoadLibraryW");
     pGetProcAddress = get_func_from_peb(L"kernel32.dll", "GetProcAddress");
     if(!pLoadLibraryW || !pGetProcAddress) {
