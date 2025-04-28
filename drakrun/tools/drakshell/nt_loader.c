@@ -204,6 +204,7 @@ void* get_func_from_peb(const wchar_t* libraryName, const char* procName)
     return NULL;
 }
 
+PCreateThread pCreateThread;
 PLoadLibraryW pLoadLibraryW;
 PGetProcAddress pGetProcAddress;
 PMessageBoxA pMessageBoxA;
