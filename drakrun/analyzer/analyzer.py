@@ -21,7 +21,7 @@ from drakrun.lib.paths import (
 from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command
 from .postprocessing import postprocess_output_dir
-from .run_tools import run_drakvuf, run_tcpdump, run_vm
+from .run_tools import run_drakvuf, run_tcpdump, run_vm, wait_until_file_not_empty
 from .startup_command import get_startup_argv, get_target_filename_from_sample_path
 
 log = logging.getLogger(__name__)
@@ -190,6 +190,7 @@ def analyze_file(
             with run_tcpdump(network_info, tcpdump_file), run_drakvuf(
                 vm.vm_name, vmi_info, kernel_profile_path, drakmon_file, drakvuf_args
             ) as drakvuf:
+                wait_until_file_not_empty(drakmon_file, 15)
                 if options.start_command is not None:
                     log.info(f"Running command: {guest_path}.")
                     drakshell.run([guest_path], terminate_drakshell=True)

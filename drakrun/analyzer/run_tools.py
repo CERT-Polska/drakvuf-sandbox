@@ -1,6 +1,7 @@
 import contextlib
 import pathlib
 import subprocess
+import time
 from typing import List
 
 from drakrun.lib.config import NetworkConfigSection
@@ -70,3 +71,18 @@ def run_vm(
             yield vm
         finally:
             vm.destroy()
+
+
+def wait_until_file_not_empty(file_path: pathlib.Path, timeout: int):
+    start_time = time.time()
+    with file_path.open("rb") as f:
+        while True:
+            buf = f.read(1)
+            if buf:
+                return True
+            end_time = time.time()
+            if end_time - start_time > timeout:
+                raise RuntimeError(
+                    f"Reached timeout while waiting for output in {file_path.as_posix()}"
+                )
+            time.sleep(0.5)
