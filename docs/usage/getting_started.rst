@@ -182,6 +182,7 @@ Check if ``drakvuf`` and ``injector`` commands load correctly:
 3. Install DRAKVUF Sandbox package
 
 .. code-block:: console
+
     $ pip install drakvuf-sandbox
 
 4. ``drakrun`` command should be available within created virtualenv
@@ -239,6 +240,7 @@ After all tools are installed correctly, we can proceed to actual VM installatio
 If you want to use defaults and qcow2 storage, download Windows installation ISO file into Dom0 and run:
 
 .. code-block:: console
+
     $ drakrun install ./Win10_22H2.iso
 
 .. note::

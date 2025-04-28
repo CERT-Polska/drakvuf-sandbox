@@ -38,7 +38,6 @@ latex_engine = 'xelatex'
 # ones.
 extensions = [
     "sphinx_rtd_theme",
-    "IPython.sphinxext.ipython_console_highlighting",
     "sphinx.ext.graphviz",
 ]
 

@@ -17,7 +17,6 @@ It's highly recommended to have a basic knowledge about Xen hypervisor that woul
    usage/getting_started
    usage/optional_features
    usage/managing_snapshots
-   usage/scaling
    usage/troubleshooting
    usage/upgrading
    usage/integration
