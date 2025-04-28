@@ -735,7 +735,7 @@ static bool send_info(HANDLE hComm) {
     return true;
 }
 
-void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshell_loop(HANDLE hComm) {
+void __attribute__((noinline)) __attribute__((ms_abi)) drakshell_loop(HANDLE hComm) {
     while(true) {
         BYTE control = 0;
         if(!recv_control(hComm, &control)) {
