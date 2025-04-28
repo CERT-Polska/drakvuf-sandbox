@@ -869,7 +869,7 @@ void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshel
         drakshell_loop,
         (void*)hComm,
         0, NULL
-    )
+    );
     WaitForSingleObject(hThread, (DWORD)-1);
 	CloseHandle(hThread);
 
