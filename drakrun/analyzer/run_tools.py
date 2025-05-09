@@ -1,7 +1,7 @@
 import contextlib
 import pathlib
 import subprocess
-from typing import List
+from typing import List, Optional
 
 from drakrun.lib.config import NetworkConfigSection
 from drakrun.lib.drakvuf_cmdline import get_base_drakvuf_cmdline
@@ -38,11 +38,13 @@ def run_drakvuf(
     kernel_profile_path: str,
     output_file: pathlib.Path,
     drakvuf_args: List[str],
+    exec_cmd: Optional[str] = None,
 ):
     drakvuf_cmdline = get_base_drakvuf_cmdline(
         vm_name,
         kernel_profile_path,
         vmi_info,
+        exec_cmd=exec_cmd,
         extra_args=drakvuf_args,
     )
 
