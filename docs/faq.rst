@@ -11,7 +11,7 @@ none of the popular "instance" services were able to run DRAKVUF.
 If you're interested to learn more about underlying problems see `relevant issues on GitHub <https://github.com/CERT-Polska/drakvuf-sandbox/issues?q=label%3Anested>`_.
 
 However, this doesn't mean that cloud deployment is impossible. You can still leverage modern
-deployment techniques and IaC (infrastracture as code) using bare metal servers.
+deployment techniques and IaC (infrastructure as code) using bare metal servers.
 
 Tested service providers:
 
@@ -46,7 +46,7 @@ If both flags are present, you're good to go.
 I have an AMD CPU which supports NPT. Can I run DRAKVUF Sandbox?
 ----------------------------------------------------------------
 
-DRAKVUF is tightly coupled with `alpt2m <https://xenproject.org/2016/04/13/stealthy-monitoring-with-xen-altp2m/>`_ feature, implemented
+DRAKVUF is tightly coupled with `altp2m <https://xenproject.org/2016/04/13/stealthy-monitoring-with-xen-altp2m/>`_ feature, implemented
 only for Intel CPUs. Thus it's not possible to run it on a AMD CPU.
 
 

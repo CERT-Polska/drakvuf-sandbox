@@ -59,7 +59,7 @@ Don't forget to run Prettier over the changes. Otherwise CI will reject your cod
     $ npm start
 
 REST API (drakrun.web)
-===================
+======================
 
 Main entrypoint into the sandbox. The intended users are web UI and programmatic integrations with
 the sandbox.
