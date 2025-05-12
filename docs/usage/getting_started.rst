@@ -165,7 +165,7 @@ It's also recommended to perform all installation activities using ``root`` user
 
   .. code-block:: console
 
-    # draksetup postinstall
+    # drakrun postinstall
 
   .. note ::
     Add ``--no-report`` if you don't want ``draksetup`` to send `basic usage report <https://github.com/CERT-Polska/drakvuf-sandbox/blob/master/USAGE_STATISTICS.md>`_. 

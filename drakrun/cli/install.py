@@ -110,7 +110,7 @@ def install(
     log.info(
         "After you have installed Windows and booted it to the desktop, please execute:"
     )
-    log.info("# draksetup postinstall")
+    log.info("# drakrun postinstall")
 
     log.info("Your configured VNC password is:")
     log.info(vnc_passwd)

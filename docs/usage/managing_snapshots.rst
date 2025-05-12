@@ -85,7 +85,7 @@ which include HDD image and VM configuration.
 This has both some advantages and drawbacks:
 
 * before using the snapshot on a new machine, VM must be cold booted to the desktop
-  and ``draksetup postinstall`` must be executed to extract runtime information,
+  and ``drakrun postinstall`` must be executed to extract runtime information,
 * this snapshot type is more portable and stable as the operating system is being booted
   on the hardware that will be used for performing analyses.
 
