@@ -43,6 +43,7 @@ class Screenshotter:
             async with asyncvnc.connect(
                 host=self.vnc_host, port=self.vnc_port, password=self.vnc_password
             ) as client:
+                logger.info(f"Connected to VNC {self.vnc_host}:{self.vnc_port}")
                 while screenshot_no < self.max_screenshots:
                     pixels = await client.screenshot()
                     timestamp = time.time()
@@ -64,6 +65,7 @@ class Screenshotter:
                             )
                             + "\n"
                         )
+                        logger.info(f"Got screenshot {screenshot_no}: {image_hash}")
                     await asyncio.sleep(self.loop_interval)
 
     def perform_loop(self):
