@@ -14,5 +14,5 @@ python-magic==0.4.27
 rq-dashboard==0.8.2.2
 # Screenshotter dependencies
 asyncvnc==1.3.0
-Pillow==11.2.1
+Pillow==10.4.0
 Perception==0.7.7
