@@ -21,6 +21,7 @@ class Screenshotter:
         vnc_password: str,
         loop_interval=5,
         max_screenshots=30,
+        diff_threshold=0.05,
     ):
         self._aioloop = None
         self._thread = None
@@ -31,6 +32,7 @@ class Screenshotter:
         self.vnc_password = vnc_password
         self.loop_interval = loop_interval
         self.max_screenshots = max_screenshots
+        self.diff_threshold = diff_threshold
 
     async def perform(self):
         hasher = hashers.PHash()
@@ -49,7 +51,12 @@ class Screenshotter:
                     timestamp = time.time()
                     image = Image.fromarray(pixels)
                     image_hash = hasher.compute(image)
-                    if prev_image_hash != image_hash:
+                    if (
+                        not prev_image_hash
+                        or hasher.compute_distance(image_hash, prev_image_hash)
+                        > self.diff_threshold
+                    ):
+                        prev_image_hash = image_hash
                         screenshot_no += 1
                         screenshot_name = (
                             screenshot_dir / f"screenshot_{screenshot_no}.png"
