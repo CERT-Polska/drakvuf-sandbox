@@ -1,7 +1,12 @@
 import json
 import pathlib
 
+from redis import StrictRedis
+
+from drakrun.analyzer.worker import enqueue_analysis_download, get_s3_client
+from drakrun.lib.config import DrakrunConfig
 from drakrun.lib.paths import ANALYSES_DIR
+from drakrun.lib.s3_archive import LocalLockType, has_analysis_lock, is_analysis_on_s3
 
 
 def check_path(path: pathlib.Path, base: pathlib.Path) -> pathlib.Path:
@@ -12,8 +17,6 @@ def check_path(path: pathlib.Path, base: pathlib.Path) -> pathlib.Path:
 
 class AnalysisStorage:
     """Abstraction over remote analysis data stored in MinIO"""
-
-    MINIO_BUCKET = "drakrun"
 
     def __init__(self, analysis_dir: pathlib.Path):
         self.analysis_dir = check_path(analysis_dir, ANALYSES_DIR)
@@ -66,8 +69,44 @@ class AnalysisStorage:
         return json.loads(path.read_text())
 
 
-def get_analysis_data(uid: str):
+class AnalysisStorageError(RuntimeError):
+    pass
+
+
+class AnalysisNotYetDownloaded(AnalysisStorageError):
+    def __init__(self):
+        super().__init__("Analysis is archived and not yet downloaded from S3")
+
+
+class AnalysisNotYetUploaded(AnalysisStorageError):
+    def __init__(self):
+        super().__init__("Analysis is from another node and not yet uploaded to S3")
+
+
+class AnalysisNotFound(AnalysisStorageError):
+    def __init__(self):
+        super().__init__("Analysis doesn't exist")
+
+
+def get_analysis_data_with_s3(
+    uid: str, config: DrakrunConfig, redis_connection: StrictRedis
+):
+    analysis_dir = ANALYSES_DIR / uid
+    s3_client = get_s3_client(config.s3_archive)
+    if not analysis_dir.exists():
+        if is_analysis_on_s3(uid, s3_client, config.s3_archive.bucket):
+            enqueue_analysis_download(uid, redis_connection)
+            raise AnalysisNotYetDownloaded()
+        else:
+            raise AnalysisNotFound()
+    else:
+        if has_analysis_lock(analysis_dir, LocalLockType.download_lock):
+            raise AnalysisNotYetDownloaded()
+        return AnalysisStorage(analysis_dir)
+
+
+def get_analysis_data_without_s3(uid: str):
     analysis_dir = ANALYSES_DIR / uid
     if not analysis_dir.exists():
-        raise RuntimeError(f"Analysis directory {analysis_dir} does not exist")
+        raise AnalysisNotFound()
     return AnalysisStorage(analysis_dir)

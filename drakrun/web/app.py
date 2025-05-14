@@ -11,16 +11,28 @@ import rq_dashboard
 from flask import Flask, Response, jsonify, request, send_file
 from orjson import orjson
 from rq.exceptions import NoSuchJobError
-from rq.job import Job
+from rq.job import Job, JobStatus
 
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.file_metadata import FileMetadata
 from drakrun.analyzer.postprocessing.indexer import scattered_read_file
-from drakrun.analyzer.worker import enqueue_analysis, get_redis_connection
+from drakrun.analyzer.worker import (
+    analysis_job_to_status_dict,
+    enqueue_analysis,
+    get_redis_connection,
+    is_s3_archive_enabled,
+)
 from drakrun.lib.config import load_config
 from drakrun.lib.paths import ANALYSES_DIR
 
-from .analysis import get_analysis_data
+from .analysis import (
+    AnalysisNotFound,
+    AnalysisNotYetDownloaded,
+    AnalysisNotYetUploaded,
+    AnalysisStorageError,
+    get_analysis_data_with_s3,
+    get_analysis_data_without_s3,
+)
 from .analysis_list import add_analysis_to_recent, get_recent_analysis_list
 
 app = Flask(__name__, static_folder="frontend/dist/assets")
@@ -107,43 +119,72 @@ def upload_sample():
         raise
 
 
-def analysis_job_to_dict(job: Job):
-    job_status = job.get_status()
-    job_meta = job.get_meta()
-    return {
-        "id": job.id,
-        "status": job_status.value if job_status is not None else None,
-        "substatus": job.meta.get("substatus"),
-        "file": job_meta.get("file"),
-        "options": job_meta.get("options"),
-        "vm_id": job_meta.get("vm_id"),
-        "time_started": job.started_at.isoformat()
-        if job.started_at is not None
-        else None,
-        "time_finished": job.ended_at.isoformat() if job.ended_at is not None else None,
-    }
+def get_analysis_data(task_uid: str):
+    try:
+        job = Job.fetch(task_uid, connection=redis)
+    except NoSuchJobError:
+        job = None
+    if is_s3_archive_enabled(drakrun_conf):
+        try:
+            return get_analysis_data_with_s3(task_uid, drakrun_conf, redis)
+        except AnalysisNotFound as e:
+            if job is not None:
+                raise AnalysisNotYetUploaded() from e
+            else:
+                raise
+    else:
+        return get_analysis_data_without_s3(task_uid)
+
+
+def get_analysis_status(task_uid: str):
+    try:
+        job = Job.fetch(task_uid, connection=redis)
+        if job.get_status() not in [JobStatus.FINISHED, JobStatus.FAILED]:
+            return analysis_job_to_status_dict(job)
+    except NoSuchJobError:
+        job = None
+    try:
+        analysis_data = get_analysis_data(task_uid)
+        return analysis_data.get_metadata()
+    except AnalysisNotYetDownloaded:
+        partial_status = analysis_job_to_status_dict(job) if job is not None else {}
+        return {
+            **partial_status,
+            "id": task_uid,
+            "status": "archived",
+            "substatus": "downloading",
+        }
+    except AnalysisNotYetUploaded:
+        partial_status = analysis_job_to_status_dict(job) if job is not None else {}
+        return {
+            **partial_status,
+            "id": task_uid,
+            "status": "archived",
+            "substatus": "uploading",
+        }
 
 
 @app.route("/list")
 def list_analyses():
     analysis_list = get_recent_analysis_list(redis)
-    return jsonify([analysis_job_to_dict(job) for job in analysis_list])
+    return jsonify([analysis_job_to_status_dict(job) for job in analysis_list])
 
 
 @app.route("/status/<task_uid>")
 def status(task_uid):
     try:
-        job = Job.fetch(task_uid, connection=redis)
-        return jsonify(analysis_job_to_dict(job))
-    except NoSuchJobError:
-        # TODO: If job no longer stored in redis, we should check the storage
-        ...
+        status = get_analysis_status(task_uid)
+        return jsonify(status)
+    except AnalysisNotFound:
         return jsonify({"error": "Job not found"}), 404
 
 
 @app.route("/processed/<task_uid>/<which>")
 def processed(task_uid, which):
-    analysis = get_analysis_data(task_uid)
+    try:
+        analysis = get_analysis_data(task_uid)
+    except AnalysisStorageError as e:
+        return dict(error=e.args[0]), 404
     path = analysis.get_processed(which)
     if not path.exists():
         return dict(error="Data not found"), 404
@@ -152,7 +193,10 @@ def processed(task_uid, which):
 
 @app.route("/logs/<task_uid>/<log_type>")
 def logs(task_uid, log_type):
-    analysis = get_analysis_data(task_uid)
+    try:
+        analysis = get_analysis_data(task_uid)
+    except AnalysisStorageError as e:
+        return dict(error=e.args[0]), 404
     path = analysis.get_log(log_type)
     if not path.exists():
         return dict(error="Data not found"), 404
@@ -161,7 +205,10 @@ def logs(task_uid, log_type):
 
 @app.route("/logs/<task_uid>/<log_type>/process/<seqid>")
 def process_logs(task_uid, log_type, seqid):
-    analysis = get_analysis_data(task_uid)
+    try:
+        analysis = get_analysis_data(task_uid)
+    except AnalysisStorageError as e:
+        return dict(error=e.args[0]), 404
     index_path = analysis.get_log_index(f"{log_type}.{seqid}.json")
     if not index_path.exists():
         return dict(error="Data not found"), 404
@@ -190,7 +237,10 @@ def pcap_dump(task_uid):
     Return archaive containing dump.pcap along with extracted tls sessions
     keys in format acceptable by wireshark.
     """
-    analysis = get_analysis_data(task_uid)
+    try:
+        analysis = get_analysis_data(task_uid)
+    except AnalysisStorageError as e:
+        return dict(error=e.args[0]), 404
     path = analysis.get_pcap_dump()
     if not path.exists():
         return dict(error="Data not found"), 404
@@ -206,7 +256,10 @@ def pcap_dump(task_uid):
 
 @app.route("/dumps/<task_uid>")
 def dumps(task_uid):
-    analysis = get_analysis_data(task_uid)
+    try:
+        analysis = get_analysis_data(task_uid)
+    except AnalysisStorageError as e:
+        return dict(error=e.args[0]), 404
     path = analysis.get_dumps()
     if not path.exists():
         return dict(error="Data not found"), 404
@@ -215,26 +268,23 @@ def dumps(task_uid):
 
 @app.route("/logs/<task_uid>")
 def list_logs(task_uid):
-    analysis = get_analysis_data(task_uid)
+    try:
+        analysis = get_analysis_data(task_uid)
+    except AnalysisStorageError as e:
+        return dict(error=e.args[0]), 404
     return jsonify(list(analysis.list_logs()))
 
 
 @app.route("/graph/<task_uid>")
 def graph(task_uid):
-    analysis = get_analysis_data(task_uid)
+    try:
+        analysis = get_analysis_data(task_uid)
+    except AnalysisStorageError as e:
+        return dict(error=e.args[0]), 404
     path = analysis.get_graph()
     if not path.exists():
         return dict(error="Data not found"), 404
     return send_file(path, mimetype="text/plain")
-
-
-@app.route("/metadata/<task_uid>")
-def metadata(task_uid):
-    analysis = get_analysis_data(task_uid)
-    metadata = analysis.get_metadata()
-    if metadata is None:
-        return dict(error="Data not found"), 404
-    return jsonify(metadata)
 
 
 @app.route("/")
