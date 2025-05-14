@@ -1,5 +1,5 @@
 dataclasses-json==0.5.6
-click==8.1.7
+click>=8.1.7,<9.0
 flare-capa>=7.2.0
 orjson==3.9.15
 mslex==1.1.0
@@ -9,6 +9,7 @@ drakpdb==0.2.2
 tomli==2.2.1
 # Web analyzer dependencies
 rq==2.3.1
-Flask==3.0.3
+Flask>=3.0.3,<4.0
 python-magic==0.4.27
 rq-dashboard==0.8.2.2
+boto3==1.38.15
