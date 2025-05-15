@@ -25,9 +25,6 @@ def parse_metadata(metadata_file: Path) -> Dict:
     with metadata_file.open("r") as f:
         metadata = orjson.loads(f.read())
 
-    metadata["time_started"] = epoch_to_timestring(metadata["time_started"])
-    metadata["time_finished"] = epoch_to_timestring(metadata["time_finished"])
-
     return metadata
 
 
