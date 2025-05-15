@@ -296,7 +296,7 @@ def construct_ttp_blocks(
 
 
 def capa_analysis(analysis_dir: Path) -> None:
-    config = load_config().capa_rules
+    config = load_config().capa
 
     # capa rules directory
     capa_rules_dir = config.rules_directory
