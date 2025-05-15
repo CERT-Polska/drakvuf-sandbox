@@ -3,8 +3,7 @@ from typing import Any, Dict, List, NamedTuple, Optional, Protocol
 
 
 class PostprocessFunction(Protocol):
-    def __call__(self, analysis_dir: pathlib.Path) -> Optional[Dict[str, Any]]:
-        ...
+    def __call__(self, analysis_dir: pathlib.Path) -> Optional[Dict[str, Any]]: ...
 
 
 class PostprocessPlugin(NamedTuple):
