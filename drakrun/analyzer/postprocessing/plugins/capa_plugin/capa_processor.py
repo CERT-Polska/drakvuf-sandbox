@@ -26,7 +26,7 @@ from capa.main import (
 from capa.render.result_document import MatchResults as ResultDocumentMatchResults
 from capa.rules import Rule, RuleSet, get_rules, get_rules_and_dependencies
 
-from .capa_config import CapaConfigSection
+from drakrun.lib.config import load_config
 
 logger = logging.getLogger(__name__)
 
@@ -296,9 +296,7 @@ def construct_ttp_blocks(
 
 
 def capa_analysis(analysis_dir: Path) -> None:
-    # todo: this should be filled with configuration
-    # right now only defaults are supported
-    config = CapaConfigSection()
+    config = load_config().capa_rules
 
     # capa rules directory
     capa_rules_dir = config.rules_directory
