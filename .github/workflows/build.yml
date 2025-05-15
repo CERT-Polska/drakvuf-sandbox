@@ -11,10 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.8
+      - name: Set up Python 3.9
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.9
       - name: Install dependencies
         working-directory: docs
         run: pip install -r requirements.txt
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: CERT-Polska/lint-python-action@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
   build_drakrun_tools:
     runs-on: ubuntu-latest
     container: "debian:bookworm"
@@ -77,7 +77,7 @@ jobs:
   build_drakrun:
     needs: [ build_drakrun_tools, build_drakrun_web ]
     runs-on: ubuntu-latest
-    container: "python:3.8"
+    container: "python:3.9"
     steps:
       - uses: actions/checkout@v4
         with:

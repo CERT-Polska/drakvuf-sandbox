@@ -1,4 +1,4 @@
 [flake8]
 extend-ignore=E501,E203
 max-line-length=88
-exclude=drakrun/data,drakrun/tools
+exclude=drakrun/data,drakrun/tools,drakrun/web/frontend
