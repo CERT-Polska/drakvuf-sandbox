@@ -31,7 +31,6 @@ def get_redis_connection(config: RedisConfigSection):
 
 
 def worker_analyze(options: AnalysisOptions):
-    global _WORKER_VM_ID
     if _WORKER_VM_ID is None:
         raise RuntimeError("Fatal error: no vm_id assigned in worker")
 
