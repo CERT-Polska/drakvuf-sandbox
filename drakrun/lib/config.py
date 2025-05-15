@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 import tomli
 from pydantic import BaseModel, ConfigDict
 
-from drakrun.lib.paths import CONFIG_PATH
+from drakrun.lib.paths import CONFIG_PATH, PACKAGE_DIR
 
 DNS_USE_GATEWAY_ADDRESS = "use-gateway-address"
 OUT_INTERFACE_DEFAULT = "default"
@@ -43,11 +43,20 @@ class DrakrunConfigSection(BaseModel):
     extra_output_subdirs: Optional[List[str]] = None
 
 
+class CapaConfigSection(BaseModel):
+    rules_directory: pathlib.Path = PACKAGE_DIR / "data" / "capa-rules"
+    analyze_drakmon_log: bool = True
+    analyze_memdumps: bool = False
+    analyze_only_malware_pids: bool = False
+    worker_pool_processes: int = 4
+
+
 class DrakrunConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
     redis: RedisConfigSection
     network: NetworkConfigSection
     drakrun: DrakrunConfigSection
+    capa_rules: CapaConfigSection
 
     @staticmethod
     def load(filename: str) -> "DrakrunConfig":
