@@ -56,7 +56,7 @@ class DrakrunConfig(BaseModel):
     redis: RedisConfigSection
     network: NetworkConfigSection
     drakrun: DrakrunConfigSection
-    capa: CapaConfigSection
+    capa: CapaConfigSection = CapaConfigSection()
 
     @staticmethod
     def load(filename: str) -> "DrakrunConfig":
