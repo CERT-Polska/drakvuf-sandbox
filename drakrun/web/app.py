@@ -11,12 +11,16 @@ import rq_dashboard
 from flask import Flask, Response, jsonify, request, send_file
 from orjson import orjson
 from rq.exceptions import NoSuchJobError
-from rq.job import Job
+from rq.job import Job, JobStatus
 
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.file_metadata import FileMetadata
 from drakrun.analyzer.postprocessing.indexer import scattered_read_file
-from drakrun.analyzer.worker import enqueue_analysis, get_redis_connection
+from drakrun.analyzer.worker import (
+    analysis_job_to_status_dict,
+    enqueue_analysis,
+    get_redis_connection,
+)
 from drakrun.lib.config import load_config
 from drakrun.lib.paths import ANALYSES_DIR
 
@@ -107,38 +111,34 @@ def upload_sample():
         raise
 
 
-def analysis_job_to_dict(job: Job):
-    job_status = job.get_status()
-    job_meta = job.get_meta()
-    return {
-        "id": job.id,
-        "status": job_status.value if job_status is not None else None,
-        "substatus": job.meta.get("substatus"),
-        "file": job_meta.get("file"),
-        "options": job_meta.get("options"),
-        "vm_id": job_meta.get("vm_id"),
-        "time_started": (
-            job.started_at.isoformat() if job.started_at is not None else None
-        ),
-        "time_finished": job.ended_at.isoformat() if job.ended_at is not None else None,
-    }
-
-
 @app.route("/list")
 def list_analyses():
     analysis_list = get_recent_analysis_list(redis)
-    return jsonify([analysis_job_to_dict(job) for job in analysis_list])
+    return jsonify([analysis_job_to_status_dict(job) for job in analysis_list])
 
 
 @app.route("/status/<task_uid>")
 def status(task_uid):
     try:
         job = Job.fetch(task_uid, connection=redis)
-        return jsonify(analysis_job_to_dict(job))
     except NoSuchJobError:
-        # TODO: If job no longer stored in redis, we should check the storage
-        ...
+        job = None
+
+    if job is not None and job.get_status() not in [
+        JobStatus.FINISHED,
+        JobStatus.FAILED,
+    ]:
+        return jsonify(analysis_job_to_status_dict(job))
+
+    analysis = get_analysis_data(task_uid)
+    metadata = analysis.get_metadata()
+    # Handling old tasks, to be removed in future
+    if "id" not in metadata:
+        metadata = {"id": task_uid, **metadata}
+    if metadata is None:
         return jsonify({"error": "Job not found"}), 404
+    else:
+        return jsonify(metadata)
 
 
 @app.route("/processed/<task_uid>/<which>")
@@ -226,15 +226,6 @@ def graph(task_uid):
     if not path.exists():
         return dict(error="Data not found"), 404
     return send_file(path, mimetype="text/plain")
-
-
-@app.route("/metadata/<task_uid>")
-def metadata(task_uid):
-    analysis = get_analysis_data(task_uid)
-    metadata = analysis.get_metadata()
-    if metadata is None:
-        return dict(error="Data not found"), 404
-    return jsonify(metadata)
 
 
 @app.route("/")
