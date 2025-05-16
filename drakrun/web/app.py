@@ -132,6 +132,9 @@ def status(task_uid):
 
     analysis = get_analysis_data(task_uid)
     metadata = analysis.get_metadata()
+    # Handling old tasks, to be removed in future
+    if "id" not in metadata:
+        metadata = {"id": task_uid, **metadata}
     if metadata is None:
         return jsonify({"error": "Job not found"}), 404
     else:
