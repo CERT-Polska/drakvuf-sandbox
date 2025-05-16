@@ -11,7 +11,7 @@ import rq_dashboard
 from flask import Flask, Response, jsonify, request, send_file
 from orjson import orjson
 from rq.exceptions import NoSuchJobError
-from rq.job import Job
+from rq.job import Job, JobStatus
 
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.file_metadata import FileMetadata
@@ -121,14 +121,21 @@ def list_analyses():
 def status(task_uid):
     try:
         job = Job.fetch(task_uid, connection=redis)
-        return jsonify(analysis_job_to_status_dict(job))
     except NoSuchJobError:
-        analysis = get_analysis_data(task_uid)
-        metadata = analysis.get_metadata()
-        if metadata is None:
-            return jsonify({"error": "Job not found"}), 404
-        else:
-            return jsonify(metadata)
+        job = None
+
+    if job is not None and job.get_status() not in [
+        JobStatus.FINISHED,
+        JobStatus.FAILED,
+    ]:
+        return jsonify(analysis_job_to_status_dict(job))
+
+    analysis = get_analysis_data(task_uid)
+    metadata = analysis.get_metadata()
+    if metadata is None:
+        return jsonify({"error": "Job not found"}), 404
+    else:
+        return jsonify(metadata)
 
 
 @app.route("/processed/<task_uid>/<which>")
