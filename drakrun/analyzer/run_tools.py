@@ -3,6 +3,7 @@ import pathlib
 import subprocess
 from typing import List, Optional
 
+from drakrun.analyzer.screenshotter import Screenshotter
 from drakrun.lib.config import NetworkConfigSection
 from drakrun.lib.drakvuf_cmdline import get_base_drakvuf_cmdline
 from drakrun.lib.install_info import InstallInfo
@@ -72,3 +73,22 @@ def run_vm(
             yield vm
         finally:
             vm.destroy()
+
+
+@contextlib.contextmanager
+def run_screenshotter(
+    vm_id: int,
+    install_info: InstallInfo,
+    output_dir: pathlib.Path,
+):
+    screenshotter = Screenshotter(
+        output_dir=output_dir,
+        vnc_host="localhost",
+        vnc_port=5900 + vm_id,
+        vnc_password=install_info.vnc_passwd,
+    )
+    try:
+        screenshotter.start()
+        yield
+    finally:
+        screenshotter.stop()
