@@ -50,7 +50,7 @@ def parse_apimon(
             call = orjson.loads(line)
             if call["Event"] == "api_called":
                 process = process_tree.get_process_for_evtid(
-                    call["PID"], call["EventUID"]
+                    call["PID"], int(call["EventUID"], 16)
                 )
                 parsed_apicall = parse_apicall(call)
                 if apicalls[process.seqid]:
@@ -104,7 +104,7 @@ def parse_memdumps(
         for line in f:
             memdump: Dict = orjson.loads(line)
             process = process_tree.get_process_for_evtid(
-                memdump["PID"], memdump["EventUID"]
+                memdump["PID"], int(memdump["EventUID"], 16)
             )
             memdumps[process.seqid].append(
                 {
