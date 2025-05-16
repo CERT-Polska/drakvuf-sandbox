@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 class Process:
     seqid: int
     pid: int
+    ppid: int  # This PPID may not be real and may not be an active process
     ts_from: float
     ts_to: Optional[float]
     evtid_from: Optional[int]
@@ -25,6 +26,19 @@ class Process:
     def __str__(self) -> str:
         return f"{pathlib.PureWindowsPath(self.procname).name}(pid={self.pid}, seq={self.seqid}) {self.args}"
 
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "seqid": self.seqid,
+            "pid": self.pid,
+            "ppid": self.ppid,
+            "procname": self.procname,
+            "args": self.args,
+            "ts_from": self.ts_from,
+            "ts_to": self.ts_to,
+            "evtid_from": self.evtid_from,
+            "evtid_to": self.evtid_to,
+        }
+
 
 class ProcessTree:
     def __init__(self):
@@ -33,6 +47,7 @@ class ProcessTree:
     def add_process(
         self,
         pid: int,
+        ppid: int,
         evtid_from: Optional[int],
         ts_from: float,
         procname: str,
@@ -45,6 +60,7 @@ class ProcessTree:
         process = Process(
             seqid=len(self.processes),
             pid=pid,
+            ppid=ppid,
             ts_from=ts_from,
             ts_to=None,
             evtid_from=evtid_from,
@@ -97,14 +113,7 @@ class ProcessTree:
         def tree_as_dict(root) -> Dict[str, Any]:
             subtrees = [tree_as_dict(c) for c in root.children]
             return {
-                "seqid": root.seqid,
-                "pid": root.pid,
-                "procname": root.procname,
-                "args": root.args,
-                "ts_from": root.ts_from,
-                "ts_to": root.ts_to,
-                "evtid_from": root.evtid_from,
-                "evtid_to": root.evtid_to,
+                **root.as_dict(),
                 "children": subtrees,
             }
 
@@ -119,6 +128,7 @@ def parse_running_process_entry(pstree: ProcessTree, entry: Dict[str, Any]) -> N
     parent = pstree.get_process(entry["PPID"])
     pstree.add_process(
         pid=entry["PID"],
+        ppid=entry["PPID"],
         ts_from=0.0,
         evtid_from=0,
         procname=entry["RunningProcess"],
@@ -157,6 +167,7 @@ def parse_nt_create_user_process_entry(
 
     pstree.add_process(
         pid=process_pid,
+        ppid=process_ppid,
         ts_from=float(entry["TimeStamp"]),
         evtid_from=evtid,
         procname=entry["ImagePathName"],
@@ -183,6 +194,7 @@ def parse_nt_create_process_ex_entry(
         )
     pstree.add_process(
         pid=process_pid,
+        ppid=process_ppid,
         ts_from=float(entry["TimeStamp"]),
         evtid_from=evtid,
         procname="Unnamed",
@@ -234,3 +246,37 @@ def tree_from_log(file: TextIO) -> ProcessTree:
             logger.warning(f"Failed to process {entry}")
             raise e
     return pstree
+
+
+def tree_from_dict(tree_dict: List[Dict[str, Any]]) -> ProcessTree:
+    """
+    Parses ProcessTree.as_dict result back to ProcessTree object.
+    """
+    process_tree = ProcessTree()
+
+    def parse_children(
+        children: List[Dict[str, Any]], parent: Optional[Process] = None
+    ):
+        for entry in children:
+            process = Process(
+                seqid=entry["seqid"],
+                pid=entry["pid"],
+                ppid=entry["ppid"],
+                procname=entry["procname"],
+                args=entry["args"],
+                ts_from=entry["ts_from"],
+                ts_to=entry["ts_to"],
+                evtid_from=entry["evtid_from"],
+                evtid_to=entry["evtid_to"],
+                parent=parent,
+                children=[],
+            )
+            process_tree.processes.append(process)
+            if parent is not None:
+                parent.children.append(process)
+            if entry["children"]:
+                parse_children(entry["children"], parent=process)
+
+    parse_children(tree_dict)
+    process_tree.processes = sorted(process_tree.processes, key=lambda p: p.seqid)
+    return process_tree

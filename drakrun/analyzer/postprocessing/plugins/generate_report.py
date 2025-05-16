@@ -1,9 +1,14 @@
-import itertools
+import logging
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional
+from typing import Any, Dict, List, Optional
 
 import orjson
+
+from ..process_tree import ProcessTree, tree_from_dict
+
+logger = logging.getLogger(__name__)
 
 
 def epoch_to_timestring(unix_time: Optional[float]) -> Optional[str]:
@@ -19,24 +24,6 @@ def epoch_to_timestring(unix_time: Optional[float]) -> Optional[str]:
     return time.isoformat()
 
 
-def parse_metadata(metadata_file: Path) -> Dict:
-    # This method parses the metadata.json file
-    # Unix epoch timestamps are converted to printable time strings as well.
-    with metadata_file.open("r") as f:
-        metadata = orjson.loads(f.read())
-
-    metadata["time_started"] = epoch_to_timestring(metadata["time_started"])
-    metadata["time_finished"] = epoch_to_timestring(metadata["time_finished"])
-
-    return metadata
-
-
-def process_key(ppid: int, pid: int) -> str:
-    # This method defines the way we use to address and differentiate between processes.
-    # The convention used by default is ppid_pid.
-    return f"{ppid}_{pid}"
-
-
 def parse_apicall(apicall: Dict) -> Dict:
     # This method takes in an apimon entry and fetches the necessary information from it.
     # Unix epoch times are converted to printable time strings.
@@ -49,57 +36,77 @@ def parse_apicall(apicall: Dict) -> Dict:
     }
 
 
-def parse_apimon(processes: Dict, apimon_file: Path) -> None:
+def parse_apimon(
+    process_tree: ProcessTree, apimon_file: Path
+) -> Dict[int, List[Dict[str, Any]]]:
+    def get_apicall_tuple(call):
+        return call["CalledFrom"], call["Method"], call["ReturnValue"], call["Argument"]
+
     # This method parses each entry of the apimon.log file and appends
     # it to the appropriate process in the report.
+    apicalls = defaultdict(list)
     with apimon_file.open("r", errors="ignore") as f:
         for line in f:
             call = orjson.loads(line)
             if call["Event"] == "api_called":
-                pkey = process_key(call["PPID"], call["PID"])
-                processes[pkey]["api_calls"].append(parse_apicall(call))
-
-    for pkey, process in processes.items():
-        grouped_api_calls = [
-            list(j)
-            for i, j in itertools.groupby(
-                process["api_calls"],
-                key=lambda call: (
-                    call["CalledFrom"],
-                    call["Method"],
-                    call["ReturnValue"],
-                    call["Argument"],
-                ),
-            )
-        ]
-        api_calls = list()
-        for calls_group in grouped_api_calls:
-            api_call = dict()
-            api_call.update(calls_group[0] | {"Repeated": len(calls_group) - 1})
-            api_calls.append(api_call)
-        process["api_calls"] = api_calls
+                process = process_tree.get_process_for_evtid(
+                    call["PID"], int(call["EventUID"], 16)
+                )
+                parsed_apicall = parse_apicall(call)
+                if apicalls[process.seqid]:
+                    previous_apicall = apicalls[process.seqid][-1]
+                    if get_apicall_tuple(parsed_apicall) == get_apicall_tuple(
+                        previous_apicall
+                    ):
+                        previous_apicall["Repeated"] = (
+                            previous_apicall.get("Repeated", 1) + 1
+                        )
+                        continue
+                apicalls[process.seqid].append(parsed_apicall)
+    return dict(apicalls)
 
 
-def parse_ttps(processes: Dict, ttps_file: Path) -> None:
+def parse_ttps(
+    process_tree: ProcessTree, ttps_file: Path
+) -> Dict[int, List[Dict[str, Any]]]:
     # This method parses the TTPs in the ttps.json file and appends
     # it to the appropriate process in the report.
+    ttps = defaultdict(list)
+    ppid_pid_mapping = {}
+    for process in process_tree.processes:
+        ppid_pid_key = (process.ppid, process.pid)
+        if ppid_pid_key in ppid_pid_mapping:
+            logger.warning(
+                "Found duplicate ppid:pid (%d:%d). TTPs will be assigned to the first found process",
+                process.ppid,
+                process.pid,
+            )
+            continue
+        ppid_pid_mapping[ppid_pid_key] = process
+
     with ttps_file.open("r") as f:
         for line in f:
             ttp: Dict = orjson.loads(line)
             occurrences = ttp.pop("occurrences")
             for occurrence in occurrences:
-                pkey = process_key(occurrence["ppid"], occurrence["pid"])
-                processes[pkey]["ttps"].append(ttp)
+                process = ppid_pid_mapping[(occurrence["ppid"], occurrence["pid"])]
+                ttps[process.seqid].append(ttp)
+    return dict(ttps)
 
 
-def parse_memdumps(processes: Dict, memdumps_file: Path) -> None:
+def parse_memdumps(
+    process_tree: ProcessTree, memdumps_file: Path
+) -> Dict[int, List[Dict[str, Any]]]:
     # This method parses the memdump.log file and appends all memory dump
     # information into the appropriate process in the report
+    memdumps = defaultdict(list)
     with memdumps_file.open("r") as f:
         for line in f:
             memdump: Dict = orjson.loads(line)
-            pkey = process_key(memdump["PPID"], memdump["PID"])
-            processes[pkey]["memdumps"].append(
+            process = process_tree.get_process_for_evtid(
+                memdump["PID"], int(memdump["EventUID"], 16)
+            )
+            memdumps[process.seqid].append(
                 {
                     "reason": memdump["DumpReason"],
                     "addr": memdump["DumpAddr"],
@@ -108,59 +115,56 @@ def parse_memdumps(processes: Dict, memdumps_file: Path) -> None:
                     "count": memdump["DumpsCount"],
                 }
             )
+    return dict(memdumps)
 
 
-def parse_processtree(processtree_file: Path) -> Dict[str, Dict]:
-    # This method extracts all the processes and their associated information
-    # from the process_tree.json file.
-    def rec(processes: List[Dict], parent=0) -> Iterator[Dict]:
-        # This is a helper recursive function that parses the process tree
-        for process in processes:
-            yield {
-                "pid": process["pid"],
-                "ppid": parent,
-                "procname": process["procname"],
-                "args": process["args"],
-                "ts_from": epoch_to_timestring(process["ts_from"]),
-                "ts_to": epoch_to_timestring(process["ts_to"]),
-                "children": [
-                    process_key(process["pid"], child["pid"])
-                    for child in process["children"]
-                ],
-                "api_calls": [],  # to be filled later by parse_apimon()
-                "ttps": [],  # to be filled later by parse_ttps()
-                "memdumps": [],  # to be filled later by parse_memdumps()
-            }
-            yield from rec(process["children"], parent=process["pid"])
-
+def parse_processtree(processtree_file: Path) -> ProcessTree:
     with processtree_file.open("r") as f:
         processtree = orjson.loads(f.read())
 
-    return {
-        process_key(process["ppid"], process["pid"]): process
-        for process in rec(processtree)
-    }
+    return tree_from_dict(processtree)
 
 
 def get_metadata(analysis_dir: Path) -> Dict:
     # Currently, all metadata is contained in the metadata.json file
-    return parse_metadata(analysis_dir / "metadata.json")
+    metadata_file = analysis_dir / "metadata.json"
+    with metadata_file.open("r") as f:
+        metadata = orjson.loads(f.read())
+
+    return metadata
 
 
-def get_processes(analysis_dir: Path) -> Dict:
+def get_processes(analysis_dir: Path) -> List[Dict[str, Any]]:
     # generate a dictionary of indexed processes
-    processes = parse_processtree(analysis_dir / "process_tree.json")
+    process_tree = parse_processtree(analysis_dir / "process_tree.json")
+    process_dicts = list(
+        map(
+            lambda procdict: {
+                **procdict,
+                "ts_from": epoch_to_timestring(procdict["ts_from"]),
+                "ts_to": epoch_to_timestring(procdict["ts_to"]),
+            },
+            [process.as_dict() for process in process_tree.processes],
+        )
+    )
     # parse api calls into the indexed process dictionary
     if (analysis_dir / "apimon.log").is_file():
-        parse_apimon(processes, analysis_dir / "apimon.log")
+        apimon = parse_apimon(process_tree, analysis_dir / "apimon.log")
+        for seqid, apicalls in apimon.items():
+            process_dicts[seqid]["apicalls"] = apicalls
     # parse ttps into the indexed process dictionary
     if (analysis_dir / "ttps.json").is_file():
-        parse_ttps(processes, analysis_dir / "ttps.json")
+        ttps = parse_ttps(process_tree, analysis_dir / "ttps.json")
+        for seqid, ttpset in ttps.items():
+            process_dicts[seqid]["ttps"] = ttpset
+
     # parse memory dumps log into the indexed process dictionary
     if (analysis_dir / "memdump.log").is_file():
-        parse_memdumps(processes, analysis_dir / "memdump.log")
+        memdumps = parse_memdumps(process_tree, analysis_dir / "memdump.log")
+        for seqid, memdump_set in memdumps.items():
+            process_dicts[seqid]["memdumps"] = memdump_set
 
-    return processes
+    return process_dicts
 
 
 def build_report(analysis_dir: Path) -> None:
