@@ -141,7 +141,7 @@ def get_processes(analysis_dir: Path) -> List[Dict[str, Any]]:
         map(
             lambda procdict: {
                 **procdict,
-                "ts_from": epoch_to_timestring(procdict["tsfrom"]),
+                "ts_from": epoch_to_timestring(procdict["ts_from"]),
                 "ts_to": epoch_to_timestring(procdict["ts_to"]),
             },
             [process.as_dict() for process in process_tree.processes],
