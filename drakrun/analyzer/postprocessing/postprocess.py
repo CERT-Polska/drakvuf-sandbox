@@ -55,5 +55,4 @@ def append_metadata_to_analysis(
 
 
 def postprocess_output_dir(output_dir: pathlib.Path):
-    extra_metadata = run_postprocessing(output_dir)
-    append_metadata_to_analysis(output_dir, extra_metadata)
+    return run_postprocessing(output_dir)

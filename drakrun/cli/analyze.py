@@ -5,6 +5,7 @@ import click
 
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.analyzer import analyze_file
+from drakrun.analyzer.postprocessing import append_metadata_to_analysis
 from drakrun.lib.config import load_config
 
 
@@ -121,4 +122,5 @@ def analyze(
         no_post_restore=no_post_restore,
     )
 
-    analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)
+    extra_metadata = analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)
+    append_metadata_to_analysis(output_dir, extra_metadata)
