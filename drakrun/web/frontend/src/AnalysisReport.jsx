@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getAnalysisProcessTree, getLogList } from "./api.js";
 import { ProcessTree } from "./ProcessTree.jsx";
 import { TabSwitcher } from "./TabSwitcher.jsx";
 import { LogViewer } from "./LogViewer.jsx";
 import { AnalysisMetadataTable } from "./AnalysisMetadataTable.jsx";
+import { AnalysisScreenshotViewer } from "./AnalysisScreenshotViewer.jsx";
 
 function isProcessInteresting(process) {
     return process.procname.endsWith("explorer.exe");
@@ -166,24 +167,31 @@ function AnalysisLogViewer({ analysisId }) {
 }
 
 function AnalysisReportTabs({ analysis }) {
+    const tabIds = useMemo(() => {
+        return analysis.screenshots
+            ? ["general-logs", "screenshots"]
+            : ["general-logs"];
+    }, [analysis.screenshots]);
     return (
         <div className="card">
             <div className="card-body">
                 <TabSwitcher
-                    tabIds={["general-logs"]}
+                    tabIds={tabIds}
                     getHeader={(tabId) => {
-                        if (tabId === "summary") {
-                            return "Summary";
-                        } else if (tabId === "process-logs") {
-                            return "Process logs";
-                        } else if (tabId === "general-logs") {
+                        if (tabId === "general-logs") {
                             return "General logs";
+                        } else if (tabId === "screenshots") {
+                            return "Screenshots";
                         }
                     }}
                     renderContent={(tabId) => {
                         if (tabId === "general-logs") {
                             return (
                                 <AnalysisLogViewer analysisId={analysis.id} />
+                            );
+                        } else if (tabId === "screenshots") {
+                            return (
+                                <AnalysisScreenshotViewer analysis={analysis} />
                             );
                         } else {
                             return <div>(not implemented)</div>;
