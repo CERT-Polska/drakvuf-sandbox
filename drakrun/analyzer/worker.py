@@ -30,6 +30,23 @@ def get_redis_connection(config: RedisConfigSection):
     return redis
 
 
+def analysis_job_to_status_dict(job: Job):
+    job_status = job.get_status()
+    job_meta = job.get_meta()
+    time_finished = job.meta["time_finished"] if "time_finished" in job.meta else None
+    if time_finished is None:
+        time_finished = job.ended_at.isoformat() if job.ended_at is not None else None
+    return {
+        "id": job.id,
+        "status": job_status.value if job_status is not None else None,
+        **job_meta,
+        "time_started": (
+            job.started_at.isoformat() if job.started_at is not None else None
+        ),
+        "time_finished": time_finished,
+    }
+
+
 def worker_analyze(options: AnalysisOptions):
     if _WORKER_VM_ID is None:
         raise RuntimeError("Fatal error: no vm_id assigned in worker")
@@ -80,9 +97,8 @@ def worker_analyze(options: AnalysisOptions):
         metadata_file.write_text(
             json.dumps(
                 {
-                    "time_started": job.started_at.isoformat(),
+                    **analysis_job_to_status_dict(job),
                     "status": "finished" if job_success else "failed",
-                    **job.meta,
                 }
             )
         )
