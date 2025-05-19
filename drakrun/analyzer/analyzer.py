@@ -23,7 +23,7 @@ from drakrun.lib.paths import (
 from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command
 from .postprocessing import postprocess_output_dir
-from .run_tools import run_drakvuf, run_tcpdump, run_vm
+from .run_tools import run_drakvuf, run_screenshotter, run_tcpdump, run_vm
 from .startup_command import get_startup_argv, get_target_filename_from_sample_path
 
 log = logging.getLogger(__name__)
@@ -196,7 +196,9 @@ def analyze_file(
                 drakshell.finish()
                 exec_cmd = None
 
-            with run_tcpdump(network_info, tcpdump_file), run_drakvuf(
+            with run_tcpdump(network_info, tcpdump_file), run_screenshotter(
+                vm_id, install_info, output_dir, enabled=(not options.no_screenshotter)
+            ), run_drakvuf(
                 vm.vm_name,
                 vmi_info,
                 kernel_profile_path,

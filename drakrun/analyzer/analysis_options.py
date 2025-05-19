@@ -33,6 +33,8 @@ class AnalysisOptions(BaseModel):
     no_vm_restore: Optional[bool] = None
     # Don't run a post-restore script
     no_post_restore: Optional[bool] = None
+    # Don't make screenshots during analysis
+    no_screenshotter: Optional[bool] = None
 
     def __init__(self, config: DrakrunConfig, **kwargs):
         net_enable = kwargs.get("net_enable")
