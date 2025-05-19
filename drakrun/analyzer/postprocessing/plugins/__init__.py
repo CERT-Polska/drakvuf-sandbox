@@ -7,6 +7,7 @@ from .generate_report import build_report
 from .generate_wireshark_key_file import generate_wireshark_key_file
 from .index_logs import index_logs
 from .plugin_base import PostprocessPlugin
+from .screenshot_metadata import screenshot_metadata
 from .split_drakmon_log import split_drakmon_log
 
 POSTPROCESS_PLUGINS = [
@@ -38,6 +39,11 @@ POSTPROCESS_PLUGINS = [
         function=build_report,
         requires=[],
         generates=["report.json"],
+    ),
+    PostprocessPlugin(
+        function=screenshot_metadata,
+        requires=["screenshots.json"],
+        generates=[],
     ),
     PostprocessPlugin(function=crop_dumps, requires=["dumps"], generates=["dumps.zip"]),
     PostprocessPlugin(function=compress_ipt, requires=["ipt"], generates=["ipt.zip"]),
