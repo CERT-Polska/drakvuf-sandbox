@@ -228,6 +228,18 @@ def graph(task_uid):
     return send_file(path, mimetype="text/plain")
 
 
+@app.route("/screenshot/<task_uid>/<which>")
+def screenshot(task_uid, which):
+    analysis = get_analysis_data(task_uid)
+    if not which.isdigit():
+        return dict(error="Wrong screenshot number"), 400
+    which = int(which)
+    path = analysis.get_screenshot(which)
+    if not path.exists():
+        return dict(error="Data not found"), 404
+    return send_file(path, mimetype="image/png")
+
+
 @app.route("/")
 def index():
     return send_file("frontend/dist/index.html")

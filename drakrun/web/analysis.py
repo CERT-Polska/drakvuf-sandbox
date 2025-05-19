@@ -58,6 +58,9 @@ class AnalysisStorage:
         """Download ProcDOT graph"""
         return self.analysis_dir / "graph.dot"
 
+    def get_screenshot(self, which):
+        return self.analysis_dir / "screenshots" / f"screenshot_{which}.png"
+
     def get_metadata(self):
         """Download metadata.json"""
         path = self.analysis_dir / "metadata.json"
