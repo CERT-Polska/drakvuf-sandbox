@@ -85,7 +85,11 @@ def worker_analyze(options: AnalysisOptions):
 
     job_success = True
     try:
-        analyze_file(vm_id, output_dir, options, substatus_callback=substatus_callback)
+        extra_metadata = analyze_file(
+            vm_id, output_dir, options, substatus_callback=substatus_callback
+        )
+        job.meta.update(extra_metadata)
+        job.save_meta()
     except BaseException:
         job_success = False
         logger.exception("Failed to analyze sample")
