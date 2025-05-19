@@ -80,7 +80,10 @@ def run_screenshotter(
     vm_id: int,
     install_info: InstallInfo,
     output_dir: pathlib.Path,
+    enabled: bool = True,
 ):
+    if not enabled:
+        return
     screenshotter = Screenshotter(
         output_dir=output_dir,
         vnc_host="localhost",

@@ -197,7 +197,7 @@ def analyze_file(
                 exec_cmd = None
 
             with run_tcpdump(network_info, tcpdump_file), run_screenshotter(
-                vm_id, install_info, output_dir
+                vm_id, install_info, output_dir, enabled=(not options.no_screenshotter)
             ), run_drakvuf(
                 vm.vm_name,
                 vmi_info,
