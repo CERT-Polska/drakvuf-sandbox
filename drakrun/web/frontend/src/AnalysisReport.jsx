@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getAnalysisProcessTree, getLogList } from "./api.js";
 import { ProcessTree } from "./ProcessTree.jsx";
-import { TabSwitcher } from "./TabSwitcher.jsx";
+import { TabSwitcher, Tab, useTabContext } from "./TabSwitcher.jsx";
 import { LogViewer } from "./LogViewer.jsx";
 import { AnalysisMetadataTable } from "./AnalysisMetadataTable.jsx";
 import { AnalysisScreenshotViewer } from "./AnalysisScreenshotViewer.jsx";
@@ -89,19 +89,21 @@ function ProcessTreeView({ analysisId }) {
     );
 }
 
-function AnalysisLogViewer({ analysisId }) {
-    const [inspector, setInspector] = useState(null);
-    const [tabs, setTabs] = useState();
-    const [error, setError] = useState();
-    const parseLine = useCallback((line) => {
-        try {
-            const data = JSON.parse(line.trimEnd());
-            setInspector(JSON.stringify(data, null, 4));
-        } catch (err) {
-            setInspector(null);
-        }
-    }, []);
+export function AnalysisLogViewerTab({ analysisId }) {
+    const logType = useTabContext();
+    const logLoaderFactory = useCallback(() => {
+        return getLogLoader({
+            getLogEntries: ({ rangeStart, rangeEnd }) =>
+                getLog({ analysisId, logType, rangeStart, rangeEnd }),
+        });
+    }, [analysisId, logType]);
+    return <LogViewer logLoaderFactory={logLoaderFactory} />;
+}
 
+function AnalysisLogViewer({ analysisId }) {
+    const [tabs, setTabs] = useState();
+    const [activeTab, setActiveTab] = useState();
+    const [error, setError] = useState();
     const loadLogTypes = useCallback(async () => {
         try {
             const logTypes = await getLogList({ analysisId });
@@ -133,71 +135,33 @@ function AnalysisLogViewer({ analysisId }) {
             <div className="fw-bold py-2">Log type:</div>
             <div className="d-flex align-items-start">
                 <TabSwitcher
-                    tabIds={tabs}
-                    getHeader={(tabId) => tabId}
-                    renderContent={(tabId) => {
-                        return (
-                            <LogViewer
-                                analysisId={analysisId}
-                                logType={tabId}
-                                className="flex-grow-1"
-                                onLineClick={parseLine}
-                            />
-                        );
-                    }}
+                    activeTab={activeTab}
+                    onTabSwitch={setActiveTab}
                     tabClassName="flex-column nav-pills me-3"
                     contentClassName="flex-grow-1"
-                />
+                >
+                    <AnalysisLogViewerTab analysisId={analysisId} />
+                </TabSwitcher>
             </div>
-            {inspector ? (
-                <div>
-                    <div
-                        className="fw-bold ps-2"
-                        style={{ borderTop: "black 1px solid" }}
-                    >
-                        JSON inspector
-                    </div>
-                    <pre>{inspector}</pre>
-                </div>
-            ) : (
-                []
-            )}
         </div>
     );
 }
 
 function AnalysisReportTabs({ analysis }) {
-    const tabIds = useMemo(() => {
-        return analysis.screenshots
-            ? ["general-logs", "screenshots"]
-            : ["general-logs"];
-    }, [analysis.screenshots]);
+    const [activeTab, setActiveTab] = useState("General logs");
     return (
         <div className="card">
             <div className="card-body">
-                <TabSwitcher
-                    tabIds={tabIds}
-                    getHeader={(tabId) => {
-                        if (tabId === "general-logs") {
-                            return "General logs";
-                        } else if (tabId === "screenshots") {
-                            return "Screenshots";
-                        }
-                    }}
-                    renderContent={(tabId) => {
-                        if (tabId === "general-logs") {
-                            return (
-                                <AnalysisLogViewer analysisId={analysis.id} />
-                            );
-                        } else if (tabId === "screenshots") {
-                            return (
-                                <AnalysisScreenshotViewer analysis={analysis} />
-                            );
-                        } else {
-                            return <div>(not implemented)</div>;
-                        }
-                    }}
-                />
+                <TabSwitcher activeTab={activeTab} onTabSwitch={setActiveTab}>
+                    <Tab tab="General logs">
+                        <AnalysisLogViewer analysisId={analysis.id} />
+                    </Tab>
+                    {analysis.screenshots ? (
+                        <Tab tab="Screenshots">
+                            <AnalysisScreenshotViewer analysis={analysis} />
+                        </Tab>
+                    ) : null}
+                </TabSwitcher>
             </div>
         </div>
     );
