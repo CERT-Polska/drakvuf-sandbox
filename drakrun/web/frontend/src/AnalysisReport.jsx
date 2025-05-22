@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { getAnalysisProcessTree, getLogList } from "./api.js";
+import { getAnalysisProcessTree, getLog, getLogList } from "./api.js";
 import { ProcessTree } from "./ProcessTree.jsx";
 import { TabSwitcher, Tab, useTabContext } from "./TabSwitcher.jsx";
-import { LogViewer } from "./LogViewer.jsx";
+import { getLogLoader, LogViewer } from "./LogViewer.jsx";
 import { AnalysisMetadataTable } from "./AnalysisMetadataTable.jsx";
 import { AnalysisScreenshotViewer } from "./AnalysisScreenshotViewer.jsx";
 
@@ -90,13 +90,14 @@ function ProcessTreeView({ analysisId }) {
 }
 
 export function AnalysisLogViewerTab({ analysisId }) {
-    const logType = useTabContext();
+    const logType = useTabContext()?.activeTab;
     const logLoaderFactory = useCallback(() => {
         return getLogLoader({
             getLogEntries: ({ rangeStart, rangeEnd }) =>
                 getLog({ analysisId, logType, rangeStart, rangeEnd }),
         });
     }, [analysisId, logType]);
+    if (!logType) return [];
     return <LogViewer logLoaderFactory={logLoaderFactory} />;
 }
 
@@ -107,11 +108,11 @@ function AnalysisLogViewer({ analysisId }) {
     const loadLogTypes = useCallback(async () => {
         try {
             const logTypes = await getLogList({ analysisId });
-            setTabs(
-                logTypes
-                    .filter((logType) => logType.endsWith(".log"))
-                    .map((logType) => logType.split(".")[0]),
-            );
+            const tabs = logTypes
+                .filter((logType) => logType.endsWith(".log"))
+                .map((logType) => logType.split(".")[0]);
+            setTabs(tabs);
+            setActiveTab(tabs[0]);
         } catch (err) {
             setError(err);
             console.error(err);
@@ -135,6 +136,7 @@ function AnalysisLogViewer({ analysisId }) {
             <div className="fw-bold py-2">Log type:</div>
             <div className="d-flex align-items-start">
                 <TabSwitcher
+                    tabs={tabs}
                     activeTab={activeTab}
                     onTabSwitch={setActiveTab}
                     tabClassName="flex-column nav-pills me-3"
