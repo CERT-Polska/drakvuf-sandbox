@@ -159,15 +159,30 @@ def logs(task_uid, log_type):
     return send_file(path, mimetype="text/plain")
 
 
+@app.route("/process_info/<task_uid>/<seqid>")
+def process_info(task_uid, seqid):
+    analysis = get_analysis_data(task_uid)
+    if not seqid.isdigit():
+        return dict(error="Incorrect process id"), 400
+    seqid = int(seqid)
+    process_info = analysis.get_process_info(seqid)
+    if process_info is None:
+        return dict(error="Data not found"), 404
+    return jsonify(process_info)
+
+
 @app.route("/logs/<task_uid>/<log_type>/process/<seqid>")
 def process_logs(task_uid, log_type, seqid):
     analysis = get_analysis_data(task_uid)
+    if not seqid.isdigit():
+        return dict(error="Incorrect process id"), 400
+    seqid = int(seqid)
     index_path = analysis.get_log_index(f"{log_type}.{seqid}.json")
     if not index_path.exists():
         return dict(error="Data not found"), 404
     index = orjson.loads(index_path.read_text())
     blocks = index["blocks"]
-    filter_values = request.args.getlist("filter")
+    filter_values = request.args.getlist("filter[]")
     if filter_values:
         filter_indices = [
             index["values"].index(filter_value)
@@ -180,14 +195,22 @@ def process_logs(task_uid, log_type, seqid):
             if mapping in filter_indices
         ]
     log_path = analysis.get_log(log_type)
-    scattered_read = scattered_read_file(log_path, blocks)
+    if request.range:
+        if len(request.range.ranges) > 1:
+            return dict(error="Multiple ranges unsupported"), 400
+        range_start, range_stop = request.range.ranges[0]
+        skip = range_start
+        length = (range_stop - range_start + 1) if range_stop is not None else None
+    else:
+        skip, length = 0, None
+    scattered_read = scattered_read_file(log_path, blocks, skip=skip, length=length)
     return Response(b"".join(scattered_read), mimetype="text/plain")
 
 
 @app.route("/pcap_dump/<task_uid>")
 def pcap_dump(task_uid):
     """
-    Return archaive containing dump.pcap along with extracted tls sessions
+    Return archive containing dump.pcap along with extracted tls sessions
     keys in format acceptable by wireshark.
     """
     analysis = get_analysis_data(task_uid)

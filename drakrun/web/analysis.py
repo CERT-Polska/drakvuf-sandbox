@@ -1,6 +1,7 @@
 import json
 import pathlib
 
+from drakrun.analyzer.postprocessing.process_tree import tree_from_dict
 from drakrun.lib.paths import ANALYSES_DIR
 
 
@@ -67,6 +68,25 @@ class AnalysisStorage:
         if not path.exists():
             return None
         return json.loads(path.read_text())
+
+    def get_process_info(self, which):
+        path = self.analysis_dir / "process_tree.json"
+        if not path.exists():
+            return None
+        process_tree = tree_from_dict(json.loads(path.read_text()))
+        process = process_tree.processes[which]
+        log_index = self.analysis_dir / "index"
+        if log_index.exists():
+            logs = {}
+            for index_path in log_index.glob(f"*.{which}.json"):
+                log_name = index_path.name.split(".")[0]
+                logs[log_name] = json.loads(index_path.read_text())["values"]
+        else:
+            logs = {}
+        return {
+            "process": process.as_dict(),
+            "logs": logs,
+        }
 
 
 def get_analysis_data(uid: str):

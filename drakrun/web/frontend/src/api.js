@@ -56,6 +56,36 @@ export async function getLogList({ analysisId }) {
     return logRequest.data;
 }
 
+export async function getProcessInfo({ analysisId, processSeqId }) {
+    const logRequest = await axios.get(
+        `/process_info/${analysisId}/${processSeqId}`,
+    );
+    return logRequest.data;
+}
+
+export async function getProcessLog({
+    analysisId,
+    logType,
+    selectedProcess,
+    rangeStart,
+    rangeEnd,
+    methodsFilter = [],
+}) {
+    const logRequest = await axios.get(
+        `/logs/${analysisId}/${logType}/process/${selectedProcess}`,
+        {
+            responseType: "text",
+            headers: {
+                Range: `bytes=${rangeStart}-${rangeEnd}`,
+            },
+            params: {
+                filter: methodsFilter,
+            },
+        },
+    );
+    return logRequest.data;
+}
+
 export async function uploadSample({
     file,
     timeout,

@@ -54,7 +54,8 @@ export function LogViewer({ logLoaderFactory }) {
     }, [logLoader]);
 
     useEffect(() => {
-        setContent("");
+        console.log("new log loader");
+        setContent(" ");
         setLoading(false);
         loadNext();
     }, [logLoader]);
