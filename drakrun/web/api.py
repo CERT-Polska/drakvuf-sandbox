@@ -4,14 +4,14 @@ import logging
 import shutil
 import uuid
 from tempfile import NamedTemporaryFile
-from typing import List, Optional
+from typing import Annotated, List, Optional
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import magic
 import orjson
 from flask import Response, jsonify, request, send_file
 from flask_openapi3 import APIBlueprint, FileStorage
-from pydantic import BaseModel, Field, RootModel
+from pydantic import AfterValidator, BaseModel, Field, RootModel
 from rq.exceptions import NoSuchJobError
 from rq.job import Job, JobStatus
 
@@ -121,16 +121,22 @@ class AnalysisResponse(BaseModel):
 
 AnalysisListResponse = RootModel[List[AnalysisResponse]]
 
+
 @api.get("/list", responses={200: AnalysisListResponse})
 def list_analyses():
     analysis_list = get_recent_analysis_list(redis)
     return jsonify([analysis_job_to_status_dict(job) for job in analysis_list])
 
 
-@api.get(
-    "/status/<uuid:task_uid>", responses={200: AnalysisResponse, 404: APIErrorResponse}
-)
-def status(task_uid):
+class AnalysisRequestPath(BaseModel):
+    task_uid: Annotated[str, AfterValidator(lambda x: str(uuid.UUID(x, version=4)))] = (
+        Field(description="Unique analysis ID")
+    )
+
+
+@api.get("/status/<task_uid>", responses={200: AnalysisResponse, 404: APIErrorResponse})
+def status(path: AnalysisRequestPath):
+    task_uid = path.task_uid
     try:
         job = Job.fetch(task_uid, connection=redis)
     except NoSuchJobError:
@@ -153,8 +159,14 @@ def status(task_uid):
         return jsonify(metadata)
 
 
-@api.get("/processed/<uuid:task_uid>/<which>")
-def processed(task_uid, which):
+class ProcessedRequestPath(AnalysisRequestPath):
+    which: str
+
+
+@api.get("/processed/<task_uid>/<which>")
+def processed(path: ProcessedRequestPath):
+    task_uid = path.task_uid
+    which = path.which
     analysis = get_analysis_data(task_uid)
     path = analysis.get_processed(which)
     if not path.exists():
@@ -162,8 +174,14 @@ def processed(task_uid, which):
     return send_file(path, mimetype="application/json")
 
 
-@api.get("/logs/<uuid:task_uid>/<log_type>")
-def logs(task_uid, log_type):
+class LogsRequestPath(AnalysisRequestPath):
+    log_type: str
+
+
+@api.get("/logs/<task_uid>/<log_type>")
+def logs(path: LogsRequestPath):
+    task_uid = path.task_uid
+    log_type = path.log_type
     analysis = get_analysis_data(task_uid)
     path = analysis.get_log(log_type)
     if not path.exists():
@@ -171,8 +189,14 @@ def logs(task_uid, log_type):
     return send_file(path, mimetype="text/plain")
 
 
-@api.get("/process_info/<uuid:task_uid>/<int:seqid>")
-def process_info(task_uid, seqid):
+class ProcessInfoRequestPath(AnalysisRequestPath):
+    seqid: int
+
+
+@api.get("/process_info/<task_uid>/<seqid>")
+def process_info(path: ProcessInfoRequestPath):
+    task_uid = path.task_uid
+    seqid = path.seqid
     analysis = get_analysis_data(task_uid)
     process_info = analysis.get_process_info(seqid)
     if process_info is None:
@@ -180,8 +204,16 @@ def process_info(task_uid, seqid):
     return jsonify(process_info)
 
 
-@api.get("/logs/<uuid:task_uid>/<log_type>/process/<int:seqid>")
-def process_logs(task_uid, log_type, seqid):
+class ProcessLogsRequestPath(AnalysisRequestPath):
+    log_type: str
+    seqid: int
+
+
+@api.get("/logs/<task_uid>/<log_type>/process/<seqid>")
+def process_logs(path: ProcessLogsRequestPath):
+    task_uid = path.task_uid
+    log_type = path.log_type
+    seqid = path.seqid
     analysis = get_analysis_data(task_uid)
     index_path = analysis.get_log_index(f"{log_type}.{seqid}.json")
     if not index_path.exists():
@@ -213,12 +245,13 @@ def process_logs(task_uid, log_type, seqid):
     return Response(b"".join(scattered_read), mimetype="text/plain")
 
 
-@api.get("/pcap_dump/<uuid:task_uid>")
-def pcap_dump(task_uid):
+@api.get("/pcap_dump/<task_uid>")
+def pcap_dump(path: AnalysisRequestPath):
     """
     Return archive containing dump.pcap along with extracted tls sessions
     keys in format acceptable by wireshark.
     """
+    task_uid = path.task_uid
     analysis = get_analysis_data(task_uid)
     path = analysis.get_pcap_dump()
     if not path.exists():
@@ -233,8 +266,9 @@ def pcap_dump(task_uid):
         return send_file(f_archive.name, mimetype="application/zip")
 
 
-@api.get("/dumps/<uuid:task_uid>")
-def dumps(task_uid):
+@api.get("/dumps/<task_uid>")
+def dumps(path: AnalysisRequestPath):
+    task_uid = path.task_uid
     analysis = get_analysis_data(task_uid)
     path = analysis.get_dumps()
     if not path.exists():
@@ -242,14 +276,16 @@ def dumps(task_uid):
     return send_file(path, mimetype="application/zip")
 
 
-@api.get("/logs/<uuid:task_uid>")
-def list_logs(task_uid):
+@api.get("/logs/<task_uid>")
+def list_logs(path: AnalysisRequestPath):
+    task_uid = path.task_uid
     analysis = get_analysis_data(task_uid)
     return jsonify(list(analysis.list_logs()))
 
 
-@api.get("/graph/<uuid:task_uid>")
-def graph(task_uid):
+@api.get("/graph/<task_uid>")
+def graph(path: AnalysisRequestPath):
+    task_uid = path.task_uid
     analysis = get_analysis_data(task_uid)
     path = analysis.get_graph()
     if not path.exists():
@@ -257,8 +293,14 @@ def graph(task_uid):
     return send_file(path, mimetype="text/plain")
 
 
-@api.get("/screenshot/<uuid:task_uid>/<int:which>")
-def screenshot(task_uid, which):
+class ScreenshotRequestPath(AnalysisRequestPath):
+    which: int
+
+
+@api.get("/screenshot/<task_uid>/<which>")
+def screenshot(path: AnalysisRequestPath):
+    task_uid = path.task_uid
+    which = path.which
     analysis = get_analysis_data(task_uid)
     path = analysis.get_screenshot(which)
     if not path.exists():
