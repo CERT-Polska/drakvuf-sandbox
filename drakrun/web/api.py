@@ -34,8 +34,9 @@ from drakrun.web.schema import (
     ProcessedRequestPath,
     ProcessInfoRequestPath,
     ProcessLogsRequestPath,
+    ScreenshotRequestPath,
     UploadAnalysisResponse,
-    UploadFileForm, ScreenshotRequestPath,
+    UploadFileForm,
 )
 
 api = APIBlueprint("api", __name__, url_prefix="/api")
