@@ -4,14 +4,12 @@ import logging
 import shutil
 import uuid
 from tempfile import NamedTemporaryFile
-from typing import Annotated, List, Optional
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import magic
 import orjson
 from flask import Response, jsonify, request, send_file
-from flask_openapi3 import APIBlueprint, FileStorage
-from pydantic import AfterValidator, BaseModel, Field, RootModel
+from flask_openapi3 import APIBlueprint
 from rq.exceptions import NoSuchJobError
 from rq.job import Job, JobStatus
 
@@ -27,6 +25,18 @@ from drakrun.lib.config import load_config
 from drakrun.lib.paths import ANALYSES_DIR
 from drakrun.web.analysis import get_analysis_data
 from drakrun.web.analysis_list import add_analysis_to_recent, get_recent_analysis_list
+from drakrun.web.schema import (
+    AnalysisListResponse,
+    AnalysisRequestPath,
+    AnalysisResponse,
+    APIErrorResponse,
+    LogsRequestPath,
+    ProcessedRequestPath,
+    ProcessInfoRequestPath,
+    ProcessLogsRequestPath,
+    UploadAnalysisResponse,
+    UploadFileForm,
+)
 
 api = APIBlueprint("api", __name__, url_prefix="/api")
 
@@ -35,25 +45,7 @@ redis = get_redis_connection(config.redis)
 logger = logging.getLogger(__name__)
 
 
-class APIErrorResponse(BaseModel):
-    error: str = Field(description="Error message")
-
-
-class UploadFileForm(BaseModel):
-    file: FileStorage
-    timeout: Optional[int] = Field(default=None, description="Analysis timeout")
-    file_name: Optional[str] = Field(default=None, description="Target file name")
-    start_command: Optional[str] = Field(default=None, description="Start command")
-    plugins: Optional[str] = Field(
-        default=None, description="Plugins to use (in JSON array string)"
-    )
-
-
-class NewAnalysisResponse(BaseModel):
-    task_uid: str = Field(description="Unique analysis ID")
-
-
-@api.post("/upload", responses={200: NewAnalysisResponse})
+@api.post("/upload", responses={200: UploadAnalysisResponse})
 def upload_sample(form: UploadFileForm):
     request_file = form.file
     job_id = str(uuid.uuid4())
@@ -108,30 +100,10 @@ def upload_sample(form: UploadFileForm):
         raise
 
 
-class AnalysisResponse(BaseModel):
-    id: str = Field(description="Unique analysis ID")
-    status: str = Field(description="Analysis status")
-    time_started: Optional[str] = Field(
-        default=None, description="Analysis start time in ISO format"
-    )
-    time_ended: Optional[str] = Field(
-        default=None, description="Analysis end time in ISO format"
-    )
-
-
-AnalysisListResponse = RootModel[List[AnalysisResponse]]
-
-
 @api.get("/list", responses={200: AnalysisListResponse})
 def list_analyses():
     analysis_list = get_recent_analysis_list(redis)
     return jsonify([analysis_job_to_status_dict(job) for job in analysis_list])
-
-
-class AnalysisRequestPath(BaseModel):
-    task_uid: Annotated[str, AfterValidator(lambda x: str(uuid.UUID(x, version=4)))] = (
-        Field(description="Unique analysis ID")
-    )
 
 
 @api.get("/status/<task_uid>", responses={200: AnalysisResponse, 404: APIErrorResponse})
@@ -159,10 +131,6 @@ def status(path: AnalysisRequestPath):
         return jsonify(metadata)
 
 
-class ProcessedRequestPath(AnalysisRequestPath):
-    which: str
-
-
 @api.get("/processed/<task_uid>/<which>")
 def processed(path: ProcessedRequestPath):
     task_uid = path.task_uid
@@ -172,10 +140,6 @@ def processed(path: ProcessedRequestPath):
     if not path.exists():
         return dict(error="Data not found"), 404
     return send_file(path, mimetype="application/json")
-
-
-class LogsRequestPath(AnalysisRequestPath):
-    log_type: str
 
 
 @api.get("/logs/<task_uid>/<log_type>")
@@ -189,10 +153,6 @@ def logs(path: LogsRequestPath):
     return send_file(path, mimetype="text/plain")
 
 
-class ProcessInfoRequestPath(AnalysisRequestPath):
-    seqid: int
-
-
 @api.get("/process_info/<task_uid>/<seqid>")
 def process_info(path: ProcessInfoRequestPath):
     task_uid = path.task_uid
@@ -202,11 +162,6 @@ def process_info(path: ProcessInfoRequestPath):
     if process_info is None:
         return dict(error="Data not found"), 404
     return jsonify(process_info)
-
-
-class ProcessLogsRequestPath(AnalysisRequestPath):
-    log_type: str
-    seqid: int
 
 
 @api.get("/logs/<task_uid>/<log_type>/process/<seqid>")
@@ -291,10 +246,6 @@ def graph(path: AnalysisRequestPath):
     if not path.exists():
         return dict(error="Data not found"), 404
     return send_file(path, mimetype="text/plain")
-
-
-class ScreenshotRequestPath(AnalysisRequestPath):
-    which: int
 
 
 @api.get("/screenshot/<task_uid>/<which>")
