@@ -43,6 +43,12 @@ function AppSidenav() {
                             Upload sample
                         </Link>
                         <div className="sb-sidenav-menu-heading">Sandbox</div>
+                        <a className="nav-link" href="/openapi/swagger">
+                            <div className="sb-nav-link-icon">
+                                <FontAwesomeIcon icon={faGear} />
+                            </div>
+                            API docs
+                        </a>
                         <a className="nav-link" href="/rq">
                             <div className="sb-nav-link-icon">
                                 <FontAwesomeIcon icon={faGear} />
