@@ -2,6 +2,8 @@ import axios from "axios";
 
 if (import.meta.env.VITE_API_SERVER) {
     axios.defaults.baseURL = import.meta.env.VITE_API_SERVER;
+} else {
+    axios.defaults.baseURL = "/api";
 }
 
 export async function getAnalysisList({ abortController }) {

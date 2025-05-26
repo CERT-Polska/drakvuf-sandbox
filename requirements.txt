@@ -10,6 +10,7 @@ tomli==2.2.1
 # Web analyzer dependencies
 rq==2.3.1
 Flask==3.0.3
+flask-openapi3[swagger]==4.1.0
 python-magic==0.4.27
 rq-dashboard==0.8.2.2
 # Screenshotter dependencies

@@ -1,7 +1,7 @@
 rwildcard = $(foreach d,$(wildcard $1*),\
                 $(call rwildcard,$d/,$2) \
                 $(filter $(subst *,%,$2),$d))
-WEB_SOURCE_FILES := $(call rwildcard,drakrun/web/frontend/src/,*.js) $(call rwildcard,drakrun/web/frontend/src/,*.css)
+WEB_SOURCE_FILES := $(call rwildcard,drakrun/web/frontend/src/,*.js) $(call rwildcard,drakrun/web/frontend/src/,*.jsx) $(call rwildcard,drakrun/web/frontend/src/,*.css)
 PYTHON_SOURCE_FILES := $(call rwildcard,drakrun/,*.py) drakrun/data pyproject.toml MANIFEST.in requirements.txt setup.py
 
 .PHONY: all
