@@ -11,7 +11,7 @@ import magic
 import orjson
 from flask import Response, jsonify, request, send_file
 from flask_openapi3 import APIBlueprint, FileStorage
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 from rq.exceptions import NoSuchJobError
 from rq.job import Job, JobStatus
 
@@ -119,9 +119,7 @@ class AnalysisResponse(BaseModel):
     )
 
 
-class AnalysisListResponse(BaseModel):
-    __root__: List[AnalysisResponse]
-
+AnalysisListResponse = RootModel[List[AnalysisResponse]]
 
 @api.get("/list", responses={200: AnalysisListResponse})
 def list_analyses():
