@@ -35,7 +35,7 @@ from drakrun.web.schema import (
     ProcessInfoRequestPath,
     ProcessLogsRequestPath,
     UploadAnalysisResponse,
-    UploadFileForm,
+    UploadFileForm, ScreenshotRequestPath,
 )
 
 api = APIBlueprint("api", __name__, url_prefix="/api")
@@ -249,7 +249,7 @@ def graph(path: AnalysisRequestPath):
 
 
 @api.get("/screenshot/<task_uid>/<which>")
-def screenshot(path: AnalysisRequestPath):
+def screenshot(path: ScreenshotRequestPath):
     task_uid = path.task_uid
     which = path.which
     analysis = get_analysis_data(task_uid)

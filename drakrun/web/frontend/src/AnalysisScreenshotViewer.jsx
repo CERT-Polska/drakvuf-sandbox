@@ -4,6 +4,8 @@ import "react-medium-image-zoom/dist/styles.css";
 let BASE_URL = "";
 if (import.meta.env.VITE_API_SERVER) {
     BASE_URL = import.meta.env.VITE_API_SERVER;
+} else {
+    BASE_URL = "/api";
 }
 
 export function AnalysisScreenshotViewer({ analysis }) {
