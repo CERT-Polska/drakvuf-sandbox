@@ -11,7 +11,7 @@ This sections contains various information about optional features that may be e
 
 ZFS storage backend
 -------------------
-If you want to install DRAKVUF Sandbox with a ZFS storage backend, you should perform the following extra steps before executing ``draksetup install`` command:
+If you want to install DRAKVUF Sandbox with a ZFS storage backend, you should perform the following extra steps before executing ``drakrun install`` command:
 
 1. Install ZFS on your machine (guide for: `Debian Buster <https://github.com/openzfs/zfs/wiki/Debian>`_, `Ubuntu 18.04 <https://ubuntu.com/tutorials/setup-zfs-storage-pool#2-installing-zfs>`_)
 2. Create a ZFS pool on a free partition:
@@ -28,7 +28,7 @@ If you want to install DRAKVUF Sandbox with a ZFS storage backend, you should pe
    
      # zfs create tank/vms
 
-4. Execute ``draksetup install`` as in "Basic installation" section, but remembering to provide additional command line switches:
+4. Execute ``drakrun install`` as in "Basic installation" section, but remembering to provide additional command line switches:
 
    .. code-block:: console
 

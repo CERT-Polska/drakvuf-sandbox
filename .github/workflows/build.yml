@@ -10,11 +10,11 @@ jobs:
   build_docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: "3.11"
       - name: Install dependencies
         working-directory: docs
         run: pip install -r requirements.txt
