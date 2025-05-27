@@ -20,16 +20,12 @@ It's highly recommended to have a basic knowledge about Xen hypervisor that woul
    usage/troubleshooting
    usage/upgrading
    usage/integration
-
-
-   understanding_sandbox
    
 .. toctree::
    :maxdepth: 2
    :caption: Developer guide
 
    sandbox_development
-   regression_testing
 
 .. toctree::
    :maxdepth: 1

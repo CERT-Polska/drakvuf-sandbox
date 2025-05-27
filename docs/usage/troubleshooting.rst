@@ -36,15 +36,15 @@ In such a case, you should inspect ``/var/log/xen/qemu*.log`` in order to determ
 Debug ``can't allocate low memory for domain``
 ----------------------------------------------
 
-The following error with ``draksetup`` command or ``drakrun@*`` service means that your machine is missing memory resources:
+The following error with ``drakrun`` command or ``drakrun-worker@*`` service means that your machine is missing memory resources:
 
 ::
 
     xc: error: panic: xc_dom_boot.c:122: xc_dom_boot_mem_init: can't allocate low memory for domain: Out of memory
     ...
-    subprocess.CalledProcessError: Command 'xl create /etc/drakrun/configs/vm-0.cfg' returned non-zero exit status 3.
+    subprocess.CalledProcessError: Command 'xl create /var/lib/drakrun/configs/vm-0.cfg' returned non-zero exit status 3.
 
 Resolutions:
 
 * adjust the amount of memory dedicated to the Dom0 (host system) in ``/etc/default/grub.d/xen.cfg`` (look for ``dom0_mem=2048M,max:2048M``) and run ``update-grub && reboot``
-* adjust the amount of memory dedicated to the DomU (guest systems) in ``/etc/drakrun/scripts/cfg.template`` (``maxmem`` and ``memory`` keys)
+* adjust the amount of memory dedicated to the DomU (guest systems) in ``/etc/drakrun/install.json`` or ``/etc/drakrun/cfg.template`` ( ``memory`` and ``maxmem`` keys)
