@@ -18,7 +18,7 @@ setup(
     package_dir={"drakrun": "drakrun"},
     packages=find_packages(),
     include_package_data=True,
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     install_requires=open("requirements.txt").read().splitlines(),
     entry_points={
         "console_scripts": [

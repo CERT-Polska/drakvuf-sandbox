@@ -2,6 +2,8 @@ import axios from "axios";
 
 if (import.meta.env.VITE_API_SERVER) {
     axios.defaults.baseURL = import.meta.env.VITE_API_SERVER;
+} else {
+    axios.defaults.baseURL = "/api";
 }
 
 export async function getAnalysisList({ abortController }) {
@@ -53,6 +55,36 @@ export async function getLog({ analysisId, logType, rangeStart, rangeEnd }) {
 
 export async function getLogList({ analysisId }) {
     const logRequest = await axios.get(`/logs/${analysisId}`);
+    return logRequest.data;
+}
+
+export async function getProcessInfo({ analysisId, processSeqId }) {
+    const logRequest = await axios.get(
+        `/process_info/${analysisId}/${processSeqId}`,
+    );
+    return logRequest.data;
+}
+
+export async function getProcessLog({
+    analysisId,
+    logType,
+    selectedProcess,
+    rangeStart,
+    rangeEnd,
+    methodsFilter = [],
+}) {
+    const logRequest = await axios.get(
+        `/logs/${analysisId}/${logType}/process/${selectedProcess}`,
+        {
+            responseType: "text",
+            headers: {
+                Range: `bytes=${rangeStart}-${rangeEnd}`,
+            },
+            params: {
+                filter: methodsFilter,
+            },
+        },
+    );
     return logRequest.data;
 }
 

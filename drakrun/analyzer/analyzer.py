@@ -5,6 +5,8 @@ import pathlib
 import subprocess
 from typing import Any, Dict, List, Optional, Protocol
 
+import mslex
+
 from drakrun.lib.config import NetworkConfigSection, load_config
 from drakrun.lib.drakshell import Drakshell
 from drakrun.lib.injector import Injector
@@ -21,7 +23,7 @@ from drakrun.lib.paths import (
 from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command
 from .postprocessing import postprocess_output_dir
-from .run_tools import run_drakvuf, run_tcpdump, run_vm
+from .run_tools import run_drakvuf, run_screenshotter, run_tcpdump, run_vm
 from .startup_command import get_startup_argv, get_target_filename_from_sample_path
 
 log = logging.getLogger(__name__)
@@ -40,8 +42,7 @@ class AnalysisSubstatusCallback(Protocol):
         self,
         substatus: AnalysisSubstatus,
         updated_options: Optional[AnalysisOptions] = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 def prepare_output_dir(output_dir: pathlib.Path, options: AnalysisOptions) -> None:
@@ -187,14 +188,24 @@ def analyze_file(
             if substatus_callback is not None:
                 substatus_callback(AnalysisSubstatus.analyzing, updated_options=options)
 
-            with run_tcpdump(network_info, tcpdump_file), run_drakvuf(
-                vm.vm_name, vmi_info, kernel_profile_path, drakmon_file, drakvuf_args
+            if options.start_command is not None:
+                exec_cmd = mslex.join(options.start_command, for_cmd=False)
+            else:
+                # If we don't inject the command to run:
+                # evacuate the drakshell before running anything
+                drakshell.finish()
+                exec_cmd = None
+
+            with run_tcpdump(network_info, tcpdump_file), run_screenshotter(
+                vm_id, install_info, output_dir, enabled=(not options.no_screenshotter)
+            ), run_drakvuf(
+                vm.vm_name,
+                vmi_info,
+                kernel_profile_path,
+                drakmon_file,
+                drakvuf_args,
+                exec_cmd=exec_cmd,
             ) as drakvuf:
-                if options.start_command is not None:
-                    log.info(f"Running command: {guest_path}.")
-                    drakshell.run([guest_path], terminate_drakshell=True)
-                else:
-                    drakshell.finish()
                 log.info("Analysis started...")
                 try:
                     # -t should be respected, but let's give 30 more secs
@@ -212,7 +223,8 @@ def analyze_file(
     if substatus_callback is not None:
         substatus_callback(AnalysisSubstatus.postprocessing)
 
-    postprocess_output_dir(output_dir)
+    extra_metadata = postprocess_output_dir(output_dir)
 
     if substatus_callback is not None:
         substatus_callback(AnalysisSubstatus.done)
+    return extra_metadata

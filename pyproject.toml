@@ -1,9 +1,9 @@
 [tool.isort]
 profile = "black"
-skip_glob = ["drakrun/data/**/*", "drakrun/tools/**/*"]
+skip_glob = ["drakrun/data/**/*", "drakrun/tools/**/*", "drakrun/web/frontend/**/*"]
 
 [tool.black]
-exclude = "drakrun/(data|tools)"
+exclude = "drakrun/(data|tools|web/frontend)"
 
 [tool.lint-python]
 lint-version = "2"

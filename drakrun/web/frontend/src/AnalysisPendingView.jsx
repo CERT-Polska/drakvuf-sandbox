@@ -1,7 +1,8 @@
-import { TabSwitcher } from "./TabSwitcher.jsx";
 import { AnalysisLiveInteraction } from "./AnalysisLiveInteraction.jsx";
 import { AnalysisStatusBadge } from "./AnalysisStatusBadge.jsx";
 import { AnalysisMetadataTable } from "./AnalysisMetadataTable.jsx";
+import { useState } from "react";
+import { Tab, TabSwitcher } from "./TabSwitcher.jsx";
 
 export function AnalysisPendingStatusBox({ children }) {
     return (
@@ -24,13 +25,9 @@ export function AnalysisPendingStatusBox({ children }) {
 }
 
 function AnalysisPendingTabs({ analysis }) {
-    const tabs = [
-        "metadata",
-        ...(analysis["vm_id"] ? ["live-interaction"] : []),
-    ];
+    const [activeTab, setActiveTab] = useState("metadata");
     return (
         <TabSwitcher
-            tabIds={tabs}
             getHeader={(tabid) => {
                 if (tabid === "metadata") {
                     return "Analysis info";
@@ -38,14 +35,20 @@ function AnalysisPendingTabs({ analysis }) {
                     return `Live interaction (vm-${analysis["vm_id"]})`;
                 }
             }}
-            renderContent={(tabid) => {
-                if (tabid === "metadata") {
-                    return <AnalysisMetadataTable analysis={analysis} />;
-                } else if (tabid === "live-interaction") {
-                    return <AnalysisLiveInteraction vmId={analysis["vm_id"]} />;
-                }
-            }}
-        />
+            activeTab={activeTab}
+            onTabSwitch={setActiveTab}
+        >
+            <Tab tab="metadata">
+                <AnalysisMetadataTable analysis={analysis} />
+            </Tab>
+            {analysis["vm_id"] ? (
+                <Tab tab="live-interaction">
+                    <AnalysisLiveInteraction vmId={analysis["vm_id"]} />
+                </Tab>
+            ) : (
+                []
+            )}
+        </TabSwitcher>
     );
 }
 

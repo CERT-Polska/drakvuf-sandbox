@@ -735,48 +735,7 @@ static bool send_info(HANDLE hComm) {
     return true;
 }
 
-void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshell_main() {
-    DCB dcb = { .DCBlength = sizeof(DCB) };
-
-    if(!load_winapi()) {
-        // Failed to load some WinAPI functions
-        return;
-    }
-
-    Sleep(500); // Some sleep to let injector finish his job
-
-    OutputDebugStringW(L"Hello from drakshell");
-
-    HANDLE hComm = CreateFileW(
-        L"\\\\.\\COM1",
-        GENERIC_READ | GENERIC_WRITE,
-        0,
-        NULL,
-        OPEN_EXISTING,
-        FILE_FLAG_OVERLAPPED,
-        NULL
-    );
-
-    if(hComm == INVALID_HANDLE_VALUE)
-    {
-        OutputDebugStringW(L"Failed to connect to COM1");
-        return;
-    }
-
-    if(!BuildCommDCB("baud=115200 parity=N data=8 stop=1", &dcb))
-    {
-        OutputDebugStringW(L"Failed to get DCB for COM1");
-        return;
-    }
-
-    if(!SetCommState(hComm, &dcb))
-    {
-        OutputDebugStringW(L"Failed to set mode of COM1");
-        return;
-    }
-
-    OutputDebugStringW(L"Connected to COM1");
-
+void __attribute__((noinline)) __attribute__((ms_abi)) drakshell_loop(HANDLE hComm) {
     while(true) {
         BYTE control = 0;
         if(!recv_control(hComm, &control)) {
@@ -857,6 +816,63 @@ void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshel
             }
         }
     }
+}
+
+void __attribute__((noinline)) __attribute__((force_align_arg_pointer)) drakshell_main() {
+    DCB dcb = { .DCBlength = sizeof(DCB) };
+
+    if(!load_winapi()) {
+        // Failed to load some WinAPI functions
+        return;
+    }
+
+    Sleep(500); // Some sleep to let injector finish his job
+
+    OutputDebugStringW(L"Hello from drakshell");
+
+    HANDLE hComm = CreateFileW(
+        L"\\\\.\\COM1",
+        GENERIC_READ | GENERIC_WRITE,
+        0,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_OVERLAPPED,
+        NULL
+    );
+
+    if(hComm == INVALID_HANDLE_VALUE)
+    {
+        OutputDebugStringW(L"Failed to connect to COM1");
+        return;
+    }
+
+    if(!BuildCommDCB("baud=115200 parity=N data=8 stop=1", &dcb))
+    {
+        OutputDebugStringW(L"Failed to get DCB for COM1");
+        return;
+    }
+
+    if(!SetCommState(hComm, &dcb))
+    {
+        OutputDebugStringW(L"Failed to set mode of COM1");
+        return;
+    }
+
+    OutputDebugStringW(L"Connected to COM1");
+
+	// It's convenient to wrap the loop in separate thread.
+	// Drakvuf can signal end of injection by exiting it
+	// via --exit-injection-thread. This enables us to clean up
+	// the shellcode from the memory after the drakshell_loop is terminated
+	HANDLE hThread = CreateThread(
+        NULL, 0,
+        drakshell_loop,
+        (void*)hComm,
+        0, NULL
+    );
+    WaitForSingleObject(hThread, (DWORD)-1);
+	CloseHandle(hThread);
+
     OutputDebugStringW(L"Bye");
     CloseHandle(hComm);
 }

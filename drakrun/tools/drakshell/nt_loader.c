@@ -204,6 +204,7 @@ void* get_func_from_peb(const wchar_t* libraryName, const char* procName)
     return NULL;
 }
 
+PCreateThread pCreateThread;
 PLoadLibraryW pLoadLibraryW;
 PGetProcAddress pGetProcAddress;
 PMessageBoxA pMessageBoxA;
@@ -238,6 +239,7 @@ PBuildCommDCB pBuildCommDCB;
 bool load_winapi() {
     HANDLE hKernel32, hUser32;
 
+    pCreateThread = get_func_from_peb(L"kernel32.dll", "CreateThread");
     pLoadLibraryW = get_func_from_peb(L"kernel32.dll", "LoadLibraryW");
     pGetProcAddress = get_func_from_peb(L"kernel32.dll", "GetProcAddress");
     if(!pLoadLibraryW || !pGetProcAddress) {

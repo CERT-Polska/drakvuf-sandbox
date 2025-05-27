@@ -1,114 +1,37 @@
 import { useCallback, useEffect, useState } from "react";
-import { getAnalysisProcessTree, getLogList } from "./api.js";
-import { ProcessTree } from "./ProcessTree.jsx";
-import { TabSwitcher } from "./TabSwitcher.jsx";
-import { LogViewer } from "./LogViewer.jsx";
+import { getLog, getLogList, getProcessInfo, getProcessLog } from "./api.js";
+import { TabSwitcher, Tab, useTabContext } from "./TabSwitcher.jsx";
+import { getLogLoader, LogViewer } from "./LogViewer.jsx";
 import { AnalysisMetadataTable } from "./AnalysisMetadataTable.jsx";
+import { AnalysisScreenshotViewer } from "./AnalysisScreenshotViewer.jsx";
+import { ProcessTreeView } from "./ProcessTreeView.jsx";
+import { MethodFilterPicker } from "./MethodFilterPicker.jsx";
+import { ProcessInfoTable } from "./ProcessInfoTable.jsx";
 
-function isProcessInteresting(process) {
-    return process.procname.endsWith("explorer.exe");
-}
-
-function getInterestingProcesses(processTree) {
-    let activeSet = new Set();
-    for (let process of processTree) {
-        if (isProcessInteresting(process)) {
-            activeSet.add(process.seqid);
-        }
-        if (process.children.length > 0) {
-            const activeChildren = getInterestingProcesses(process.children);
-            if (activeChildren.size) {
-                activeSet = activeSet.union(activeChildren);
-                activeSet.add(process.seqid);
-            }
-        }
-    }
-    return activeSet;
-}
-
-function ProcessTreeView({ analysisId }) {
-    const [uncollapsed, setUncollapsed] = useState(new Set());
-    const [processTree, setProcessTree] = useState();
-    const [selected, setSelected] = useState();
-    const [error, setError] = useState();
-
-    useEffect(() => {
-        getAnalysisProcessTree({ analysisId })
-            .then((data) => {
-                setProcessTree(data);
-                setUncollapsed(getInterestingProcesses(data));
-            })
-            .catch((e) => {
-                console.error(e);
-                setError(e);
-            });
-    }, []);
-
-    return (
-        <div className="card">
-            <div className="card-body">
-                {typeof processTree === "undefined" ? (
-                    <span>Loading process tree...</span>
-                ) : (
-                    []
-                )}
-                {typeof error !== "undefined" ? (
-                    <span className="text-danger">
-                        Unable to load process tree
-                    </span>
-                ) : (
-                    []
-                )}
-                {typeof processTree !== "undefined" ? (
-                    <ProcessTree
-                        processTree={processTree}
-                        uncollapsedSeqid={uncollapsed}
-                        setCollapse={(seqid) => {
-                            const collapse = uncollapsed.has(seqid);
-                            setUncollapsed((currentValue) => {
-                                let newSet = new Set(currentValue);
-                                if (!collapse) {
-                                    newSet.add(seqid);
-                                } else {
-                                    newSet.delete(seqid);
-                                }
-                                return newSet;
-                            });
-                        }}
-                        selected={selected}
-                        onSelect={(seqid) => {
-                            setSelected(seqid);
-                        }}
-                    />
-                ) : (
-                    []
-                )}
-            </div>
-        </div>
-    );
+export function AnalysisLogViewerTab({ analysisId }) {
+    const logType = useTabContext()?.activeTab;
+    const logLoaderFactory = useCallback(() => {
+        return getLogLoader({
+            getLogEntries: ({ rangeStart, rangeEnd }) =>
+                getLog({ analysisId, logType, rangeStart, rangeEnd }),
+        });
+    }, [analysisId, logType]);
+    if (!logType) return [];
+    return <LogViewer logLoaderFactory={logLoaderFactory} />;
 }
 
 function AnalysisLogViewer({ analysisId }) {
-    const [inspector, setInspector] = useState(null);
     const [tabs, setTabs] = useState();
+    const [activeTab, setActiveTab] = useState();
     const [error, setError] = useState();
-    const parseLine = useCallback((line) => {
-        try {
-            const data = JSON.parse(line.trimEnd());
-            setInspector(JSON.stringify(data, null, 4));
-        } catch (err) {
-            setInspector(null);
-        }
-    }, []);
-
     const loadLogTypes = useCallback(async () => {
         try {
             const logTypes = await getLogList({ analysisId });
-            setTabs(
-                logTypes
-                    .filter((logType) => logType.endsWith(".log"))
-                    .map((logType) => logType.split(".")[0]),
-            );
+            const tabs = logTypes
+                .filter((logType) => logType.endsWith(".log"))
+                .map((logType) => logType.split(".")[0]);
+            setTabs(tabs);
+            setActiveTab(tabs[0]);
         } catch (err) {
             setError(err);
             console.error(err);
@@ -120,11 +43,13 @@ function AnalysisLogViewer({ analysisId }) {
     }, [analysisId]);
 
     if (typeof tabs === "undefined") {
-        return <div>Loading log information...</div>;
+        return <div className="py-2">Loading log information...</div>;
     }
 
     if (typeof error !== "undefined") {
-        return <div className="text-danger">Error: {error.toString()}</div>;
+        return (
+            <div className="text-danger py-2">Error: {error.toString()}</div>
+        );
     }
 
     return (
@@ -132,75 +57,179 @@ function AnalysisLogViewer({ analysisId }) {
             <div className="fw-bold py-2">Log type:</div>
             <div className="d-flex align-items-start">
                 <TabSwitcher
-                    tabIds={tabs}
-                    getHeader={(tabId) => tabId}
-                    renderContent={(tabId) => {
-                        return (
-                            <LogViewer
-                                analysisId={analysisId}
-                                logType={tabId}
-                                className="flex-grow-1"
-                                onLineClick={parseLine}
-                            />
-                        );
-                    }}
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabSwitch={setActiveTab}
                     tabClassName="flex-column nav-pills me-3"
                     contentClassName="flex-grow-1"
-                />
+                >
+                    <AnalysisLogViewerTab analysisId={analysisId} />
+                </TabSwitcher>
             </div>
-            {inspector ? (
-                <div>
-                    <div
-                        className="fw-bold ps-2"
-                        style={{ borderTop: "black 1px solid" }}
-                    >
-                        JSON inspector
-                    </div>
-                    <pre>{inspector}</pre>
-                </div>
-            ) : (
-                []
-            )}
         </div>
     );
 }
 
-function AnalysisReportTabs({ analysis }) {
+function ProcessInfoTab({ analysisId, selectedProcess, processInfo }) {
+    const activeTab = useTabContext()?.activeTab;
+    if (activeTab !== "Process information") {
+        return [];
+    }
+    return <ProcessInfoTable processInfo={processInfo["process"]} />;
+}
+
+function ProcessLogViewerTab({ analysisId, selectedProcess, processInfo }) {
+    const [methodsFilter, setMethodsFilter] = useState([]);
+    const activeTab = useTabContext()?.activeTab;
+    const logType =
+        activeTab === "Process information" || !processInfo["logs"][activeTab]
+            ? undefined
+            : activeTab;
+    const logMethods = logType ? processInfo["logs"][logType] : [];
+    const logLoaderFactory = useCallback(() => {
+        return getLogLoader({
+            getLogEntries: ({ rangeStart, rangeEnd }) => {
+                return getProcessLog({
+                    analysisId,
+                    logType,
+                    selectedProcess,
+                    rangeStart,
+                    rangeEnd,
+                    methodsFilter,
+                });
+            },
+        });
+    }, [analysisId, logType, selectedProcess, methodsFilter]);
+    useEffect(() => {
+        setMethodsFilter([]);
+    }, [logType]);
+    if (!logType) return [];
+    return (
+        <>
+            <div>
+                <label className="form-label">Method filter</label>
+                <MethodFilterPicker
+                    onFilterChange={setMethodsFilter}
+                    currentFilter={methodsFilter}
+                    methods={logMethods}
+                />
+            </div>
+            <LogViewer logLoaderFactory={logLoaderFactory} />
+        </>
+    );
+}
+
+function ProcessLogViewer({ analysisId, selectedProcess }) {
+    const [tabs, setTabs] = useState();
+    const [activeTab, setActiveTab] = useState();
+    const [processInfo, setProcessInfo] = useState();
+    const [error, setError] = useState();
+    const loadProcessInfo = useCallback(
+        async (processSeqId) => {
+            try {
+                const processInfo = await getProcessInfo({
+                    analysisId,
+                    processSeqId,
+                });
+                const tabs = Object.keys(processInfo["logs"]);
+                setProcessInfo(processInfo);
+                setTabs(["Process information", ...tabs]);
+                setActiveTab("Process information");
+            } catch (err) {
+                setError(err);
+                console.error(err);
+            }
+        },
+        [analysisId],
+    );
+
+    useEffect(() => {
+        if (typeof selectedProcess === "undefined") return;
+        loadProcessInfo(selectedProcess);
+    }, [analysisId, selectedProcess]);
+
+    if (typeof selectedProcess === "undefined") {
+        return (
+            <div className="fw-bold py-2">
+                Select a process from the process tree above
+            </div>
+        );
+    }
+
+    if (typeof tabs === "undefined") {
+        return <div className="py-2">Loading log information...</div>;
+    }
+
+    if (typeof error !== "undefined") {
+        return (
+            <div className="text-danger py-2">Error: {error.toString()}</div>
+        );
+    }
+
+    return (
+        <div>
+            <div className="fw-bold py-2">Log type:</div>
+            <div className="d-flex align-items-start">
+                <TabSwitcher
+                    tabs={tabs}
+                    activeTab={activeTab}
+                    onTabSwitch={setActiveTab}
+                    tabClassName="flex-column nav-pills me-3"
+                    contentClassName="flex-grow-1"
+                >
+                    <ProcessInfoTab
+                        analysisId={analysisId}
+                        selectedProcess={selectedProcess}
+                        processInfo={processInfo}
+                    />
+                    <ProcessLogViewerTab
+                        analysisId={analysisId}
+                        selectedProcess={selectedProcess}
+                        processInfo={processInfo}
+                    />
+                </TabSwitcher>
+            </div>
+        </div>
+    );
+}
+
+function AnalysisReportTabs({ analysis, selectedProcess }) {
+    const [activeTab, setActiveTab] = useState("General logs");
     return (
         <div className="card">
             <div className="card-body">
-                <TabSwitcher
-                    tabIds={["general-logs"]}
-                    getHeader={(tabId) => {
-                        if (tabId === "summary") {
-                            return "Summary";
-                        } else if (tabId === "process-logs") {
-                            return "Process logs";
-                        } else if (tabId === "general-logs") {
-                            return "General logs";
-                        }
-                    }}
-                    renderContent={(tabId) => {
-                        if (tabId === "general-logs") {
-                            return (
-                                <AnalysisLogViewer analysisId={analysis.id} />
-                            );
-                        } else {
-                            return <div>(not implemented)</div>;
-                        }
-                    }}
-                />
+                <TabSwitcher activeTab={activeTab} onTabSwitch={setActiveTab}>
+                    <Tab tab="General logs">
+                        <AnalysisLogViewer analysisId={analysis.id} />
+                    </Tab>
+                    <Tab tab="Process logs">
+                        <ProcessLogViewer
+                            analysisId={analysis.id}
+                            selectedProcess={selectedProcess}
+                        />
+                    </Tab>
+                    {analysis.screenshots ? (
+                        <Tab tab="Screenshots">
+                            <AnalysisScreenshotViewer analysis={analysis} />
+                        </Tab>
+                    ) : null}
+                </TabSwitcher>
             </div>
         </div>
     );
 }
 
 export function AnalysisReport({ analysis }) {
+    const [selectedProcess, setSelectedProcess] = useState();
     return (
         <>
             <div className="row">
                 <div className="col-6">
-                    <ProcessTreeView analysisId={analysis.id} />
+                    <ProcessTreeView
+                        analysisId={analysis.id}
+                        selectedProcess={selectedProcess}
+                        onProcessSelect={setSelectedProcess}
+                    />
                 </div>
                 <div className="col-6">
                     <AnalysisMetadataTable analysis={analysis} />
@@ -208,7 +237,10 @@ export function AnalysisReport({ analysis }) {
             </div>
             <div className="row py-4">
                 <div className="col">
-                    <AnalysisReportTabs analysis={analysis} />
+                    <AnalysisReportTabs
+                        analysis={analysis}
+                        selectedProcess={selectedProcess}
+                    />
                 </div>
             </div>
         </>

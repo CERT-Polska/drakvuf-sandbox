@@ -5,6 +5,7 @@ import click
 
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.analyzer import analyze_file
+from drakrun.analyzer.postprocessing import append_metadata_to_analysis
 from drakrun.lib.config import load_config
 
 
@@ -79,6 +80,12 @@ from drakrun.lib.config import load_config
     is_flag=True,
     help="Don't run a post-restore script",
 )
+@click.option(
+    "--no-screenshotter",
+    "no_screenshotter",
+    is_flag=True,
+    help="Don't make screenshots during analysis",
+)
 def analyze(
     vm_id,
     output_dir,
@@ -90,6 +97,7 @@ def analyze(
     net_enable,
     no_restore,
     no_post_restore,
+    no_screenshotter,
 ):
     """
     Run a CLI analysis using Drakvuf
@@ -119,6 +127,8 @@ def analyze(
         plugins=plugins,
         no_vm_restore=no_restore,
         no_post_restore=no_post_restore,
+        no_screenshotter=no_screenshotter,
     )
 
-    analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)
+    extra_metadata = analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)
+    append_metadata_to_analysis(output_dir, extra_metadata)

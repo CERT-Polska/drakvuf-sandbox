@@ -34,7 +34,7 @@ def get_base_drakvuf_cmdline(
                 "-e",
                 exec_cmd,
                 *(
-                    ["-I", str(vmi_info.inject_tid)]
+                    ["-I", str(vmi_info.inject_tid), "--exit-injection-thread"]
                     if vmi_info.inject_tid is not None
                     else []
                 ),
