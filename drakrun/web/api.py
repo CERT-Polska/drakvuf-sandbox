@@ -1,5 +1,4 @@
 import hashlib
-import json
 import logging
 import shutil
 import uuid
@@ -71,9 +70,6 @@ def upload_sample(form: UploadFileForm):
             filename = request_file.filename
         start_command = form.start_command
         plugins = form.plugins
-        if plugins:
-            plugins = json.loads(plugins)
-
         file_metadata = FileMetadata(
             name=filename,
             type=sample_magic,

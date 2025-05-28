@@ -14,7 +14,7 @@ class UploadFileForm(BaseModel):
     timeout: Optional[int] = Field(default=None, description="Analysis timeout")
     file_name: Optional[str] = Field(default=None, description="Target file name")
     start_command: Optional[str] = Field(default=None, description="Start command")
-    plugins: Optional[str] = Field(
+    plugins: Optional[List[str]] = Field(
         default=None, description="Plugins to use (in JSON array string)"
     )
 
