@@ -13,12 +13,12 @@ from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.libvmi import VmiInfo
 from drakrun.lib.paths import (
+    DUMPS_DIR,
     ETC_DIR,
     INSTALL_INFO_PATH,
     PACKAGE_DATA_PATH,
     VMI_INFO_PATH,
     VMI_KERNEL_PROFILE_PATH,
-    DUMPS_DIR,
 )
 
 from .analysis_options import AnalysisOptions

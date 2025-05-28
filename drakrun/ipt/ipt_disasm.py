@@ -5,6 +5,7 @@ import sys
 import tempfile
 from collections import defaultdict
 from pathlib import Path
+
 from drakrun.lib.paths import IPT_DIR
 
 from .ipt_utils import (

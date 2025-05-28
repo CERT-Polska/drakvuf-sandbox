@@ -1,3 +1,5 @@
+from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP, IPT_DIR, IPT_ZIP
+
 from .build_process_tree import build_process_tree
 from .capa_plugin.capa_processor import capa_analysis
 from .compress_ipt import compress_ipt
@@ -9,7 +11,6 @@ from .index_logs import index_logs
 from .plugin_base import PostprocessPlugin
 from .screenshot_metadata import screenshot_metadata
 from .split_drakmon_log import split_drakmon_log
-from drakrun.lib.paths import DUMPS_DIR, IPT_DIR, DUMPS_ZIP, IPT_ZIP
 
 POSTPROCESS_PLUGINS = [
     PostprocessPlugin(

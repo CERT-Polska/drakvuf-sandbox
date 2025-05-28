@@ -3,6 +3,7 @@ import zipfile
 
 from drakrun.lib.paths import IPT_DIR, IPT_ZIP
 
+
 def compress_ipt(analysis_dir: pathlib.Path) -> None:
     """
     Compress the directory specified by dirpath to target_zip file.
