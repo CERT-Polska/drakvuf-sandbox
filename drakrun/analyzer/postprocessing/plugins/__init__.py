@@ -1,3 +1,5 @@
+from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP, IPT_DIR, IPT_ZIP
+
 from .build_process_tree import build_process_tree
 from .capa_plugin.capa_processor import capa_analysis
 from .compress_ipt import compress_ipt
@@ -45,8 +47,8 @@ POSTPROCESS_PLUGINS = [
         requires=["screenshots.json"],
         generates=[],
     ),
-    PostprocessPlugin(function=crop_dumps, requires=["dumps"], generates=["dumps.zip"]),
-    PostprocessPlugin(function=compress_ipt, requires=["ipt"], generates=["ipt.zip"]),
+    PostprocessPlugin(function=crop_dumps, requires=[DUMPS_DIR], generates=[DUMPS_ZIP]),
+    PostprocessPlugin(function=compress_ipt, requires=[IPT_DIR], generates=[IPT_ZIP]),
     PostprocessPlugin(
         function=index_logs, requires=["procmon.log"], generates=["index"]
     ),

@@ -5,12 +5,14 @@ import re
 import zipfile
 from typing import Any, Dict, List, Tuple
 
+from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP
+
 logger = logging.getLogger(__name__)
 
 
 def crop_dumps(analysis_dir: pathlib.Path) -> Dict[str, Any]:
-    dumps_path = analysis_dir / "dumps"
-    target_zip = analysis_dir / "dumps.zip"
+    dumps_path = analysis_dir / DUMPS_DIR
+    target_zip = analysis_dir / DUMPS_ZIP
     zipf = zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED)
 
     dumps: List[Tuple[pathlib.Path, os.stat_result]] = sorted(
@@ -33,16 +35,16 @@ def crop_dumps(analysis_dir: pathlib.Path) -> Dict[str, Any]:
                 dump_base = hex(int(file_basename.split("_")[0], 16))
                 dumps_metadata.append(
                     {
-                        "filename": os.path.join("dumps", file_basename),
+                        "filename": os.path.join(DUMPS_DIR, file_basename),
                         "base_address": dump_base,
                     }
                 )
-            zipf.write(dump, os.path.join("dumps", file_basename))
+            zipf.write(dump, os.path.join(DUMPS_DIR, file_basename))
         dump.unlink()
 
     # No dumps, force empty directory
     if current_size == 0:
-        zipf.writestr(zipfile.ZipInfo("dumps/"), "")
+        zipf.writestr(zipfile.ZipInfo(f"{DUMPS_DIR}/"), "")
 
     if current_size > max_total_size:
         logger.warning(

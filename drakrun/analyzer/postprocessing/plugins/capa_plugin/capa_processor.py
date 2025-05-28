@@ -27,6 +27,7 @@ from capa.render.result_document import MatchResults as ResultDocumentMatchResul
 from capa.rules import Rule, RuleSet, get_rules, get_rules_and_dependencies
 
 from drakrun.lib.config import load_config
+from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP
 
 logger = logging.getLogger(__name__)
 
@@ -218,10 +219,10 @@ def static_memory_dumps_capa_analysis(
 
     with TemporaryDirectory() as dump_extraction_directory:
         # extract all memory dumps temporarily into a dumps/ folder
-        with zipfile.ZipFile(analysis_dir / "dumps.zip", "r") as zip_ref:
+        with zipfile.ZipFile(analysis_dir / DUMPS_ZIP, "r") as zip_ref:
             # extract the memory dumps into the temporary directory
             zip_ref.extractall(dump_extraction_directory)
-            dumps = Path(dump_extraction_directory) / "dumps"
+            dumps = Path(dump_extraction_directory) / DUMPS_DIR
 
         # extract the capabilities within each memory dump, one per thread
         pool = multiprocessing.Pool(processes=worker_pool_processes)
