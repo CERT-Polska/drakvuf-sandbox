@@ -22,6 +22,11 @@ PACKAGE_TOOLS_PATH = PACKAGE_DIR / "tools"
 
 RUN_DIR = pathlib.Path("/var/run/drakrun")
 
+DUMPS_DIR = "dumps"
+DUMPS_ZIP = "dumps.zip"
+IPT_DIR = "ipt"
+IPT_ZIP = "ipt.zip"
+
 
 def make_dirs():
     pathlib.Path(ETC_DIR).mkdir(exist_ok=True)

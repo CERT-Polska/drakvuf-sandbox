@@ -5,6 +5,7 @@ import sys
 import tempfile
 from collections import defaultdict
 from pathlib import Path
+from drakrun.lib.paths import IPT_DIR
 
 from .ipt_utils import (
     get_fault_pa,
@@ -125,7 +126,7 @@ def get_ptxed_cmdline(analysis_dir, cr3_value, vcpu, use_blocks=False):
             # codemon failed to save dump
             continue
         name = Path(fname).name
-        fpath = analysis_dir / "ipt" / "dumps" / name
+        fpath = analysis_dir / IPT_DIR / "dumps" / name
         if fpath.stat().st_size == 0x1000:
             pages.append("--raw")
             pages.append(f"{fpath}:0x{addr:x}")

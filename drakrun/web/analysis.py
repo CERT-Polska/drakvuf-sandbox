@@ -2,7 +2,7 @@ import json
 import pathlib
 
 from drakrun.analyzer.postprocessing.process_tree import tree_from_dict
-from drakrun.lib.paths import ANALYSES_DIR
+from drakrun.lib.paths import ANALYSES_DIR, DUMPS_ZIP
 
 
 def check_path(path: pathlib.Path, base: pathlib.Path) -> pathlib.Path:
@@ -53,7 +53,7 @@ class AnalysisStorage:
 
     def get_dumps(self):
         """Download memory dumps"""
-        return self.analysis_dir / "dumps.zip"
+        return self.analysis_dir / DUMPS_ZIP
 
     def get_graph(self):
         """Download ProcDOT graph"""

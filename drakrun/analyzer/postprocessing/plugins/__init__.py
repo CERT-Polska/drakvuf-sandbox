@@ -9,6 +9,7 @@ from .index_logs import index_logs
 from .plugin_base import PostprocessPlugin
 from .screenshot_metadata import screenshot_metadata
 from .split_drakmon_log import split_drakmon_log
+from drakrun.lib.paths import DUMPS_DIR, IPT_DIR, DUMPS_ZIP, IPT_ZIP
 
 POSTPROCESS_PLUGINS = [
     PostprocessPlugin(
@@ -45,8 +46,8 @@ POSTPROCESS_PLUGINS = [
         requires=["screenshots.json"],
         generates=[],
     ),
-    PostprocessPlugin(function=crop_dumps, requires=["dumps"], generates=["dumps.zip"]),
-    PostprocessPlugin(function=compress_ipt, requires=["ipt"], generates=["ipt.zip"]),
+    PostprocessPlugin(function=crop_dumps, requires=[DUMPS_DIR], generates=[DUMPS_ZIP]),
+    PostprocessPlugin(function=compress_ipt, requires=[IPT_DIR], generates=[IPT_ZIP]),
     PostprocessPlugin(
         function=index_logs, requires=["procmon.log"], generates=["index"]
     ),

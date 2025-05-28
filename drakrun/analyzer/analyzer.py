@@ -18,6 +18,7 @@ from drakrun.lib.paths import (
     PACKAGE_DATA_PATH,
     VMI_INFO_PATH,
     VMI_KERNEL_PROFILE_PATH,
+    DUMPS_DIR,
 )
 
 from .analysis_options import AnalysisOptions
@@ -47,7 +48,7 @@ class AnalysisSubstatusCallback(Protocol):
 
 def prepare_output_dir(output_dir: pathlib.Path, options: AnalysisOptions) -> None:
     if "memdump" in options.plugins:
-        (output_dir / "memdumps").mkdir()
+        (output_dir / DUMPS_DIR).mkdir()
 
     if options.extra_output_subdirs is not None:
         for dirname in options.extra_output_subdirs:
@@ -82,7 +83,7 @@ def prepare_drakvuf_args(
         "-t": options.timeout,
     }
     if "memdump" in options.plugins:
-        base_args["--memdump-dir"] = (output_dir / "memdumps").resolve().as_posix()
+        base_args["--memdump-dir"] = (output_dir / DUMPS_DIR).resolve().as_posix()
     if "apimon" in options.plugins or "memdump" in options.plugins:
         if options.apimon_hooks_path is not None:
             dll_hooks_path = options.apimon_hooks_path.resolve()
