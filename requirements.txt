@@ -19,3 +19,4 @@ Pillow==10.4.0
 Perception==0.6.8
 # Perception missing peer dependency
 opencv-contrib-python-headless==4.11.0.86
+boto3==1.38.15

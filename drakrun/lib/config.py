@@ -33,8 +33,8 @@ class DrakrunConfigSection(BaseModel):
     model_config = ConfigDict(extra="ignore")
     plugins: List[str]
     default_timeout: int
-    job_timeout_leeway: int = 300
-    """Give extra 5 minutes as a timeout for whole analysis process
+    job_timeout_leeway: int = 600
+    """Give extra 10 minutes as a timeout for whole analysis process
     including VM restore, post-restore, drakvuf hard timeout and
     postprocessing."""
     apimon_hooks_path: Optional[pathlib.Path] = None
@@ -51,12 +51,24 @@ class CapaConfigSection(BaseModel):
     worker_pool_processes: int = 4
 
 
+class S3StorageConfigSection(BaseModel):
+    enabled: bool = True
+    bucket: str = "drakrun"
+    address: str
+    access_key: str
+    secret_key: Optional[str]
+    iam_auth: bool = False
+    local_storage_limit: int = 100
+    remove_local_after_upload: bool = False
+
+
 class DrakrunConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
     redis: RedisConfigSection
     network: NetworkConfigSection
     drakrun: DrakrunConfigSection
     capa: CapaConfigSection = CapaConfigSection()
+    s3: Optional[S3StorageConfigSection] = None
 
     @staticmethod
     def load(filename: str) -> "DrakrunConfig":
