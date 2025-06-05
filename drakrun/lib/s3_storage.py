@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 import shutil
+import time
 import zipfile
 from tempfile import NamedTemporaryFile
 from typing import BinaryIO, Optional
@@ -18,6 +19,8 @@ from botocore.exceptions import ClientError
 from botocore.session import get_session
 
 from .config import S3StorageConfigSection
+
+LOCK_EXPIRE_TTL_SECONDS = 60 * 60
 
 logger = logging.getLogger(__name__)
 
@@ -110,8 +113,9 @@ def download_analysis(
 
 
 def set_analysis_lock(analysis_path: pathlib.Path, lock_type: LocalLockType) -> None:
+    lock_time = time.time()
     lock_path = analysis_path / lock_type.name
-    lock_path.touch()
+    lock_path.write_text(str(lock_time))
 
 
 def reset_analysis_lock(analysis_path: pathlib.Path, lock_type: LocalLockType) -> None:
@@ -119,16 +123,30 @@ def reset_analysis_lock(analysis_path: pathlib.Path, lock_type: LocalLockType) -
     lock_path.unlink()
 
 
+def _has_analysis_lock(lock_path: pathlib.Path) -> bool:
+    if not lock_path.exists():
+        return False
+    current_time = time.time()
+    try:
+        lock_time = int(lock_path.read_text())
+        if (current_time - lock_time) > LOCK_EXPIRE_TTL_SECONDS:
+            return False
+        return True
+    except Exception:
+        logger.exception("Failed to get lock expiration time. Lock considered invalid.")
+        return False
+
+
 def has_analysis_lock(
     analysis_path: pathlib.Path, lock_type: Optional[LocalLockType] = None
 ) -> bool:
     upload_lock = analysis_path / LocalLockType.upload_lock.value
     if lock_type is LocalLockType.upload_lock:
-        return upload_lock.exists()
+        return _has_analysis_lock(upload_lock)
     download_lock = analysis_path / LocalLockType.download_lock.value
     if lock_type is LocalLockType.download_lock:
-        return download_lock.exists()
-    return upload_lock.exists() or download_lock.exists()
+        return _has_analysis_lock(download_lock)
+    return _has_analysis_lock(upload_lock) or _has_analysis_lock(download_lock)
 
 
 def remove_local_analysis(analysis_path: pathlib.Path, with_lock: bool = False) -> None:
