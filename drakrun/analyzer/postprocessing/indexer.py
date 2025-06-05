@@ -1,7 +1,7 @@
 import logging
 import pathlib
 from collections import defaultdict
-from typing import List, Optional
+from typing import BinaryIO, List, Optional
 
 import msgpack
 import orjson
@@ -100,48 +100,45 @@ def build_log_index(analysis_dir: pathlib.Path, process_tree: ProcessTree) -> by
     return serialized_index_toc + b"".join(serialized_indexes)
 
 
-def get_plugin_names_for_process(index_file: pathlib.Path, seqid: int):
-    with index_file.open("rb") as f:
-        unpacker = msgpack.Unpacker(f)
-        index_toc = unpacker.unpack()
-        if seqid >= len(index_toc):
-            return []
-        return list(index_toc[seqid].keys())
+def get_plugin_names_for_process(index_file: BinaryIO, seqid: int):
+    unpacker = msgpack.Unpacker(index_file)
+    index_toc = unpacker.unpack()
+    if seqid >= len(index_toc):
+        return []
+    return list(index_toc[seqid].keys())
 
 
-def get_log_index_for_process(index_file: pathlib.Path, seqid: int, plugin_name: str):
-    with index_file.open("rb") as f:
-        unpacker = msgpack.Unpacker(f)
-        index_toc = unpacker.unpack()
-        log_pos = unpacker.tell()
-        if seqid >= len(index_toc):
-            return None
-        if plugin_name not in index_toc[seqid]:
-            return None
-        start = index_toc[seqid][plugin_name]
-        # Seek to the specific point of file
-        f.seek(log_pos + start)
-        unpacker = msgpack.Unpacker(f)
-        return unpacker.unpack()
+def get_log_index_for_process(index_file: BinaryIO, seqid: int, plugin_name: str):
+    unpacker = msgpack.Unpacker(index_file)
+    index_toc = unpacker.unpack()
+    log_pos = unpacker.tell()
+    if seqid >= len(index_toc):
+        return None
+    if plugin_name not in index_toc[seqid]:
+        return None
+    start = index_toc[seqid][plugin_name]
+    # Seek to the specific point of file
+    index_file.seek(log_pos + start)
+    unpacker = msgpack.Unpacker(index_file)
+    return unpacker.unpack()
 
 
 def scattered_read_file(
-    log_file: pathlib.Path,
+    log_file: BinaryIO,
     offsets: List[List[int]],
     skip: int = 0,
     length: Optional[int] = None,
 ):
     bytes_scanned = 0
     bytes_read = 0
-    with log_file.open("rb") as f:
-        for offset_start, offset_end in offsets:
-            block_length = offset_end - offset_start
-            if skip < (bytes_scanned + block_length):
-                block_skip = max(0, skip - bytes_scanned)
-                f.seek(offset_start + block_skip)
-                block_read = block_length - block_skip
-                if length is not None:
-                    block_read = min(length - bytes_read, block_read)
-                yield f.read(block_read)
-                bytes_read += block_read
-            bytes_scanned += block_length
+    for offset_start, offset_end in offsets:
+        block_length = offset_end - offset_start
+        if skip < (bytes_scanned + block_length):
+            block_skip = max(0, skip - bytes_scanned)
+            log_file.seek(offset_start + block_skip)
+            block_read = block_length - block_skip
+            if length is not None:
+                block_read = min(length - bytes_read, block_read)
+            yield log_file.read(block_read)
+            bytes_read += block_read
+        bytes_scanned += block_length
