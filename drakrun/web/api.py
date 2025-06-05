@@ -6,7 +6,6 @@ from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import magic
-import orjson
 from flask import Response, jsonify, request, send_file
 from flask_openapi3 import APIBlueprint
 from rq.exceptions import NoSuchJobError
@@ -14,7 +13,10 @@ from rq.job import Job, JobStatus
 
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.file_metadata import FileMetadata
-from drakrun.analyzer.postprocessing.indexer import scattered_read_file
+from drakrun.analyzer.postprocessing.indexer import (
+    get_log_index_for_process,
+    scattered_read_file,
+)
 from drakrun.analyzer.worker import (
     analysis_job_to_status_dict,
     enqueue_analysis,
@@ -167,10 +169,12 @@ def process_logs(path: ProcessLogsRequestPath):
     log_type = path.log_type
     seqid = path.seqid
     analysis = get_analysis_data(task_uid)
-    index_path = analysis.get_log_index(f"{log_type}.{seqid}.json")
+    index_path = analysis.get_log_index()
     if not index_path.exists():
         return dict(error="Data not found"), 404
-    index = orjson.loads(index_path.read_text())
+    index = get_log_index_for_process(index_path, seqid, log_type)
+    if not index:
+        return dict(error="Data not found"), 404
     blocks = index["blocks"]
     filter_values = request.args.getlist("filter[]")
     if filter_values:
