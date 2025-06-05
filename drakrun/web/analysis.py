@@ -1,6 +1,10 @@
 import json
 import pathlib
 
+from drakrun.analyzer.postprocessing.indexer import (
+    get_log_index_for_process,
+    get_plugin_names_for_process,
+)
 from drakrun.analyzer.postprocessing.process_tree import tree_from_dict
 from drakrun.lib.paths import ANALYSES_DIR, DUMPS_ZIP
 
@@ -34,12 +38,12 @@ class AnalysisStorage:
         """Download DRAKVUF log"""
         return self._check_path(self.analysis_dir / f"{log_type}.log")
 
-    def get_log_index(self, log_type):
+    def get_log_index(self):
         """
         Download log index, useful for quickly accessing n-th
         log line
         """
-        return self._check_path(self.analysis_dir / "index" / log_type)
+        return self.analysis_dir / "log_index"
 
     def get_pcap_dump(self):
         """Download dump.pcap file."""
@@ -75,14 +79,16 @@ class AnalysisStorage:
             return None
         process_tree = tree_from_dict(json.loads(path.read_text()))
         process = process_tree.processes[which]
-        log_index = self.analysis_dir / "index"
+        log_index = self.analysis_dir / "log_index"
+        logs = {}
         if log_index.exists():
-            logs = {}
-            for index_path in log_index.glob(f"*.{which}.json"):
-                log_name = index_path.name.split(".")[0]
-                logs[log_name] = json.loads(index_path.read_text())["values"]
-        else:
-            logs = {}
+            plugin_names = get_plugin_names_for_process(log_index, which)
+            for plugin_name in plugin_names:
+                process_log_index = get_log_index_for_process(
+                    log_index, which, plugin_name
+                )
+                if process_log_index:
+                    logs[plugin_name] = process_log_index["values"]
         return {
             "process": process.as_dict(),
             "logs": logs,

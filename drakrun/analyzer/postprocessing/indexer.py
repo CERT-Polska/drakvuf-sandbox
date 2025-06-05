@@ -1,9 +1,9 @@
 import logging
-import msgpack
 import pathlib
 from collections import defaultdict
 from typing import List, Optional
 
+import msgpack
 import orjson
 
 from .process_tree import ProcessTree
@@ -72,10 +72,8 @@ def index_log_file(
                 logger.exception("Failed to process entry")
     return dict(index)
 
-def build_log_index(
-    analysis_dir: pathlib.Path,
-    process_tree: ProcessTree
-) -> bytes:
+
+def build_log_index(analysis_dir: pathlib.Path, process_tree: ProcessTree) -> bytes:
     log_index = [dict() for _ in range(len(process_tree.processes))]
     for log_file_path in analysis_dir.glob("*.log"):
         plugin_name = log_file_path.stem
@@ -99,12 +97,10 @@ def build_log_index(
             serialized_indexes.append(serialized_index)
             serialized_indexes_current += len(serialized_index)
     serialized_index_toc = msgpack.packb(index_toc)
-    return serialized_index_toc + b''.join(serialized_indexes)
+    return serialized_index_toc + b"".join(serialized_indexes)
 
-def get_plugin_names_for_process(
-    index_file: pathlib.Path,
-    seqid: int
-):
+
+def get_plugin_names_for_process(index_file: pathlib.Path, seqid: int):
     with index_file.open("rb") as f:
         unpacker = msgpack.Unpacker(f)
         index_toc = unpacker.unpack()
@@ -113,11 +109,7 @@ def get_plugin_names_for_process(
         return list(index_toc[seqid].keys())
 
 
-def get_log_index_for_process(
-    index_file: pathlib.Path,
-    seqid: int,
-    plugin_name: str
-):
+def get_log_index_for_process(index_file: pathlib.Path, seqid: int, plugin_name: str):
     with index_file.open("rb") as f:
         unpacker = msgpack.Unpacker(f)
         index_toc = unpacker.unpack()
