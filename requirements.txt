@@ -21,3 +21,4 @@ Perception==0.6.8
 opencv-contrib-python-headless==4.11.0.86
 # Also peer vivisect dependency, but we use it directly
 msgpack==1.0.8
+boto3==1.38.15

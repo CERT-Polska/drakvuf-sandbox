@@ -1,6 +1,8 @@
 import datetime
 import json
 import logging
+import pathlib
+import shutil
 from typing import Optional
 
 from redis import Redis
@@ -8,8 +10,14 @@ from rq import Queue, Worker, get_current_job
 from rq.job import Job
 
 from drakrun.lib.config import RedisConfigSection, load_config
-from drakrun.lib.paths import ANALYSES_DIR
+from drakrun.lib.paths import ANALYSES_DIR, UPLOADS_DIR
 
+from ..lib.s3_storage import (
+    download_sample_from_s3,
+    get_s3_client,
+    is_s3_enabled,
+    upload_analysis,
+)
 from .analysis_options import AnalysisOptions
 from .analyzer import AnalysisSubstatus, analyze_file
 from .file_metadata import FileMetadata
@@ -51,6 +59,14 @@ def worker_analyze(options: AnalysisOptions):
     if _WORKER_VM_ID is None:
         raise RuntimeError("Fatal error: no vm_id assigned in worker")
 
+    config = load_config()
+    if is_s3_enabled(config.s3):
+        s3_client = get_s3_client(config.s3)
+        s3_bucket = config.s3.bucket
+    else:
+        s3_client = None
+        s3_bucket = None
+
     job = get_current_job()
     job.meta["vm_id"] = _WORKER_VM_ID
     job.save_meta()
@@ -83,6 +99,15 @@ def worker_analyze(options: AnalysisOptions):
         )
     )
 
+    if options.sample_path is None:
+        if s3_client is None:
+            raise RuntimeError("Got sample referenced on S3 but S3 is not enabled")
+        # Sample is passed via S3
+        UPLOADS_DIR.mkdir(exist_ok=True)
+        upload_path = UPLOADS_DIR / f"{job.id}.sample"
+        download_sample_from_s3(job.id, upload_path, s3_client, s3_bucket)
+        options.sample_path = upload_path.as_posix()
+
     job_success = True
     try:
         extra_metadata = analyze_file(
@@ -107,6 +132,11 @@ def worker_analyze(options: AnalysisOptions):
             )
         )
         job.save_meta()
+        pathlib.Path(options.sample_path).unlink()
+        if s3_client is not None:
+            upload_analysis(job.id, output_dir, s3_client, s3_bucket)
+            if config.s3.remove_local_after_upload:
+                shutil.rmtree(output_dir)
 
 
 def worker_main(vm_id: int):

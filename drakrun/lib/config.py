@@ -51,12 +51,23 @@ class CapaConfigSection(BaseModel):
     worker_pool_processes: int = 4
 
 
+class S3StorageConfigSection(BaseModel):
+    enabled: bool = True
+    bucket: str = "drakrun"
+    address: str
+    access_key: str
+    secret_key: Optional[str]
+    iam_auth: bool = False
+    remove_local_after_upload: bool = True
+
+
 class DrakrunConfig(BaseModel):
     model_config = ConfigDict(extra="ignore")
     redis: RedisConfigSection
     network: NetworkConfigSection
     drakrun: DrakrunConfigSection
     capa: CapaConfigSection = CapaConfigSection()
+    s3: Optional[S3StorageConfigSection] = None
 
     @staticmethod
     def load(filename: str) -> "DrakrunConfig":

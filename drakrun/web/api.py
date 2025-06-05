@@ -1,6 +1,5 @@
 import hashlib
 import logging
-import shutil
 import uuid
 from tempfile import NamedTemporaryFile
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -23,7 +22,8 @@ from drakrun.analyzer.worker import (
     get_redis_connection,
 )
 from drakrun.lib.config import load_config
-from drakrun.lib.paths import ANALYSES_DIR
+from drakrun.lib.paths import UPLOADS_DIR
+from drakrun.lib.s3_storage import get_s3_client, is_s3_enabled, upload_sample_to_s3
 from drakrun.web.analysis import get_analysis_data
 from drakrun.web.analysis_list import add_analysis_to_recent, get_recent_analysis_list
 from drakrun.web.schema import (
@@ -52,31 +52,42 @@ def upload_sample(form: UploadFileForm):
     request_file = form.file
     job_id = str(uuid.uuid4())
 
-    analysis_path = ANALYSES_DIR / job_id
-    analysis_path.mkdir()
+    timeout = form.timeout
+    if not timeout:
+        timeout = config.default_timeout
+    filename = form.file_name
+    if not filename:
+        filename = request_file.filename
+    start_command = form.start_command
+    plugins = form.plugins
 
-    sample_path = analysis_path / "sample"
-    sample_sha256 = hashlib.sha256()
+    UPLOADS_DIR.mkdir(exist_ok=True)
+    upload_path = UPLOADS_DIR / f"{job_id}.sample"
+
     try:
-        with sample_path.open("wb") as f:
-            for chunk in iter(lambda: request_file.read(32 * 4096), b""):
-                f.write(chunk)
+        request_file.save(upload_path)
+        sample_sha256 = hashlib.sha256()
+        with open(upload_path, "rb") as f:
+            for chunk in iter(lambda: f.read(32 * 4096), b""):
                 sample_sha256.update(chunk)
-        sample_magic = magic.from_file(sample_path.as_posix())
+        sample_magic = magic.from_file(upload_path)
 
-        timeout = form.timeout
-        if not timeout:
-            timeout = config.default_timeout
-        filename = form.file_name
-        if not filename:
-            filename = request_file.filename
-        start_command = form.start_command
-        plugins = form.plugins
         file_metadata = FileMetadata(
             name=filename,
             type=sample_magic,
             sha256=sample_sha256.hexdigest(),
         )
+
+        if is_s3_enabled(config.s3):
+            s3_client = get_s3_client(config.s3)
+            s3_bucket = config.s3.bucket
+            with upload_path.open("rb") as f:
+                upload_sample_to_s3(job_id, f, s3_client, s3_bucket)
+            upload_path.unlink()
+            sample_path = None
+        else:
+            sample_path = upload_path.as_posix()
+
         analysis_options = AnalysisOptions(
             config=config,
             sample_path=sample_path,
@@ -92,11 +103,12 @@ def upload_sample(form: UploadFileForm):
             options=analysis_options,
             connection=redis,
         )
-        add_analysis_to_recent(connection=redis, analysis_id=job_id)
-        return jsonify({"task_uid": job_id})
     except Exception:
-        shutil.rmtree(analysis_path)
+        upload_path.unlink(missing_ok=True)
         raise
+
+    add_analysis_to_recent(connection=redis, analysis_id=job_id)
+    return jsonify({"task_uid": job_id})
 
 
 @api.get("/list", responses={200: AnalysisListResponse})
