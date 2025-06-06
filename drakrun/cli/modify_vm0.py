@@ -11,6 +11,8 @@ from drakrun.lib.paths import INSTALL_INFO_PATH
 from drakrun.lib.vm import VirtualMachine
 from drakrun.lib.vmi_profile import create_vmi_info, create_vmi_json_profile
 
+from .banner import banner
+
 log = logging.getLogger(__name__)
 
 
@@ -20,25 +22,32 @@ def modify_vm0():
 
 
 @modify_vm0.command(name="begin", help="Safely restore vm-0 for modification")
-def begin_modify_vm0():
+@click.option(
+    "--cold-boot",
+    "cold_boot",
+    is_flag=True,
+    default=False,
+    help="Cold-boot vm-0 instead of restoring from snapshot",
+)
+def begin_modify_vm0(cold_boot):
     config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
 
     vm0 = VirtualMachine(0, install_info, config.network)
 
-    # Internally, it's expected to restore VM-0 from vm-modify snapshot
-    vm0.restore()
-    log.info("-" * 80)
-    log.info("Initial VM setup is complete and the vm-0 was launched.")
-    log.info("Please now VNC to the port 5900 on this machine to perform modification.")
-    log.info("After you have applied your changes, please execute:")
-    log.info(
-        "- 'draksetup modify-vm0 commit' to apply your modification to the base image"
+    # Internally, it's expected that VM-0 will be restored from vm-modify snapshot
+    vm0.restore(cold_boot=cold_boot)
+    banner(
+        f"""
+        Initial VM setup is complete and the vm-0 was launched.
+        Please now VNC to the port 5900 on this machine to perform Windows installation.
+        After you have installed Windows and booted it to the desktop, please execute:
+        - 'draksetup modify-vm0 commit' to apply your modification to the base image
+        - 'draksetup modify-vm0 rollback' to rollback your changes
+        Your configured VNC password is:
+        {install_info.vnc_passwd}
+    """
     )
-    log.info("- 'draksetup modify-vm0 rollback' to rollback your changes")
-    log.info("Your configured VNC password is:")
-    log.info(install_info.vnc_passwd)
-    log.info("-" * 80)
 
 
 @modify_vm0.command(name="commit", help="Commit changes made during vm-0 modification")

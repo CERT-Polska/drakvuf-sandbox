@@ -1,7 +1,10 @@
+import contextlib
 import datetime
+import gzip
 import json
 import logging
 import os
+import pathlib
 import shutil
 import subprocess
 import time
@@ -10,6 +13,28 @@ from typing import Tuple
 from .install_info import InstallInfo
 
 log = logging.getLogger(__name__)
+
+
+@contextlib.contextmanager
+def gzip_pipe(outfile: pathlib.Path):
+    with open(outfile, "wb") as f:
+        _gzip = subprocess.Popen(["gzip", "-c"], stdin=subprocess.PIPE, stdout=f)
+        try:
+            yield _gzip.stdin
+        finally:
+            _gzip.stdin.close()
+            _gzip.wait()
+
+
+@contextlib.contextmanager
+def ungzip_pipe(infile: pathlib.Path):
+    with open(infile, "rb") as f:
+        _gzip = subprocess.Popen(["gzip", "-c", "-d"], stdin=f, stdout=subprocess.PIPE)
+        try:
+            yield _gzip.stdout
+        finally:
+            _gzip.stdout.close()
+            _gzip.wait()
 
 
 class StorageBackendBase:
@@ -76,11 +101,11 @@ class StorageBackendBase:
         """Get UNIX timestamp of when vm-0 snapshot was last modified"""
         raise NotImplementedError
 
-    def export_vm0(self, path) -> None:
+    def export_vm0(self, gzip_path: pathlib.Path) -> None:
         """Export vm-0 disk into a file (symmetric to import_vm0)"""
         raise NotImplementedError
 
-    def import_vm0(self, path) -> None:
+    def import_vm0(self, gzip_path: pathlib.Path) -> None:
         """Import vm-0 disk from a file (symmetric to export_vm0)"""
         raise NotImplementedError
 
@@ -214,21 +239,21 @@ class ZfsStorageBackend(StorageBackendBase):
         ts = int(out.decode("ascii").strip())
         return ts
 
-    def export_vm0(self, path) -> None:
-        with open(path, "wb") as snapshot_file:
+    def export_vm0(self, gzip_path: pathlib.Path) -> None:
+        with gzip_pipe(gzip_path) as f:
             subprocess.run(
                 ["zfs", "send", f"{self.zfs_tank_name}/vm-0@booted"],
                 check=True,
-                stdout=snapshot_file,
+                stdout=f,
             )
 
-    def import_vm0(self, path) -> None:
+    def import_vm0(self, gzip_path: pathlib.Path) -> None:
         subprocess.run(["zfs", "create", self.zfs_tank_name], check=True)
-        with open(path, "rb") as snapshot_file:
+        with ungzip_pipe(gzip_path) as f:
             subprocess.run(
                 ["zfs", "recv", f"{self.zfs_tank_name}/vm-0@booted"],
                 check=True,
-                stdin=snapshot_file,
+                stdin=f,
             )
 
     def delete_vm_volume_by_name(self, volume_name: str) -> None:
@@ -364,13 +389,17 @@ class Qcow2StorageBackend(StorageBackendBase):
         volume_path = self.snapshot_dir / "vm-0.img"
         return int(volume_path.lstat().st_mtime)
 
-    def export_vm0(self, path: str) -> None:
+    def export_vm0(self, gzip_path: pathlib.Path) -> None:
         volume_path = self.snapshot_dir / "vm-0.img"
-        shutil.copy(volume_path, path)
+        with volume_path.open("rb") as src:
+            with gzip.open(gzip_path, "wb", compresslevel=6) as dst:
+                shutil.copyfileobj(src, dst)
 
-    def import_vm0(self, path: str) -> None:
+    def import_vm0(self, gzip_path: pathlib.Path) -> None:
         volume_path = self.snapshot_dir / "vm-0.img"
-        shutil.copy(path, volume_path)
+        with gzip.open(gzip_path, "rb") as src:
+            with volume_path.open("wb") as dst:
+                shutil.copyfileobj(src, dst)
 
     def delete_vm_volume_by_name(self, volume_name: str) -> None:
         # unmount can be done here
@@ -550,33 +579,37 @@ class LvmStorageBackend(StorageBackendBase):
         )
         return int(dt.timestamp())
 
-    def export_vm0(self, path: str) -> None:
+    def export_vm0(self, gzip_path: pathlib.Path) -> None:
         """Export vm-0 disk into a file (symmetric to import_vm0)"""
         # As dd copies empty spaces also
         # Should we use compressions in this? Will it have any issues while importing?
-        subprocess.run(
-            [
-                "dd",
-                f"if=/dev/{self.lvm_volume_group}/vm-0",
-                f"of={path}",
-                "bs=4k",
-                "status=progress",
-            ],
-            check=True,
-        )
+        with gzip_pipe(gzip_path) as f:
+            subprocess.run(
+                [
+                    "dd",
+                    f"if=/dev/{self.lvm_volume_group}/vm-0",
+                    "of=/dev/stdout",
+                    "bs=4k",
+                    "status=progress",
+                ],
+                check=True,
+                stdout=f,
+            )
 
-    def import_vm0(self, path: str) -> None:
+    def import_vm0(self, gzip_path: pathlib.Path) -> None:
         """Import vm-0 disk from a file (symmetric to export_vm0)"""
-        subprocess.run(
-            [
-                "dd",
-                f"of=/dev/{self.lvm_volume_group}/vm-0",
-                f"if={path}",
-                "bs=4k",
-                "status=progress",
-            ],
-            check=True,
-        )
+        with ungzip_pipe(gzip_path) as f:
+            subprocess.run(
+                [
+                    "dd",
+                    f"of=/dev/{self.lvm_volume_group}/vm-0",
+                    "if=/dev/stdin",
+                    "bs=4k",
+                    "status=progress",
+                ],
+                check=True,
+                stdin=f,
+            )
 
     def delete_vm_volume_by_name(self, volume_name: str) -> None:
         try:
