@@ -1,16 +1,13 @@
+import gzip
 import logging
 import shutil
-import subprocess
 from pathlib import Path
 
 import click
-from drakrun.lib.storage import get_storage_backend
-
-from drakrun.lib.paths import INSTALL_INFO_PATH, VMI_PROFILES_DIR
 
 from drakrun.lib.install_info import InstallInfo
-
-from drakrun.lib.config import load_config
+from drakrun.lib.paths import INSTALL_INFO_PATH, VMI_PROFILES_DIR
+from drakrun.lib.storage import get_storage_backend
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +15,7 @@ log = logging.getLogger(__name__)
 @click.group(name="snapshot", help="Snapshot management commands (import/export)")
 def snapshot():
     pass
+
 
 @snapshot.command(name="export", help="Export snapshot into local directory")
 @click.argument(
@@ -33,18 +31,16 @@ def snapshot_export(output_dir):
     log.info("Exporting cfg.template...")
     shutil.copy(install_info.xl_cfg_template, output_dir / "cfg.template")
 
-    log.info("Exporting VM disk...")
+    log.info("Exporting VM disk (this may take a while)...")
     backend = get_storage_backend(install_info)
-    backend.export_vm0(output_dir / "disk.img")
+    backend.export_vm0(output_dir / "disk.img.gz")
 
     log.info("Exporting snapshot.sav...")
     snapshot_path = install_info.snapshot_dir / "snapshot.sav"
     exported_snapshot_path = output_dir / "snapshot.sav.gz"
-    with exported_snapshot_path.open("wb") as f:
-        subprocess.check_call(
-            ["gzip", "-c", snapshot_path.as_posix()],
-            stdout=f,
-        )
+    with snapshot_path.open("rb") as src:
+        with gzip.open(exported_snapshot_path, "wb") as dst:
+            shutil.copyfileobj(src, dst)
 
     log.info("Exporting profiles...")
     exported_profiles_path = output_dir / "profiles"
@@ -52,7 +48,7 @@ def snapshot_export(output_dir):
     for profile_path in VMI_PROFILES_DIR.glob("*.json"):
         shutil.copy(profile_path, exported_profiles_path / profile_path.name)
 
-    log.info("Profile successfully exported to %s", output_dir.resolve().as_posix())
+    log.info("Snapshot successfully exported to %s", output_dir.resolve().as_posix())
 
 
 @snapshot.command(name="import", help="Import snapshot from local directory")
