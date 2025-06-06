@@ -156,6 +156,7 @@ def enqueue_analysis(
     file_metadata: FileMetadata,
     options: AnalysisOptions,
     connection: Redis,
+    result_ttl: int,
 ) -> Job:
     queue = Queue(name=ANALYSIS_QUEUE_NAME, connection=connection)
     if options.sample_path is None:
@@ -171,5 +172,5 @@ def enqueue_analysis(
             "file": file_metadata.to_dict(),
         },
         job_timeout=options.timeout + options.job_timeout_leeway,
-        result_ttl=-1,
+        result_ttl=result_ttl,
     )

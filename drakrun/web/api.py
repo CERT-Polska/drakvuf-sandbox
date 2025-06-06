@@ -106,6 +106,7 @@ def upload_sample(form: UploadFileForm):
             file_metadata=file_metadata,
             options=analysis_options,
             connection=redis,
+            result_ttl=config.drakrun.result_ttl,
         )
     except Exception:
         upload_path.unlink(missing_ok=True)
