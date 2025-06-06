@@ -1,6 +1,7 @@
 import logging
 import shutil
 import subprocess
+from pathlib import Path
 
 import click
 from drakrun.lib.storage import get_storage_backend
@@ -25,6 +26,7 @@ def snapshot():
 )
 def snapshot_export(output_dir):
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
+    output_dir = Path(output_dir)
     output_dir.mkdir()
     log.info("Exporting install.json...")
     shutil.copy(INSTALL_INFO_PATH, output_dir / "install.json")
