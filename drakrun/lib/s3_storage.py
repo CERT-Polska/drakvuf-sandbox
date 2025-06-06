@@ -89,7 +89,7 @@ def is_analysis_on_s3(analysis_id: str, s3_client: BaseClient, s3_bucket: str) -
         s3_client.head_object(Bucket=s3_bucket, Key=s3_name)
         return True
     except ClientError as e:
-        if e.response["Error"]["Code"] == "404":
+        if e.response["Error"]["Code"] == "NoSuchKey":
             return False
         else:
             raise

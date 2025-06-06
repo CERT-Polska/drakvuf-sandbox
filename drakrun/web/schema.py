@@ -43,10 +43,6 @@ class AnalysisRequestPath(BaseModel):
     )
 
 
-class ProcessedRequestPath(AnalysisRequestPath):
-    which: str
-
-
 class LogsRequestPath(AnalysisRequestPath):
     log_type: str
 
