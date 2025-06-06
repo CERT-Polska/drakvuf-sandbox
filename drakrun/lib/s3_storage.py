@@ -82,6 +82,23 @@ def upload_analysis(
     logger.info("Analysis %s uploaded successfully", analysis_id)
 
 
+def download_analysis(
+    analysis_id: str, target_path: pathlib.Path, s3_client: BaseClient, s3_bucket: str
+) -> None:
+    s3_name_prefix = "/".join([*analysis_id[0:4], analysis_id])
+    logger.info("Downloading analysis %s...", analysis_id)
+    objects = s3_client.list_objects_v2(Bucket=s3_bucket, Prefix=s3_name_prefix + "/")
+    for object in objects:
+        object_key = object["Key"]
+        relative_path = object_key[len(s3_name_prefix + "/") :]
+        logger.info(f"Downloading {relative_path}...", analysis_id)
+        target_file_path = target_path / relative_path
+        s3_client.download_file(
+            Bucket=s3_bucket, Key=object_key, Filename=target_file_path
+        )
+    logger.info("Analysis %s downloaded successfully", analysis_id)
+
+
 def is_analysis_on_s3(analysis_id: str, s3_client: BaseClient, s3_bucket: str) -> bool:
     s3_name = "/".join([*analysis_id[:4], analysis_id, "metadata.json"])
 

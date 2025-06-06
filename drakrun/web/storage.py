@@ -185,7 +185,6 @@ def open_seekable_stream(
 ):
     if not is_s3_enabled(s3_config):
         base_path = ANALYSES_DIR / analysis_id
-        base_path = ANALYSES_DIR / analysis_id
         path_to_file = check_path(base_path / path, base_path)
         if not path_to_file.exists():
             raise FileNotFoundError

@@ -13,6 +13,7 @@ from .modify_vm0 import modify_vm0
 from .mount import mount
 from .postinstall import postinstall
 from .postprocess import postprocess
+from .s3_storage import s3_storage
 from .vm_start import vm_start
 from .vm_stop import vm_stop
 from .worker import worker
@@ -43,3 +44,4 @@ main.add_command(drakshell)
 main.add_command(drakvuf_cmdline)
 main.add_command(mount)
 main.add_command(make_profile)
+main.add_command(s3_storage)
