@@ -159,8 +159,6 @@ def enqueue_analysis(
     result_ttl: int,
 ) -> Job:
     queue = Queue(name=ANALYSIS_QUEUE_NAME, connection=connection)
-    if options.sample_path is None:
-        raise RuntimeError("Sample path is required when spawning analysis to worker")
     if options.timeout is None:
         raise RuntimeError("Timeout is required when spawning analysis to worker")
     return queue.enqueue(
