@@ -98,8 +98,8 @@ class VirtualMachine:
         vm_conf_path = self._generate_vm_conf(disks)
         xen_create_vm(self.vm_name, vm_conf_path.as_posix())
 
-    def restore(self, snapshot_path: Optional[str] = None) -> None:
-        if snapshot_path is None:
+    def restore(self, snapshot_path: Optional[str] = None, cold_boot=False) -> None:
+        if not cold_boot and snapshot_path is None:
             snapshot_path = (
                 Path(self.install_info.snapshot_dir) / "snapshot.sav"
             ).as_posix()
@@ -118,7 +118,10 @@ class VirtualMachine:
 
         vm_conf_path = self._generate_vm_conf(disks)
         log.info(f"Restoring VM {self.vm_name}")
-        xen_restore_vm(self.vm_name, vm_conf_path.as_posix(), snapshot_path)
+        if not cold_boot:
+            xen_restore_vm(self.vm_name, vm_conf_path.as_posix(), snapshot_path)
+        else:
+            xen_create_vm(self.vm_name, vm_conf_path.as_posix())
 
     def save(self, snapshot_path: Optional[str] = None) -> None:
         if snapshot_path is None:
