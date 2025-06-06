@@ -209,3 +209,19 @@ def open_seekable_stream(
         yield file
     finally:
         file.close()
+
+
+def list_analysis_logs(analysis_id: str, s3_config: S3StorageConfigSection):
+    if not is_s3_enabled(s3_config):
+        base_path = ANALYSES_DIR / analysis_id
+        if not base_path.exists():
+            raise FileNotFoundError
+        return list([path.name for path in base_path.glob("*.log")])
+    # S3 handling
+    s3_client = get_s3_client(s3_config)
+    analysis_key = get_s3_prefix(analysis_id) + "/"
+    response = s3_client.list_objects_v2(Bucket=s3_config.bucket, Prefix=analysis_key)
+    keys = []
+    for obj in response:
+        keys.append(obj["Key"].split("/")[-1])
+    return keys

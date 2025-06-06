@@ -38,6 +38,7 @@ from drakrun.web.schema import (
     UploadFileForm,
 )
 from drakrun.web.storage import (
+    list_analysis_logs,
     open_seekable_stream,
     read_analysis_json,
     send_analysis_file,
@@ -257,6 +258,13 @@ def dumps(path: AnalysisRequestPath):
     return send_analysis_file(
         task_uid, "dumps.zip", mimetype="application/zip", s3_config=config.s3
     )
+
+
+@api.get("/logs/<task_uid>")
+def list_logs(path: AnalysisRequestPath):
+    task_uid = path.task_uid
+    analysis_logs = list_analysis_logs(task_uid, s3_config=config.s3)
+    return jsonify(analysis_logs)
 
 
 @api.get("/graph/<task_uid>")
