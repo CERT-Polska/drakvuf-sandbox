@@ -178,9 +178,9 @@ def process_info(path: ProcessInfoRequestPath):
     try:
         with open_seekable_stream(task_uid, "log_index", config.s3) as log_index:
             plugin_names = get_plugin_names_for_process(log_index, seqid)
-            log_index.seek(0)
             logs = {}
             for plugin_name in plugin_names:
+                log_index.seek(0)
                 process_log_index = get_log_index_for_process(
                     log_index, seqid, plugin_name
                 )
