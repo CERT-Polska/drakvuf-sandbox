@@ -74,6 +74,8 @@ def upload_analysis(
 
     logger.info("Uploading analysis %s...", analysis_id)
     for analysis_file in analysis_path.rglob("*"):
+        if not analysis_file.is_file():
+            continue
         relative_path = analysis_file.relative_to(analysis_path).as_posix()
         s3_name = s3_name_prefix + "/" + relative_path
         logger.info(f"Uploading {relative_path}...", analysis_id)
