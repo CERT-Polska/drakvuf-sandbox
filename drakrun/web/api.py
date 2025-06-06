@@ -91,6 +91,7 @@ def upload_sample(form: UploadFileForm):
             file_metadata=file_metadata,
             options=analysis_options,
             connection=redis,
+            result_ttl=config.drakrun.result_ttl,
         )
         add_analysis_to_recent(connection=redis, analysis_id=job_id)
         return jsonify({"task_uid": job_id})
