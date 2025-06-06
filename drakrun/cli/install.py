@@ -11,6 +11,7 @@ from drakrun.lib.paths import INSTALL_INFO_PATH, initialize_config_files, make_d
 from drakrun.lib.storage import REGISTERED_BACKEND_NAMES, get_storage_backend
 from drakrun.lib.vm import VirtualMachine
 
+from .banner import banner
 from .sanity_check import sanity_check
 
 log = logging.getLogger(__name__)
@@ -105,21 +106,15 @@ def install(
     iso_path = os.path.abspath(iso_path)
     vm0.create(iso_path=iso_path)
 
-    log.info("-" * 80)
-    log.info("Initial VM setup is complete and the vm-0 was launched.")
-    log.info(
-        "Please now VNC to the port 5900 on this machine to perform Windows installation."
+    banner(
+        f"""
+        Initial VM setup is complete and the vm-0 was launched.
+        Please now VNC to the port 5900 on this machine to perform Windows installation.
+        After you have installed Windows and booted it to the desktop, please execute:
+        # draksetup postinstall
+        Your configured VNC password is:
+        {vnc_passwd}
+        Please note that on some machines, system installer may boot for up to 10 minutes
+        and may look unresponsive during the process. Please be patient.
+    """
     )
-    log.info(
-        "After you have installed Windows and booted it to the desktop, please execute:"
-    )
-    log.info("# draksetup postinstall")
-
-    log.info("Your configured VNC password is:")
-    log.info(vnc_passwd)
-
-    log.info(
-        "Please note that on some machines, system installer may boot for up to 10 minutes"
-    )
-    log.info("and may look unresponsive during the process. Please be patient.")
-    log.info("-" * 80)
