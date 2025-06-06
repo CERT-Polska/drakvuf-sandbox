@@ -18,23 +18,23 @@ log = logging.getLogger(__name__)
 @contextlib.contextmanager
 def gzip_pipe(outfile: pathlib.Path):
     with open(outfile, "wb") as f:
-        gzip = subprocess.Popen(["gzip", "-c"], stdin=subprocess.PIPE, stdout=f)
+        _gzip = subprocess.Popen(["gzip", "-c"], stdin=subprocess.PIPE, stdout=f)
         try:
-            yield gzip.stdin
+            yield _gzip.stdin
         finally:
-            gzip.stdin.close()
-            gzip.wait()
+            _gzip.stdin.close()
+            _gzip.wait()
 
 
 @contextlib.contextmanager
 def ungzip_pipe(infile: pathlib.Path):
     with open(infile, "rb") as f:
-        gzip = subprocess.Popen(["gzip", "-c", "-d"], stdin=f, stdout=subprocess.PIPE)
+        _gzip = subprocess.Popen(["gzip", "-c", "-d"], stdin=f, stdout=subprocess.PIPE)
         try:
-            yield gzip.stdout
+            yield _gzip.stdout
         finally:
-            gzip.stdout.close()
-            gzip.wait()
+            _gzip.stdout.close()
+            _gzip.wait()
 
 
 class StorageBackendBase:
@@ -392,7 +392,7 @@ class Qcow2StorageBackend(StorageBackendBase):
     def export_vm0(self, gzip_path: pathlib.Path) -> None:
         volume_path = self.snapshot_dir / "vm-0.img"
         with volume_path.open("rb") as src:
-            with gzip.open(gzip_path, "wb") as dst:
+            with gzip.open(gzip_path, "wb", compresslevel=6) as dst:
                 shutil.copyfileobj(src, dst)
 
     def import_vm0(self, gzip_path: pathlib.Path) -> None:

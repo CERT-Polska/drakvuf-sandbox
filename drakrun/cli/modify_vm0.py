@@ -25,7 +25,7 @@ def modify_vm0():
     "cold_boot",
     is_flag=True,
     default=False,
-    help="Cold-boot vm-0 instead of restoring for snapshot",
+    help="Cold-boot vm-0 instead of restoring from snapshot",
 )
 def begin_modify_vm0(cold_boot):
     config = load_config()

@@ -39,7 +39,7 @@ def snapshot_export(output_dir):
     snapshot_path = install_info.snapshot_dir / "snapshot.sav"
     exported_snapshot_path = output_dir / "snapshot.sav.gz"
     with snapshot_path.open("rb") as src:
-        with gzip.open(exported_snapshot_path, "wb") as dst:
+        with gzip.open(exported_snapshot_path, "wb", compresslevel=6) as dst:
             shutil.copyfileobj(src, dst)
 
     log.info("Exporting profiles...")
