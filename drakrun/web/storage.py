@@ -219,7 +219,9 @@ def list_analysis_logs(analysis_id: str, s3_config: S3StorageConfigSection):
     # S3 handling
     s3_client = get_s3_client(s3_config)
     analysis_key = get_s3_prefix(analysis_id) + "/"
-    response = s3_client.list_objects_v2(Bucket=s3_config.bucket, Prefix=analysis_key)
+    response = s3_client.list_objects_v2(Bucket=s3_config.bucket, Prefix=analysis_key)[
+        "Contents"
+    ]
     keys = []
     for obj in response:
         keys.append(obj["Key"].split("/")[-1])
