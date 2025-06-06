@@ -1,7 +1,6 @@
 import datetime
 import json
 import logging
-import pathlib
 import shutil
 from typing import Optional
 
@@ -106,7 +105,7 @@ def worker_analyze(options: AnalysisOptions):
         UPLOADS_DIR.mkdir(exist_ok=True)
         upload_path = UPLOADS_DIR / f"{job.id}.sample"
         download_sample_from_s3(job.id, upload_path, s3_client, s3_bucket)
-        options.sample_path = upload_path.as_posix()
+        options.sample_path = upload_path
 
     job_success = True
     try:
@@ -132,7 +131,7 @@ def worker_analyze(options: AnalysisOptions):
             )
         )
         job.save_meta()
-        pathlib.Path(options.sample_path).unlink()
+        options.sample_path.unlink()
         if s3_client is not None:
             upload_analysis(job.id, output_dir, s3_client, s3_bucket)
             if config.s3.remove_local_after_upload:
