@@ -37,7 +37,7 @@ class DrakrunConfigSection(BaseModel):
     """Give extra 5 minutes as a timeout for whole analysis process
     including VM restore, post-restore, drakvuf hard timeout and
     postprocessing."""
-    results_ttl: int = -1
+    result_ttl: int = -1
     apimon_hooks_path: Optional[pathlib.Path] = None
     syscall_hooks_path: Optional[pathlib.Path] = None
     extra_drakvuf_args: Optional[Dict[str, Any]] = None
