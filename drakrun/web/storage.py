@@ -224,5 +224,7 @@ def list_analysis_logs(analysis_id: str, s3_config: S3StorageConfigSection):
     ]
     keys = []
     for obj in response:
-        keys.append(obj["Key"].split("/")[-1])
+        object_name = obj["Key"].split("/")[-1]
+        if object_name.endswith(".log"):
+            keys.append(object_name)
     return keys
