@@ -3,6 +3,7 @@ import pathlib
 from collections import defaultdict
 from typing import List, Optional
 
+import msgpack
 import orjson
 
 from .process_tree import ProcessTree
@@ -70,6 +71,58 @@ def index_log_file(
             except Exception:
                 logger.exception("Failed to process entry")
     return dict(index)
+
+
+def build_log_index(analysis_dir: pathlib.Path, process_tree: ProcessTree) -> bytes:
+    log_index = [dict() for _ in range(len(process_tree.processes))]
+    for log_file_path in analysis_dir.glob("*.log"):
+        plugin_name = log_file_path.stem
+        if plugin_name == "drakrun":
+            continue
+        index = index_log_file(
+            log_file_path,
+            process_tree,
+            key="Method",
+        )
+        for proc_seqid in index.keys():
+            log_index[proc_seqid][plugin_name] = index[proc_seqid]
+
+    serialized_indexes = []
+    serialized_indexes_current = 0
+    index_toc = [dict() for _ in range(len(process_tree.processes))]
+    for proc_seqid, proc_log_index in enumerate(log_index):
+        for plugin_name, plugin_index in proc_log_index.items():
+            serialized_index = msgpack.packb(plugin_index)
+            index_toc[proc_seqid][plugin_name] = serialized_indexes_current
+            serialized_indexes.append(serialized_index)
+            serialized_indexes_current += len(serialized_index)
+    serialized_index_toc = msgpack.packb(index_toc)
+    return serialized_index_toc + b"".join(serialized_indexes)
+
+
+def get_plugin_names_for_process(index_file: pathlib.Path, seqid: int):
+    with index_file.open("rb") as f:
+        unpacker = msgpack.Unpacker(f)
+        index_toc = unpacker.unpack()
+        if seqid >= len(index_toc):
+            return []
+        return list(index_toc[seqid].keys())
+
+
+def get_log_index_for_process(index_file: pathlib.Path, seqid: int, plugin_name: str):
+    with index_file.open("rb") as f:
+        unpacker = msgpack.Unpacker(f)
+        index_toc = unpacker.unpack()
+        log_pos = unpacker.tell()
+        if seqid >= len(index_toc):
+            return None
+        if plugin_name not in index_toc[seqid]:
+            return None
+        start = index_toc[seqid][plugin_name]
+        # Seek to the specific point of file
+        f.seek(log_pos + start)
+        unpacker = msgpack.Unpacker(f)
+        return unpacker.unpack()
 
 
 def scattered_read_file(

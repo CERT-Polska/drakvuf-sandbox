@@ -50,6 +50,6 @@ POSTPROCESS_PLUGINS = [
     PostprocessPlugin(function=crop_dumps, requires=[DUMPS_DIR], generates=[DUMPS_ZIP]),
     PostprocessPlugin(function=compress_ipt, requires=[IPT_DIR], generates=[IPT_ZIP]),
     PostprocessPlugin(
-        function=index_logs, requires=["procmon.log"], generates=["index"]
+        function=index_logs, requires=["process_tree.json"], generates=["log_index"]
     ),
 ]
