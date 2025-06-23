@@ -46,7 +46,7 @@ from drakrun.lib.config import load_config
     "preset",
     default=None,
     type=str,
-    help="Use specified defaults preset from configuration"
+    help="Use specified defaults preset from configuration",
 )
 @click.option(
     "--target-filename",

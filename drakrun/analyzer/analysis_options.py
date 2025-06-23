@@ -39,7 +39,9 @@ class AnalysisOptions(BaseModel):
     no_screenshotter: Optional[bool] = None
 
     @staticmethod
-    def _construct_defaults(config: DrakrunConfig, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _construct_defaults(
+        config: DrakrunConfig, options: Dict[str, Any]
+    ) -> Dict[str, Any]:
         defaults = config.get_drakrun_defaults(options.get("preset"))
         if not config.network.net_enable:
             net_enable = False
@@ -51,7 +53,11 @@ class AnalysisOptions(BaseModel):
         return {
             **options,
             **{
-                key: options.get(key) if options.get(key) is not None else defaults_dict[key]
+                key: (
+                    options.get(key)
+                    if options.get(key) is not None
+                    else defaults_dict[key]
+                )
                 for key in defaults_dict.keys()
             },
             **dict(net_enable=net_enable),

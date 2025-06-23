@@ -91,16 +91,20 @@ class DrakrunConfig(BaseModel):
             config = tomli.load(f)
         return DrakrunConfig.model_validate(config)
 
-    def get_drakrun_defaults(self, preset_name: Optional[str]) -> DrakrunDefaultsSection:
+    def get_drakrun_defaults(
+        self, preset_name: Optional[str]
+    ) -> DrakrunDefaultsSection:
         if preset_name not in self.preset:
             preset = dict(DrakrunDefaultsPresetSection())
         else:
             preset = dict(self.preset[preset_name])
         global_defaults = dict(self.drakrun)
-        return DrakrunDefaultsSection(**{
-            key: (preset[key] if preset[key] is not None else global_defaults[key])
-            for key in preset.keys()
-        })
+        return DrakrunDefaultsSection(
+            **{
+                key: (preset[key] if preset[key] is not None else global_defaults[key])
+                for key in preset.keys()
+            }
+        )
 
 
 def load_config() -> DrakrunConfig:
