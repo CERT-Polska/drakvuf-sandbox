@@ -66,6 +66,7 @@ def upload_sample(form: UploadFileForm):
         filename = request_file.filename
     start_command = form.start_command
     plugins = form.plugins
+    preset = form.preset
 
     UPLOADS_DIR.mkdir(exist_ok=True)
     upload_path = UPLOADS_DIR / f"{job_id}.sample"
@@ -96,6 +97,7 @@ def upload_sample(form: UploadFileForm):
 
         analysis_options = AnalysisOptions(
             config=config,
+            preset=preset,
             sample_path=sample_path,
             target_filename=filename,
             start_command=start_command,

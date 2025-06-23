@@ -66,6 +66,12 @@ def worker_analyze(options: AnalysisOptions):
         s3_client = None
         s3_bucket = None
 
+    # Reconstruct options object to include worker-side preset defaults
+    options = AnalysisOptions(config, **dict(options))
+
+    if not options.plugins:
+        raise RuntimeError("Cannot analyze sample without plugins specified")
+
     job = get_current_job()
     job.meta["vm_id"] = _WORKER_VM_ID
     job.save_meta()
