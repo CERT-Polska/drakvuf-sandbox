@@ -39,14 +39,17 @@ class AnalysisOptions(BaseModel):
     no_screenshotter: Optional[bool] = None
 
     @staticmethod
-    def _construct_defaults(
+    def _apply_defaults(
         config: DrakrunConfig, options: Dict[str, Any]
     ) -> Dict[str, Any]:
         defaults = config.get_drakrun_defaults(options.get("preset"))
         if not config.network.net_enable:
+            # If network access is globally disabled, enforce net_enable=False
             net_enable = False
         else:
+            # If network access is globally enabled, use value from options
             net_enable = options.get("net_enable", defaults.net_enable)
+            # If unset, set True
             if net_enable is None:
                 net_enable = True
         defaults_dict = dict(defaults)
@@ -65,7 +68,7 @@ class AnalysisOptions(BaseModel):
 
     def __init__(self, config: DrakrunConfig, **kwargs):
         super().__init__(
-            **self._construct_defaults(config, kwargs),
+            **self._apply_defaults(config, kwargs),
         )
 
     def to_dict(self, exclude_none=True):

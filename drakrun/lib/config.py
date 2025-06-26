@@ -92,10 +92,12 @@ class DrakrunConfig(BaseModel):
         return DrakrunConfig.model_validate(config)
 
     def get_drakrun_defaults(
-        self, preset_name: Optional[str]
+        self, preset_name: Optional[str] = None
     ) -> DrakrunDefaultsSection:
-        if preset_name not in self.preset:
+        if preset_name is None:
             preset = dict(DrakrunDefaultsPresetSection())
+        elif preset_name not in self.preset:
+            raise RuntimeError(f"Preset {preset_name} is not defined in configuration")
         else:
             preset = dict(self.preset[preset_name])
         global_defaults = dict(self.drakrun)
