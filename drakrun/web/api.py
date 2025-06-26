@@ -3,7 +3,6 @@ import logging
 import uuid
 
 import magic
-from analyzer.worker import get_analyses_list, truncate_analysis_list
 from flask import Response, jsonify, request
 from flask_openapi3 import APIBlueprint
 from rq.exceptions import NoSuchJobError
@@ -20,7 +19,9 @@ from drakrun.analyzer.postprocessing.process_tree import tree_from_dict
 from drakrun.analyzer.worker import (
     analysis_job_to_status_dict,
     enqueue_analysis,
+    get_analyses_list,
     get_redis_connection,
+    truncate_analysis_list,
 )
 from drakrun.lib.config import load_config
 from drakrun.lib.paths import UPLOADS_DIR
