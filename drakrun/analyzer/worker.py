@@ -2,11 +2,11 @@ import datetime
 import json
 import logging
 import shutil
-from typing import Optional
+from typing import List, Optional
 
 from redis import Redis
 from rq import Queue, Worker, get_current_job
-from rq.job import Job
+from rq.job import Job, JobStatus
 
 from drakrun.lib.config import RedisConfigSection, load_config
 from drakrun.lib.paths import ANALYSES_DIR, UPLOADS_DIR
@@ -171,3 +171,30 @@ def enqueue_analysis(
         job_timeout=options.timeout + options.job_timeout_leeway,
         result_ttl=result_ttl,
     )
+
+
+def get_analyses_list(connection: Redis) -> List[Job]:
+    queue = Queue(name=ANALYSIS_QUEUE_NAME, connection=connection)
+    jobs = list(queue.get_jobs())
+    for job_registry in [
+        queue.started_job_registry,
+        queue.finished_job_registry,
+        queue.failed_job_registry,
+    ]:
+        job_ids = job_registry.get_job_ids()
+        jobs.extend(
+            [
+                job
+                for job in Job.fetch_many(job_ids, connection=connection)
+                if job is not None
+            ]
+        )
+    return sorted(jobs, key=lambda job: job.enqueued_at, reverse=True)
+
+
+def truncate_analysis_list(connection: Redis, limit: int) -> None:
+    queue = Queue(name=ANALYSIS_QUEUE_NAME, connection=connection)
+    jobs_to_truncate = list(queue.get_jobs())[limit:]
+    for job in jobs_to_truncate:
+        if job.get_status() in [JobStatus.FINISHED, JobStatus.FAILED]:
+            job.delete()
