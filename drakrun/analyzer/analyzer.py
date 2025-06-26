@@ -206,6 +206,7 @@ def analyze_file(
                 drakmon_file,
                 drakvuf_args,
                 exec_cmd=exec_cmd,
+                cwd=output_dir,
             ) as drakvuf:
                 log.info("Analysis started...")
                 try:

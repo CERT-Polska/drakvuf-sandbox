@@ -40,6 +40,7 @@ def run_drakvuf(
     output_file: pathlib.Path,
     drakvuf_args: List[str],
     exec_cmd: Optional[str] = None,
+    cwd: Optional[pathlib.Path] = None,
 ):
     drakvuf_cmdline = get_base_drakvuf_cmdline(
         vm_name,
@@ -50,7 +51,7 @@ def run_drakvuf(
     )
 
     with output_file.open("wb") as output:
-        drakvuf = subprocess.Popen(drakvuf_cmdline, stdout=output)
+        drakvuf = subprocess.Popen(drakvuf_cmdline, stdout=output, cwd=cwd)
         with process_graceful_exit(drakvuf):
             yield drakvuf
 
