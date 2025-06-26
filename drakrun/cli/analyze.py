@@ -125,6 +125,12 @@ def analyze(
     if sample is not None:
         sample = pathlib.Path(sample)
 
+    if not plugins:
+        # If plugins not provided, pass None to indicate
+        # that we want to use a configured default.
+        # Click passes empty list there.
+        plugins = None
+
     options = AnalysisOptions(
         config=config,
         preset=preset,
