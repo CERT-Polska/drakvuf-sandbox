@@ -5,7 +5,6 @@ import string
 import unicodedata
 from typing import List
 
-import mslex
 from pathvalidate import Platform, is_valid_filename
 
 log = logging.getLogger(__name__)
