@@ -29,13 +29,11 @@ class NetworkConfigSection(BaseModel):
     net_enable: bool
 
 
-class DrakrunDefaultsSection(BaseModel):
+class DrakrunConfigSection(BaseModel):
     model_config = ConfigDict(extra="ignore")
     plugins: List[str]
     default_timeout: int
     job_timeout_leeway: int = 300
-
-    result_ttl: int = -1
     net_enable: Optional[bool] = None
     apimon_hooks_path: Optional[pathlib.Path] = None
     syscall_hooks_path: Optional[pathlib.Path] = None
@@ -43,6 +41,7 @@ class DrakrunDefaultsSection(BaseModel):
     extra_output_subdirs: Optional[List[str]] = None
     no_post_restore: bool = False
     no_screenshotter: bool = False
+    result_ttl: int = -1
 
 
 class DrakrunDefaultsPresetSection(BaseModel):
@@ -80,7 +79,7 @@ class DrakrunConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
     redis: RedisConfigSection
     network: NetworkConfigSection
-    drakrun: DrakrunDefaultsSection
+    drakrun: DrakrunConfigSection
     capa: CapaConfigSection = CapaConfigSection()
     s3: Optional[S3StorageConfigSection] = None
     preset: Dict[str, DrakrunDefaultsPresetSection] = Field(default_factory=dict)
@@ -93,7 +92,7 @@ class DrakrunConfig(BaseModel):
 
     def get_drakrun_defaults(
         self, preset_name: Optional[str] = None
-    ) -> DrakrunDefaultsSection:
+    ) -> DrakrunDefaultsPresetSection:
         if preset_name is None:
             preset = dict(DrakrunDefaultsPresetSection())
         elif preset_name not in self.preset:
@@ -101,7 +100,7 @@ class DrakrunConfig(BaseModel):
         else:
             preset = dict(self.preset[preset_name])
         global_defaults = dict(self.drakrun)
-        return DrakrunDefaultsSection(
+        return DrakrunDefaultsPresetSection(
             **{
                 key: (preset[key] if preset[key] is not None else global_defaults[key])
                 for key in preset.keys()
