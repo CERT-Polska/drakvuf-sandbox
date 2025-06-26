@@ -53,7 +53,7 @@ def prepare_output_dir(output_dir: pathlib.Path, options: AnalysisOptions) -> No
     if options.extra_output_subdirs is not None:
         for dirname in options.extra_output_subdirs:
             subdir = output_dir.joinpath(dirname).resolve()
-            if subdir.relative_to(output_dir.resolve()):
+            if not subdir.relative_to(output_dir.resolve()):
                 raise RuntimeError(
                     f"Incorrect directory name {dirname} in extra_output_subdirs option"
                 )
