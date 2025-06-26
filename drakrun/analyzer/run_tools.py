@@ -84,6 +84,7 @@ def run_screenshotter(
     enabled: bool = True,
 ):
     if not enabled:
+        yield
         return
     screenshotter = Screenshotter(
         output_dir=output_dir,
