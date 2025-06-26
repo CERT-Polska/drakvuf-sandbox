@@ -193,8 +193,7 @@ def get_analyses_list(connection: Redis) -> List[Job]:
 
 
 def truncate_analysis_list(connection: Redis, limit: int) -> None:
-    queue = Queue(name=ANALYSIS_QUEUE_NAME, connection=connection)
-    jobs_to_truncate = list(queue.get_jobs())[limit:]
+    jobs_to_truncate = get_analyses_list(connection=connection)[limit:]
     for job in jobs_to_truncate:
         if job.get_status() in [JobStatus.FINISHED, JobStatus.FAILED]:
             job.delete()
