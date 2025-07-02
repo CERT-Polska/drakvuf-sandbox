@@ -7,7 +7,7 @@ typedef struct _LIST_ENTRY {
 
 typedef struct _PEB_LDR_DATA {
     uint8_t Reserved1[8];
-    void* Reserved2[2];
+    void* Reserved2;
     LIST_ENTRY InLoadOrderModuleList;
     LIST_ENTRY InMemoryOrderModuleList;
     LIST_ENTRY InInitOrderModuleList;
