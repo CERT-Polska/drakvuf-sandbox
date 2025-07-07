@@ -145,8 +145,6 @@ def status(path: AnalysisRequestPath):
     except FileNotFoundError:
         return jsonify({"error": "Job not found"}), 404
 
-    if "id" not in metadata:
-        metadata = {"id": task_uid, **metadata}
     return jsonify(metadata)
 
 

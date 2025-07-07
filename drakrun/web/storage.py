@@ -130,7 +130,15 @@ def read_analysis_json(analysis_id: str, path: str, s3_config: S3StorageConfigSe
                 raise FileNotFoundError from e
             else:
                 raise
-    return json.loads(data)
+
+    metadata = json.loads(data)
+
+    if "id" not in metadata:
+        metadata = {"id": analysis_id, **metadata}
+
+    if "status" not in metadata:
+        metadata = {"status": "unknown", **metadata}
+    return metadata
 
 
 def send_analysis_file(
