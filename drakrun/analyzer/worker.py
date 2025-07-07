@@ -45,7 +45,7 @@ def analysis_job_to_status_dict(job: Job):
         time_finished = job.ended_at.isoformat() if job.ended_at is not None else None
     return {
         "id": job.id,
-        "status": job_status.value if job_status is not None else None,
+        "status": job_status.value if job_status is not None else "unknown",
         **job_meta,
         "time_started": (
             job.started_at.isoformat() if job.started_at is not None else None
