@@ -6,6 +6,7 @@ from typing import List, Optional
 
 from redis import Redis
 from rq import Queue, Worker, get_current_job
+from rq.exceptions import InvalidJobOperation
 from rq.job import Job, JobStatus
 
 from drakrun.lib.config import RedisConfigSection, load_config
@@ -201,5 +202,10 @@ def get_analyses_list(connection: Redis) -> List[Job]:
 def truncate_analysis_list(connection: Redis, limit: int) -> None:
     jobs_to_truncate = get_analyses_list(connection=connection)[limit:]
     for job in jobs_to_truncate:
-        if job.get_status() in [JobStatus.FINISHED, JobStatus.FAILED]:
+        try:
+            status = job.get_status()
+        except InvalidJobOperation:
+            # Already deleted?
+            continue
+        if status in [JobStatus.FINISHED, JobStatus.FAILED]:
             job.delete()
