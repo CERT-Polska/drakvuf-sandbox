@@ -142,6 +142,10 @@ def status(path: AnalysisRequestPath):
 
     try:
         metadata = read_analysis_json(task_uid, "metadata.json", config.s3)
+        if "id" not in metadata:
+            metadata = {"id": task_uid, **metadata}
+        if "status" not in metadata:
+            metadata = {"status": "unknown", **metadata}
     except FileNotFoundError:
         return jsonify({"error": "Job not found"}), 404
 

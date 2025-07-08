@@ -131,14 +131,8 @@ def read_analysis_json(analysis_id: str, path: str, s3_config: S3StorageConfigSe
             else:
                 raise
 
-    metadata = json.loads(data)
-
-    if "id" not in metadata:
-        metadata = {"id": analysis_id, **metadata}
-
-    if "status" not in metadata:
-        metadata = {"status": "unknown", **metadata}
-    return metadata
+    parsed_data = json.loads(data)
+    return parsed_data
 
 
 def send_analysis_file(
