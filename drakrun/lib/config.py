@@ -42,6 +42,7 @@ class DrakrunConfigSection(BaseModel):
     no_post_restore: bool = False
     no_screenshotter: bool = False
     result_ttl: int = -1
+    gzip_syscalls: bool = False
 
 
 class DrakrunDefaultsPresetSection(BaseModel):
