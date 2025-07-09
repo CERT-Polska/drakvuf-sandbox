@@ -39,6 +39,13 @@ class Process:
             "evtid_to": self.evtid_to,
         }
 
+    def change_parent(self, new_parent: "Process") -> None:
+        if self.parent is not None:
+            self.parent.children.remove(self)
+        new_parent.children.append(self)
+        self.parent = new_parent
+        self.ppid = new_parent.ppid
+
 
 class ProcessTree:
     def __init__(self):
@@ -209,7 +216,7 @@ def parse_mm_clean_process_address_space_entry(
     evtid = int(entry["EventUID"], 16)
     p = pstree.get_process(pid)
     if p is None:
-        logger.warning(f"Process not found ath the process exit time (PID: {pid})")
+        logger.warning(f"Process not found at the process exit time (PID: {pid})")
         return
     p.ts_to = float(entry["TimeStamp"])
     p.evtid_to = evtid
@@ -230,15 +237,25 @@ def tree_from_log(file: TextIO) -> ProcessTree:
             if "RunningProcess" in entry:
                 # Process has been created before the analysis started.
                 parse_running_process_entry(pstree, entry)
-            elif "Method" in entry and entry["Method"] in ["NtCreateUserProcess"]:
-                # Process has been created after the analysis started.
-                parse_nt_create_user_process_entry(pstree, entry)
-            elif "Method" in entry and entry["Method"] == "NtCreateProcessEx":
-                # Process has been created after the analysis started.
-                parse_nt_create_process_ex_entry(pstree, entry)
-            elif "Method" in entry and entry["Method"] == "MmCleanProcessAddressSpace":
-                # Process has been terminated.
-                parse_mm_clean_process_address_space_entry(pstree, entry)
+            elif "Method" in entry:
+                if entry["Method"] == "NtCreateUserProcess":
+                    # Process has been created after the analysis started.
+                    parse_nt_create_user_process_entry(pstree, entry)
+                elif entry["Method"] == "NtCreateProcessEx":
+                    # Process has been created after the analysis started.
+                    parse_nt_create_process_ex_entry(pstree, entry)
+                elif entry["Method"] == "MmCleanProcessAddressSpace":
+                    # Process has been terminated.
+                    parse_mm_clean_process_address_space_entry(pstree, entry)
+                elif "PID" in entry and "PPID" in entry:
+                    pid = entry["PID"]
+                    ppid = entry["PPID"]
+                    process = pstree.get_process(pid)
+                    if process.ts_to is None and process.ppid != ppid:
+                        # Found elevated process: rebind to another parent
+                        new_parent = pstree.get_process(ppid)
+                        if new_parent is not None:
+                            process.change_parent(new_parent)
         except json.JSONDecodeError as e:
             logger.warning(f"Line cannot be parsed as JSON\n{e}")
             continue
