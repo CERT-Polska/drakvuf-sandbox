@@ -186,12 +186,17 @@ def analyze_file(
         drakvuf_args = prepare_drakvuf_args(output_dir, options)
 
         try:
+            if (
+                options.start_command is not None
+                and type(options.start_command) is list
+            ):
+                exec_cmd = mslex.join(options.start_command, for_cmd=False)
+                options.start_command = exec_cmd
+
             if substatus_callback is not None:
                 substatus_callback(AnalysisSubstatus.analyzing, updated_options=options)
 
-            if options.start_command is not None:
-                exec_cmd = mslex.join(options.start_command, for_cmd=False)
-            else:
+            if options.start_command is None:
                 # If we don't inject the command to run:
                 # evacuate the drakshell before running anything
                 drakshell.finish()
