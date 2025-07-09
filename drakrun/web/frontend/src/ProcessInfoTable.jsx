@@ -20,7 +20,7 @@ export function ProcessInfoTable({ processInfo }) {
                 </tr>
                 <tr>
                     <th>Arguments</th>
-                    <td>{processInfo.args.join(" ")}</td>
+                    <td>{Array.isArray(processInfo.args) ? processInfo.args.join(" ") : processInfo.args}</td>
                 </tr>
                 <tr>
                     <th>Started at</th>
