@@ -190,8 +190,12 @@ def analyze_file(
                 options.start_command is not None
                 and type(options.start_command) is list
             ):
-                exec_cmd = mslex.join(options.start_command, for_cmd=False)
+                exec_cmd: Optional[str] = mslex.join(
+                    options.start_command, for_cmd=False
+                )
                 options.start_command = exec_cmd
+            elif type(options.start_command) is str:
+                exec_cmd = options.start_command
 
             if substatus_callback is not None:
                 substatus_callback(AnalysisSubstatus.analyzing, updated_options=options)
