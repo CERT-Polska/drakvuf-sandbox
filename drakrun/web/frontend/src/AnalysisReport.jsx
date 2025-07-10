@@ -7,8 +7,8 @@ import { AnalysisScreenshotViewer } from "./AnalysisScreenshotViewer.jsx";
 import { ProcessTreeView } from "./ProcessTreeView.jsx";
 import { MethodFilterPicker } from "./MethodFilterPicker.jsx";
 import { ProcessInfoTable } from "./ProcessInfoTable.jsx";
-import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faDownload} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 
 export function AnalysisLogViewerTab({ analysisId }) {
@@ -242,28 +242,41 @@ export function AnalysisReport({ analysis }) {
                         <div className="card-body">
                             <a href={`${baseUrl}/pcap_file/${analysis.id}`}>
                                 <button className="btn btn-primary me-2">
-                                    <FontAwesomeIcon icon={faDownload} className="me-2"/>
+                                    <FontAwesomeIcon
+                                        icon={faDownload}
+                                        className="me-2"
+                                    />
                                     Download PCAP
                                 </button>
                             </a>
-                            {
-                                Array.isArray(plugins) && plugins.includes("tlsmon") ?
-                                    <a href={`${baseUrl}/pcap_keys/${analysis.id}`}>
-                                        <button className="btn btn-primary me-2">
-                                            <FontAwesomeIcon icon={faDownload} className="me-2"/>
-                                            TLS keys
-                                        </button>
-                                    </a> : []
-                            }
-                            {
-                                Array.isArray(plugins) && plugins.includes("memdump") ?
-                                    <a href={`${baseUrl}/dumps/${analysis.id}`}>
-                                        <button className="btn btn-primary me-2">
-                                            <FontAwesomeIcon icon={faDownload} className="me-2"/>
-                                            Memory dumps
-                                        </button>
-                                    </a> : []
-                            }
+                            {Array.isArray(plugins) &&
+                            plugins.includes("tlsmon") ? (
+                                <a href={`${baseUrl}/pcap_keys/${analysis.id}`}>
+                                    <button className="btn btn-primary me-2">
+                                        <FontAwesomeIcon
+                                            icon={faDownload}
+                                            className="me-2"
+                                        />
+                                        TLS keys
+                                    </button>
+                                </a>
+                            ) : (
+                                []
+                            )}
+                            {Array.isArray(plugins) &&
+                            plugins.includes("memdump") ? (
+                                <a href={`${baseUrl}/dumps/${analysis.id}`}>
+                                    <button className="btn btn-primary me-2">
+                                        <FontAwesomeIcon
+                                            icon={faDownload}
+                                            className="me-2"
+                                        />
+                                        Memory dumps
+                                    </button>
+                                </a>
+                            ) : (
+                                []
+                            )}
                         </div>
                     </div>
                 </div>
