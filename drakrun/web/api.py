@@ -244,7 +244,11 @@ def process_logs(path: ProcessLogsRequestPath):
 def pcap_file(path: AnalysisRequestPath):
     task_uid = path.task_uid
     return send_analysis_file(
-        task_uid, "dump.pcap", mimetype="application/octet-stream", s3_config=config.s3
+        task_uid,
+        "dump.pcap",
+        mimetype="application/octet-stream",
+        s3_config=config.s3,
+        download_name=f"{task_uid}_dump.pcap",
     )
 
 
@@ -256,6 +260,7 @@ def pcap_keys(path: AnalysisRequestPath):
         "wireshark_key_file.txt",
         mimetype="application/octet-stream",
         s3_config=config.s3,
+        download_name=f"{task_uid}_wireshark_key_file.txt",
     )
 
 
@@ -263,7 +268,11 @@ def pcap_keys(path: AnalysisRequestPath):
 def dumps(path: AnalysisRequestPath):
     task_uid = path.task_uid
     return send_analysis_file(
-        task_uid, "dumps.zip", mimetype="application/zip", s3_config=config.s3
+        task_uid,
+        "dumps.zip",
+        mimetype="application/zip",
+        s3_config=config.s3,
+        download_name=f"{task_uid}_dumps.zip",
     )
 
 
