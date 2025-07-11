@@ -276,7 +276,10 @@ def start_vm_network(vm_id: int, network_conf: NetworkConfigSection) -> NetworkI
         f"DRAKRUN_INP -i {bridge_name} -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
     )
 
-    if network_info.dns_server == network_info.gateway_address:
+    if (
+        network_info.net_enable
+        and network_info.dns_server == network_info.gateway_address
+    ):
         add_iptable_rule(f"DRAKRUN_INP -i {bridge_name} -p udp --dport 53 -j ACCEPT")
 
     add_iptable_rule(f"DRAKRUN_INP -i {bridge_name} -d 0.0.0.0/0 -j DROP")
