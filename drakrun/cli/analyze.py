@@ -42,6 +42,13 @@ from drakrun.lib.config import load_config
     help="Analysis timeout (default is None, analysis interrupted on CTRL-C)",
 )
 @click.option(
+    "--preset",
+    "preset",
+    default=None,
+    type=str,
+    help="Use specified defaults preset from configuration",
+)
+@click.option(
     "--target-filename",
     "target_filename",
     default=None,
@@ -91,6 +98,7 @@ def analyze(
     output_dir,
     sample,
     timeout,
+    preset,
     target_filename,
     start_command,
     plugins,
@@ -117,8 +125,15 @@ def analyze(
     if sample is not None:
         sample = pathlib.Path(sample)
 
+    if not plugins:
+        # If plugins not provided, pass None to indicate
+        # that we want to use a configured default.
+        # Click passes empty list there.
+        plugins = None
+
     options = AnalysisOptions(
         config=config,
+        preset=preset,
         sample_path=sample,
         timeout=timeout,
         net_enable=net_enable,

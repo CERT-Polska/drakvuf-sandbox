@@ -19,12 +19,13 @@ from drakrun.analyzer.postprocessing.process_tree import tree_from_dict
 from drakrun.analyzer.worker import (
     analysis_job_to_status_dict,
     enqueue_analysis,
+    get_analyses_list,
     get_redis_connection,
+    truncate_analysis_list,
 )
 from drakrun.lib.config import load_config
 from drakrun.lib.paths import UPLOADS_DIR
 from drakrun.lib.s3_storage import get_s3_client, is_s3_enabled, upload_sample_to_s3
-from drakrun.web.analysis_list import add_analysis_to_recent, get_recent_analysis_list
 from drakrun.web.schema import (
     AnalysisListResponse,
     AnalysisRequestPath,
@@ -44,6 +45,7 @@ from drakrun.web.storage import (
     send_analysis_file,
 )
 
+ANALYSES_LIST_MAX_LENGTH = 100
 api = APIBlueprint("api", __name__, url_prefix="/api")
 
 config = load_config()
@@ -64,6 +66,7 @@ def upload_sample(form: UploadFileForm):
         filename = request_file.filename
     start_command = form.start_command
     plugins = form.plugins
+    preset = form.preset
 
     UPLOADS_DIR.mkdir(exist_ok=True)
     upload_path = UPLOADS_DIR / f"{job_id}.sample"
@@ -94,6 +97,7 @@ def upload_sample(form: UploadFileForm):
 
         analysis_options = AnalysisOptions(
             config=config,
+            preset=preset,
             sample_path=sample_path,
             target_filename=filename,
             start_command=start_command,
@@ -112,13 +116,13 @@ def upload_sample(form: UploadFileForm):
         upload_path.unlink(missing_ok=True)
         raise
 
-    add_analysis_to_recent(connection=redis, analysis_id=job_id)
+    truncate_analysis_list(connection=redis, limit=ANALYSES_LIST_MAX_LENGTH)
     return jsonify({"task_uid": job_id})
 
 
 @api.get("/list", responses={200: AnalysisListResponse})
 def list_analyses():
-    analysis_list = get_recent_analysis_list(redis)
+    analysis_list = get_analyses_list(connection=redis)
     return jsonify([analysis_job_to_status_dict(job) for job in analysis_list])
 
 
@@ -138,11 +142,13 @@ def status(path: AnalysisRequestPath):
 
     try:
         metadata = read_analysis_json(task_uid, "metadata.json", config.s3)
+        if "id" not in metadata:
+            metadata = {"id": task_uid, **metadata}
+        if "status" not in metadata:
+            metadata = {"status": "unknown", **metadata}
     except FileNotFoundError:
         return jsonify({"error": "Job not found"}), 404
 
-    if "id" not in metadata:
-        metadata = {"id": task_uid, **metadata}
     return jsonify(metadata)
 
 
@@ -238,7 +244,11 @@ def process_logs(path: ProcessLogsRequestPath):
 def pcap_file(path: AnalysisRequestPath):
     task_uid = path.task_uid
     return send_analysis_file(
-        task_uid, "dump.pcap", mimetype="application/octet-stream", s3_config=config.s3
+        task_uid,
+        "dump.pcap",
+        mimetype="application/octet-stream",
+        s3_config=config.s3,
+        download_name=f"{task_uid}_dump.pcap",
     )
 
 
@@ -250,6 +260,7 @@ def pcap_keys(path: AnalysisRequestPath):
         "wireshark_key_file.txt",
         mimetype="application/octet-stream",
         s3_config=config.s3,
+        download_name=f"{task_uid}_wireshark_key_file.txt",
     )
 
 
@@ -257,7 +268,11 @@ def pcap_keys(path: AnalysisRequestPath):
 def dumps(path: AnalysisRequestPath):
     task_uid = path.task_uid
     return send_analysis_file(
-        task_uid, "dumps.zip", mimetype="application/zip", s3_config=config.s3
+        task_uid,
+        "dumps.zip",
+        mimetype="application/zip",
+        s3_config=config.s3,
+        download_name=f"{task_uid}_dumps.zip",
     )
 
 

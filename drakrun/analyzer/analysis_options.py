@@ -13,6 +13,8 @@ class AnalysisOptions(BaseModel):
     target_filename: Optional[str] = None
     # Start command to run on the VM
     start_command: Optional[Union[List[str], str]] = None
+    # Preset of defaults to be used for analysis
+    preset: Optional[str] = None
     # Plugins to enable
     plugins: List[str]
     # Alternative hooks list for apimon
@@ -36,23 +38,37 @@ class AnalysisOptions(BaseModel):
     # Don't make screenshots during analysis
     no_screenshotter: Optional[bool] = None
 
-    def __init__(self, config: DrakrunConfig, **kwargs):
-        net_enable = kwargs.get("net_enable")
-        if net_enable is None:
-            net_enable = config.network.net_enable
-
-        super().__init__(
+    @staticmethod
+    def _apply_defaults(
+        config: DrakrunConfig, options: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        defaults = config.get_drakrun_defaults(options.get("preset"))
+        if not config.network.net_enable:
+            # If network access is globally disabled, enforce net_enable=False
+            net_enable = False
+        else:
+            # If network access is globally enabled, use value from options
+            net_enable = options.get("net_enable", defaults.net_enable)
+            # If unset, set True
+            if net_enable is None:
+                net_enable = True
+        defaults_dict = dict(defaults)
+        return {
+            **options,
             **{
-                **kwargs,
-                **dict(
-                    plugins=kwargs.get("plugins") or config.drakrun.plugins,
-                    apimon_hooks_path=kwargs.get("apimon_hooks_path")
-                    or config.drakrun.apimon_hooks_path,
-                    syscall_hooks_path=kwargs.get("syscall_hooks_path")
-                    or config.drakrun.syscall_hooks_path,
-                    net_enable=net_enable,
-                ),
+                key: (
+                    options.get(key)
+                    if options.get(key) is not None
+                    else defaults_dict[key]
+                )
+                for key in defaults_dict.keys()
             },
+            **dict(net_enable=net_enable),
+        }
+
+    def __init__(self, config: DrakrunConfig, **kwargs):
+        super().__init__(
+            **self._apply_defaults(config, kwargs),
         )
 
     def to_dict(self, exclude_none=True):

@@ -1,6 +1,7 @@
 import { PluginList } from "./PluginPicker.jsx";
 
 export function AnalysisMetadataTable({ analysis }) {
+    const startCommand = analysis.options["start_command"] || "-";
     return (
         <table className="datatable-table">
             <tbody>
@@ -19,7 +20,9 @@ export function AnalysisMetadataTable({ analysis }) {
                 <tr>
                     <th>Start command</th>
                     <td>
-                        {(analysis.options["start_command"] || ["-"]).join(" ")}
+                        {Array.isArray(startCommand)
+                            ? startCommand.join(" ")
+                            : startCommand}
                     </td>
                 </tr>
                 <tr>

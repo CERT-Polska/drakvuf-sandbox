@@ -2,7 +2,7 @@ import pathlib
 from typing import Any, Dict, List, Optional
 
 import tomli
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from drakrun.lib.paths import CONFIG_PATH, PACKAGE_DIR
 
@@ -34,14 +34,27 @@ class DrakrunConfigSection(BaseModel):
     plugins: List[str]
     default_timeout: int
     job_timeout_leeway: int = 300
-    """Give extra 5 minutes as a timeout for whole analysis process
-    including VM restore, post-restore, drakvuf hard timeout and
-    postprocessing."""
-    result_ttl: int = -1
+    net_enable: Optional[bool] = None
     apimon_hooks_path: Optional[pathlib.Path] = None
     syscall_hooks_path: Optional[pathlib.Path] = None
     extra_drakvuf_args: Optional[Dict[str, Any]] = None
     extra_output_subdirs: Optional[List[str]] = None
+    no_post_restore: bool = False
+    no_screenshotter: bool = False
+    result_ttl: int = -1
+
+
+class DrakrunDefaultsPresetSection(BaseModel):
+    plugins: Optional[List[str]] = None
+    default_timeout: Optional[int] = None
+    job_timeout_leeway: Optional[int] = None
+    net_enable: Optional[bool] = None
+    apimon_hooks_path: Optional[pathlib.Path] = None
+    syscall_hooks_path: Optional[pathlib.Path] = None
+    extra_drakvuf_args: Optional[Dict[str, Any]] = None
+    extra_output_subdirs: Optional[List[str]] = None
+    no_post_restore: Optional[bool] = None
+    no_screenshotter: Optional[bool] = None
 
 
 class CapaConfigSection(BaseModel):
@@ -63,18 +76,36 @@ class S3StorageConfigSection(BaseModel):
 
 
 class DrakrunConfig(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="allow")
     redis: RedisConfigSection
     network: NetworkConfigSection
     drakrun: DrakrunConfigSection
     capa: CapaConfigSection = CapaConfigSection()
     s3: Optional[S3StorageConfigSection] = None
+    preset: Dict[str, DrakrunDefaultsPresetSection] = Field(default_factory=dict)
 
     @staticmethod
     def load(filename: str) -> "DrakrunConfig":
         with open(filename, "rb") as f:
             config = tomli.load(f)
         return DrakrunConfig.model_validate(config)
+
+    def get_drakrun_defaults(
+        self, preset_name: Optional[str] = None
+    ) -> DrakrunDefaultsPresetSection:
+        if preset_name is None:
+            preset = dict(DrakrunDefaultsPresetSection())
+        elif preset_name not in self.preset:
+            raise RuntimeError(f"Preset {preset_name} is not defined in configuration")
+        else:
+            preset = dict(self.preset[preset_name])
+        global_defaults = dict(self.drakrun)
+        return DrakrunDefaultsPresetSection(
+            **{
+                key: (preset[key] if preset[key] is not None else global_defaults[key])
+                for key in preset.keys()
+            }
+        )
 
 
 def load_config() -> DrakrunConfig:

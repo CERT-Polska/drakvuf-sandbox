@@ -53,7 +53,7 @@ def prepare_output_dir(output_dir: pathlib.Path, options: AnalysisOptions) -> No
     if options.extra_output_subdirs is not None:
         for dirname in options.extra_output_subdirs:
             subdir = output_dir.joinpath(dirname).resolve()
-            if subdir.relative_to(output_dir.resolve()):
+            if not subdir.relative_to(output_dir.resolve()):
                 raise RuntimeError(
                     f"Incorrect directory name {dirname} in extra_output_subdirs option"
                 )
@@ -186,12 +186,21 @@ def analyze_file(
         drakvuf_args = prepare_drakvuf_args(output_dir, options)
 
         try:
+            if (
+                options.start_command is not None
+                and type(options.start_command) is list
+            ):
+                exec_cmd: Optional[str] = mslex.join(
+                    options.start_command, for_cmd=False
+                )
+                options.start_command = exec_cmd
+            elif type(options.start_command) is str:
+                exec_cmd = options.start_command
+
             if substatus_callback is not None:
                 substatus_callback(AnalysisSubstatus.analyzing, updated_options=options)
 
-            if options.start_command is not None:
-                exec_cmd = mslex.join(options.start_command, for_cmd=False)
-            else:
+            if options.start_command is None:
                 # If we don't inject the command to run:
                 # evacuate the drakshell before running anything
                 drakshell.finish()
@@ -206,6 +215,7 @@ def analyze_file(
                 drakmon_file,
                 drakvuf_args,
                 exec_cmd=exec_cmd,
+                cwd=output_dir,
             ) as drakvuf:
                 log.info("Analysis started...")
                 try:

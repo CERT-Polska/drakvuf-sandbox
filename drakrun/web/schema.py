@@ -17,6 +17,7 @@ class UploadFileForm(BaseModel):
     plugins: Optional[List[str]] = Field(
         default=None, description="Plugins to use (in JSON array string)"
     )
+    preset: Optional[str] = Field(default=None, description="Analysis settings preset")
 
 
 class UploadAnalysisResponse(BaseModel):

@@ -5,7 +5,6 @@ import string
 import unicodedata
 from typing import List
 
-import mslex
 from pathvalidate import Platform, is_valid_filename
 
 log = logging.getLogger(__name__)
@@ -56,13 +55,13 @@ def get_startup_argv(
         else:
             raise RuntimeError(f"Unknown office file extension {extension}.")
         argv.extend(["/t", target_path])
-        return ["cmd.exe", "/C", mslex.join(["start", *argv])]
+        return ["cmd.exe", "/C", "start", *argv]
     elif extension in ["js", "jse", "vbs", "vbe"]:
         return ["wscript.exe", target_path]
     elif extension in ["hta", "html", "htm"]:
         return ["mshta.exe", target_path]
     else:
-        return ["cmd.exe", "/C", mslex.join(["start", target_path])]
+        return ["cmd.exe", "/C", "start", target_path]
 
 
 def is_office_word_file(extension: str) -> bool:

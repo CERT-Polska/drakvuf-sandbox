@@ -3,6 +3,7 @@ import json
 import os
 import pathlib
 from io import BytesIO
+from typing import Optional
 
 from botocore.exceptions import ClientError
 from botocore.response import StreamingBody
@@ -130,18 +131,30 @@ def read_analysis_json(analysis_id: str, path: str, s3_config: S3StorageConfigSe
                 raise FileNotFoundError from e
             else:
                 raise
-    return json.loads(data)
+
+    parsed_data = json.loads(data)
+    return parsed_data
 
 
 def send_analysis_file(
-    analysis_id: str, path: str, mimetype: str, s3_config: S3StorageConfigSection
+    analysis_id: str,
+    path: str,
+    mimetype: str,
+    s3_config: S3StorageConfigSection,
+    download_name: Optional[str] = None,
 ):
     if not is_s3_enabled(s3_config):
         base_path = ANALYSES_DIR / analysis_id
         path_to_file = check_path(base_path / path, base_path)
         if not path_to_file.exists():
             return dict(error="Data not found"), 404
-        return send_file(path_to_file, mimetype=mimetype)
+        as_attachment = download_name is not None
+        return send_file(
+            path_to_file,
+            mimetype=mimetype,
+            as_attachment=as_attachment,
+            download_name=download_name,
+        )
 
     # S3 handling
     s3_client = get_s3_client(s3_config)
@@ -169,7 +182,12 @@ def send_analysis_file(
             )
         else:
             body = s3_client.get_object(Bucket=s3_config.bucket, Key=object_key)["Body"]
-            return Response(body.iter_chunks(32 * 1024), mimetype=mimetype)
+            headers = {}
+            if download_name is not None:
+                headers["Content-Disposition"] = f"attachment; filename={download_name}"
+            return Response(
+                body.iter_chunks(32 * 1024), mimetype=mimetype, headers=headers
+            )
     except ClientError as e:
         if e.response["Error"]["Code"] == "NoSuchKey":
             return dict(error="Data not found"), 404

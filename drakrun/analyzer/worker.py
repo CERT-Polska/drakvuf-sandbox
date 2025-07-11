@@ -2,11 +2,12 @@ import datetime
 import json
 import logging
 import shutil
-from typing import Optional
+from typing import List, Optional
 
 from redis import Redis
 from rq import Queue, Worker, get_current_job
-from rq.job import Job
+from rq.exceptions import InvalidJobOperation
+from rq.job import Job, JobStatus
 
 from drakrun.lib.config import RedisConfigSection, load_config
 from drakrun.lib.paths import ANALYSES_DIR, UPLOADS_DIR
@@ -45,7 +46,7 @@ def analysis_job_to_status_dict(job: Job):
         time_finished = job.ended_at.isoformat() if job.ended_at is not None else None
     return {
         "id": job.id,
-        "status": job_status.value if job_status is not None else None,
+        "status": job_status.value if job_status is not None else "unknown",
         **job_meta,
         "time_started": (
             job.started_at.isoformat() if job.started_at is not None else None
@@ -65,6 +66,12 @@ def worker_analyze(options: AnalysisOptions):
     else:
         s3_client = None
         s3_bucket = None
+
+    # Reconstruct options object to include worker-side preset defaults
+    options = AnalysisOptions(config, **dict(options))
+
+    if not options.plugins:
+        raise RuntimeError("Cannot analyze sample without plugins specified")
 
     job = get_current_job()
     job.meta["vm_id"] = _WORKER_VM_ID
@@ -171,3 +178,34 @@ def enqueue_analysis(
         job_timeout=options.timeout + options.job_timeout_leeway,
         result_ttl=result_ttl,
     )
+
+
+def get_analyses_list(connection: Redis) -> List[Job]:
+    queue = Queue(name=ANALYSIS_QUEUE_NAME, connection=connection)
+    jobs = list(queue.get_jobs())
+    for job_registry in [
+        queue.started_job_registry,
+        queue.finished_job_registry,
+        queue.failed_job_registry,
+    ]:
+        job_ids = job_registry.get_job_ids()
+        jobs.extend(
+            [
+                job
+                for job in Job.fetch_many(job_ids, connection=connection)
+                if job is not None
+            ]
+        )
+    return sorted(jobs, key=lambda job: job.enqueued_at, reverse=True)
+
+
+def truncate_analysis_list(connection: Redis, limit: int) -> None:
+    jobs_to_truncate = get_analyses_list(connection=connection)[limit:]
+    for job in jobs_to_truncate:
+        try:
+            status = job.get_status()
+        except InvalidJobOperation:
+            # Already deleted?
+            continue
+        if status in [JobStatus.FINISHED, JobStatus.FAILED]:
+            job.delete()
