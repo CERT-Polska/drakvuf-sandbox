@@ -7,6 +7,7 @@ from .crop_dumps import crop_dumps
 from .generate_graphs import generate_graphs
 from .generate_report import build_report
 from .generate_wireshark_key_file import generate_wireshark_key_file
+from .gzip_syscalls import gzip_syscalls
 from .index_logs import index_logs
 from .plugin_base import PostprocessPlugin
 from .screenshot_metadata import screenshot_metadata
@@ -49,6 +50,9 @@ POSTPROCESS_PLUGINS = [
     ),
     PostprocessPlugin(function=crop_dumps, requires=[DUMPS_DIR], generates=[DUMPS_ZIP]),
     PostprocessPlugin(function=compress_ipt, requires=[IPT_DIR], generates=[IPT_ZIP]),
+    PostprocessPlugin(
+        function=gzip_syscalls, requires=["syscall.log"], generates=["syscall.log.gz"]
+    ),
     PostprocessPlugin(
         function=index_logs, requires=["process_tree.json"], generates=["log_index"]
     ),
