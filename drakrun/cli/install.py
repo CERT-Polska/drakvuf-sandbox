@@ -81,7 +81,7 @@ def install(
 
     log.info("Performing installation...")
     passwd_characters = string.ascii_letters + string.digits
-    vnc_passwd = "".join(secrets.choice(passwd_characters) for _ in range(20))
+    vnc_passwd = "".join(secrets.choice(passwd_characters) for _ in range(8))
     install_info = InstallInfo(
         vcpus=vcpus,
         memory=memory,
