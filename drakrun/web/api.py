@@ -110,7 +110,7 @@ def upload_sample(form: UploadFileForm):
         if no_internet:
             analysis_options.net_enable = False
         if no_screenshots:
-            analysis_options.no_screenshots = True
+            analysis_options.no_screenshotter = True
         enqueue_analysis(
             job_id=job_id,
             file_metadata=file_metadata,
