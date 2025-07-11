@@ -21,6 +21,8 @@ export default function UploadView(props) {
                     plugins: form.getAll("plugins"),
                     file_name: form.get("file_name"),
                     start_command: form.get("start_command"),
+                    no_internet: form.get("no_internet"),
+                    no_screenshots: form.get("no_screenshots"),
                 });
                 const jobId = jobData["task_uid"];
                 navigate(`/analysis/${jobId}`);
@@ -95,6 +97,31 @@ export default function UploadView(props) {
                         name="start_command"
                         placeholder="(pick automatically)"
                     />
+                </div>
+                <div className="mb-3 form-check">
+                    <input
+                        className="form-check-input"
+                        id="no-internet"
+                        type="checkbox"
+                        name="no_internet"
+                    />
+                    <label className="form-check-label" htmlFor="no-internet">
+                        Disable Internet access
+                    </label>
+                </div>
+                <div className="mb-3 form-check">
+                    <input
+                        className="form-check-input"
+                        id="no-screenshots"
+                        type="checkbox"
+                        name="no_screenshots"
+                    />
+                    <label
+                        className="form-check-label"
+                        htmlFor="no-screenshots"
+                    >
+                        Disable screenshots
+                    </label>
                 </div>
                 <div className="mb-3">
                     <button

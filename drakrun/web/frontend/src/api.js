@@ -94,6 +94,8 @@ export async function uploadSample({
     file_name,
     plugins,
     start_command,
+    no_internet,
+    no_screenshots,
 }) {
     const formData = new FormData();
     formData.append("file", file);
@@ -101,6 +103,8 @@ export async function uploadSample({
     formData.append("plugins", JSON.stringify(plugins));
     if (file_name) formData.append("file_name", file_name);
     if (start_command) formData.append("start_command", start_command);
+    if (no_internet) formData.append("no_internet", "1");
+    if (no_screenshots) formData.append("no_screenshots", "1");
     const request = await axios.post("/upload", formData, {
         headers: {
             "Content-Type": "multipart/form-data",

@@ -18,6 +18,12 @@ class UploadFileForm(BaseModel):
         default=None, description="Plugins to use (in JSON array string)"
     )
     preset: Optional[str] = Field(default=None, description="Analysis settings preset")
+    no_internet: Optional[bool] = Field(
+        default=False, description="Disable Internet connection"
+    )
+    no_screenshots: Optional[bool] = Field(
+        default=False, description="Disable screenshots"
+    )
 
 
 class UploadAnalysisResponse(BaseModel):
