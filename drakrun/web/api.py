@@ -67,6 +67,8 @@ def upload_sample(form: UploadFileForm):
     start_command = form.start_command
     plugins = form.plugins
     preset = form.preset
+    no_internet = form.no_internet
+    no_screenshots = form.no_screenshots
 
     UPLOADS_DIR.mkdir(exist_ok=True)
     upload_path = UPLOADS_DIR / f"{job_id}.sample"
@@ -105,6 +107,10 @@ def upload_sample(form: UploadFileForm):
             timeout=timeout,
             job_timeout_leeway=config.drakrun.job_timeout_leeway,
         )
+        if no_internet:
+            analysis_options.net_enable = False
+        if no_screenshots:
+            analysis_options.no_screenshotter = True
         enqueue_analysis(
             job_id=job_id,
             file_metadata=file_metadata,
