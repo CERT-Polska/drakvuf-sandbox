@@ -18,6 +18,9 @@ class Process:
     ts_to: Optional[float]
     evtid_from: Optional[int]
     evtid_to: Optional[int]
+    exit_code: Optional[int]
+    exit_code_str: Optional[str]
+    killed_by: Optional[int]
     procname: str
     args: List[str]
     parent: Optional["Process"] = None
@@ -37,6 +40,9 @@ class Process:
             "ts_to": self.ts_to,
             "evtid_from": self.evtid_from,
             "evtid_to": self.evtid_to,
+            "exit_code": self.exit_code,
+            "exit_code_str": self.exit_code_str,
+            "killed_by": self.killed_by,
         }
 
     def change_parent(self, new_parent: "Process") -> None:
@@ -75,6 +81,9 @@ class ProcessTree:
             procname=procname,
             parent=parent,
             args=args or [],
+            exit_code=None,
+            exit_code_str=None,
+            killed_by=None,
         )
         existing_process = self.get_process(pid)
         if existing_process is not None and existing_process.ts_to is None:
@@ -222,6 +231,31 @@ def parse_mm_clean_process_address_space_entry(
     p.evtid_to = evtid
 
 
+def parse_mm_terminate_process(pstree: ProcessTree, entry: Dict[str, Any]):
+    pid = entry["ExitPid"]
+    killer_pid = None
+    if pid == 0:
+        # Terminate self
+        pid = entry["PID"]
+    else:
+        killer_pid = entry["PID"]
+    p = pstree.get_process(pid)
+    if p is None:
+        logger.warning(
+            f"Process not found at the process termination request (PID: {pid})"
+        )
+        return
+    if killer_pid is not None:
+        killer = pstree.get_process(killer_pid)
+        if killer is None:
+            logger.warning(
+                f"Process not found at the NtTerminateProcess call time (PID: {killer_pid})"
+            )
+        p.killed_by = killer.seqid
+    p.exit_code = int(entry["ExitStatus"], 16)
+    p.exit_code_str = entry["ExitStatusStr"]
+
+
 def tree_from_log(file: TextIO) -> ProcessTree:
     pstree = ProcessTree()
     prev_line = None
@@ -247,6 +281,8 @@ def tree_from_log(file: TextIO) -> ProcessTree:
                 elif entry["Method"] == "MmCleanProcessAddressSpace":
                     # Process has been terminated.
                     parse_mm_clean_process_address_space_entry(pstree, entry)
+                elif entry["Method"] == "NtTerminateProcess":
+                    parse_mm_terminate_process(pstree, entry)
                 elif "PID" in entry and "PPID" in entry:
                     pid = entry["PID"]
                     ppid = entry["PPID"]
