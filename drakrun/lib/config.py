@@ -66,8 +66,11 @@ class CapaConfigSection(BaseModel):
 
 
 class MemdumpConfigSection(BaseModel):
-    max_dumps_size: int = 300 * 1024 * 1024
+    max_dumps_size: int = 500 * 1024 * 1024
     min_single_dump_size: int = 512
+    max_single_dump_size: int = 32 * 1024 * 1024
+    filter_system_pid: bool = True
+    soft_same_region_count_limit: int = 5
 
 
 class S3StorageConfigSection(BaseModel):

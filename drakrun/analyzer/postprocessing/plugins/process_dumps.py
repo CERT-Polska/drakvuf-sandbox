@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 import zipfile
+from collections import defaultdict
 from typing import Any, Dict, Optional
 
 from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP
@@ -25,7 +26,7 @@ def process_dumps(context: PostprocessContext) -> None:
             "index": data["DumpsCount"],
             "dump_reason": data["DumpReason"],
             "method": data["Method"],
-            "process": process.seqid,
+            "process": process,
             "address": data["DumpAddr"],
             "size": int(data["DumpSize"], 16),
             "filename": data["DumpFilename"],
@@ -42,42 +43,75 @@ def process_dumps(context: PostprocessContext) -> None:
     dumps_path = analysis_dir / DUMPS_DIR
     target_zip = analysis_dir / DUMPS_ZIP
 
-    current_size = 0
-    dumps_metadata = []
+    region_count = defaultdict(int)
+    filtered_dumps = []
 
-    with zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
-        for idx, entry in enumerate(memdump_log):
-            if current_size > memdump_config.max_dumps_size:
-                logger.warning(
-                    "Some dumps were deleted, because the configured size threshold was exceeded. "
-                    f"Last fetched dump index: {idx+1}"
-                )
-                break
-            dump_file = dumps_path / entry["filename"]
-            metadata_file = (
-                dumps_path / f"memdump.{str(entry['index']).rjust(6, '0')}.metadata"
+    # First, we're pre-filtering single dumps
+    for idx, entry in enumerate(memdump_log):
+        dump_file = dumps_path / entry["filename"]
+        metadata_file = (
+            dumps_path / f"memdump.{str(entry['index']).rjust(6, '0')}.metadata"
+        )
+        if not dump_file.exists():
+            logger.warning(f"{dump_file} does not exist")
+            continue
+        if not metadata_file.exists():
+            logger.warning(f"{metadata_file} does not exist")
+            continue
+        if memdump_config.filter_system_pid and entry["process"].pid == 4:
+            continue
+        dump_size = entry["size"]
+        if not (
+            memdump_config.min_single_dump_size
+            <= dump_size
+            <= memdump_config.max_single_dump_size
+        ):
+            continue
+        region = (entry["process"].pid, entry["address"])
+        region_count[region] += 1
+        filtered_dumps.append(
+            {
+                **entry,
+                "dump_file": dump_file,
+                "region_count": region_count[region],
+            }
+        )
+
+    filtered_dumps = sorted(
+        filtered_dumps,
+        key=lambda x: (
+            x["region_count"] > memdump_config.soft_same_region_count_limit,
+            x["index"],
+        ),
+    )
+    current_size = 0
+    dumps_to_pack = []
+
+    for idx, dump in enumerate(filtered_dumps):
+        if current_size > memdump_config.max_single_dump_size:
+            logger.warning(
+                "Some dumps were deleted, because the configured size threshold was exceeded."
             )
-            if not dump_file.exists():
-                logger.warning(f"{dump_file} does not exist")
-                continue
-            if not metadata_file.exists():
-                logger.warning(f"{metadata_file} does not exist")
-                continue
-            if entry["size"] >= memdump_config.min_single_dump_size:
-                dump_zip_name = os.path.join(DUMPS_DIR, entry["filename"])
-                dumps_metadata.append(
-                    {
-                        "filename": dump_zip_name,
-                        "base_address": entry["address"],
-                    }
-                )
-                zipf.write(dump_file, dump_zip_name)
-            current_size += entry["size"]
-            dump_file.unlink()
-            metadata_file.unlink()
+            break
+        current_size += dump["size"]
+        dumps_to_pack.append(dump)
+
+    dumps_to_pack = sorted(dumps_to_pack, key=lambda x: x["index"])
+    dumps_metadata = []
+    with zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
+        for dump in dumps_to_pack:
+            dump_file = dump["dump_file"]
+            dump_zip_name = os.path.join(DUMPS_DIR, dump["filename"])
+            dumps_metadata.append(
+                {
+                    "filename": dump_zip_name,
+                    "base_address": dump["address"],
+                }
+            )
+            zipf.write(dump_file, dump_zip_name)
 
         # No dumps, force empty directory
-        if current_size == 0:
+        if not dumps_metadata:
             zipf.writestr(zipfile.ZipInfo(f"{DUMPS_DIR}/"), "")
 
     shutil.rmtree(dumps_path)
