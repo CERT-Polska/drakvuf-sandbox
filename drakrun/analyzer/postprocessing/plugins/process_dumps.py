@@ -58,7 +58,7 @@ def process_dumps(context: PostprocessContext) -> None:
         if not metadata_file.exists():
             logger.warning(f"{metadata_file} does not exist")
             continue
-        if memdump_config.filter_system_pid and entry["process"].pid == 4:
+        if memdump_config.filter_out_system_pid and entry["process"].pid == 4:
             continue
         dump_size = entry["size"]
         if not (
@@ -88,7 +88,7 @@ def process_dumps(context: PostprocessContext) -> None:
     dumps_to_pack = []
 
     for idx, dump in enumerate(filtered_dumps):
-        if current_size > memdump_config.max_dumps_size:
+        if current_size > memdump_config.max_total_dumps_size:
             logger.warning(
                 "Some dumps were deleted, because the configured size threshold was exceeded."
             )

@@ -66,10 +66,17 @@ class CapaConfigSection(BaseModel):
 
 
 class MemdumpConfigSection(BaseModel):
-    max_dumps_size: int = 500 * 1024 * 1024
+    # Maximum total size of collected, uncompressed dumps
+    max_total_dumps_size: int = 500 * 1024 * 1024
+    # Minimal accepted size of a single memory dump
     min_single_dump_size: int = 512
+    # Maximal accepted size of a single memory dump
     max_single_dump_size: int = 32 * 1024 * 1024
-    filter_system_pid: bool = True
+    # Drop dumps from System process
+    filter_out_system_pid: bool = True
+    # When same region was dumped more times than specified
+    # by this value, it will be dropped first when total
+    # size of dumps exceed max_total_dumps_size limit
     soft_same_region_count_limit: int = 5
 
 
