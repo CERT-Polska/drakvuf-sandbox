@@ -1,7 +1,7 @@
 import json
 import logging
 
-from .. import PostprocessContext
+from .plugin_base import PostprocessContext
 
 logger = logging.getLogger(__name__)
 

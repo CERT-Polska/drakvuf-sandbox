@@ -1,6 +1,6 @@
 import json
 
-from .. import PostprocessContext
+from .plugin_base import PostprocessContext
 
 
 def screenshot_metadata(context: PostprocessContext) -> None:

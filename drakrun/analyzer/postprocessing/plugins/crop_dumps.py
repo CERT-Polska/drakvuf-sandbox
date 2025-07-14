@@ -7,7 +7,7 @@ from typing import List, Tuple
 
 from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP
 
-from .. import PostprocessContext
+from .plugin_base import PostprocessContext
 
 logger = logging.getLogger(__name__)
 

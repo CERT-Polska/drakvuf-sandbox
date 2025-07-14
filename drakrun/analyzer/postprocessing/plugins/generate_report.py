@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Optional
 
 import orjson
 
-from .. import PostprocessContext
 from ..process_tree import ProcessTree, tree_from_dict
+from .plugin_base import PostprocessContext
 
 logger = logging.getLogger(__name__)
 

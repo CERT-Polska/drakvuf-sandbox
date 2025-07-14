@@ -3,7 +3,7 @@ import logging
 import re
 from collections import Counter
 
-from .. import PostprocessContext
+from .plugin_base import PostprocessContext
 
 logger = logging.getLogger(__name__)
 

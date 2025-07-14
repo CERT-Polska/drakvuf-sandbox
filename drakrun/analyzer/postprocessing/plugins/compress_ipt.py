@@ -2,7 +2,7 @@ import zipfile
 
 from drakrun.lib.paths import IPT_DIR, IPT_ZIP
 
-from .. import PostprocessContext
+from .plugin_base import PostprocessContext
 
 
 def compress_ipt(context: PostprocessContext) -> None:

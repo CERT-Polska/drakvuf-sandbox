@@ -1,5 +1,5 @@
-from .. import PostprocessContext
 from ..indexer import build_log_index
+from .plugin_base import PostprocessContext
 
 
 def index_logs(context: PostprocessContext) -> None:
