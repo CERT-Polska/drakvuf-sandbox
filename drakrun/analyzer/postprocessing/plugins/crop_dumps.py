@@ -3,7 +3,7 @@ import os
 import pathlib
 import re
 import zipfile
-from typing import Any, Dict, List, Tuple
+from typing import List, Tuple
 
 from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP
 
@@ -12,7 +12,7 @@ from .. import PostprocessContext
 logger = logging.getLogger(__name__)
 
 
-def crop_dumps(context: PostprocessContext) -> Dict[str, Any]:
+def crop_dumps(context: PostprocessContext) -> None:
     analysis_dir = context.analysis_dir
     dumps_path = analysis_dir / DUMPS_DIR
     target_zip = analysis_dir / DUMPS_ZIP
@@ -53,4 +53,4 @@ def crop_dumps(context: PostprocessContext) -> Dict[str, Any]:
         logger.warning(
             "Some dumps were deleted, because the configured size threshold was exceeded."
         )
-    return {"dumps_metadata": dumps_metadata}
+    context.update_metadata({"dumps_metadata": dumps_metadata})

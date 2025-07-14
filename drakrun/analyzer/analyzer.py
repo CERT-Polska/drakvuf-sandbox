@@ -234,7 +234,7 @@ def analyze_file(
     if substatus_callback is not None:
         substatus_callback(AnalysisSubstatus.postprocessing)
 
-    extra_metadata = postprocess_analysis_dir(output_dir, config, options)
+    extra_metadata = postprocess_analysis_dir(output_dir, config)
 
     if substatus_callback is not None:
         substatus_callback(AnalysisSubstatus.done)
