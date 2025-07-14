@@ -109,18 +109,3 @@ If you want to modify the existing snapshot, please refer to :ref:`snapshot modi
      "ExtensionHardening"=dword:00000000
 
    (change 14.0 to your Office version, see `registry key by product name <https://docs.microsoft.com/en-us/office/troubleshoot/word/reset-options-and-settings-in-word#word-key>`_)
-
-ProcDOT integration
--------------------
-DRAKVUF Sandbox may optionally draw a behavioral graph using `ProcDOT <https://www.procdot.com/>`_, if ``drakcore`` will find it's binary installed at ``/opt/procdot/procmon2dot``.
-
-1. `Download ProcDOT <https://www.procdot.com/downloadprocdotbinaries.htm>`_ (Linux version).
-2. With your downloaded ``procdot*_linux.zip`` archive, execute the following commands:
-
-  .. code-block :: console
-
-   # unzip -o procdot*_linux.zip lin64/* -d /tmp/procdot
-   # mv /tmp/procdot/lin64 /opt/procdot
-   # chmod +x /opt/procdot/procmon2dot
-
-3. Your new analysis reports will also contain behavioral graphs.
