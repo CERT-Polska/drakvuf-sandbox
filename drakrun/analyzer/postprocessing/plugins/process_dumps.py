@@ -88,7 +88,7 @@ def process_dumps(context: PostprocessContext) -> None:
     dumps_to_pack = []
 
     for idx, dump in enumerate(filtered_dumps):
-        if current_size > memdump_config.max_single_dump_size:
+        if current_size > memdump_config.max_dumps_size:
             logger.warning(
                 "Some dumps were deleted, because the configured size threshold was exceeded."
             )
