@@ -13,8 +13,9 @@ def build_process_tree(context: PostprocessContext) -> None:
     process_tree_path = analysis_dir / "process_tree.json"
 
     with procmon_log_path.open("r") as procmon_log:
-        process_tree = tree_from_log(procmon_log).as_dict()
-        data = json.dumps(process_tree)
-        process_tree_path.write_text(data)
+        process_tree = tree_from_log(procmon_log)
+
+    data = json.dumps(process_tree.as_dict())
+    process_tree_path.write_text(data)
 
     context.process_tree = process_tree
