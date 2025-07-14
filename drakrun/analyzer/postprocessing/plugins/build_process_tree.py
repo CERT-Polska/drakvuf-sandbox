@@ -1,8 +1,8 @@
 import json
 import logging
 
-from .. import PostprocessContext
 from ..process_tree import tree_from_log
+from .plugin_base import PostprocessContext
 
 logger = logging.getLogger(__name__)
 
