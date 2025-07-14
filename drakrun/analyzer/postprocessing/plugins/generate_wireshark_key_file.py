@@ -1,6 +1,7 @@
 import json
 import logging
-import pathlib
+
+from .. import PostprocessContext
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,8 @@ def gen_key_file_from_log(tlsmon_log):
     return key_file_content
 
 
-def generate_wireshark_key_file(analysis_dir: pathlib.Path) -> None:
+def generate_wireshark_key_file(context: PostprocessContext) -> None:
+    analysis_dir = context.analysis_dir
     tlsmon_log_path = analysis_dir / "tlsmon.log"
     target_path = analysis_dir / "wireshark_key_file.txt"
     with open(tlsmon_log_path, "r") as tlsmon_log:

@@ -1,13 +1,15 @@
 import json
 import logging
-import pathlib
 import re
 from collections import Counter
+
+from .. import PostprocessContext
 
 logger = logging.getLogger(__name__)
 
 
-def split_drakmon_log(analysis_dir: pathlib.Path) -> None:
+def split_drakmon_log(context: PostprocessContext) -> None:
+    analysis_dir = context.analysis_dir
     drakmon_log_path = analysis_dir / "drakmon.log"
     error_path = analysis_dir / "parse_errors.log"
     error_file = None

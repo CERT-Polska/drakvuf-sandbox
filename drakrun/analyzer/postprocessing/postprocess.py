@@ -3,8 +3,10 @@ import logging
 import pathlib
 from typing import Any, Dict
 
+from drakrun.lib.config import DrakrunConfig
+
 from .plugins import POSTPROCESS_PLUGINS
-from .plugins.plugin_base import PostprocessPlugin
+from .plugins.plugin_base import PostprocessContext, PostprocessPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +30,14 @@ def check_plugin_requirements(
     return True
 
 
-def run_postprocessing(analysis_dir: pathlib.Path):
+def run_postprocessing(context: PostprocessContext):
     extra_metadata = {}
     for plugin in POSTPROCESS_PLUGINS:
         plugin_name = plugin.function.__name__
-        if not check_plugin_requirements(analysis_dir, plugin):
+        if not check_plugin_requirements(context.analysis_dir, plugin):
             continue
         try:
-            plugin_metadata = plugin.function(analysis_dir)
+            plugin_metadata = plugin.function(context)
             if plugin_metadata:
                 extra_metadata.update(plugin_metadata)
         except Exception:
@@ -54,5 +56,9 @@ def append_metadata_to_analysis(
     metadata_path.write_text(json.dumps(metadata))
 
 
-def postprocess_output_dir(output_dir: pathlib.Path):
-    return run_postprocessing(output_dir)
+def postprocess_analysis_dir(analysis_dir: pathlib.Path, config: DrakrunConfig):
+    context = PostprocessContext(
+        analysis_dir=analysis_dir,
+        config=config,
+    )
+    return run_postprocessing(context)

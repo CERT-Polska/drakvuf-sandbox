@@ -26,8 +26,9 @@ from capa.main import (
 from capa.render.result_document import MatchResults as ResultDocumentMatchResults
 from capa.rules import Rule, RuleSet, get_rules, get_rules_and_dependencies
 
-from drakrun.lib.config import load_config
 from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP
+
+from ..plugin_base import PostprocessContext
 
 logger = logging.getLogger(__name__)
 
@@ -296,8 +297,9 @@ def construct_ttp_blocks(
                 yield construct_ttp_block(rules[name], addresses)
 
 
-def capa_analysis(analysis_dir: Path) -> None:
-    config = load_config().capa
+def capa_analysis(context: PostprocessContext) -> None:
+    analysis_dir = context.analysis_dir
+    config = context.config.capa
 
     # capa rules directory
     capa_rules_dir = config.rules_directory
@@ -355,9 +357,3 @@ def capa_analysis(analysis_dir: Path) -> None:
                 ):
                     f.write(orjson.dumps(ttp))
                     f.write(b"\n")
-
-
-if __name__ == "__main__":
-    import sys
-
-    capa_analysis(Path(sys.argv[1]))

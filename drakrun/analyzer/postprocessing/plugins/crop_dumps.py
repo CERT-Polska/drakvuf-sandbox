@@ -7,10 +7,13 @@ from typing import Any, Dict, List, Tuple
 
 from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP
 
+from .. import PostprocessContext
+
 logger = logging.getLogger(__name__)
 
 
-def crop_dumps(analysis_dir: pathlib.Path) -> Dict[str, Any]:
+def crop_dumps(context: PostprocessContext) -> Dict[str, Any]:
+    analysis_dir = context.analysis_dir
     dumps_path = analysis_dir / DUMPS_DIR
     target_zip = analysis_dir / DUMPS_ZIP
     zipf = zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED)

@@ -1,3 +1,11 @@
-from .postprocess import append_metadata_to_analysis, postprocess_output_dir
+from .postprocess import (
+    PostprocessContext,
+    append_metadata_to_analysis,
+    postprocess_analysis_dir,
+)
 
-__all__ = ["postprocess_output_dir", "append_metadata_to_analysis"]
+__all__ = [
+    "postprocess_analysis_dir",
+    "append_metadata_to_analysis",
+    "PostprocessContext",
+]

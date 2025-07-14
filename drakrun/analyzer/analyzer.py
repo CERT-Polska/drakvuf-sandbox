@@ -23,7 +23,7 @@ from drakrun.lib.paths import (
 
 from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command
-from .postprocessing import postprocess_output_dir
+from .postprocessing import postprocess_analysis_dir
 from .run_tools import run_drakvuf, run_screenshotter, run_tcpdump, run_vm
 from .startup_command import get_startup_argv, get_target_filename_from_sample_path
 
@@ -234,7 +234,7 @@ def analyze_file(
     if substatus_callback is not None:
         substatus_callback(AnalysisSubstatus.postprocessing)
 
-    extra_metadata = postprocess_output_dir(output_dir)
+    extra_metadata = postprocess_analysis_dir(output_dir, config, options)
 
     if substatus_callback is not None:
         substatus_callback(AnalysisSubstatus.done)
