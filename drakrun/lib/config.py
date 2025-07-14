@@ -65,6 +65,11 @@ class CapaConfigSection(BaseModel):
     worker_pool_processes: int = 4
 
 
+class MemdumpConfigSection(BaseModel):
+    max_dumps_size: int = 300 * 1024 * 1024
+    min_single_dump_size: int = 512
+
+
 class S3StorageConfigSection(BaseModel):
     enabled: bool = True
     bucket: str = "drakrun"
@@ -81,6 +86,7 @@ class DrakrunConfig(BaseModel):
     network: NetworkConfigSection
     drakrun: DrakrunConfigSection
     capa: CapaConfigSection = CapaConfigSection()
+    memdump: MemdumpConfigSection = MemdumpConfigSection()
     s3: Optional[S3StorageConfigSection] = None
     preset: Dict[str, DrakrunDefaultsPresetSection] = Field(default_factory=dict)
 
