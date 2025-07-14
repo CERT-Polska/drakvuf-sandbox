@@ -323,6 +323,9 @@ def tree_from_dict(tree_dict: List[Dict[str, Any]]) -> ProcessTree:
                 evtid_to=entry["evtid_to"],
                 parent=parent,
                 children=[],
+                exit_code=entry.get("exit_code"),
+                exit_code_str=entry.get("exit_code_str"),
+                killed_by=entry.get("killed_by"),
             )
             process_tree.processes.append(process)
             if parent is not None:
