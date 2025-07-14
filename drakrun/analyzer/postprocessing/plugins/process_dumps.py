@@ -35,6 +35,7 @@ def process_dumps(context: PostprocessContext) -> None:
             target_process = process_tree.get_process_for_evtid(target_pid, event_uid)
             memdump_data["target_process"] = target_process.seqid
             memdump_data["target_addr"] = data["WriteAddr"]
+        return memdump_data
 
     memdump_log = parse_log(analysis_dir / "memdump.log", parse_memdump)
 
