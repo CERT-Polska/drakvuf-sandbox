@@ -16,3 +16,5 @@ def build_process_tree(context: PostprocessContext) -> None:
         process_tree = tree_from_log(procmon_log).as_dict()
         data = json.dumps(process_tree)
         process_tree_path.write_text(data)
+
+    context.process_tree = process_tree

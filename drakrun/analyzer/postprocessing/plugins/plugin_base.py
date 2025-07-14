@@ -3,15 +3,33 @@ from typing import Any, Dict, List, NamedTuple, Optional, Protocol
 
 from drakrun.lib.config import DrakrunConfig
 
+from ..process_tree import ProcessTree
+
 
 class PostprocessContext:
     def __init__(self, analysis_dir: pathlib.Path, config: DrakrunConfig) -> None:
         self.analysis_dir = analysis_dir
         self.config = config
+        self._process_tree: Optional[ProcessTree] = None
+        # Quick metadata fetched along with analysis status
+        self.metadata = {}
+
+    @property
+    def process_tree(self) -> ProcessTree:
+        if self._process_tree is None:
+            raise RuntimeError("Process tree not initialized")
+        return self._process_tree
+
+    @process_tree.setter
+    def process_tree(self, value: ProcessTree) -> None:
+        self._process_tree = value
+
+    def update_metadata(self, metadata: Dict[str, Any]) -> None:
+        self.metadata.update(metadata)
 
 
 class PostprocessFunction(Protocol):
-    def __call__(self, context: PostprocessContext) -> Optional[Dict[str, Any]]: ...
+    def __call__(self, context: PostprocessContext) -> None: ...
 
 
 class PostprocessPlugin(NamedTuple):

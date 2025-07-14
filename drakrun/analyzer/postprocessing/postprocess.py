@@ -31,18 +31,14 @@ def check_plugin_requirements(
 
 
 def run_postprocessing(context: PostprocessContext):
-    extra_metadata = {}
     for plugin in POSTPROCESS_PLUGINS:
         plugin_name = plugin.function.__name__
         if not check_plugin_requirements(context.analysis_dir, plugin):
             continue
         try:
-            plugin_metadata = plugin.function(context)
-            if plugin_metadata:
-                extra_metadata.update(plugin_metadata)
+            plugin.function(context)
         except Exception:
             logger.exception(f"{plugin_name} failed with uncaught exception")
-    return extra_metadata
 
 
 def append_metadata_to_analysis(
@@ -61,4 +57,5 @@ def postprocess_analysis_dir(analysis_dir: pathlib.Path, config: DrakrunConfig):
         analysis_dir=analysis_dir,
         config=config,
     )
-    return run_postprocessing(context)
+    run_postprocessing(context)
+    return context.metadata
