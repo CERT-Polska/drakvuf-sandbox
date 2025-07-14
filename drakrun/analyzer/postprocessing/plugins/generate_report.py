@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 
 import orjson
 
+from .. import PostprocessContext
 from ..process_tree import ProcessTree, tree_from_dict
 
 logger = logging.getLogger(__name__)
@@ -167,7 +168,8 @@ def get_processes(analysis_dir: Path) -> List[Dict[str, Any]]:
     return process_dicts
 
 
-def build_report(analysis_dir: Path) -> None:
+def build_report(context: PostprocessContext) -> None:
+    analysis_dir = context.analysis_dir
     report = {
         "info": get_metadata(analysis_dir),
         "processes": get_processes(analysis_dir),

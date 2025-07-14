@@ -1,13 +1,15 @@
-import pathlib
 import zipfile
 
 from drakrun.lib.paths import IPT_DIR, IPT_ZIP
 
+from .. import PostprocessContext
 
-def compress_ipt(analysis_dir: pathlib.Path) -> None:
+
+def compress_ipt(context: PostprocessContext) -> None:
     """
     Compress the directory specified by dirpath to target_zip file.
     """
+    analysis_dir = context.analysis_dir
     # Compress IPT traces, they're quite large however they compress well
     ipt_path = analysis_dir / IPT_DIR
     ipt_zip_path = analysis_dir / IPT_ZIP

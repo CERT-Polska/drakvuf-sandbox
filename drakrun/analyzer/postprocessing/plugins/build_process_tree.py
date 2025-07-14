@@ -1,13 +1,14 @@
 import json
 import logging
-import pathlib
 
+from .. import PostprocessContext
 from ..process_tree import tree_from_log
 
 logger = logging.getLogger(__name__)
 
 
-def build_process_tree(analysis_dir: pathlib.Path) -> None:
+def build_process_tree(context: PostprocessContext) -> None:
+    analysis_dir = context.analysis_dir
     procmon_log_path = analysis_dir / "procmon.log"
     process_tree_path = analysis_dir / "process_tree.json"
 
