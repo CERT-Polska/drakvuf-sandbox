@@ -106,6 +106,7 @@ def process_dumps(context: PostprocessContext) -> None:
 
     dumps_to_pack = sorted(dumps_to_pack, key=lambda x: x["index"])
     dumps_metadata = []
+    dumps_per_process = defaultdict(list)
     with zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
         for dump in dumps_to_pack:
             dump_file = dump["dump_file"]
@@ -116,6 +117,7 @@ def process_dumps(context: PostprocessContext) -> None:
                     "base_address": dump["address"],
                 }
             )
+            dumps_per_process[dump["process"].seqid].append(dump_zip_name)
             zipf.write(dump_file, dump_zip_name)
 
         # No dumps, force empty directory
@@ -124,3 +126,17 @@ def process_dumps(context: PostprocessContext) -> None:
 
     shutil.rmtree(dumps_path)
     context.update_metadata({"dumps_metadata": dumps_metadata})
+    context.update_report(
+        {
+            "memdumps": [
+                {
+                    "process": process_seqid,
+                    "dumps": [
+                        {k: v for k, v in dump.items() if k not in ["process"]}
+                        for dump in dumps_per_process[process_seqid]
+                    ],
+                }
+                for process_seqid in sorted(dumps_per_process.keys())
+            ]
+        }
+    )

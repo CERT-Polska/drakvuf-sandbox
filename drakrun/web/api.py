@@ -282,6 +282,17 @@ def dumps(path: AnalysisRequestPath):
     )
 
 
+@api.get("/report/<task_uid>")
+def report(path: AnalysisRequestPath):
+    task_uid = path.task_uid
+    return send_analysis_file(
+        task_uid,
+        "report.json",
+        mimetype="application/json",
+        s3_config=config.s3,
+    )
+
+
 @api.get("/logs/<task_uid>")
 def list_logs(path: AnalysisRequestPath):
     task_uid = path.task_uid
