@@ -22,10 +22,10 @@ def index_log_file(
     with log_file.open("r") as f:
         while True:
             data_start = f.tell()
-            entry_data = f.readline()
-            if not entry_data:
-                break
             try:
+                entry_data = f.readline()
+                if not entry_data:
+                    break
                 entry = orjson.loads(entry_data)
                 pid = entry.get("PID")
                 event_id = entry.get("EventUID")
