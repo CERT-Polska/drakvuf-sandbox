@@ -117,7 +117,7 @@ def process_dumps(context: PostprocessContext) -> None:
                     "base_address": dump["address"],
                 }
             )
-            dumps_per_process[dump["process"].seqid].append(dump_zip_name)
+            dumps_per_process[dump["process"].seqid].append(dump)
             zipf.write(dump_file, dump_zip_name)
 
         # No dumps, force empty directory
