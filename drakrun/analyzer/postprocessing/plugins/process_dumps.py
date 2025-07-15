@@ -132,7 +132,11 @@ def process_dumps(context: PostprocessContext) -> None:
                 {
                     "process": process_seqid,
                     "dumps": [
-                        {k: v for k, v in dump.items() if k not in ["process"]}
+                        {
+                            k: v
+                            for k, v in dump.items()
+                            if k not in ["process", "dump_file", "region_count"]
+                        }
                         for dump in dumps_per_process[process_seqid]
                     ],
                 }
