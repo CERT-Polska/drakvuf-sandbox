@@ -77,7 +77,7 @@ class MemdumpConfigSection(BaseModel):
     # When same region was dumped more times than specified
     # by this value, it will be dropped first when total
     # size of dumps exceed max_total_dumps_size limit
-    soft_same_region_count_limit: int = 5
+    same_region_count_soft_limit: int = 5
 
 
 class S3StorageConfigSection(BaseModel):

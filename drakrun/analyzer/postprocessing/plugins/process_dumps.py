@@ -46,6 +46,8 @@ def process_dumps(context: PostprocessContext) -> None:
     region_count = defaultdict(int)
     filtered_dumps = []
 
+    filtered_out_count = 0
+
     # First, we're pre-filtering single dumps
     for idx, entry in enumerate(memdump_log):
         dump_file = dumps_path / entry["filename"]
@@ -59,6 +61,7 @@ def process_dumps(context: PostprocessContext) -> None:
             logger.warning(f"{metadata_file} does not exist")
             continue
         if memdump_config.filter_out_system_pid and entry["process"].pid == 4:
+            filtered_out_count += 1
             continue
         dump_size = entry["size"]
         if not (
@@ -66,6 +69,7 @@ def process_dumps(context: PostprocessContext) -> None:
             <= dump_size
             <= memdump_config.max_single_dump_size
         ):
+            filtered_out_count += 1
             continue
         region = (entry["process"].pid, entry["address"])
         region_count[region] += 1
@@ -77,10 +81,12 @@ def process_dumps(context: PostprocessContext) -> None:
             }
         )
 
+    logger.info("Filtered out %d dumps.", filtered_out_count)
+
     filtered_dumps = sorted(
         filtered_dumps,
         key=lambda x: (
-            x["region_count"] > memdump_config.soft_same_region_count_limit,
+            x["region_count"] > memdump_config.same_region_count_soft_limit,
             x["index"],
         ),
     )
@@ -90,7 +96,8 @@ def process_dumps(context: PostprocessContext) -> None:
     for idx, dump in enumerate(filtered_dumps):
         if current_size > memdump_config.max_total_dumps_size:
             logger.warning(
-                "Some dumps were deleted, because the configured size threshold was exceeded."
+                "%d dumps were deleted, because the configured size threshold was exceeded.",
+                len(filtered_dumps) - idx,
             )
             break
         current_size += dump["size"]
