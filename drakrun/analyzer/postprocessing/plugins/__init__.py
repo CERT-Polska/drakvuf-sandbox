@@ -5,6 +5,10 @@ from .capa_plugin.capa_processor import capa_analysis
 from .compress_ipt import compress_ipt
 from .generate_report import build_report
 from .generate_wireshark_key_file import generate_wireshark_key_file
+from .get_http_info import get_http_info
+from .get_modified_files_info import get_modified_files_info
+from .get_socket_info import get_socket_info
+from .get_ttps_info import get_ttps_info
 from .index_logs import index_logs
 from .plugin_base import PostprocessPlugin
 from .process_dumps import process_dumps
@@ -49,6 +53,26 @@ POSTPROCESS_PLUGINS = [
         generates=[DUMPS_ZIP],
     ),
     PostprocessPlugin(function=compress_ipt, requires=[IPT_DIR], generates=[IPT_ZIP]),
+    PostprocessPlugin(
+        function=get_http_info,
+        requires=["process_tree.json", "apimon.log"],
+        generates=[],
+    ),
+    PostprocessPlugin(
+        function=get_modified_files_info,
+        requires=["process_tree.json", "filetracer.log"],
+        generates=[],
+    ),
+    PostprocessPlugin(
+        function=get_socket_info,
+        requires=["process_tree.json", "socketmon.log"],
+        generates=[],
+    ),
+    PostprocessPlugin(
+        function=get_ttps_info,
+        requires=["process_tree.json", "ttps.json"],
+        generates=[],
+    ),
     PostprocessPlugin(
         function=index_logs, requires=["process_tree.json"], generates=["log_index"]
     ),
