@@ -86,7 +86,7 @@ def process_dumps(context: PostprocessContext) -> None:
     filtered_dumps = sorted(
         filtered_dumps,
         key=lambda x: (
-            x["region_count"] > memdump_config.same_region_count_soft_limit,
+            x["region_count"],
             x["index"],
         ),
     )
@@ -96,7 +96,8 @@ def process_dumps(context: PostprocessContext) -> None:
     for idx, dump in enumerate(filtered_dumps):
         if current_size > memdump_config.max_total_dumps_size:
             logger.warning(
-                "%d dumps were deleted, because the configured size threshold was exceeded.",
+                "%d dumps were deleted, because the configured size threshold was exceeded. "
+                "Regions with the most copies have been removed.",
                 len(filtered_dumps) - idx,
             )
             break

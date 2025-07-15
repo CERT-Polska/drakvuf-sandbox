@@ -74,10 +74,6 @@ class MemdumpConfigSection(BaseModel):
     max_single_dump_size: int = 32 * 1024 * 1024
     # Drop dumps from System process
     filter_out_system_pid: bool = True
-    # When same region was dumped more times than specified
-    # by this value, it will be dropped first when total
-    # size of dumps exceed max_total_dumps_size limit
-    same_region_count_soft_limit: int = 5
 
 
 class S3StorageConfigSection(BaseModel):
