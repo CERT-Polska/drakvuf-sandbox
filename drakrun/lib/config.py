@@ -65,6 +65,17 @@ class CapaConfigSection(BaseModel):
     worker_pool_processes: int = 4
 
 
+class MemdumpConfigSection(BaseModel):
+    # Maximum total size of collected, uncompressed dumps
+    max_total_dumps_size: int = 500 * 1024 * 1024
+    # Minimal accepted size of a single memory dump
+    min_single_dump_size: int = 512
+    # Maximal accepted size of a single memory dump
+    max_single_dump_size: int = 32 * 1024 * 1024
+    # Drop dumps from System process
+    filter_out_system_pid: bool = True
+
+
 class S3StorageConfigSection(BaseModel):
     enabled: bool = True
     bucket: str = "drakrun"
@@ -81,6 +92,7 @@ class DrakrunConfig(BaseModel):
     network: NetworkConfigSection
     drakrun: DrakrunConfigSection
     capa: CapaConfigSection = CapaConfigSection()
+    memdump: MemdumpConfigSection = MemdumpConfigSection()
     s3: Optional[S3StorageConfigSection] = None
     preset: Dict[str, DrakrunDefaultsPresetSection] = Field(default_factory=dict)
 
