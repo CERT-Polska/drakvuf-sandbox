@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { getLog, getLogList, getProcessInfo, getProcessLog } from "./api.js";
+import {
+    getAnalysisSummary,
+    getLog,
+    getLogList,
+    getProcessInfo,
+    getProcessLog,
+} from "./api.js";
 import { TabSwitcher, Tab, useTabContext } from "./TabSwitcher.jsx";
 import { getLogLoader, LogViewer } from "./LogViewer.jsx";
 import { AnalysisMetadataTable } from "./AnalysisMetadataTable.jsx";
@@ -9,7 +15,9 @@ import { MethodFilterPicker } from "./MethodFilterPicker.jsx";
 import { ProcessInfoTable } from "./ProcessInfoTable.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload } from "@fortawesome/free-solid-svg-icons";
-import axios from "axios";
+import axios, { CanceledError } from "axios";
+import { AnalysisSummary } from "./AnalysisSummary.jsx";
+import { ProcessBadge } from "./ProcessBadge.jsx";
 
 export function AnalysisLogViewerTab({ analysisId }) {
     const logType = useTabContext()?.activeTab;
@@ -196,25 +204,70 @@ function ProcessLogViewer({ analysisId, selectedProcess }) {
     );
 }
 
-function AnalysisReportTabs({ analysis, selectedProcess }) {
-    const [activeTab, setActiveTab] = useState("General logs");
+function PaddedTab({ tab, children }) {
+    return (
+        <Tab tab={tab}>
+            <div className="mt-2">{children}</div>
+        </Tab>
+    );
+}
+
+function AnalysisReportTabs({
+    analysis,
+    analysisSummary,
+    selectedProcess,
+    setSelectedProcess,
+    activeReportTab,
+    setActiveReportTab,
+}) {
+    const getHeader = useCallback(
+        (tab) => {
+            if (tab === "Process info") {
+                let process;
+                if (analysisSummary?.processes && selectedProcess) {
+                    process = analysisSummary.processes[selectedProcess];
+                }
+                if (!process) {
+                    return "Process info";
+                }
+                return (
+                    <>
+                        <ProcessBadge process={process} />
+                    </>
+                );
+            } else {
+                return tab;
+            }
+        },
+        [analysisSummary, selectedProcess],
+    );
     return (
         <div className="card">
             <div className="card-body">
-                <TabSwitcher activeTab={activeTab} onTabSwitch={setActiveTab}>
-                    <Tab tab="General logs">
+                <TabSwitcher
+                    activeTab={activeReportTab || "Summary report"}
+                    onTabSwitch={setActiveReportTab}
+                    getHeader={getHeader}
+                >
+                    <PaddedTab tab="Summary report">
+                        <AnalysisSummary
+                            analysisSummary={analysisSummary}
+                            setSelectedProcess={setSelectedProcess}
+                        />
+                    </PaddedTab>
+                    <PaddedTab tab="General logs">
                         <AnalysisLogViewer analysisId={analysis.id} />
-                    </Tab>
-                    <Tab tab="Process logs">
+                    </PaddedTab>
+                    <PaddedTab tab="Process info">
                         <ProcessLogViewer
                             analysisId={analysis.id}
                             selectedProcess={selectedProcess}
                         />
-                    </Tab>
+                    </PaddedTab>
                     {analysis.screenshots ? (
-                        <Tab tab="Screenshots">
+                        <PaddedTab tab="Screenshots">
                             <AnalysisScreenshotViewer analysis={analysis} />
-                        </Tab>
+                        </PaddedTab>
                     ) : null}
                 </TabSwitcher>
             </div>
@@ -224,8 +277,37 @@ function AnalysisReportTabs({ analysis, selectedProcess }) {
 
 export function AnalysisReport({ analysis }) {
     const [selectedProcess, setSelectedProcess] = useState();
+    const [activeReportTab, setActiveReportTab] = useState();
+    const [analysisSummary, setAnalysisSummary] = useState();
     const plugins = analysis.options?.plugins;
     const baseUrl = axios.defaults.baseURL;
+    const analysisId = analysis.id;
+
+    const fetchSummary = useCallback(() => {
+        getAnalysisSummary({ analysisId })
+            .then((response) => {
+                setAnalysisSummary(response);
+            })
+            .catch((error) => {
+                if (!(error instanceof CanceledError)) {
+                    setAnalysisSummary(null);
+                    console.error(error);
+                }
+            });
+    }, [analysisId]);
+
+    useEffect(() => {
+        fetchSummary();
+    }, [analysisId, fetchSummary]);
+
+    const onSelectProcess = useCallback(
+        (processId) => {
+            setSelectedProcess(processId);
+            setActiveReportTab("Process info");
+        },
+        [setSelectedProcess, setActiveReportTab],
+    );
+
     return (
         <>
             <div className="row">
@@ -233,7 +315,7 @@ export function AnalysisReport({ analysis }) {
                     <ProcessTreeView
                         analysisId={analysis.id}
                         selectedProcess={selectedProcess}
-                        onProcessSelect={setSelectedProcess}
+                        onProcessSelect={onSelectProcess}
                     />
                 </div>
                 <div className="col-6">
@@ -241,7 +323,7 @@ export function AnalysisReport({ analysis }) {
                     <div className="card">
                         <div className="card-body">
                             <a href={`${baseUrl}/pcap_file/${analysis.id}`}>
-                                <button className="btn btn-primary me-2">
+                                <button className="btn btn-primary m-1">
                                     <FontAwesomeIcon
                                         icon={faDownload}
                                         className="me-2"
@@ -252,7 +334,7 @@ export function AnalysisReport({ analysis }) {
                             {Array.isArray(plugins) &&
                             plugins.includes("tlsmon") ? (
                                 <a href={`${baseUrl}/pcap_keys/${analysis.id}`}>
-                                    <button className="btn btn-primary me-2">
+                                    <button className="btn btn-primary m-1">
                                         <FontAwesomeIcon
                                             icon={faDownload}
                                             className="me-2"
@@ -266,7 +348,7 @@ export function AnalysisReport({ analysis }) {
                             {Array.isArray(plugins) &&
                             plugins.includes("memdump") ? (
                                 <a href={`${baseUrl}/dumps/${analysis.id}`}>
-                                    <button className="btn btn-primary me-2">
+                                    <button className="btn btn-primary m-1">
                                         <FontAwesomeIcon
                                             icon={faDownload}
                                             className="me-2"
@@ -285,7 +367,11 @@ export function AnalysisReport({ analysis }) {
                 <div className="col">
                     <AnalysisReportTabs
                         analysis={analysis}
+                        analysisSummary={analysisSummary}
                         selectedProcess={selectedProcess}
+                        setSelectedProcess={onSelectProcess}
+                        activeReportTab={activeReportTab}
+                        setActiveReportTab={setActiveReportTab}
                     />
                 </div>
             </div>

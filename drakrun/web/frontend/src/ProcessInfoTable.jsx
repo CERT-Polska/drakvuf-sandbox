@@ -46,6 +46,17 @@ export function ProcessInfoTable({ processInfo }) {
                         )}
                     </td>
                 </tr>
+                {processInfo.exit_code_str ? (
+                    <tr>
+                        <th>Exit code</th>
+                        <td>
+                            {processInfo.exit_code_str} (0x
+                            {processInfo.exit_code.toString(16)})
+                        </td>
+                    </tr>
+                ) : (
+                    []
+                )}
             </tbody>
         </table>
     );
