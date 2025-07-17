@@ -90,7 +90,7 @@ def worker_analyze(options: AnalysisOptions):
         substatus: AnalysisSubstatus, updated_options: Optional[AnalysisOptions] = None
     ):
         job.meta["substatus"] = substatus.value
-        if substatus.value == AnalysisSubstatus.analyzing:
+        if substatus == AnalysisSubstatus.analyzing:
             job.meta["time_execution_started"] = datetime.datetime.now(
                 datetime.UTC
             ).isoformat()
