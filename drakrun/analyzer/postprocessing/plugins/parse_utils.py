@@ -1,6 +1,7 @@
 import ast
 import logging
 import pathlib
+import string
 from datetime import datetime, timezone
 from typing import Callable, Iterator, List, Optional, Union
 
@@ -29,7 +30,9 @@ def trim_method_name(method: str) -> str:
     WinAPI has two variants for each method using strings: Unicode (W) and ANSI (A).
     We don't care about it, it's easier to trim it from the method name while processing.
     """
-    if method[-1] in ["A", "W"]:
+    if method[-1] in ["A", "W"] and method[-2] in (
+        string.ascii_lowercase + string.digits
+    ):
         return method[:-1]
     return method
 
