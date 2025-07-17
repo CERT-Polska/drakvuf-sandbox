@@ -62,123 +62,123 @@ def get_http_info(context: PostprocessContext) -> None:
     apimon_log = parse_log(analysis_dir / "apimon.log", filter_http)
 
     for data in apimon_log:
+        arguments = data["arguments"]
+        process_seqid = data["process"].seqid
         if data["method"] == "InternetOpen":
-            handle = (data["process"].seqid, data["retval"], "internet_open")
+            handle = (process_seqid, data["retval"], "internet_open")
             handles[handle] = {
-                "user_agent": data["arguments"][0],
-                "proxy": data["arguments"][2],
-                "proxy_bypass": data["arguments"][3],
+                "user_agent": arguments[0],
+                "proxy": arguments[2],
+                "proxy_bypass": arguments[3],
             }
         elif data["method"] == "InternetConnect":
             internet_open_handle = (
-                data["process"].seqid,
-                data["arguments"][0],
+                process_seqid,
+                arguments[0],
                 "internet_open",
             )
             if internet_open_handle not in handles:
                 internet_open = {}
             else:
                 internet_open = handles[internet_open_handle]
-            handle = (data["process"].seqid, data["retval"], "internet_connect")
+            handle = (process_seqid, data["retval"], "internet_connect")
             handles[handle] = {
-                "server_name": data["arguments"][1],
-                "server_port": data["arguments"][2],
-                "username": data["arguments"][3],
-                "password": data["arguments"][4],
-                "service": data["arguments"][5],
+                "server_name": arguments[1],
+                "server_port": arguments[2],
+                "username": arguments[3],
+                "password": arguments[4],
+                "service": arguments[5],
                 "session": internet_open,
             }
         elif data["method"] == "InternetCrackUrl":
-            url = data["arguments"][0]
+            url = arguments[0]
             if type(url) is str:
-                cracked_urls[url].add(data["process"].seqid)
+                cracked_urls[url].add(process_seqid)
         elif data["method"] == "InternetCreateUrl":
-            url = data["arguments"][3]
+            url = arguments[3]
             if type(url) is str:
-                cracked_urls[url].add(data["process"].seqid)
+                cracked_urls[url].add(process_seqid)
         elif data["method"] == "HttpOpenRequest":
             internet_connect_handle = (
-                data["process"].seqid,
-                data["arguments"][0],
+                process_seqid,
+                arguments[0],
                 "internet_connect",
             )
             if internet_connect_handle not in handles:
                 internet_connect = {}
             else:
                 internet_connect = handles[internet_connect_handle]
-            handle = (data["process"].seqid, data["retval"], "http_request")
+            handle = (process_seqid, data["retval"], "http_request")
             request_handles[handle] = handles[handle] = {
-                "verb": data["arguments"][1],
-                "path": data["arguments"][2],
-                "version": data["arguments"][3],
-                "referer": data["arguments"][4],
-                "flags": data["arguments"][6],
+                "verb": arguments[1],
+                "path": arguments[2],
+                "version": arguments[3],
+                "referer": arguments[4],
+                "flags": arguments[6],
                 "connection": internet_connect,
                 "extra_headers": [],
             }
         elif data["method"] == "HttpAddRequestHeaders":
             http_request_handle = (
-                data["process"].seqid,
-                data["arguments"][0],
+                process_seqid,
+                arguments[0],
                 "http_request",
             )
             if http_request_handle not in handles:
                 continue
-            handles[http_request_handle]["extra_headers"].append(data["arguments"][1])
+            handles[http_request_handle]["extra_headers"].append(arguments[1])
         elif data["method"] == "WinHttpOpen":
-            handle = (data["process"].seqid, data["retval"], "winhttp_open")
+            handle = (process_seqid, data["retval"], "winhttp_open")
             handles[handle] = {
-                "user_agent": data["arguments"][0],
-                "proxy": data["arguments"][2],
-                "proxy_bypass": data["arguments"][3],
+                "user_agent": arguments[0],
+                "proxy": arguments[2],
+                "proxy_bypass": arguments[3],
             }
         elif data["method"] == "WinHttpConnect":
             winhttp_open_handle = (
-                data["process"].seqid,
-                data["arguments"][0],
+                process_seqid,
+                arguments[0],
                 "winhttp_open",
             )
             if winhttp_open_handle not in handles:
                 winhttp_open = {}
             else:
                 winhttp_open = handles[winhttp_open_handle]
-            handle = (data["process"].seqid, data["retval"], "winhttp_connect")
+            handle = (process_seqid, data["retval"], "winhttp_connect")
             handles[handle] = {
-                "server_name": data["arguments"][1],
-                "server_port": data["arguments"][2],
+                "server_name": arguments[1],
+                "server_port": arguments[2],
                 "session": winhttp_open,
             }
         elif data["method"] == "WinHttpOpenRequest":
             winhttp_connect_handle = (
-                data["process"].seqid,
-                data["arguments"][0],
+                process_seqid,
+                arguments[0],
                 "winhttp_connect",
             )
             if winhttp_connect_handle not in handles:
                 winhttp_connect = {}
             else:
                 winhttp_connect = handles[winhttp_connect_handle]
-            handle = (data["process"].seqid, data["retval"], "winhttp_request")
+            handle = (process_seqid, data["retval"], "winhttp_request")
             request_handles[handle] = handles[handle] = {
-                "verb": data["arguments"][1],
-                "path": data["arguments"][2],
-                "version": data["arguments"][3],
-                "referer": data["arguments"][4],
-                "flags": data["arguments"][6],
+                "verb": arguments[1],
+                "path": arguments[2],
+                "version": arguments[3],
+                "referer": arguments[4],
+                "flags": arguments[6],
                 "connection": winhttp_connect,
                 "extra_headers": [],
             }
         elif data["method"] == "WinHttpAddRequestHeaders":
             winhttp_request_handle = (
-                data["process"].seqid,
-                data["arguments"][0],
+                process_seqid,
+                arguments[0],
                 "winhttp_request",
             )
             if winhttp_request_handle not in handles:
                 continue
-            handles[winhttp_request_handle]["extra_headers"].append(
-                data["arguments"][1]
-            )
+            handles[winhttp_request_handle]["extra_headers"].append(arguments[1])
 
     requests = []
     for handle, request in request_handles.items():
