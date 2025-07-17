@@ -83,14 +83,20 @@ function SummaryStartupSection() {
 
     if (startupStatus === "Success") {
         let processInfo = null;
+        let badgeValue = "Success";
+        let badgeType = "success";
         if (startupInfo.process && analysisSummary.processes) {
             processInfo = analysisSummary.processes[startupInfo.process];
+        }
+        if (processInfo?.exit_code & 0xc0000000) {
+            badgeValue = "Exited with error";
+            badgeType = "warning";
         }
         return (
             <SummarySection
                 header="Process creation"
-                badgeValue="Success"
-                badgeType="success"
+                badgeValue={badgeValue}
+                badgeType={badgeType}
             >
                 <table
                     className="table table-borderless"
@@ -118,7 +124,7 @@ function SummaryStartupSection() {
                                 )}
                             </td>
                         </tr>
-                        {processInfo["exited_at"] ? (
+                        {processInfo?.exited_at ? (
                             <>
                                 <tr>
                                     <th>Exited at:</th>
