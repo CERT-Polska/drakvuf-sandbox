@@ -123,7 +123,7 @@ export function AnalysisLiveInteraction({ vmId }) {
             ) : (
                 []
             )}
-            {error?.error === "credentialsrequired" ? (
+            {error?.error === "credentialsrequired" || error?.error === "securityfailure" ? (
                 <PasswordForm onSubmit={onSubmit} />
             ) : (
                 []
