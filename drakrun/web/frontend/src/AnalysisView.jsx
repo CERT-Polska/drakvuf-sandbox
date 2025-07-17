@@ -17,6 +17,20 @@ function AnalysisViewComponent({ analysisId }) {
     const checkStatus = useCallback(() => {
         getAnalysisStatus({ analysisId })
             .then((response) => {
+                if (response && response["time_execution_started"]) {
+                    // Inject remaining time here. We're calling this method every second,
+                    // while tracking a pending analysis status, so it's very good place
+                    // for injecting such information
+                    const timeout = response.options?.timeout;
+                    const elapsedSeconds =
+                        (new Date() -
+                            new Date(response["time_execution_started"])) /
+                        1000;
+                    response["remaining_time"] = Math.max(
+                        0,
+                        timeout - elapsedSeconds,
+                    );
+                }
                 setAnalysisInfo(response);
                 if (isStatusPending(response?.status)) {
                     if (!checkInterval.current)

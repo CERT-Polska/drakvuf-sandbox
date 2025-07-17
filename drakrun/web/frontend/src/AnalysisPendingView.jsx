@@ -26,6 +26,10 @@ export function AnalysisPendingStatusBox({ children }) {
 
 function AnalysisPendingTabs({ analysis }) {
     const [activeTab, setActiveTab] = useState("metadata");
+    const enableLiveInteraction =
+        analysis["vm_id"] &&
+        analysis["status"] === "started" &&
+        analysis["substatus"] !== "starting_vm";
     return (
         <TabSwitcher
             getHeader={(tabid) => {
@@ -41,7 +45,7 @@ function AnalysisPendingTabs({ analysis }) {
             <Tab tab="metadata">
                 <AnalysisMetadataTable analysis={analysis} />
             </Tab>
-            {analysis["vm_id"] ? (
+            {enableLiveInteraction ? (
                 <Tab tab="live-interaction">
                     <AnalysisLiveInteraction vmId={analysis["vm_id"]} />
                 </Tab>
@@ -49,6 +53,22 @@ function AnalysisPendingTabs({ analysis }) {
                 []
             )}
         </TabSwitcher>
+    );
+}
+
+function formatTime(tm) {
+    const minutes = Math.floor(tm / 60);
+    const seconds = Math.floor(tm % 60)
+        .toString()
+        .padStart(2, "0");
+    return `${minutes}:${seconds}`;
+}
+
+export function AnalysisRemainingTimeBadge({ remainingTime }) {
+    return (
+        <div className="badge bg-primary me-2 p-2">
+            Remaining time: {formatTime(remainingTime)}
+        </div>
     );
 }
 
@@ -67,6 +87,15 @@ export function AnalysisPendingView({ analysis }) {
                                 status={analysis.status}
                                 substatus={analysis.substatus}
                             />
+                            {analysis["status"] === "started" &&
+                            analysis["substatus"] === "analyzing" &&
+                            analysis["remaining_time"] ? (
+                                <AnalysisRemainingTimeBadge
+                                    remainingTime={analysis["remaining_time"]}
+                                />
+                            ) : (
+                                []
+                            )}
                         </div>
                     </AnalysisPendingStatusBox>
                 </div>
