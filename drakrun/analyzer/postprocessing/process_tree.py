@@ -115,6 +115,12 @@ class ProcessTree:
                 return process
         return None
 
+    def get_process_by_pid_ppid(self, pid: int, ppid: int) -> Optional[Process]:
+        for process in reversed(self.processes):
+            if process.pid == pid and process.ppid == ppid:
+                return process
+        return None
+
     def __str__(self):
         def print_tree_rec(depth: int, root: Process) -> str:
             res = "\t" * depth + str(root) + "\n"

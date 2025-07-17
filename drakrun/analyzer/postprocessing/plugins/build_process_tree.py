@@ -19,3 +19,22 @@ def build_process_tree(context: PostprocessContext) -> None:
     process_tree_path.write_text(data)
 
     context.process_tree = process_tree
+    context.update_report(
+        {
+            "processes": [
+                {
+                    "seqid": process.seqid,
+                    "pid": process.pid,
+                    "parent_seqid": process.parent.seqid if process.parent else None,
+                    "name": process.procname,
+                    "args": process.args,
+                    "started_at": process.ts_from,
+                    "exited_at": process.ts_to,
+                    "exit_code": process.exit_code,
+                    "exit_code_str": process.exit_code_str,
+                    "killed_by": process.killed_by,
+                }
+                for process in process_tree.processes
+            ]
+        }
+    )

@@ -28,6 +28,21 @@ export async function getAnalysisStatus({
     return listRequest.data;
 }
 
+export async function getAnalysisSummary({
+    analysisId,
+    abortController = undefined,
+}) {
+    const reportRequest = await axios.get(
+        `/report/${analysisId}`,
+        abortController
+            ? {
+                  signal: abortController.signal,
+              }
+            : {},
+    );
+    return reportRequest.data;
+}
+
 export async function getAnalysisProcessTree({
     analysisId,
     abortController = undefined,

@@ -6,6 +6,26 @@ function isProcessInteresting(process) {
     return process.procname.endsWith("explorer.exe");
 }
 
+function getProcessParents(processTree, processId) {
+    let stack = processTree.map((element) => ({ parents: [], element }));
+    while (stack.length > 0) {
+        let { parents, element } = stack.shift();
+        if (element.seqid === processId) {
+            return parents;
+        }
+        if (element.children && element.children.length > 0) {
+            stack = [
+                ...element.children.map((child) => ({
+                    parents: [...parents, element.seqid],
+                    element: child,
+                })),
+                ...stack,
+            ];
+        }
+    }
+    return undefined;
+}
+
 function getInterestingProcesses(processTree) {
     let activeSet = new Set();
     for (let process of processTree) {
@@ -43,6 +63,16 @@ export function ProcessTreeView({
                 setError(e);
             });
     }, []);
+
+    useEffect(() => {
+        if (!processTree) return;
+        const parents = getProcessParents(processTree, selectedProcess);
+        if (parents) {
+            setUncollapsed((currentValue) =>
+                currentValue.union(new Set(parents)),
+            );
+        }
+    }, [selectedProcess, processTree]);
 
     return (
         <div className="card">

@@ -13,6 +13,8 @@ class PostprocessContext:
         self._process_tree: Optional[ProcessTree] = None
         # Quick metadata fetched along with analysis status
         self.metadata = {}
+        # More verbose data to be placed in report.json
+        self.report = {}
 
     @property
     def process_tree(self) -> ProcessTree:
@@ -26,6 +28,9 @@ class PostprocessContext:
 
     def update_metadata(self, metadata: Dict[str, Any]) -> None:
         self.metadata.update(metadata)
+
+    def update_report(self, report: Dict[str, Any]) -> None:
+        self.report.update(report)
 
 
 class PostprocessFunction(Protocol):
