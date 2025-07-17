@@ -11,21 +11,11 @@ def get_modified_files_info(context: PostprocessContext) -> None:
     process_tree = context.process_tree
 
     def filter_modified_files(data: dict) -> Optional[dict]:
-        if data.get("Method") not in [
-            "NtCreateFile",
-            "NtOpenFile",
-            "NtWriteFile",
-            "NtSetInformationFile",
-        ]:
-            return None
-
-        if (
-            data.get("Method") == "NtSetInformationFile"
-            and not data.get("Operation") == "FileDispositionInformation"
-        ):
-            return None
-
-        if data.get("Method") in ["NtCreateFile", "NtOpenFile"]:
+        if data.get("Method") == "NtSetInformationFile":
+            if not data.get("Operation") == "FileDispositionInformation":
+                return None
+            method = "delete"
+        elif data.get("Method") in ["NtCreateFile", "NtOpenFile"]:
             desired_access = data.get("DesiredAccess").split(" | ")
             if not any(
                 access
@@ -39,18 +29,15 @@ def get_modified_files_info(context: PostprocessContext) -> None:
             path = pathlib.PureWindowsPath(filename[len("\\??\\") :])
             if not path.drive:
                 return None
+            method = "open"
+        elif data.get("Method") == "NtWriteFile":
+            method = "write"
+        else:
+            return None
 
         event_uid = int(data["EventUID"], 16)
         pid = data["PID"]
         process = process_tree.get_process_for_evtid(pid, event_uid)
-
-        method = None
-        if data["Method"] in ["NtCreateFile", "NtOpenFile"]:
-            method = "open"
-        elif data["Method"] == "NtSetInformationFile":
-            method = "delete"
-        elif data["Method"] == "NtWriteFile":
-            method = "write"
 
         return {
             "process": process,
