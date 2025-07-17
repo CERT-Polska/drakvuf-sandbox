@@ -27,7 +27,7 @@ export function AnalysisPendingStatusBox({ children }) {
 function AnalysisPendingTabs({ analysis }) {
     const [activeTab, setActiveTab] = useState("metadata");
     const enableLiveInteraction = (
-        analysis["vm_id"] && analysis["status"] === "started" && analysis["status"] !== "starting_vm"
+        analysis["vm_id"] && analysis["status"] === "started" && analysis["substatus"] !== "starting_vm"
     )
     return (
         <TabSwitcher
