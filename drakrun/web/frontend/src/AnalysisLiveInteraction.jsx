@@ -80,6 +80,9 @@ export function AnalysisLiveInteraction({ vmId }) {
         async (password) => {
             try {
                 canvas.current.textContent = "";
+                const parentWidth =
+                    canvas.current.parentElement.getBoundingClientRect().width;
+                canvas.current.style.width = parentWidth + "px";
                 rfb.current = await connectVNC(
                     `ws://${VNC_HOSTNAME}:${6400 + vmId}`,
                     password,
