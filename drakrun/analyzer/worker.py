@@ -51,6 +51,11 @@ def analysis_job_to_status_dict(job: Job):
         "time_started": (
             job.started_at.isoformat() if job.started_at is not None else None
         ),
+        "time_execution_started": (
+            job.meta["time_execution_started"]
+            if "time_execution_started" in job.meta
+            else None
+        ),
         "time_finished": time_finished,
     }
 

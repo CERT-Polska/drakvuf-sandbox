@@ -26,6 +26,9 @@ export function AnalysisPendingStatusBox({ children }) {
 
 function AnalysisPendingTabs({ analysis }) {
     const [activeTab, setActiveTab] = useState("metadata");
+    const enableLiveInteraction = (
+        analysis["vm_id"] && analysis["status"] === "started" && analysis["status"] !== "starting_vm"
+    )
     return (
         <TabSwitcher
             getHeader={(tabid) => {
@@ -41,7 +44,7 @@ function AnalysisPendingTabs({ analysis }) {
             <Tab tab="metadata">
                 <AnalysisMetadataTable analysis={analysis} />
             </Tab>
-            {analysis["vm_id"] ? (
+            {enableLiveInteraction ? (
                 <Tab tab="live-interaction">
                     <AnalysisLiveInteraction vmId={analysis["vm_id"]} />
                 </Tab>
