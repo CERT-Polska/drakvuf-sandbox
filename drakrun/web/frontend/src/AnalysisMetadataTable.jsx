@@ -30,11 +30,15 @@ export function AnalysisMetadataTable({ analysis }) {
                     <td>{analysis.options["timeout"]} seconds</td>
                 </tr>
                 <tr>
-                    <th>Started at</th>
+                    <th>Job started at</th>
                     <td>{analysis["time_started"] || "-"}</td>
                 </tr>
                 <tr>
-                    <th>Finished at</th>
+                    <th>Execution started at</th>
+                    <td>{analysis["time_execution_started"] || "-"}</td>
+                </tr>
+                <tr>
+                    <th>Job finished at</th>
                     <td>{analysis["time_finished"] || "-"}</td>
                 </tr>
                 <tr>

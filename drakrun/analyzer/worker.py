@@ -85,6 +85,8 @@ def worker_analyze(options: AnalysisOptions):
         substatus: AnalysisSubstatus, updated_options: Optional[AnalysisOptions] = None
     ):
         job.meta["substatus"] = substatus.value
+        if substatus.value == AnalysisSubstatus.analyzing:
+            job.meta["time_execution_started"] = datetime.datetime.now(datetime.UTC).isoformat()
         if updated_options is not None:
             job.meta["options"] = updated_options.to_dict(exclude_none=True)
         job.save_meta()
@@ -129,6 +131,7 @@ def worker_analyze(options: AnalysisOptions):
         drakrun_logger.removeHandler(file_handler)
         file_handler.close()
         job.meta["time_finished"] = datetime.datetime.now(datetime.UTC).isoformat()
+        job.save_meta()
         metadata_file.write_text(
             json.dumps(
                 {
@@ -137,7 +140,6 @@ def worker_analyze(options: AnalysisOptions):
                 }
             )
         )
-        job.save_meta()
         options.sample_path.unlink()
         if s3_client is not None:
             upload_analysis(job.id, output_dir, s3_client, s3_bucket)
