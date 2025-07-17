@@ -86,7 +86,9 @@ def worker_analyze(options: AnalysisOptions):
     ):
         job.meta["substatus"] = substatus.value
         if substatus.value == AnalysisSubstatus.analyzing:
-            job.meta["time_execution_started"] = datetime.datetime.now(datetime.UTC).isoformat()
+            job.meta["time_execution_started"] = datetime.datetime.now(
+                datetime.UTC
+            ).isoformat()
         if updated_options is not None:
             job.meta["options"] = updated_options.to_dict(exclude_none=True)
         job.save_meta()
