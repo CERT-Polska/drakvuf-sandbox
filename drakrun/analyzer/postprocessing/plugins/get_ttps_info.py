@@ -17,7 +17,11 @@ def get_ttps_info(context: PostprocessContext) -> None:
             )
             if process:
                 processes.append(process.seqid)
-        return {"name": data["name"], "att&ck": data["att&ck"], "processes": processes}
+        return {
+            "name": data["name"],
+            "att&ck": data["att&ck"],
+            "process_seqids": processes,
+        }
 
     ttps_log = parse_log(analysis_dir / "ttps.json", filter_ttps)
     context.update_report({"ttps": [data for data in ttps_log]})

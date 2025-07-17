@@ -23,9 +23,9 @@ def build_process_tree(context: PostprocessContext) -> None:
         {
             "processes": [
                 {
-                    "index": process.seqid,
+                    "seqid": process.seqid,
                     "pid": process.pid,
-                    "parent": process.parent.seqid if process.parent else None,
+                    "parent_seqid": process.parent.seqid if process.parent else None,
                     "name": process.procname,
                     "args": process.args,
                     "started_at": process.ts_from,

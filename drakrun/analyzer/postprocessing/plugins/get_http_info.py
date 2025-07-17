@@ -189,14 +189,14 @@ def get_http_info(context: PostprocessContext) -> None:
             {k: v for k, v in connection.items() if k != "session" and v}
         )
         request_data.update({k: v for k, v in session.items() if v})
-        request_data["process"] = handle[0]
+        request_data["process_seqid"] = handle[0]
         requests.append(request_data)
 
     context.update_report(
         {
             "http_requests": requests,
             "cracked_urls": [
-                {"url": url, "processes": list(processes)}
+                {"url": url, "process_seqids": list(processes)}
                 for url, processes in cracked_urls.items()
             ],
         }

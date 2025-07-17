@@ -130,7 +130,7 @@ def process_dumps(context: PostprocessContext) -> None:
         {
             "memdumps": [
                 {
-                    "process": process_seqid,
+                    "process_seqid": process_seqid,
                     "dumps": [
                         {
                             k: v

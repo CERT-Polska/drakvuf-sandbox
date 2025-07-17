@@ -63,7 +63,7 @@ def get_socket_info(context: PostprocessContext) -> None:
                     "local_port": local_port,
                     "remote_ip": remote_ip,
                     "remote_port": remote_port,
-                    "processes": list(processes),
+                    "process_seqids": list(processes),
                 }
                 for (
                     protocol,
@@ -74,7 +74,7 @@ def get_socket_info(context: PostprocessContext) -> None:
                 ), processes in connections.items()
             ],
             "dns_queries": [
-                {"domain": domain, "processes": list(processes)}
+                {"domain": domain, "process_seqids": list(processes)}
                 for domain, processes in dns_queries.items()
             ],
         }

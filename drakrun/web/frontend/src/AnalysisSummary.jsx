@@ -186,7 +186,7 @@ function TTPRow({ ttp }) {
                 <b>{ttp.name}</b>
             </div>
             <div>
-                {ttp.processes.map((p) => (
+                {ttp.process_seqids.map((p) => (
                     <SummaryProcessBadge processId={p} />
                 ))}
             </div>
@@ -260,11 +260,11 @@ function HTTPRow({ httpRequest }) {
                 ) : (
                     []
                 )}
-                {httpRequest["process"] ? (
+                {httpRequest["process_seqid"] ? (
                     <div>
                         <b>Process: </b>
                         <SummaryProcessBadge
-                            processId={httpRequest["process"]}
+                            processId={httpRequest["process_seqid"]}
                         />
                     </div>
                 ) : (
@@ -311,7 +311,7 @@ function SummaryCrackedURLs() {
                             {urlinfo.url}
                         </span>
                         <span>
-                            {urlinfo.processes.map((p) => (
+                            {urlinfo.process_seqids.map((p) => (
                                 <SummaryProcessBadge processId={p} />
                             ))}
                         </span>
@@ -339,7 +339,7 @@ function SummaryModifiedFilesSection() {
                             {mfile.filename}
                         </span>
                         <span>
-                            {mfile.processes.map((p) => (
+                            {mfile.process_seqids.map((p) => (
                                 <SummaryProcessBadge processId={p} />
                             ))}
                         </span>
@@ -367,7 +367,7 @@ function SummaryDeletedFilesSection() {
                             {mfile.filename}
                         </span>
                         <span>
-                            {mfile.processes.map((p) => (
+                            {mfile.process_seqids.map((p) => (
                                 <SummaryProcessBadge processId={p} />
                             ))}
                         </span>
@@ -400,7 +400,7 @@ function ConnectionRow({ connection }) {
                     connection.remote_port,
                     connection.protocol,
                 )}
-                {connection.processes.map((p) => (
+                {connection.process_seqids.map((p) => (
                     <SummaryProcessBadge processId={p} />
                 ))}
             </div>
@@ -444,7 +444,7 @@ function SummaryDNSSection() {
                             {dnsq["domain"]}
                         </span>
                         <span>
-                            {dnsq.processes.map((p) => (
+                            {dnsq.process_seqids.map((p) => (
                                 <SummaryProcessBadge processId={p} />
                             ))}
                         </span>

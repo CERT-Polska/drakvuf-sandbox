@@ -75,14 +75,14 @@ def get_modified_files_info(context: PostprocessContext) -> None:
             "modified_files": [
                 {
                     "filename": filename,
-                    "processes": sorted(list(modified_files[filename])),
+                    "process_seqids": sorted(list(modified_files[filename])),
                 }
                 for filename in sorted(modified_files.keys())
             ],
             "deleted_files": [
                 {
                     "filename": filename,
-                    "processes": sorted(list(deleted_files[filename])),
+                    "process_seqids": sorted(list(deleted_files[filename])),
                 }
                 for filename in sorted(deleted_files.keys())
             ],
