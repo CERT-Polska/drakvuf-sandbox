@@ -9,6 +9,7 @@ from .get_http_info import get_http_info
 from .get_modified_files_info import get_modified_files_info
 from .get_socket_info import get_socket_info
 from .get_ttps_info import get_ttps_info
+from .gzip_syscalls import gzip_syscalls
 from .index_logs import index_logs
 from .plugin_base import PostprocessPlugin
 from .process_dumps import process_dumps
@@ -48,6 +49,9 @@ POSTPROCESS_PLUGINS = [
         generates=[DUMPS_ZIP],
     ),
     PostprocessPlugin(function=compress_ipt, requires=[IPT_DIR], generates=[IPT_ZIP]),
+    PostprocessPlugin(
+        function=gzip_syscalls, requires=["syscall.log"], generates=["syscall.log.gz"]
+    ),
     PostprocessPlugin(
         function=get_http_info,
         requires=["process_tree.json", "apimon.log"],
