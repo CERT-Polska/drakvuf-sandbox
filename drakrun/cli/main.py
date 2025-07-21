@@ -23,10 +23,11 @@ from .worker import worker
 @click.group()
 def main():
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format="[%(asctime)s][%(levelname)s] %(message)s",
         handlers=[logging.StreamHandler()],
     )
+    logging.getLogger("drakrun").setLevel(logging.DEBUG)
     if os.geteuid() != 0:
         logging.error("You need to have root privileges to run this command.")
         raise click.Abort()
