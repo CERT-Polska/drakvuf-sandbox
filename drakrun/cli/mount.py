@@ -5,6 +5,8 @@ import click
 from drakrun.lib.vm import FIRST_CDROM_DRIVE
 from drakrun.lib.xen import xen_insert_cd
 
+from .check_root import check_root
+
 
 @click.command(help="Mount ISO into guest", no_args_is_help=True)
 @click.argument("iso_path", type=click.Path(exists=True))
@@ -16,6 +18,7 @@ from drakrun.lib.xen import xen_insert_cd
     show_default=True,
     help="Domain name (i.e. Virtual Machine name)",
 )
+@check_root
 def mount(iso_path, domain_name):
     """Inject ISO file into specified guest vm.
     Domain can be retrieved by running "xl list" command on the host.

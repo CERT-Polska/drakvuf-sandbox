@@ -33,7 +33,7 @@ class DrakrunConfigSection(BaseModel):
     model_config = ConfigDict(extra="ignore")
     plugins: List[str]
     default_timeout: int
-    job_timeout_leeway: int = 300
+    job_timeout_leeway: int = 600
     net_enable: Optional[bool] = None
     apimon_hooks_path: Optional[pathlib.Path] = None
     syscall_hooks_path: Optional[pathlib.Path] = None
@@ -56,6 +56,7 @@ class DrakrunDefaultsPresetSection(BaseModel):
     extra_output_subdirs: Optional[List[str]] = None
     no_post_restore: Optional[bool] = None
     no_screenshotter: Optional[bool] = None
+    gzip_syscalls: Optional[bool] = False
 
 
 class CapaConfigSection(BaseModel):

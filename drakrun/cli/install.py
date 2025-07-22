@@ -12,6 +12,7 @@ from drakrun.lib.storage import REGISTERED_BACKEND_NAMES, get_storage_backend
 from drakrun.lib.vm import VirtualMachine
 
 from .banner import banner
+from .check_root import check_root
 from .sanity_check import sanity_check
 
 log = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ log = logging.getLogger(__name__)
     "lvm_volume_group",
     help="Volume group (only for lvm storage backend)",
 )
+@check_root
 def install(
     vcpus,
     memory,

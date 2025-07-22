@@ -1,6 +1,6 @@
 import click
 
-from drakrun.analyzer.worker import worker_main
+from .check_root import check_root
 
 
 @click.command(help="Start drakrun analysis worker")
@@ -12,5 +12,8 @@ from drakrun.analyzer.worker import worker_main
     show_default=True,
     help="VM id to use for running analyses",
 )
+@check_root
 def worker(vm_id: int):
+    from drakrun.analyzer.worker import worker_main
+
     worker_main(vm_id)

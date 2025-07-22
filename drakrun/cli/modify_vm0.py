@@ -12,11 +12,13 @@ from drakrun.lib.vm import VirtualMachine
 from drakrun.lib.vmi_profile import create_vmi_info, create_vmi_json_profile
 
 from .banner import banner
+from .check_root import check_root
 
 log = logging.getLogger(__name__)
 
 
 @click.group(name="modify-vm0", help="Modify base VM snapshot (vm-0)")
+@check_root
 def modify_vm0():
     pass
 
