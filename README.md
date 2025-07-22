@@ -1,7 +1,10 @@
 # DRAKVUF Sandbox
 
 > [!WARNING]  
-> 🛠️ Drakvuf Sandbox is right now under heavy development and not everything works smoothly, especially on the **master** branch.
+> Here be dragons 🐉. Maintaining your own sandbox is a difficult task and this project uses technology that is not user-friendly.
+> Be prepared to brush up on your debugging skills as bugs may be reproducible only on your configuration.
+> On the other hand, it's not purely an R&D project, because we use it on our production! Source code and issues section on both
+> DRAKVUF Sandbox and [DRAKVUF engine](https://github.com/tklengyel/drakvuf) projects are your best friend.
 
 DRAKVUF Sandbox is an automated black-box malware analysis system with [DRAKVUF](https://drakvuf.com/) engine under the hood, which does not require an agent on guest OS.
 

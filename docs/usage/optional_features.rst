@@ -3,9 +3,31 @@
 Optional features
 =================
 
-
 This sections contains various information about optional features that may be enabled when setting up DRAKVUF Sandbox.
 
+.. _s3-integration:
+
+S3 integration
+--------------
+
+DRAKVUF Sandbox can use S3 bucket as a primary storage for your analyses.
+
+You can configure it by adding ``[s3]`` section to the ``/etc/drakrun/config.toml`` configuration file.
+
+... code-block:: toml
+
+  [s3]
+  address = "https://<your-s3-host>"
+  access_key = "<your access key>"
+  secret_key = "<your secret key>"
+  bucket = "drakrun"
+
+When you configure S3, new analyses will be uploaded to the S3 and served from it by the web application.
+Locally stored analyses will not be available. If you already made some, you need to migrate them using the following one-liner:
+
+... code-block:: console
+
+  $ for f in /var/lib/drakrun/analyses/*; do drakrun s3 export $(basename $f); done
 
 .. _zfs-backend:
 
