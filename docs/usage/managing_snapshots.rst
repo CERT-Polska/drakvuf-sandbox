@@ -85,3 +85,10 @@ You can use ``drakrun snapshot`` command to import/export your VM disk image and
       import  Import snapshot from local directory
 
 ``drakrun snapshot import`` accepts similar arguments as the ``drakrun install`` and can be used as an initial configuration command.
+
+When snapshot is imported onto different hardware configuration, it may throw an error when trying to restore the snapshot.
+In that case, you may need to:
+
+- cold boot your snapshot using ``drakrun modify-vm0 begin --cold-boot``
+- wait for Windows to boot into Desktop
+- use ``drakrun modify-vm0 commit`` to make a new VM-0 snapshot and regenerate VMI profile.

@@ -203,7 +203,7 @@ Advanced DRAKVUF engine configuration
 =====================================
 
 Customizing apimon hooks
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can customize the list of hooked WinAPI by apimon plugin. By default, the list is taken from these paths:
 
@@ -232,7 +232,7 @@ Flags value can be ``log``, ``stack`` or ``log+stack``. ``log`` means that API c
 
 
 Customizing syscall filter
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can also customize the list of hooked syscalls by syscall plugin. By default, the list is taken from these paths:
 
@@ -243,7 +243,7 @@ You can also customize the list of hooked syscalls by syscall plugin. By default
 ``syscalls.txt`` is just a simple newline-separated list of Nt* function names. Syscall number and argument types are deduced automatically by the DRAKVUF engine.
 
 Adding extra directories and flags to DRAKVUF command line
-----------------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Some plugins need additional configuration provided via arguments to DRAKVUF command line. If you want to use plugin that we don't support directly
 or you want to customize the DRAKVUF behavior, you can pass additional arguments and create extra output subdirs using ``[drakrun].extra_drakvuf_args`` and
@@ -319,6 +319,7 @@ through different interface than the default one (in our case it was "enp2s0")
 Another common use-case is limiting the bandwidth for the VM: https://wiki.gentoo.org/wiki/Traffic_shaping
 
 .. code-block:: bash
+
     #!/bin/sh
 
     # Based on https://wiki.gentoo.org/wiki/Traffic_shaping
@@ -378,7 +379,7 @@ DRAKVUF Sandbox implements configuration mechanism called "preset". We can defin
 depending on which "preset" was chosen in analysis options. Presets are not yet exposed in the Web UI, but can be used
 via API and CLI.
 
-To create a new preset, simply add proper ``[preset.<preset name>]`` section in the ``/etc/drakrun/config.toml`:
+To create a new preset, simply add proper ``[preset.<preset name>]`` section in the ``/etc/drakrun/config.toml``:
 
 .. code-block::
 
