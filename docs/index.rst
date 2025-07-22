@@ -20,7 +20,6 @@ It's highly recommended to have a basic knowledge about Xen hypervisor that woul
    usage/optional_features
    usage/managing_snapshots
    usage/troubleshooting
-   usage/integration
 
 .. toctree::
    :maxdepth: 1
