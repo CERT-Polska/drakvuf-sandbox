@@ -1,5 +1,4 @@
 import logging
-import os
 
 import click
 
@@ -28,9 +27,6 @@ def main():
         handlers=[logging.StreamHandler()],
     )
     logging.getLogger("drakrun").setLevel(logging.DEBUG)
-    if os.geteuid() != 0:
-        logging.error("You need to have root privileges to run this command.")
-        raise click.Abort()
 
 
 main.add_command(analyze)

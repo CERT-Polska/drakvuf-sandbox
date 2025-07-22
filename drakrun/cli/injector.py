@@ -13,12 +13,15 @@ from drakrun.lib.libvmi import VmiInfo
 from drakrun.lib.paths import INSTALL_INFO_PATH, VMI_INFO_PATH, VMI_KERNEL_PROFILE_PATH
 from drakrun.lib.vm import VirtualMachine
 
+from .check_root import check_root
+
 log = logging.getLogger(__name__)
 
 
 @click.group(
     name="injector", help="Copy files and execute commands on VM using injector"
 )
+@check_root
 def injector():
     pass
 

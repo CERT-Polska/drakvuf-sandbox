@@ -8,10 +8,13 @@ from drakrun.lib.paths import INSTALL_INFO_PATH
 from drakrun.lib.vm import VirtualMachine
 from drakrun.lib.vmi_profile import create_vmi_info, create_vmi_json_profile
 
+from .check_root import check_root
+
 log = logging.getLogger(__name__)
 
 
 @click.command(help="Finalize VM installation")
+@check_root
 def postinstall():
     config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)

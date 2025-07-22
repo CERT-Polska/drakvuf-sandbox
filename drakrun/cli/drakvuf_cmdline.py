@@ -32,9 +32,6 @@ def drakvuf_cmdline(vm_id, cmd):
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
 
     vm = VirtualMachine(vm_id, install_info, config.network)
-    if not vm.is_running:
-        raise RuntimeError("VM is not running")
-
     vmi_info = VmiInfo.load(VMI_INFO_PATH)
     print(
         shlex.join(

@@ -17,6 +17,8 @@ from drakrun.lib.paths import (
 )
 from drakrun.lib.vm import VirtualMachine
 
+from .check_root import check_root
+
 log = logging.getLogger(__name__)
 
 
@@ -30,6 +32,7 @@ log = logging.getLogger(__name__)
     help="VM id to use for generating profile",
 )
 @click.argument("cmd", nargs=-1, type=str)
+@check_root
 def drakshell(vm_id, cmd):
     """
     Run drakshell session

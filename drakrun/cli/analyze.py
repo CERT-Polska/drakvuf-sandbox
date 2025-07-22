@@ -3,10 +3,7 @@ from datetime import datetime
 
 import click
 
-from drakrun.analyzer.analysis_options import AnalysisOptions
-from drakrun.analyzer.analyzer import analyze_file
-from drakrun.analyzer.postprocessing import append_metadata_to_analysis
-from drakrun.lib.config import load_config
+from .check_root import check_root
 
 
 @click.command("analyze")
@@ -93,6 +90,7 @@ from drakrun.lib.config import load_config
     is_flag=True,
     help="Don't make screenshots during analysis",
 )
+@check_root
 def analyze(
     vm_id,
     output_dir,
@@ -110,6 +108,11 @@ def analyze(
     """
     Run a CLI analysis using Drakvuf
     """
+    from drakrun.analyzer.analysis_options import AnalysisOptions
+    from drakrun.analyzer.analyzer import analyze_file
+    from drakrun.analyzer.postprocessing import append_metadata_to_analysis
+    from drakrun.lib.config import load_config
+
     config = load_config()
     if output_dir is None:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
