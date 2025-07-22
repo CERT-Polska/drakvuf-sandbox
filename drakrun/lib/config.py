@@ -56,7 +56,7 @@ class DrakrunDefaultsPresetSection(BaseModel):
     extra_output_subdirs: Optional[List[str]] = None
     no_post_restore: Optional[bool] = None
     no_screenshotter: Optional[bool] = None
-    gzip_syscalls: Optional[bool] = False
+    gzip_syscalls: Optional[bool] = None
 
 
 class CapaConfigSection(BaseModel):
