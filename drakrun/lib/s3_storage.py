@@ -78,7 +78,7 @@ def upload_analysis(
             continue
         relative_path = analysis_file.relative_to(analysis_path).as_posix()
         s3_name = s3_name_prefix + "/" + relative_path
-        logger.info("Uploading %s...", relative_path)
+        logger.info("Uploading %s/%s...", analysis_id, relative_path)
         with analysis_file.open("rb") as f:
             s3_client.put_object(Bucket=s3_bucket, Key=s3_name, Body=f)
     logger.info("Analysis %s uploaded successfully", analysis_id)
@@ -93,7 +93,7 @@ def download_analysis(
     for object in objects:
         object_key = object["Key"]
         relative_path = object_key[len(s3_name_prefix + "/") :]
-        logger.info("Downloading %s...", relative_path)
+        logger.info("Downloading %s/%s...", analysis_id, relative_path)
         target_file_path = target_path / relative_path
         s3_client.download_file(
             Bucket=s3_bucket, Key=object_key, Filename=target_file_path
