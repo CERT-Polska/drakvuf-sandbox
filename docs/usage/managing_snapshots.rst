@@ -68,4 +68,20 @@ After that, use ``draksetup modify-vm0 commit`` to apply your changes to the mai
 Importing and exporting snapshots
 =================================
 
-TBD (not available in v0.19-alpha2)
+You can use ``drakrun snapshot`` command to import/export your VM disk image and memory snapshot.
+
+.. code-block:: console
+
+    $ drakrun snapshot
+    Usage: drakrun snapshot [OPTIONS] COMMAND [ARGS]...
+
+      Snapshot management commands (import/export)
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      export  Export snapshot into local directory
+      import  Import snapshot from local directory
+
+``drakrun snapshot import`` accepts similar arguments as the ``drakrun install`` and can be used as an initial configuration command.
