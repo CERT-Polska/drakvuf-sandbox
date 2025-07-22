@@ -13,6 +13,7 @@ Here the list of the most crucial changes comparing to v0.18.x:
 
 - There is no built-in Karton integration. The main interface for interacting with sandbox is Web UI/API.
 - Analyses are by default stored locally in ``/var/lib/drakrun/analyses``. S3 integration is optional.
+- There is no ``drakplayground``. Former ``draksetup`` CLI command is now ``drakrun`` and comes with a rich toolset for configuration and debugging.
 - Volume structure has not changed, so if you use e.g. qcow2 backend, you will still find ``vm-0.img`` in ``/var/lib/drakrun/volumes``.
   ``snapshot.sav`` is still there as well.
 - ``/etc/drakrun`` changes:
