@@ -3,10 +3,7 @@ import { LazyLog } from "@melloware/react-logviewer";
 
 const DEFAULT_CHUNK_SIZE = 300 * 1024;
 
-export async function* getLogLoader({
-    getLogEntries,
-    chunkSize = DEFAULT_CHUNK_SIZE,
-}) {
+export async function* _logLoader({ getLogEntries, chunkSize }) {
     let currentStart = 0;
     while (1) {
         try {
@@ -27,12 +24,43 @@ export async function* getLogLoader({
     }
 }
 
+class ClosableLogLoader {
+    constructor({ getLogEntries, chunkSize }) {
+        this._logLoader = _logLoader({ getLogEntries, chunkSize });
+        this._closed = false;
+    }
+
+    async next() {
+        if (this._closed) {
+            throw new Error("Log loader is closed");
+        }
+        const result = await this._logLoader.next();
+        if (this._closed) {
+            throw new Error("Log loader is closed");
+        }
+        return result;
+    }
+
+    close() {
+        this._closed = true;
+    }
+}
+
+export function getLogLoader({
+    getLogEntries,
+    chunkSize = DEFAULT_CHUNK_SIZE,
+}) {
+    return new ClosableLogLoader({ getLogEntries, chunkSize });
+}
+
 export function LogViewer({ logLoaderFactory }) {
     const [loading, setLoading] = useState(true);
     const [content, setContent] = useState("");
     const logLoader = useMemo(() => logLoaderFactory(), [logLoaderFactory]);
     const logViewer = useRef(null);
     const [jsonInspectedLine, setJsonInspectedLine] = useState(null);
+
+    const loaderRef = useRef(null);
 
     const inspectLine = useCallback((line) => {
         try {
@@ -45,16 +73,32 @@ export function LogViewer({ logLoaderFactory }) {
 
     const loadNext = useCallback(() => {
         setLoading(true);
-        logLoader.next().then(({ done, value }) => {
-            if (!done) {
-                setContent((content) => content + value);
-            }
-            setLoading(false);
-        });
+        logLoader
+            .next()
+            .then(({ done, value }) => {
+                if (!done) {
+                    setContent((content) => content + value);
+                }
+                setLoading(false);
+            })
+            .catch((reason) => {
+                if (reason?.message === "Log loader is closed") {
+                    console.info("Log loader closed");
+                    return undefined;
+                }
+                console.error(reason);
+            });
     }, [logLoader]);
 
     useEffect(() => {
-        console.log("new log loader");
+        // I can't use finalization function here because useEffect
+        // is triggered also on initial render. I need to explicitly
+        // check if the logLoader changed. If yes, we need to invalidate
+        // the previous logLoader to prevent race condition.
+        if (loaderRef.current !== logLoader) {
+            if (loaderRef.current) loaderRef.current.close();
+            loaderRef.current = logLoader;
+        }
         setContent(" ");
         setLoading(false);
         loadNext();
@@ -80,8 +124,9 @@ export function LogViewer({ logLoaderFactory }) {
                         }
                     }}
                     onLineContentClick={(event) => {
-                        inspectLine(event.target?.firstChild?.data);
+                        inspectLine(event.target?.textContent);
                     }}
+                    selectableLines
                     enableSearch
                     wrapLines
                 />
