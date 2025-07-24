@@ -83,7 +83,6 @@ export function LogViewer({ logLoaderFactory }) {
             })
             .catch((reason) => {
                 if (reason?.message === "Log loader is closed") {
-                    console.info("Log loader closed");
                     return undefined;
                 }
                 console.error(reason);
