@@ -1,13 +1,40 @@
 import { PluginPicker } from "./PluginPicker.jsx";
 import { useNavigate } from "react-router-dom";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { uploadSample } from "./api.js";
 
 export default function UploadView(props) {
+    const [valid, setValid] = useState(true);
     const [submitted, setSubmitted] = useState(false);
+    const [filenameWarning, setFilenameWarning] = useState(undefined);
+    const [pluginsWarning, setPluginsWarning] = useState(undefined);
     const [error, setError] = useState();
     const [analysisTime, setAnalysisTime] = useState(10);
     const navigate = useNavigate();
+
+    const validatePlugins = useCallback((plugins) => {
+        if (plugins.length === 0) {
+            setPluginsWarning("You need to pick at least one plugin");
+            setValid(false);
+        } else {
+            setPluginsWarning(undefined);
+            setValid(true);
+        }
+    }, []);
+
+    const checkName = useCallback((ev) => {
+        const filename = ev.target.name;
+        if (filename) {
+            if (!filename.includes(".")) {
+                setFilenameWarning(
+                    "File doesn't have proper extension. " +
+                        "Consider providing 'Target file name' for correct execution.",
+                );
+                return;
+            }
+        }
+        setFilenameWarning(undefined);
+    }, []);
 
     const submitForm = useCallback(
         async (ev) => {
@@ -48,8 +75,16 @@ export default function UploadView(props) {
                         type="file"
                         id="formFile"
                         name="file"
+                        onChange={checkName}
                         required
                     />
+                    {filenameWarning ? (
+                        <div className="text-danger small">
+                            {filenameWarning}
+                        </div>
+                    ) : (
+                        []
+                    )}
                 </div>
                 <div className="mb-3">
                     <label htmlFor="form-timeout" className="form-label">
@@ -69,7 +104,14 @@ export default function UploadView(props) {
                 </div>
                 <div className="mb-3">
                     <label className="form-label">Plugins</label>
-                    <PluginPicker name="plugins" />
+                    <PluginPicker name="plugins" onChange={validatePlugins} />
+                    {pluginsWarning ? (
+                        <div className="text-danger small">
+                            {pluginsWarning}
+                        </div>
+                    ) : (
+                        []
+                    )}
                 </div>
                 <div className="mb-3">
                     <label htmlFor="target-file-name" className="form-label">
@@ -126,7 +168,7 @@ export default function UploadView(props) {
                 <div className="mb-3">
                     <button
                         className="btn btn-primary"
-                        disabled={submitted}
+                        disabled={submitted || !valid}
                         type="submit"
                     >
                         Submit
