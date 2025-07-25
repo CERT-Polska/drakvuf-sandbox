@@ -66,10 +66,23 @@ export function PluginList({ plugins }) {
 }
 
 export function PluginPicker({ onChange, name }) {
-    const [chosenCustomPlugin, setChosenCustomPlugin] = useState(false);
+    const [warning, setWarning] = useState(undefined);
     const onSelectChange = useCallback(
         (currentValue) => {
-            setChosenCustomPlugin(currentValue.some((data) => data.__isNew__));
+            if (currentValue.some((data) => data.__isNew__)) {
+                setWarning(
+                    "Picked custom plugin which may be not supported by Drakvuf Sandbox",
+                );
+            } else if (
+                currentValue.length > 0 &&
+                !currentValue.some((data) => data.value === "procmon")
+            ) {
+                setWarning(
+                    "It's recommended to include 'procmon' plugin for complete process information",
+                );
+            } else {
+                setWarning(undefined);
+            }
             if (onChange) onChange(currentValue);
         },
         [onChange],
@@ -84,14 +97,7 @@ export function PluginPicker({ onChange, name }) {
                 defaultValue={defaultPlugins}
                 name={name}
             />
-            {chosenCustomPlugin ? (
-                <div className="text-danger small">
-                    Picked custom plugin which may be not supported by Drakvuf
-                    Sandbox
-                </div>
-            ) : (
-                []
-            )}
+            {warning ? <div className="text-danger small">{warning}</div> : []}
         </div>
     );
 }
