@@ -13,19 +13,14 @@ It's highly recommended to have a basic knowledge about Xen hypervisor that woul
 .. toctree::
    :maxdepth: 2
    :caption: User guide
-   
+
+   whats_changed
    usage/getting_started
+   usage/basic_usage
+   usage/advanced_configuration
    usage/optional_features
    usage/managing_snapshots
    usage/troubleshooting
-   usage/upgrading
-   usage/integration
-   
-.. toctree::
-   :maxdepth: 2
-   :caption: Developer guide
-
-   sandbox_development
 
 .. toctree::
    :maxdepth: 1

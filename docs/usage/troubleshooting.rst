@@ -1,25 +1,6 @@
 Troubleshooting
 ===============
 
-Checking service status
------------------------
-
-If your DRAKVUF Sandbox installation seems to work improperly, here are some commands that would help to troubleshoot the infrastructure.
-
-Check service status:
-
-.. code-block:: console
-
-  # drak-healthcheck
-
-Check service logs:
-
-.. code-block:: console
-
-  # journalctl -e -u drak-web
-  # journalctl -e -u drak-system
-  # journalctl -e -u drakrun@1
-
 Debug ``device model did not start``
 ------------------------------------
 
