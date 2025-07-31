@@ -1,6 +1,6 @@
 [submodule "drakvuf"]
 	path = drakvuf
-	url = https://github.com/CERT-Polska/drakvuf.git
+	url = https://github.com/tklengyel/drakvuf.git
 [submodule "drakrun/data/capa-rules"]
 	path = drakrun/data/capa-rules
 	url = https://github.com/mandiant/capa-rules.git
