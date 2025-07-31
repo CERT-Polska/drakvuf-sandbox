@@ -58,7 +58,7 @@ function AppSidenav() {
                     </div>
                 </div>
                 <div className="sb-sidenav-footer">
-                    <div className="small">v0.19.0-alpha3</div>
+                    <div className="small">{__APP_VERSION__}</div>
                 </div>
             </nav>
         </div>
