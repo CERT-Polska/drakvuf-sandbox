@@ -113,7 +113,18 @@ def decode_json_lines(fd: TextIO) -> Iterator[Dict]:
     for line in fd:
         try:
             # we use orjson for a small performance improvement
-            yield orjson.loads(line.strip())
+            data = orjson.loads(line.strip())
+            if (
+                data.get("Plugin") == "apimon"
+                and data.get("Event") == "api_called"
+                and "Arguments" not in data
+            ):
+                data["Arguments"] = []
+            if data.get("Plugin") == "syscall" and "FromParentModule" in data:
+                del data["FromParentModule"]
+            if data.get("Plugin") == "syscall" and "FromModule" in data:
+                del data["FromModule"]
+            yield data
         except orjson.JSONDecodeError:
             # sometimes Drakvuf reports bad method names and/or malformed JSON
             logger.debug("bad drakvuf log line: %s", line)
