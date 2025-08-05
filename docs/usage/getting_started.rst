@@ -122,6 +122,7 @@ Since your Xen installation is ready, install Drakvuf engine, starting from inst
 
 .. code-block:: console
 
+    $ cd /opt
     $ git clone --recursive https://github.com/tklengyel/drakvuf
     $ cd drakvuf/libvmi
     $ autoreconf -vif
@@ -520,7 +521,7 @@ Building from sources
 
     $ python3 -m venv venv
     $ source venv/bin/activate
-    $ cd drakrun
+    $ cd drakvuf-sandbox
     $ make
     $ make install
 
