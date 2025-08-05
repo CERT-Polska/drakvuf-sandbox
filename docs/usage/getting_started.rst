@@ -336,10 +336,10 @@ which would mount a virtual CD disk containing additional software into your VM.
 
 Things that are highly recommended to do are:
 
-* turn off the User Account Control <put link here>
+* `turn off the User Account Control <https://support.microsoft.com/en-us/windows/user-account-control-settings-d5b2046b-dcb8-54eb-f732-059f321afe18>`_
 * turn off the Windows Defender (be aware that it turns on automatically if you just switch it off in the Control Panel)
 * run Powershell at least once to speed-up its execution
-* install Visual C++ Redistributable in various versions <put link here>
+* install `Visual C++ Redistributable in various versions <https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170>`_
 * install .NET Framework in various versions
 * generate .NET Framework native image cache e.g. by executing the following commands in the administrative prompt of your VM.
 
