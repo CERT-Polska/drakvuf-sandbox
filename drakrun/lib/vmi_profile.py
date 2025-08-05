@@ -24,6 +24,8 @@ def extract_dll_profile(injector: Injector, dll: DLL):
     local_dll_path = (tempdir / dll.dest).as_posix()
     guest_dll_path = str(pathlib.PureWindowsPath("C:/", dll.path))
 
+    log.info("Generating VMI profile for %s", local_dll_path)
+
     proc = injector.read_file(guest_dll_path, local_dll_path)
     out = json.loads(proc.stdout.decode())
     if out["Status"] == "Error" and out["Error"] in [
