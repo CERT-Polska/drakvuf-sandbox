@@ -181,10 +181,13 @@ def send_analysis_file(
                 },
             )
         else:
-            body = s3_client.get_object(Bucket=s3_config.bucket, Key=object_key)["Body"]
-            headers = {}
+            response = s3_client.get_object(Bucket=s3_config.bucket, Key=object_key)
+            headers = {
+                "Content-Length": response.get("ContentLength"),
+            }
             if download_name is not None:
                 headers["Content-Disposition"] = f"attachment; filename={download_name}"
+            body = response["Body"]
             return Response(
                 body.iter_chunks(32 * 1024), mimetype=mimetype, headers=headers
             )
