@@ -11,6 +11,8 @@ class AnalysisOptions(BaseModel):
     sample_path: Optional[pathlib.Path] = None
     # Target file name on guest VM
     target_filename: Optional[str] = None
+    # Target filepath on guest VM
+    target_filepath: Optional[pathlib.PureWindowsPath] = None
     # Start command to run on the VM
     start_command: Optional[Union[List[str], str]] = None
     # Preset of defaults to be used for analysis
