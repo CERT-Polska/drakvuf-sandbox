@@ -168,9 +168,9 @@ def analyze_file(
             if not lower_target_name.startswith(
                 "c:"
             ) and not lower_target_name.startswith("%"):
-                options.target_filepath = (
-                    "%USERPROFILE%\\Desktop\\" + options.target_filename
-                )
+                options.target_filepath = options.target_filepath / options.target_filename
+            else:
+                options.target_filepath = pathlib.PureWindowsPath(options.target_filename)
             log.info(
                 f"Copying sample to the VM ({options.sample_path.as_posix()} -> {options.target_filepath})..."
             )
