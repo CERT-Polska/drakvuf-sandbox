@@ -43,7 +43,8 @@ class AnalysisSubstatusCallback(Protocol):
         self,
         substatus: AnalysisSubstatus,
         updated_options: Optional[AnalysisOptions] = None,
-    ) -> None: ...
+    ) -> None:
+        ...
 
 
 def prepare_output_dir(output_dir: pathlib.Path, options: AnalysisOptions) -> None:
@@ -168,9 +169,13 @@ def analyze_file(
             if not lower_target_name.startswith(
                 "c:"
             ) and not lower_target_name.startswith("%"):
-                options.target_filepath = options.target_filepath / options.target_filename
+                options.target_filepath = (
+                    options.target_filepath / options.target_filename
+                )
             else:
-                options.target_filepath = pathlib.PureWindowsPath(options.target_filename)
+                options.target_filepath = pathlib.PureWindowsPath(
+                    options.target_filename
+                )
             log.info(
                 f"Copying sample to the VM ({options.sample_path.as_posix()} -> {options.target_filepath})..."
             )
