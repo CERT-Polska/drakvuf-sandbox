@@ -45,9 +45,9 @@ AnalysisListResponse = RootModel[List[AnalysisResponse]]
 
 
 class AnalysisRequestPath(BaseModel):
-    task_uid: Annotated[
-        str, AfterValidator(lambda x: str(uuid.UUID(x, version=4)))
-    ] = Field(description="Unique analysis ID")
+    task_uid: Annotated[str, AfterValidator(lambda x: str(uuid.UUID(x, version=4)))] = (
+        Field(description="Unique analysis ID")
+    )
 
 
 class LogsRequestPath(AnalysisRequestPath):

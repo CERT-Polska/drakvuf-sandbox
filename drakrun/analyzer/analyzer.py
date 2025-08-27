@@ -43,8 +43,7 @@ class AnalysisSubstatusCallback(Protocol):
         self,
         substatus: AnalysisSubstatus,
         updated_options: Optional[AnalysisOptions] = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 def prepare_output_dir(output_dir: pathlib.Path, options: AnalysisOptions) -> None:

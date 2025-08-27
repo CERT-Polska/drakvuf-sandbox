@@ -34,8 +34,7 @@ class PostprocessContext:
 
 
 class PostprocessFunction(Protocol):
-    def __call__(self, context: PostprocessContext) -> None:
-        ...
+    def __call__(self, context: PostprocessContext) -> None: ...
 
 
 class PostprocessPlugin(NamedTuple):
