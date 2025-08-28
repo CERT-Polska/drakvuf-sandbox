@@ -10,7 +10,7 @@ Snapshot modification
 modify-vm0 tool
 ---------------
 
-Before trying to modify the installation, make sure that all ``drakrun@`` services are stopped and VMs are destroyed.
+Before trying to modify the installation, make sure that all ``drakrun-worker@`` services are stopped and VMs are destroyed.
 
 Execute ``draksetup modify-vm0 begin`` as root. This will run vm-0 and at this point you can connect to VNC
 and perform the modifications.
