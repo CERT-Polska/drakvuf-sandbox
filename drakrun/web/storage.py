@@ -212,23 +212,24 @@ def open_seekable_stream(
         with path_to_file.open("rb") as file:
             yield file
 
-    # S3 handling
-    s3_client = get_s3_client(s3_config)
-    object_key = get_s3_prefix(analysis_id) + "/" + path
-    try:
-        body = s3_client.get_object(Bucket=s3_config.bucket, Key=object_key)["Body"]
-    except ClientError as e:
-        if e.response["Error"]["Code"] == "NoSuchKey":
-            raise FileNotFoundError from e
-        else:
-            raise
-    file = SeekableStreamingBody(
-        s3_client, s3_bucket=s3_config.bucket, key=object_key, body=body
-    )
-    try:
-        yield file
-    finally:
-        file.close()
+    else:
+        # S3 handling
+        s3_client = get_s3_client(s3_config)
+        object_key = get_s3_prefix(analysis_id) + "/" + path
+        try:
+            body = s3_client.get_object(Bucket=s3_config.bucket, Key=object_key)["Body"]
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchKey":
+                raise FileNotFoundError from e
+            else:
+                raise
+        file = SeekableStreamingBody(
+            s3_client, s3_bucket=s3_config.bucket, key=object_key, body=body
+        )
+        try:
+            yield file
+        finally:
+            file.close()
 
 
 def list_analysis_logs(analysis_id: str, s3_config: S3StorageConfigSection):
