@@ -5,9 +5,10 @@ Using Intel Processor Trace Features (Experimental)
 Enable IPT plugin in drakrun
 ----------------------------
 
-1. In ``/etc/drakrun/config.toml``, add ``ipt`` plugin under ``[drakvuf_plugins]`` section ``__all__`` in order to enable IPT tracing.
-2. In ``/etc/drakrun/scripts/cfg.template`` add a new entry: ``vmtrace_buf_kb = 8192``
-3. Execute ``systemctl restart drakrun-worker@1`` (repeat for each drakrun instance if you have scaled them up).
+1. In ``/etc/drakrun/scripts/cfg.template`` add a new entry: ``vmtrace_buf_kb = 8192``
+2. Execute ``systemctl restart drakrun-worker@1`` (repeat for each drakrun instance if you have scaled them up).
+3. Use ``ipt`` and ``codemon`` Drakvuf plugins while submitting your analysis.
+ 
 
 
 Install required extra dependencies
