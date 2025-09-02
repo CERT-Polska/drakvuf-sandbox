@@ -4,7 +4,7 @@ Troubleshooting
 Debug ``device model did not start``
 ------------------------------------
 
-You may encounter the following error with ``draksetup`` command or ``drakrun@*`` service, which will prevent the VM from starting properly.
+You may encounter the following error with ``draksetup`` command or ``drakrun-worker@*`` service, which will prevent the VM from starting properly.
 
 ::
 
