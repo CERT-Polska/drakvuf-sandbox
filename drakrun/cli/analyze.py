@@ -156,7 +156,7 @@ def analyze(
         timeout=timeout,
         net_enable=net_enable,
         target_filename=target_filename,
-        target_filepath=target_filepath,
+        target_filepath=target_filepath or AnalysisOptions.target_filepath,
         start_command=start_command,
         plugins=plugins,
         no_vm_restore=no_restore,
