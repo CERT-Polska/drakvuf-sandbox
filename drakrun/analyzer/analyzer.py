@@ -211,7 +211,12 @@ def analyze_file(
         if options.extract_archive:
             log.info("Running archive extraction...")
             target_dir = extract_archive_on_vm(
-                drakshell, injector, options.sample_path, options.target_filepath
+                config,
+                drakshell,
+                injector,
+                options.sample_path,
+                options.target_filepath,
+                options.archive_password,
             )
             if options.start_command is None:
                 options.start_command = get_startup_argv(
