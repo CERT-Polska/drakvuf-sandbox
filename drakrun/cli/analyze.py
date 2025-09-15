@@ -149,20 +149,26 @@ def analyze(
         # Click passes empty list there.
         plugins = None
 
-    options = AnalysisOptions(
+    options_dict = dict(
         config=config,
         preset=preset,
         sample_path=sample,
         timeout=timeout,
         net_enable=net_enable,
         target_filename=target_filename,
-        target_filepath=target_filepath or AnalysisOptions.target_filepath,
         start_command=start_command,
         plugins=plugins,
         no_vm_restore=no_restore,
         no_post_restore=no_post_restore,
         no_screenshotter=no_screenshotter,
         extract_archive=extract_archive,
+    )
+
+    if target_filepath is not None:
+        options_dict["target_filepath"] = pathlib.PureWindowsPath(target_filepath)
+
+    options = AnalysisOptions(
+        **options_dict,
     )
 
     extra_metadata = analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)
