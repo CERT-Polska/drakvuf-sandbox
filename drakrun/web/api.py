@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import pathlib
 import uuid
 
 import magic
@@ -111,6 +112,12 @@ def upload_sample(form: UploadFileForm):
             analysis_options.net_enable = False
         if no_screenshots:
             analysis_options.no_screenshotter = True
+        if form.file_path:
+            analysis_options.target_filepath = pathlib.PureWindowsPath(form.file_path)
+        if form.extract_archive:
+            analysis_options.extract_archive = True
+            analysis_options.archive_password = form.archive_password
+            analysis_options.target_filename = form.file_name
         enqueue_analysis(
             job_id=job_id,
             file_metadata=file_metadata,

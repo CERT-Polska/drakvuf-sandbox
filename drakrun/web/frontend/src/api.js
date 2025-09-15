@@ -107,6 +107,7 @@ export async function uploadSample({
     file,
     timeout,
     file_name,
+    file_path,
     plugins,
     start_command,
     no_internet,
@@ -117,9 +118,12 @@ export async function uploadSample({
     formData.append("timeout", timeout);
     formData.append("plugins", JSON.stringify(plugins));
     if (file_name) formData.append("file_name", file_name);
+    if (file_path) formData.append("file_path", file_path);
     if (start_command) formData.append("start_command", start_command);
     if (no_internet) formData.append("no_internet", "1");
     if (no_screenshots) formData.append("no_screenshots", "1");
+    if (extract_archive) formData.append("extract_archive", "1");
+    if (archive_password) formData.append("archive_password", archive_password);
     const request = await axios.post("/upload", formData, {
         headers: {
             "Content-Type": "multipart/form-data",

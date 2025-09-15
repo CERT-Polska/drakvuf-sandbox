@@ -103,6 +103,12 @@ from .check_root import check_root
     is_flag=True,
     help="Treat file as an ZIP archive and extract it during analysis",
 )
+@click.option(
+    "--archive-password",
+    "archive_password",
+    type=str,
+    help="Optional password to use for extracting archive (works only when 7-zip is used for extraction)",
+)
 @check_root
 def analyze(
     vm_id,
@@ -119,6 +125,7 @@ def analyze(
     no_post_restore,
     no_screenshotter,
     extract_archive,
+    archive_password,
 ):
     """
     Run a CLI analysis using Drakvuf
@@ -149,7 +156,7 @@ def analyze(
         # Click passes empty list there.
         plugins = None
 
-    options_dict = dict(
+    options = AnalysisOptions(
         config=config,
         preset=preset,
         sample_path=sample,
@@ -162,14 +169,11 @@ def analyze(
         no_post_restore=no_post_restore,
         no_screenshotter=no_screenshotter,
         extract_archive=extract_archive,
+        archive_password=archive_password,
     )
 
     if target_filepath is not None:
-        options_dict["target_filepath"] = pathlib.PureWindowsPath(target_filepath)
-
-    options = AnalysisOptions(
-        **options_dict,
-    )
+        options.target_filepath = pathlib.PureWindowsPath(target_filepath)
 
     extra_metadata = analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)
     append_metadata_to_analysis(output_dir, extra_metadata)

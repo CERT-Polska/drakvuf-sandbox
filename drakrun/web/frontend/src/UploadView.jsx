@@ -3,37 +3,55 @@ import { useNavigate } from "react-router-dom";
 import { useCallback, useRef, useState } from "react";
 import { uploadSample } from "./api.js";
 
-export default function UploadView(props) {
+function FormError({ errors, field }) {
+    const error = errors[field];
+    if (error) {
+        return <div className="text-danger small">{error}</div>;
+    }
+    return [];
+}
+
+export default function UploadView() {
     const [valid, setValid] = useState(true);
     const [submitted, setSubmitted] = useState(false);
-    const [filenameWarning, setFilenameWarning] = useState(undefined);
-    const [pluginsWarning, setPluginsWarning] = useState(undefined);
+    const formRef = useRef(undefined);
+    const [formErrors, setFormErrors] = useState({});
     const [error, setError] = useState();
     const [analysisTime, setAnalysisTime] = useState(10);
+    const [extractArchive, setExtractArchive] = useState(false);
     const navigate = useNavigate();
 
-    const validatePlugins = useCallback((plugins) => {
-        if (plugins.length === 0) {
-            setPluginsWarning("You need to pick at least one plugin");
-            setValid(false);
-        } else {
-            setPluginsWarning(undefined);
-            setValid(true);
-        }
-    }, []);
+    const validateForm = useCallback(() => {
+        const form = new FormData(formRef.current);
+        const filename = form.get("file").name;
+        const targetFileName = form.get("file_name");
+        const targetStartCommand = form.get("start_command");
+        const extractArchive = form.get("extract_archive");
 
-    const checkName = useCallback((ev) => {
-        const filename = ev.target.name;
-        if (filename) {
-            if (!filename.includes(".")) {
-                setFilenameWarning(
-                    "File doesn't have proper extension. " +
-                        "Consider providing 'Target file name' for correct execution.",
-                );
-                return;
-            }
+        let isValid = true;
+        let formErrors = {};
+
+        if (form.getAll("plugins").length === 0) {
+            formErrors["plugins"] = "You need to pick at least one plugin";
+            isValid = false;
         }
-        setFilenameWarning(undefined);
+
+        if (filename && !filename.includes(".")) {
+            formErrors["form-file"] =
+                "File doesn't have proper extension. " +
+                "Consider providing 'Target file name' for correct execution.";
+        }
+
+        if (extractArchive && !targetFileName && !targetStartCommand) {
+            formErrors["target-file-name"] = formErrors[
+                "custom-start-command"
+            ] =
+                "Target file name or start command is required when extracting archive";
+            isValid = false;
+        }
+
+        setValid(isValid);
+        setFormErrors(formErrors);
     }, []);
 
     const submitForm = useCallback(
@@ -47,9 +65,12 @@ export default function UploadView(props) {
                     timeout: form.get("timeout") * 60,
                     plugins: form.getAll("plugins"),
                     file_name: form.get("file_name"),
+                    file_path: form.get("file_path"),
                     start_command: form.get("start_command"),
                     no_internet: form.get("no_internet"),
                     no_screenshots: form.get("no_screenshots"),
+                    extract_archive: form.get("extract_archive"),
+                    archive_password: form.get("archive_password"),
                 });
                 const jobId = jobData["task_uid"];
                 navigate(`/analysis/${jobId}`);
@@ -65,26 +86,20 @@ export default function UploadView(props) {
         <div className="container-fluid px-4">
             <h1 className="m-4 h4">Upload sample</h1>
             {error ? <div className="text-danger">Error: {error}</div> : []}
-            <form onSubmit={submitForm}>
+            <form onSubmit={submitForm} ref={formRef}>
                 <div className="mb-3">
-                    <label htmlFor="formFile" className="form-label">
+                    <label htmlFor="form-file" className="form-label">
                         Sample file
                     </label>
                     <input
                         className="form-control"
                         type="file"
-                        id="formFile"
+                        id="form-file"
                         name="file"
-                        onChange={checkName}
+                        onChange={validateForm}
                         required
                     />
-                    {filenameWarning ? (
-                        <div className="text-danger small">
-                            {filenameWarning}
-                        </div>
-                    ) : (
-                        []
-                    )}
+                    <FormError errors={formErrors} field="form-file" />
                 </div>
                 <div className="mb-3">
                     <label htmlFor="form-timeout" className="form-label">
@@ -104,14 +119,8 @@ export default function UploadView(props) {
                 </div>
                 <div className="mb-3">
                     <label className="form-label">Plugins</label>
-                    <PluginPicker name="plugins" onChange={validatePlugins} />
-                    {pluginsWarning ? (
-                        <div className="text-danger small">
-                            {pluginsWarning}
-                        </div>
-                    ) : (
-                        []
-                    )}
+                    <PluginPicker name="plugins" onChange={validateForm} />
+                    <FormError errors={formErrors} field="plugins" />
                 </div>
                 <div className="mb-3">
                     <label htmlFor="target-file-name" className="form-label">
@@ -122,6 +131,20 @@ export default function UploadView(props) {
                         className="form-control"
                         id="target-file-name"
                         name="file_name"
+                        onChange={validateForm}
+                        placeholder="(pick automatically)"
+                    />
+                    <FormError errors={formErrors} field="target-file-name" />
+                </div>
+                <div className="mb-3">
+                    <label htmlFor="target-file-path" className="form-label">
+                        Target file path
+                    </label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        id="target-file-path"
+                        name="file_path"
                         placeholder="(pick automatically)"
                     />
                 </div>
@@ -137,7 +160,12 @@ export default function UploadView(props) {
                         className="form-control"
                         id="custom-start-command"
                         name="start_command"
+                        onChange={validateForm}
                         placeholder="(pick automatically)"
+                    />
+                    <FormError
+                        errors={formErrors}
+                        field="custom-start-command"
                     />
                 </div>
                 <div className="mb-3 form-check">
@@ -165,6 +193,42 @@ export default function UploadView(props) {
                         Disable screenshots
                     </label>
                 </div>
+                <div className="mb-3 form-check">
+                    <input
+                        className="form-check-input"
+                        id="extract-archive"
+                        type="checkbox"
+                        name="extract_archive"
+                        onChange={(ev) => {
+                            setExtractArchive(ev.target.checked);
+                            validateForm();
+                        }}
+                    />
+                    <label
+                        className="form-check-label"
+                        htmlFor="extract-archive"
+                    >
+                        Extract archive
+                    </label>
+                </div>
+                {extractArchive ? (
+                    <div className="mb-3">
+                        <label
+                            htmlFor="archive-password"
+                            className="form-label"
+                        >
+                            Archive password (optional)
+                        </label>
+                        <input
+                            type="text"
+                            className="form-control"
+                            id="archive-password"
+                            name="archive_password"
+                        />
+                    </div>
+                ) : (
+                    []
+                )}
                 <div className="mb-3">
                     <button
                         className="btn btn-primary"
