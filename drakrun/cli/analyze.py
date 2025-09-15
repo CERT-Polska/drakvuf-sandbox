@@ -53,6 +53,13 @@ from .check_root import check_root
     help="Target file name where sample will be copied on a VM",
 )
 @click.option(
+    "--target-filepath",
+    "target_filepath",
+    default=None,
+    type=str,
+    help="Target file path where sample will be copied on a VM",
+)
+@click.option(
     "--start-command",
     "start_command",
     default=None,
@@ -90,6 +97,18 @@ from .check_root import check_root
     is_flag=True,
     help="Don't make screenshots during analysis",
 )
+@click.option(
+    "--extract-archive",
+    "extract_archive",
+    is_flag=True,
+    help="Treat file as an ZIP archive and extract it during analysis",
+)
+@click.option(
+    "--archive-password",
+    "archive_password",
+    type=str,
+    help="Optional password to use for extracting archive (works only when 7-zip is used for extraction)",
+)
 @check_root
 def analyze(
     vm_id,
@@ -98,12 +117,15 @@ def analyze(
     timeout,
     preset,
     target_filename,
+    target_filepath,
     start_command,
     plugins,
     net_enable,
     no_restore,
     no_post_restore,
     no_screenshotter,
+    extract_archive,
+    archive_password,
 ):
     """
     Run a CLI analysis using Drakvuf
@@ -146,7 +168,12 @@ def analyze(
         no_vm_restore=no_restore,
         no_post_restore=no_post_restore,
         no_screenshotter=no_screenshotter,
+        extract_archive=extract_archive,
+        archive_password=archive_password,
     )
+
+    if target_filepath is not None:
+        options.target_filepath = pathlib.PureWindowsPath(target_filepath)
 
     extra_metadata = analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)
     append_metadata_to_analysis(output_dir, extra_metadata)

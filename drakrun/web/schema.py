@@ -13,6 +13,7 @@ class UploadFileForm(BaseModel):
     file: FileStorage
     timeout: Optional[int] = Field(default=None, description="Analysis timeout")
     file_name: Optional[str] = Field(default=None, description="Target file name")
+    file_path: Optional[str] = Field(default=None, description="Target file path")
     start_command: Optional[str] = Field(default=None, description="Start command")
     plugins: Optional[List[str]] = Field(
         default=None, description="Plugins to use (in JSON array string)"
@@ -23,6 +24,12 @@ class UploadFileForm(BaseModel):
     )
     no_screenshots: Optional[bool] = Field(
         default=False, description="Disable screenshots"
+    )
+    extract_archive: Optional[bool] = Field(
+        default=False, description="Sample is an archive, extract it"
+    )
+    archive_password: Optional[str] = Field(
+        default=None, description="Archive password"
     )
 
 

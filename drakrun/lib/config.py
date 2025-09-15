@@ -43,6 +43,8 @@ class DrakrunConfigSection(BaseModel):
     no_screenshotter: bool = False
     result_ttl: int = -1
     gzip_syscalls: bool = False
+    use_7zip: bool = False
+    path_to_7zip: str = "C:/Program Files/7-Zip/7z.exe"
 
 
 class DrakrunDefaultsPresetSection(BaseModel):
