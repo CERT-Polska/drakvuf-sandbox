@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Protocol
 
 import mslex
 
-from drakrun.lib.config import NetworkConfigSection, load_config
+from drakrun.lib.config import DrakrunConfig, NetworkConfigSection, load_config
 from drakrun.lib.drakshell import Drakshell
 from drakrun.lib.injector import Injector
 from drakrun.lib.install_info import InstallInfo
@@ -120,10 +120,12 @@ def drop_sample_to_vm(
 
 
 def extract_archive_on_vm(
+    config: DrakrunConfig,
     drakshell: Drakshell,
     injector: Injector,
     sample_path: pathlib.Path,
     target_filepath: pathlib.PureWindowsPath,
+    archive_password: Optional[str],
 ) -> pathlib.PureWindowsPath:
     target_archive_path = target_filepath / pathlib.PureWindowsPath(
         get_target_filename_from_sample_path(sample_path)
@@ -135,11 +137,25 @@ def extract_archive_on_vm(
     )
     guest_path = drop_sample_to_vm(injector, sample_path, str(target_archive_path))
     resolved_target_dir = pathlib.PureWindowsPath(guest_path).parent
-    log.info(f"Expanding archive {guest_path} -> {resolved_target_dir}")
-    ps_command = prepare_ps_command(
-        f"Expand-Archive -Force {guest_path} {resolved_target_dir}"
-    )
-    drakshell.check_call(ps_command)
+    if config.drakrun.use_7zip:
+        log.info(
+            f"Expanding archive using 7-Zip {guest_path} -> {resolved_target_dir}..."
+        )
+        command = [
+            config.drakrun.path_to_7zip,
+            "e",
+            str(guest_path),
+            "-o" + str(resolved_target_dir),
+            *(["-p" + archive_password] if archive_password else []),
+        ]
+    else:
+        log.info(
+            f"Expanding archive using Expand-Archive {guest_path} -> {resolved_target_dir}..."
+        )
+        command = prepare_ps_command(
+            f"Expand-Archive -Force {guest_path} {resolved_target_dir}"
+        )
+    drakshell.check_call(command)
     return resolved_target_dir
 
 
