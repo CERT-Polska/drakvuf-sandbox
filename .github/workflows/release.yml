@@ -24,7 +24,7 @@ jobs:
           upload-release-files: true
           release-upload-url: ${{ github.event.release.upload_url }}
       - name: Publish to PyPi
-        uses: pypa/gh-action-pypi-publish@v1.9.0
+        uses: pypa/gh-action-pypi-publish@v1.13.0
         with:
           user: __token__
           password: ${{ secrets.pypi_password }}
