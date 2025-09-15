@@ -41,6 +41,10 @@ class AnalysisOptions(BaseModel):
     no_post_restore: Optional[bool] = None
     # Don't make screenshots during analysis
     no_screenshotter: Optional[bool] = None
+    # If .zip archive is passed, extract it before analysis
+    extract_archive: Optional[bool] = None
+    # Archive password for 'extract_archive' function
+    archive_password: Optional[str] = None
 
     @staticmethod
     def _apply_defaults(

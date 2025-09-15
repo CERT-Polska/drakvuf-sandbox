@@ -53,6 +53,13 @@ from .check_root import check_root
     help="Target file name where sample will be copied on a VM",
 )
 @click.option(
+    "--target-filepath",
+    "target_filepath",
+    default=None,
+    type=str,
+    help="Target file path where sample will be copied on a VM",
+)
+@click.option(
     "--start-command",
     "start_command",
     default=None,
@@ -90,6 +97,12 @@ from .check_root import check_root
     is_flag=True,
     help="Don't make screenshots during analysis",
 )
+@click.option(
+    "--extract-archive",
+    "extract_archive",
+    is_flag=True,
+    help="Treat file as an ZIP archive and extract it during analysis",
+)
 @check_root
 def analyze(
     vm_id,
@@ -98,12 +111,14 @@ def analyze(
     timeout,
     preset,
     target_filename,
+    target_filepath,
     start_command,
     plugins,
     net_enable,
     no_restore,
     no_post_restore,
     no_screenshotter,
+    extract_archive,
 ):
     """
     Run a CLI analysis using Drakvuf
@@ -141,11 +156,13 @@ def analyze(
         timeout=timeout,
         net_enable=net_enable,
         target_filename=target_filename,
+        target_filepath=target_filepath,
         start_command=start_command,
         plugins=plugins,
         no_vm_restore=no_restore,
         no_post_restore=no_post_restore,
         no_screenshotter=no_screenshotter,
+        extract_archive=extract_archive,
     )
 
     extra_metadata = analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)

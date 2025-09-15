@@ -22,7 +22,7 @@ from drakrun.lib.paths import (
 )
 
 from .analysis_options import AnalysisOptions
-from .post_restore import get_post_restore_command
+from .post_restore import get_post_restore_command, prepare_ps_command
 from .postprocessing import postprocess_analysis_dir
 from .run_tools import run_drakvuf, run_screenshotter, run_tcpdump, run_vm
 from .startup_command import get_startup_argv, get_target_filename_from_sample_path
@@ -105,7 +105,9 @@ def prepare_drakvuf_args(
     return args_dict_to_list(base_args)
 
 
-def drop_sample_to_vm(injector: Injector, sample_path: pathlib.Path, target_path: str):
+def drop_sample_to_vm(
+    injector: Injector, sample_path: pathlib.Path, target_path: str
+) -> str:
     result = injector.write_file(str(sample_path), target_path)
     try:
         return json.loads(result.stdout)["ProcessName"]
@@ -115,6 +117,30 @@ def drop_sample_to_vm(injector: Injector, sample_path: pathlib.Path, target_path
             f"Raw log line: {result.stdout}"
         )
         raise e
+
+
+def extract_archive_on_vm(
+    drakshell: Drakshell,
+    injector: Injector,
+    sample_path: pathlib.Path,
+    target_filepath: pathlib.PureWindowsPath,
+) -> pathlib.PureWindowsPath:
+    target_archive_path = target_filepath / pathlib.PureWindowsPath(
+        get_target_filename_from_sample_path(sample_path)
+    )
+    if target_archive_path.suffix.lower() != ".zip":
+        target_archive_path = target_archive_path.with_suffix(".zip")
+    log.info(
+        f"Copying archive to the VM ({sample_path.as_posix()} -> {target_archive_path})..."
+    )
+    guest_path = drop_sample_to_vm(injector, sample_path, str(target_archive_path))
+    resolved_target_dir = pathlib.PureWindowsPath(guest_path).parent
+    log.info(f"Expanding archive {guest_path} -> {resolved_target_dir}")
+    ps_command = prepare_ps_command(
+        f"Expand-Archive -Force {guest_path} {resolved_target_dir}"
+    )
+    drakshell.check_call(ps_command)
+    return resolved_target_dir
 
 
 def analyze_file(
@@ -139,6 +165,13 @@ def analyze_file(
     if substatus_callback is not None:
         substatus_callback(AnalysisSubstatus.starting_vm)
 
+    if options.extract_archive:
+        if not options.target_filename and not options.start_command:
+            raise ValueError(
+                "Archive extractor requires target_filename or start_command "
+                "to know what to execute after unpacking archive."
+            )
+
     with run_vm(
         vm_id, install_info, network_conf, no_restore=options.no_vm_restore
     ) as vm:
@@ -159,7 +192,17 @@ def analyze_file(
             post_restore_cmd = get_post_restore_command(network_conf.net_enable)
             drakshell.check_call(post_restore_cmd)
 
-        if options.sample_path is not None:
+        if options.extract_archive:
+            log.info("Running archive extraction...")
+            target_dir = extract_archive_on_vm(
+                drakshell, injector, options.sample_path, options.target_filepath
+            )
+            if options.start_command is None:
+                options.start_command = get_startup_argv(
+                    str(target_dir / options.target_filename)
+                )
+
+        elif options.sample_path is not None:
             if options.target_filename is None:
                 options.target_filename = get_target_filename_from_sample_path(
                     options.sample_path
@@ -179,7 +222,7 @@ def analyze_file(
                 f"Copying sample to the VM ({options.sample_path.as_posix()} -> {options.target_filepath})..."
             )
             guest_path = drop_sample_to_vm(
-                injector, options.sample_path, options.target_filepath
+                injector, options.sample_path, str(options.target_filepath)
             )
 
             if options.start_command is None:
