@@ -168,14 +168,18 @@ def analyze_file(
             if not lower_target_name.startswith(
                 "c:"
             ) and not lower_target_name.startswith("%"):
-                options.target_filename = (
-                    "%USERPROFILE%\\Desktop\\" + options.target_filename
+                options.target_filepath = (
+                    options.target_filepath / options.target_filename
+                )
+            else:
+                options.target_filepath = pathlib.PureWindowsPath(
+                    options.target_filename
                 )
             log.info(
-                f"Copying sample to the VM ({options.sample_path.as_posix()} -> {options.target_filename})..."
+                f"Copying sample to the VM ({options.sample_path.as_posix()} -> {options.target_filepath})..."
             )
             guest_path = drop_sample_to_vm(
-                injector, options.sample_path, options.target_filename
+                injector, options.sample_path, options.target_filepath
             )
 
             if options.start_command is None:
