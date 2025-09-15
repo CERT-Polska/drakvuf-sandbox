@@ -112,6 +112,8 @@ export async function uploadSample({
     start_command,
     no_internet,
     no_screenshots,
+    extract_archive,
+    archive_password,
 }) {
     const formData = new FormData();
     formData.append("file", file);
