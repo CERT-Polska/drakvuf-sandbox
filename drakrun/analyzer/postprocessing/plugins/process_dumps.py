@@ -43,9 +43,8 @@ def process_dumps(context: PostprocessContext) -> None:
     dumps_path = analysis_dir / DUMPS_DIR
     target_zip = analysis_dir / DUMPS_ZIP
 
-    region_count = defaultdict(int)
+    occurrence_index = defaultdict(int)
     filtered_dumps = []
-
     filtered_out_count = 0
 
     # First, we're pre-filtering single dumps
@@ -72,25 +71,31 @@ def process_dumps(context: PostprocessContext) -> None:
             filtered_out_count += 1
             continue
         region = (entry["process"].pid, entry["address"])
-        region_count[region] += 1
+        # Add occurrence counter: it counts the index of
+        # current (PID,address) region dump
+        occurrence_index[region] += 1
         filtered_dumps.append(
             {
                 **entry,
                 "dump_file": dump_file,
-                "region_count": region_count[region],
+                "occurrence_index": occurrence_index[region],
             }
         )
 
     logger.info("Filtered out %d dumps.", filtered_out_count)
 
+    # Sort dumps starting from first occurrences of a region
+    # If region was dumped n>1 times, first dumps will be prioritized
+    # in case if size threshold was exceeded
     filtered_dumps = sorted(
         filtered_dumps,
         key=lambda x: (
-            x["region_count"],
+            x["occurrence_index"],
             x["index"],
         ),
     )
     current_size = 0
+    dump_name_visited = set()
     dumps_to_pack = []
 
     for idx, dump in enumerate(filtered_dumps):
@@ -101,24 +106,31 @@ def process_dumps(context: PostprocessContext) -> None:
                 len(filtered_dumps) - idx,
             )
             break
-        current_size += dump["size"]
+        dump_filename = dump["filename"]
+        if dump_filename not in dump_name_visited:
+            # Count each dump file only once
+            current_size += dump["size"]
+        dump_name_visited.add(dump_filename)
         dumps_to_pack.append(dump)
 
     dumps_to_pack = sorted(dumps_to_pack, key=lambda x: x["index"])
+    dump_name_visited = set()
     dumps_metadata = []
     dumps_per_process = defaultdict(list)
     with zipfile.ZipFile(target_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
         for dump in dumps_to_pack:
             dump_file = dump["dump_file"]
             dump_zip_name = os.path.join(DUMPS_DIR, dump["filename"])
-            dumps_metadata.append(
-                {
-                    "filename": dump_zip_name,
-                    "base_address": dump["address"],
-                }
-            )
             dumps_per_process[dump["process"].seqid].append(dump)
-            zipf.write(dump_file, dump_zip_name)
+            if dump["filename"] not in dump_name_visited:
+                dumps_metadata.append(
+                    {
+                        "filename": dump_zip_name,
+                        "base_address": dump["address"],
+                    }
+                )
+                zipf.write(dump_file, dump_zip_name)
+                dump_name_visited.add(dump["filename"])
 
         # No dumps, force empty directory
         if not dumps_metadata:
@@ -135,7 +147,7 @@ def process_dumps(context: PostprocessContext) -> None:
                         {
                             k: v
                             for k, v in dump.items()
-                            if k not in ["process", "dump_file", "region_count"]
+                            if k not in ["process", "dump_file", "occurrence_index"]
                         }
                         for dump in dumps_per_process[process_seqid]
                     ],
