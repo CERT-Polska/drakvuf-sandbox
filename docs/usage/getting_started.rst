@@ -118,6 +118,25 @@ Once you are booted into Xen, verify that everything works as such:
     Name                                        ID   Mem VCPUs	State	Time(s)
     Domain-0                                     0  4096     2     r-----       6.9
 
+.. note::
+    **Issue noted on 2025-06-26**: In certain cases, Xen might employ GDS mitigation by disabling AVX instruction set support entirely.
+
+    The mitigation is in place if you get the following command output:
+
+    .. code-block:: console
+        $ cat /proc/cpuinfo | grep avx
+
+        $ xl info | grep GDS
+        (XEN) Mitigating GDS by disabling AVX
+
+    Some applications or guest OSes may crash without AVX support, although it doesn't seem to be a requirement to run DRAKVUF Sandbox with Windows 7 / 10.
+
+    If you want to disable this mitigation:
+
+    1. Add `spec-ctrl=gds-mit=no` option to `GRUB_CMDLINE_XEN_DEFAULT` in `/etc/default/grub`.
+    2. Run `update-grub` and `reboot`.
+
+
 Since your Xen installation is ready, install Drakvuf engine, starting from installation of LibVMI:
 
 .. code-block:: console
