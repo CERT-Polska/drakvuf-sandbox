@@ -1,5 +1,5 @@
 IDIR =./include
-CFLAGS=-I$(IDIR) -fPIE -nostdlib -ffreestanding -masm=intel -march=x86-64 -fshort-wchar -O2 -mno-avx
+CFLAGS=-I$(IDIR) -fPIE -nostdlib -ffreestanding -masm=intel -march=x86-64 -mtune=generic -fshort-wchar -O2
 LFLAGS=-T linker.ld
 ODIR=obj
 
