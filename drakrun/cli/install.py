@@ -113,7 +113,7 @@ def install(
         Initial VM setup is complete and the vm-0 was launched.
         Please now VNC to the port 5900 on this machine to perform Windows installation.
         After you have installed Windows and booted it to the desktop, please execute:
-        # draksetup postinstall
+        # drakrun postinstall
         Your configured VNC password is:
         {vnc_passwd}
         Please note that on some machines, system installer may boot for up to 10 minutes
