@@ -121,13 +121,12 @@ Once you are booted into Xen, verify that everything works as such:
 .. note::
     **Issue noted on 2025-06-26**: In certain cases, Xen might employ GDS mitigation by disabling AVX instruction set support entirely.
 
-    The mitigation is in place if you get the following command output:
-
-    .. code-block:: console
-        $ cat /proc/cpuinfo | grep avx
+    The mitigation is enabled if you can observe the following command output:
 
         $ xl info | grep GDS
         (XEN) Mitigating GDS by disabling AVX
+        ... or ...
+        (XEN) Mitigating GDS by disabling AVX while virtualised - protections are best-effort
 
     Some applications or guest OSes may crash without AVX support, although it doesn't seem to be a requirement to run DRAKVUF Sandbox with Windows 7 / 10.
 
