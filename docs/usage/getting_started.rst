@@ -59,6 +59,7 @@ First, install build dependencies and unpack Xen 4.19.2 sources
     $ cd xen-4.19.2
 
 .. note::
+    
     **Bug noted on 2025-04-24**: Xen refers to old Tianocore OVMF version that refers to `broken subhook submodule URL <https://github.com/tianocore/edk2/commit/4dfdca63a93497203f197ec98ba20e2327e4afe4>`_.
     If you're affected by this bug, you'll be asked for Git credentials while running ``make -j4 dist-tools`` and build process will be interrupted.
 
@@ -117,6 +118,25 @@ Once you are booted into Xen, verify that everything works as such:
 
     Name                                        ID   Mem VCPUs	State	Time(s)
     Domain-0                                     0  4096     2     r-----       6.9
+
+.. note::
+    
+    **Issue noted on 2025-06-26**: In certain cases, Xen might employ GDS mitigation by disabling AVX instruction set support entirely.
+
+    The mitigation is enabled if you can observe the following command output:
+
+        $ xl info | grep GDS
+        (XEN) Mitigating GDS by disabling AVX
+        ... or ...
+        (XEN) Mitigating GDS by disabling AVX while virtualised - protections are best-effort
+
+    Some applications or guest OSes may crash without AVX support, although it doesn't seem to be a requirement to run DRAKVUF Sandbox with Windows 7 / 10.
+
+    If you want to disable this mitigation:
+
+    1. Add `spec-ctrl=gds-mit=no` option to `GRUB_CMDLINE_XEN_DEFAULT` in `/etc/default/grub`.
+    2. Run `update-grub` and `reboot`.
+
 
 Since your Xen installation is ready, install Drakvuf engine, starting from installation of LibVMI:
 
