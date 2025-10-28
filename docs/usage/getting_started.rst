@@ -59,6 +59,7 @@ First, install build dependencies and unpack Xen 4.19.2 sources
     $ cd xen-4.19.2
 
 .. note::
+    
     **Bug noted on 2025-04-24**: Xen refers to old Tianocore OVMF version that refers to `broken subhook submodule URL <https://github.com/tianocore/edk2/commit/4dfdca63a93497203f197ec98ba20e2327e4afe4>`_.
     If you're affected by this bug, you'll be asked for Git credentials while running ``make -j4 dist-tools`` and build process will be interrupted.
 
