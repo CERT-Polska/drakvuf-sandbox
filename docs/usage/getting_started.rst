@@ -120,6 +120,7 @@ Once you are booted into Xen, verify that everything works as such:
     Domain-0                                     0  4096     2     r-----       6.9
 
 .. note::
+    
     **Issue noted on 2025-06-26**: In certain cases, Xen might employ GDS mitigation by disabling AVX instruction set support entirely.
 
     The mitigation is enabled if you can observe the following command output:
