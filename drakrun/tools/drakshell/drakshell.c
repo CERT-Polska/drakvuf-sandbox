@@ -815,9 +815,12 @@ void __attribute__((noinline)) __attribute__((ms_abi)) drakshell_loop(HANDLE hCo
         }
         else if(control == REQ_TEST) {
             if(!send_control(hComm, RESP_TEST)) {
-                OutputDebugStringW(L"Failed to send RESP_FINISH_START response");
+                OutputDebugStringW(L"Failed to send RESP_TEST response");
+                break;
             }
-            break;
+            if(!test_shell_execute()) {
+                OutputDebugStringW(L"Failed to execute shell execute");
+            }
         }
         else if(control == REQ_DATA) {
             // We're definitely out of sync, but we need to consume
