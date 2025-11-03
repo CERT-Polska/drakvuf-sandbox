@@ -736,6 +736,9 @@ static bool send_info(HANDLE hComm) {
 }
 
 void __attribute__((noinline)) __attribute__((ms_abi)) drakshell_loop(HANDLE hComm) {
+    // Initialize COM to allow injected ShellExecute calls
+    CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+
     while(true) {
         BYTE control = 0;
         if(!recv_control(hComm, &control)) {

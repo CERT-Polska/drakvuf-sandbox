@@ -235,9 +235,10 @@ PSetLastError pSetLastError;
 PGetCurrentProcessId pGetCurrentProcessId;
 PGetCurrentThreadId pGetCurrentThreadId;
 PBuildCommDCB pBuildCommDCB;
+PCoInitializeEx pCoInitializeEx;
 
 bool load_winapi() {
-    HANDLE hKernel32, hUser32;
+    HANDLE hKernel32, hUser32, hOle32;
 
     pCreateThread = get_func_from_peb(L"kernel32.dll", "CreateThread");
     pLoadLibraryW = get_func_from_peb(L"kernel32.dll", "LoadLibraryW");
@@ -249,6 +250,7 @@ bool load_winapi() {
 
     hKernel32 = LoadLibraryW(L"kernel32.dll");
     hUser32 = LoadLibraryW(L"user32.dll");
+    hOle32 = LoadLibraryW(L"ole32.dll");
 
     pMessageBoxA = GetProcAddress(hUser32, "MessageBoxA");
     pExpandEnvironmentStringsW = GetProcAddress(hKernel32, "ExpandEnvironmentStringsW");
@@ -278,6 +280,7 @@ bool load_winapi() {
     pGetCurrentProcessId = GetProcAddress(hKernel32, "GetCurrentProcessId");
     pGetCurrentThreadId = GetProcAddress(hKernel32, "GetCurrentThreadId");
     pBuildCommDCB = GetProcAddress(hKernel32, "BuildCommDCBA");
+    pCoInitializeEx = GetProcAddress(hOle32, "CoInitializeEx");
 
     return true;
 }

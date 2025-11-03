@@ -25,6 +25,9 @@
 #define WAIT_TIMEOUT 0x00000102
 #define INFINITE 0xffffffff
 
+#define COINIT_APARTMENTTHREADED 0x2
+#define COINIT_DISABLE_OLE1DDE 0x4
+
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
 typedef uint32_t DWORD;
@@ -358,6 +361,13 @@ typedef BOOL (WINAPI *PBuildCommDCB)(
 );
 extern PBuildCommDCB pBuildCommDCB;
 #define BuildCommDCB (*pBuildCommDCB)
+
+typedef DWORD (WINAPI *PCoInitializeEx)(
+     LPVOID pvReserved,
+     DWORD  dwCoInit
+);
+extern PCoInitializeEx pCoInitializeEx;
+#define CoInitializeEx (*pCoInitializeEx)
 
 extern void* get_func_from_peb(const wchar_t* libraryName, const char* procName);
 extern bool load_winapi();
