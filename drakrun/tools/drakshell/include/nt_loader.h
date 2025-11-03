@@ -141,13 +141,13 @@ typedef struct _OVERLAPPED {
 
 typedef struct _SHELLEXECUTEINFO {
     DWORD     cbSize;
-    ULONG     fMask;
+    DWORD     fMask;
     HANDLE    hwnd;
     LPWSTR    lpVerb;
     LPWSTR    lpFile;
     LPWSTR    lpParameters;
     LPWSTR    lpDirectory;
-    int       nShow;
+    ULONG     nShow;
     HANDLE    hInstApp;
     LPVOID    lpIDList;
     LPWSTR    lpClass;
