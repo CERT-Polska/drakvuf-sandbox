@@ -155,7 +155,7 @@ typedef struct _SHELLEXECUTEINFO {
     DWORD     dwHotKey;
     HANDLE    hIcon;
     HANDLE    hProcess;
-} SHELLEXECUTEINFO, *PSHELLEXECUTEINFO;
+} __attribute__((packed, aligned(1))) SHELLEXECUTEINFO, *PSHELLEXECUTEINFO;
 
 #define WINAPI __attribute__((ms_abi))
 
