@@ -14,6 +14,7 @@
 #define REQ_FINISH 0xA5
 #define REQ_DATA 0xA6
 #define REQ_TERMINATE_PROCESS 0xA7
+#define REQ_TEST 0xA8
 
 #define RESP_PONG 0xA0
 #define RESP_INFO 0xA1
@@ -25,6 +26,7 @@
 #define RESP_STDERR_DATA 0xA7
 #define RESP_PROCESS_START 0xA8
 #define RESP_PROCESS_EXIT 0xA9
+#define RESP_TEST 0xAA
 
 #define RESP_BAD_REQ 0xB0
 #define RESP_FATAL_ERROR 0xB1
@@ -726,6 +728,7 @@ static bool process_execute(HANDLE hComm, BOOL interactive) {
 static bool send_info(HANDLE hComm) {
     DWORD pid = GetCurrentProcessId();
     DWORD tid = GetCurrentThreadId();
+
     if(!sendn(hComm, (LPBYTE)&pid, sizeof(pid))) {
         return false;
     }
@@ -735,8 +738,18 @@ static bool send_info(HANDLE hComm) {
     return true;
 }
 
+static bool test_shell_execute() {
+    SHELLEXECUTEINFO shellexec_info = { 0 };
+    shellexec_info.cbSize = sizeof(SHELLEXECUTEINFO);
+    shellexec_info.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
+    shellexec_info.nShow = SW_SHOWNORMAL;
+    shellexec_info.lpFile = L"C:\\Windows\\system32\\cmd.exe";
+    shellexec_info.lpVerb = L"runas";
+    return ShellExecuteEx(&shellexec_info);
+}
+
 void __attribute__((noinline)) __attribute__((ms_abi)) drakshell_loop(HANDLE hComm) {
-    // Initialize COM to allow injected ShellExecute calls
+    // Initialize COM to allow ShellExecute calls
     CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
     while(true) {
@@ -796,6 +809,12 @@ void __attribute__((noinline)) __attribute__((ms_abi)) drakshell_loop(HANDLE hCo
         }
         else if(control == REQ_FINISH) {
             if(!send_control(hComm, RESP_FINISH_START)) {
+                OutputDebugStringW(L"Failed to send RESP_FINISH_START response");
+            }
+            break;
+        }
+        else if(control == REQ_TEST) {
+            if(!send_control(hComm, RESP_TEST)) {
                 OutputDebugStringW(L"Failed to send RESP_FINISH_START response");
             }
             break;

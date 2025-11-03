@@ -27,6 +27,9 @@
 
 #define COINIT_APARTMENTTHREADED 0x2
 #define COINIT_DISABLE_OLE1DDE 0x4
+#define SEE_MASK_NOCLOSEPROCESS 0x00000040
+#define SEE_MASK_NOASYNC 0x00000100
+#define SW_SHOWNORMAL 0x1
 
 typedef uint8_t BYTE;
 typedef uint16_t WORD;
@@ -135,6 +138,24 @@ typedef struct _OVERLAPPED {
     } DUMMYUNIONNAME;
     HANDLE    hEvent;
 } OVERLAPPED, *LPOVERLAPPED;
+
+typedef struct _SHELLEXECUTEINFO {
+    DWORD     cbSize;
+    ULONG     fMask;
+    HANDLE    hwnd;
+    LPWSTR    lpVerb;
+    LPWSTR    lpFile;
+    LPWSTR    lpParameters;
+    LPWSTR    lpDirectory;
+    int       nShow;
+    HANDLE    hInstApp;
+    LPVOID    lpIDList;
+    LPWSTR    lpClass;
+    HANDLE    hkeyClass;
+    DWORD     dwHotKey;
+    HANDLE    hIcon;
+    HANDLE    hProcess;
+} SHELLEXECUTEINFO, *PSHELLEXECUTEINFO;
 
 #define WINAPI __attribute__((ms_abi))
 
@@ -368,6 +389,18 @@ typedef DWORD (WINAPI *PCoInitializeEx)(
 );
 extern PCoInitializeEx pCoInitializeEx;
 #define CoInitializeEx (*pCoInitializeEx)
+
+typedef DWORD (WINAPI *PShellExecuteEx)(
+    PSHELLEXECUTEINFO pExecInfo
+);
+extern PShellExecuteEx pShellExecuteEx;
+#define ShellExecuteEx (*pShellExecuteEx)
+
+typedef DWORD (WINAPI *PGetProcessId)(
+    HANDLE hProcess
+);
+extern PGetProcessId pGetProcessId;
+#define GetProcessId (*pGetProcessId)
 
 extern void* get_func_from_peb(const wchar_t* libraryName, const char* procName);
 extern bool load_winapi();

@@ -236,9 +236,11 @@ PGetCurrentProcessId pGetCurrentProcessId;
 PGetCurrentThreadId pGetCurrentThreadId;
 PBuildCommDCB pBuildCommDCB;
 PCoInitializeEx pCoInitializeEx;
+PShellExecuteEx pShellExecuteEx;
+PGetProcessId pGetProcessId;
 
 bool load_winapi() {
-    HANDLE hKernel32, hUser32, hOle32;
+    HANDLE hKernel32, hUser32, hOle32, hShell32;
 
     pCreateThread = get_func_from_peb(L"kernel32.dll", "CreateThread");
     pLoadLibraryW = get_func_from_peb(L"kernel32.dll", "LoadLibraryW");
@@ -251,6 +253,7 @@ bool load_winapi() {
     hKernel32 = LoadLibraryW(L"kernel32.dll");
     hUser32 = LoadLibraryW(L"user32.dll");
     hOle32 = LoadLibraryW(L"ole32.dll");
+    hShell32 = LoadLibraryW(L"shell32.dll");
 
     pMessageBoxA = GetProcAddress(hUser32, "MessageBoxA");
     pExpandEnvironmentStringsW = GetProcAddress(hKernel32, "ExpandEnvironmentStringsW");
@@ -281,6 +284,8 @@ bool load_winapi() {
     pGetCurrentThreadId = GetProcAddress(hKernel32, "GetCurrentThreadId");
     pBuildCommDCB = GetProcAddress(hKernel32, "BuildCommDCBA");
     pCoInitializeEx = GetProcAddress(hOle32, "CoInitializeEx");
+    pShellExecuteEx = GetProcAddress(hShell32, "ShellExecuteExW");
+    pGetProcessId = GetProcAddress(hKernel32, "GetProcessId");
 
     return true;
 }
