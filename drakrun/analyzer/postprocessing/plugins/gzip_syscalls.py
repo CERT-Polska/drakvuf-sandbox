@@ -2,7 +2,9 @@ import gzip
 import shutil
 
 from drakrun.lib.config import load_config
+
 from .plugin_base import PostprocessContext
+
 
 def gzip_syscalls(context: PostprocessContext) -> None:
     """
@@ -13,7 +15,7 @@ def gzip_syscalls(context: PostprocessContext) -> None:
     config = load_config()
     if not config.drakrun.gzip_syscalls:
         return
-    
+
     for name in ["syscall", "sysret"]:
         log_path = analysis_dir / f"{name}.log"
         log_path_gz = analysis_dir / f"{name}.log.gz"

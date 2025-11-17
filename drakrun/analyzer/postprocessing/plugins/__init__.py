@@ -50,7 +50,9 @@ POSTPROCESS_PLUGINS = [
     ),
     PostprocessPlugin(function=compress_ipt, requires=[IPT_DIR], generates=[IPT_ZIP]),
     PostprocessPlugin(
-        function=gzip_syscalls, requires=["syscall.log"], generates=["syscall.log.gz", "sysret.log.gz"]
+        function=gzip_syscalls,
+        requires=["syscall.log"],
+        generates=["syscall.log.gz", "sysret.log.gz"],
     ),
     PostprocessPlugin(
         function=get_http_info,
