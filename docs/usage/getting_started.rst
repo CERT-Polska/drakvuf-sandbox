@@ -30,6 +30,10 @@ First steps: Basic installation
 
 First you need to perform Xen installation and install DRAKVUF engine itself. Official DRAKVUF installation instruction can be found on https://drakvuf.com/
 
+The easiest way is to use prebuilt .deb Xen and Drakvuf packages from `https://github.com/tklengyel/drakvuf-builds/releases <https://github.com/tklengyel/drakvuf-builds/releases>`_
+
+**Step 1. alternative: Installation of Xen Hypervisor and DRAKVUF engine from sources**
+
 It's recommended to build components from sources to include latest patches that may be crucial for the stability of the system.
 
 * Xen 4.19.2 sources: `https://downloads.xenproject.org/release/xen/4.19.2/ <https://downloads.xenproject.org/release/xen/4.19.2/>`_
