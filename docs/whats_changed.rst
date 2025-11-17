@@ -2,6 +2,17 @@
 What's changed, how to upgrade?
 ===============================
 
+v0.20.0
+-------
+
+This release mostly fixes the bugs found in v0.19.0.
+
+The new addition is an experimental "Extract archive" option for guest-side archive extraction using Expand-Archive or 7-Zip installed on guest VM. It works well, but it's still WIP so it's not yet documented and may change in the future.
+
+This version was tested using `DRAKVUF v1.1-f619440 <https://github.com/tklengyel/drakvuf/tree/f61944014baf7f8c52d7ad97c33c610e3b3ad356>`_.
+
+Complete changelog can be found here: `v0.20.0 changelog <https://github.com/CERT-Polska/drakvuf-sandbox/releases/tag/v0.20.0>`_.
+
 v0.19.0
 -------
 
