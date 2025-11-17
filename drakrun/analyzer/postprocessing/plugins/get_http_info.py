@@ -82,13 +82,14 @@ def get_http_info(context: PostprocessContext) -> None:
             else:
                 internet_open = handles[internet_open_handle]
             handle = (process_seqid, data["retval"], "internet_connect")
+            server_port = arguments[2] & 0xFFFF
             handles[handle] = {
                 "server_name": arguments[1],
-                "server_port": arguments[2],
                 "username": arguments[3],
                 "password": arguments[4],
                 "service": arguments[5],
                 "session": internet_open,
+                **({"server_port": server_port} if server_port else {}),
             }
         elif data["method"] == "InternetCrackUrl":
             url = arguments[0]
@@ -145,10 +146,11 @@ def get_http_info(context: PostprocessContext) -> None:
             else:
                 winhttp_open = handles[winhttp_open_handle]
             handle = (process_seqid, data["retval"], "winhttp_connect")
+            server_port = arguments[2] & 0xFFFF
             handles[handle] = {
                 "server_name": arguments[1],
-                "server_port": arguments[2],
                 "session": winhttp_open,
+                **({"server_port": server_port} if server_port else {}),
             }
         elif data["method"] == "WinHttpOpenRequest":
             winhttp_connect_handle = (
