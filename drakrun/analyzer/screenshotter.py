@@ -113,4 +113,3 @@ class Screenshotter:
             logger.error("Screenshotter thread did not stop in time!")
 
         logger.info("Screenshotter stopped.")
-
