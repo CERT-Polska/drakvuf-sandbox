@@ -92,7 +92,7 @@ def worker_analyze(options: AnalysisOptions):
         job.meta["substatus"] = substatus.value
         if substatus == AnalysisSubstatus.analyzing:
             job.meta["time_execution_started"] = datetime.datetime.now(
-                datetime.UTC
+                datetime.timezone.utc
             ).isoformat()
         if updated_options is not None:
             job.meta["options"] = updated_options.to_dict(exclude_none=True)
@@ -137,7 +137,9 @@ def worker_analyze(options: AnalysisOptions):
     finally:
         drakrun_logger.removeHandler(file_handler)
         file_handler.close()
-        job.meta["time_finished"] = datetime.datetime.now(datetime.UTC).isoformat()
+        job.meta["time_finished"] = datetime.datetime.now(
+            datetime.timezone.utc
+        ).isoformat()
         job.save_meta()
         metadata_file.write_text(
             json.dumps(
