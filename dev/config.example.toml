@@ -1,0 +1,23 @@
+# Copy this file to config.toml
+#
+# If you want to connect it to the remote worker instance:
+# - change [redis] so it points to the Redis host shared with worker
+# - uncomment and change [s3] section so it points to the S3 host shared with worker
+
+[redis]
+host = "redis."
+port = 6379
+
+# [s3]
+# address = "https://<address>"
+# access_key = "<access-key>"
+# secret_key = "<secret-key>"
+
+[network]
+dns_server = "use-gateway-address"
+out_interface = "default"
+net_enable = false
+
+[drakrun]
+default_timeout = 300
+plugins = ["apimon", "clipboardmon", "exmon", "filetracer", "memdump", "procmon", "regmon", "socketmon", "tlsmon"]

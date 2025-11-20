@@ -1,0 +1,18 @@
+services:
+  redis:
+    image: "redis:latest"
+    command: '--requirepass redisPassword'
+
+  backend:
+    build:
+      context: ..
+      dockerfile: ./dev/backend.Dockerfile
+    volumes:
+      - "./config.toml:/etc/drakrun/config.toml"
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: ./dev/frontend.Dockerfile
+    ports:
+      - "3000:3000"
