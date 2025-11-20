@@ -69,3 +69,8 @@ li.selected {
     color: #6c757d;
 }
 /* Ends overriding */
+
+.ReactModalPortal {
+    z-index: 10000;
+    position: absolute;
+}

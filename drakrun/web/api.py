@@ -28,6 +28,7 @@ from drakrun.lib.config import load_config
 from drakrun.lib.paths import UPLOADS_DIR
 from drakrun.lib.s3_storage import get_s3_client, is_s3_enabled, upload_sample_to_s3
 from drakrun.web.schema import (
+    AnalysisFileRequestQuery,
     AnalysisListResponse,
     AnalysisRequestPath,
     AnalysisResponse,
@@ -40,6 +41,7 @@ from drakrun.web.schema import (
     UploadFileForm,
 )
 from drakrun.web.storage import (
+    list_analysis_files,
     list_analysis_logs,
     open_seekable_stream,
     read_analysis_json,
@@ -305,6 +307,25 @@ def list_logs(path: AnalysisRequestPath):
     task_uid = path.task_uid
     analysis_logs = list_analysis_logs(task_uid, s3_config=config.s3)
     return jsonify(analysis_logs)
+
+
+@api.get("/files/<task_uid>")
+def list_files(path: AnalysisRequestPath):
+    task_uid = path.task_uid
+    analysis_files = list_analysis_files(task_uid, s3_config=config.s3)
+    return jsonify(analysis_files)
+
+
+@api.get("/files/<task_uid>/download")
+def download_analysis_file(path: AnalysisRequestPath, query: AnalysisFileRequestQuery):
+    task_uid = path.task_uid
+    return send_analysis_file(
+        task_uid,
+        query.filename,
+        s3_config=config.s3,
+        mimetype="application/octet-stream",
+        download_name=query.filename.split("/")[-1],
+    )
 
 
 @api.get("/graph/<task_uid>")

@@ -103,6 +103,21 @@ export async function getProcessLog({
     return logRequest.data;
 }
 
+export async function getAnalysisFileList({
+    analysisId,
+    abortController = undefined,
+}) {
+    const listRequest = await axios.get(
+        `/files/${analysisId}`,
+        abortController
+            ? {
+                  signal: abortController.signal,
+              }
+            : {},
+    );
+    return listRequest.data;
+}
+
 export async function uploadSample({
     file,
     timeout,

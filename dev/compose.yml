@@ -14,5 +14,7 @@ services:
     build:
       context: ..
       dockerfile: ./dev/frontend.Dockerfile
+    volumes:
+      - "../drakrun/web/frontend/src:/app/src"
     ports:
       - "3000:3000"

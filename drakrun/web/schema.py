@@ -57,6 +57,10 @@ class AnalysisRequestPath(BaseModel):
     )
 
 
+class AnalysisFileRequestQuery(BaseModel):
+    filename: str
+
+
 class LogsRequestPath(AnalysisRequestPath):
     log_type: str
 

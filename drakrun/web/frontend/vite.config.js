@@ -18,6 +18,10 @@ export default defineConfig({
                     target: process.env.PROXY_BACKEND_URL,
                     changeOrigin: true,
                 },
+                "/openapi": {
+                    target: process.env.PROXY_BACKEND_URL,
+                    changeOrigin: true,
+                }
             } : {}
         ),
     }
