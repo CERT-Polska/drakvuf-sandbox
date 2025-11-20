@@ -18,6 +18,7 @@ import { faDownload } from "@fortawesome/free-solid-svg-icons";
 import axios, { CanceledError } from "axios";
 import { AnalysisSummary } from "./AnalysisSummary.jsx";
 import { ProcessBadge } from "./ProcessBadge.jsx";
+import { AnalysisFilesViewer } from "./AnalysisFiles.jsx";
 
 export function AnalysisLogViewerTab({ analysisId }) {
     const logType = useTabContext()?.activeTab;
@@ -269,6 +270,9 @@ function AnalysisReportTabs({
                             <AnalysisScreenshotViewer analysis={analysis} />
                         </PaddedTab>
                     ) : null}
+                    <PaddedTab tab="Analysis files">
+                        <AnalysisFilesViewer analysisId={analysis.id} />
+                    </PaddedTab>
                 </TabSwitcher>
             </div>
         </div>
