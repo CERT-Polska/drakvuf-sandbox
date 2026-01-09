@@ -293,7 +293,11 @@ def tree_from_log(file: TextIO) -> ProcessTree:
                     pid = entry["PID"]
                     ppid = entry["PPID"]
                     process = pstree.get_process(pid)
-                    if process.ts_to is None and process.ppid != ppid:
+                    if (
+                        process is not None
+                        and process.ts_to is None
+                        and process.ppid != ppid
+                    ):
                         # Found elevated process: rebind to another parent
                         new_parent = pstree.get_process(ppid)
                         if new_parent is not None:
