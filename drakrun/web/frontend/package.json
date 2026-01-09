@@ -25,7 +25,7 @@
     "react-dom": "^19.0.0",
     "react-medium-image-zoom": "^5.2.14",
     "react-modal": "^3.16.3",
-    "react-router-dom": "^6.30.0",
+    "react-router-dom": "^6.30.3",
     "react-select": "^5.10.1",
     "startbootstrap-sb-admin": "^7.0.7"
   },
