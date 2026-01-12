@@ -45,8 +45,7 @@ def log_activity_watchdog(
     last_size = 0
     last_activity_time = time.time()
 
-    while not stop_event.is_set():
-        time.sleep(5)
+    while not stop_event.wait(timeout=5):
 
         try:
             current_size = output_file.stat().st_size
