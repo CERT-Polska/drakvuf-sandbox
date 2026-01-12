@@ -262,6 +262,25 @@ def parse_mm_terminate_process(pstree: ProcessTree, entry: Dict[str, Any]):
     p.exit_code_str = entry["ExitStatusStr"]
 
 
+def parse_unknown_process_entry(pstree: ProcessTree, entry: Dict[str, Any]) -> None:
+    process_pid = entry.get("PID")
+    process_ppid = entry.get("PPID")
+    parent = pstree.get_process(process_ppid)
+    if parent is None:
+        logger.warning(
+            f"Parent process not found at the process creation time (PID: {process_pid}, PPID: {process_ppid})"
+        )
+
+    pstree.add_process(
+        pid=process_pid,
+        ppid=process_ppid,
+        ts_from=0.0,
+        evtid_from=0,
+        procname=entry.get("ProcessName"),
+        parent=parent,
+    )
+
+
 def tree_from_log(file: TextIO) -> ProcessTree:
     pstree = ProcessTree()
     prev_line = None
@@ -293,11 +312,12 @@ def tree_from_log(file: TextIO) -> ProcessTree:
                     pid = entry["PID"]
                     ppid = entry["PPID"]
                     process = pstree.get_process(pid)
-                    if (
-                        process is not None
-                        and process.ts_to is None
-                        and process.ppid != ppid
-                    ):
+                    if process is None:
+                        logger.warning(
+                            f"Found log for process not yet in process tree: {entry}"
+                        )
+                        parse_unknown_process_entry(pstree, entry)
+                    elif process.ts_to is None and process.ppid != ppid:
                         # Found elevated process: rebind to another parent
                         new_parent = pstree.get_process(ppid)
                         if new_parent is not None:
