@@ -1,6 +1,9 @@
 import contextlib
+import logging
 import pathlib
 import subprocess
+import threading
+import time
 from typing import List, Optional
 
 from drakrun.analyzer.screenshotter import Screenshotter
@@ -11,6 +14,8 @@ from drakrun.lib.libvmi import VmiInfo
 from drakrun.lib.network_info import NetworkInfo
 from drakrun.lib.networking import start_tcpdump_collector
 from drakrun.lib.vm import VirtualMachine
+
+logger = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
@@ -32,12 +37,43 @@ def run_tcpdump(network_info: NetworkInfo, output_file: pathlib.Path):
     )
 
 
+def log_activity_watchdog(
+    output_file: pathlib.Path,
+    stop_event: threading.Event,
+    inactivity_threshold: int = 30,
+):
+    last_size = 0
+    last_activity_time = time.time()
+
+    while not stop_event.wait(timeout=5):
+
+        try:
+            current_size = output_file.stat().st_size
+
+            if current_size > last_size:
+                last_activity_time = time.time()
+                last_size = current_size
+            else:
+                inactive_duration = time.time() - last_activity_time
+
+                if inactive_duration > inactivity_threshold:
+                    logger.warning(
+                        f"DRAKVUF output inactive for {inactive_duration} - possible VM crash"
+                    )
+                    last_activity_time = time.time()
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            logger.debug(f"Watchdog error: {e}")
+
+
 @contextlib.contextmanager
 def run_drakvuf(
     vm_name: str,
     vmi_info: VmiInfo,
     kernel_profile_path: str,
     output_file: pathlib.Path,
+    output_err_file: pathlib.Path,
     drakvuf_args: List[str],
     exec_cmd: Optional[str] = None,
     cwd: Optional[pathlib.Path] = None,
@@ -50,10 +86,25 @@ def run_drakvuf(
         extra_args=drakvuf_args,
     )
 
-    with output_file.open("wb") as output:
-        drakvuf = subprocess.Popen(drakvuf_cmdline, stdout=output, cwd=cwd)
-        with process_graceful_exit(drakvuf):
-            yield drakvuf
+    stop_watchdog = threading.Event()
+    watchdog_thread = threading.Thread(
+        target=log_activity_watchdog,
+        args=(output_file, stop_watchdog),
+        daemon=True,
+        name="drakvuf-watchdog",
+    )
+    watchdog_thread.start()
+
+    try:
+        with output_file.open("wb") as output, output_err_file.open("wb") as output_err:
+            drakvuf = subprocess.Popen(
+                drakvuf_cmdline, stdout=output, stderr=output_err, cwd=cwd
+            )
+            with process_graceful_exit(drakvuf):
+                yield drakvuf
+    finally:
+        stop_watchdog.set()
+        watchdog_thread.join(timeout=1)
 
 
 @contextlib.contextmanager
