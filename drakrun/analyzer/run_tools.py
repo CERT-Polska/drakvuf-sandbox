@@ -74,6 +74,7 @@ def run_drakvuf(
     vmi_info: VmiInfo,
     kernel_profile_path: str,
     output_file: pathlib.Path,
+    output_err_file: pathlib.Path,
     drakvuf_args: List[str],
     exec_cmd: Optional[str] = None,
     cwd: Optional[pathlib.Path] = None,
@@ -96,9 +97,9 @@ def run_drakvuf(
     watchdog_thread.start()
 
     try:
-        with output_file.open("wb") as output:
+        with output_file.open("wb") as output, output_err_file.open("wb") as output_err:
             drakvuf = subprocess.Popen(
-                drakvuf_cmdline, stdout=output, cwd=cwd
+                drakvuf_cmdline, stdout=output, stderr=output_err, cwd=cwd
             )
             with process_graceful_exit(drakvuf):
                 yield drakvuf

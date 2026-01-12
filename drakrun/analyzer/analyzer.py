@@ -251,6 +251,7 @@ def analyze_file(
 
         tcpdump_file = output_dir / "dump.pcap"
         drakmon_file = output_dir / "drakmon.log"
+        drakvuf_err_file = output_dir / "drakvuf_stderr.log"
         drakvuf_args = prepare_drakvuf_args(output_dir, options)
 
         try:
@@ -281,6 +282,7 @@ def analyze_file(
                 vmi_info,
                 kernel_profile_path,
                 drakmon_file,
+                drakvuf_err_file,
                 drakvuf_args,
                 exec_cmd=exec_cmd,
                 cwd=output_dir,
