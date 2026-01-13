@@ -45,6 +45,9 @@ class DrakrunConfigSection(BaseModel):
     gzip_syscalls: bool = False
     use_7zip: bool = False
     path_to_7zip: str = "C:/Program Files/7-Zip/7z.exe"
+    # Override hostname used in worker names on this host.
+    # It gets automatically detected if not set.
+    worker_hostname: Optional[str] = None
 
 
 class DrakrunDefaultsPresetSection(BaseModel):
