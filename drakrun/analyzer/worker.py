@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import shutil
+import socket
 from typing import List, Optional
 
 from redis import Redis
@@ -160,9 +161,11 @@ def worker_main(vm_id: int):
     global _WORKER_VM_ID
     _WORKER_VM_ID = vm_id
     config = load_config()
+    hostname = config.drakrun.worker_hostname or socket.gethostname()
+
     worker = Worker(
         queues=[ANALYSIS_QUEUE_NAME],
-        name=f"drakrun-worker-vm-{vm_id}",
+        name=f"drakrun-worker@{hostname}:vm-{vm_id}",
         connection=get_redis_connection(config.redis),
     )
     worker.work()
