@@ -64,9 +64,9 @@ def upload_sample(form: UploadFileForm):
     timeout = form.timeout
     if not timeout:
         timeout = config.default_timeout
-    filename = form.file_name
-    if not filename:
-        filename = request_file.filename
+    sample_filename = form.file_name
+    if not sample_filename:
+        sample_filename = request_file.filename
     start_command = form.start_command
     plugins = form.plugins
     preset = form.preset
@@ -74,18 +74,18 @@ def upload_sample(form: UploadFileForm):
     no_screenshots = form.no_screenshots
 
     UPLOADS_DIR.mkdir(exist_ok=True)
-    upload_path = UPLOADS_DIR / f"{job_id}.sample"
+    tmp_upload_path = UPLOADS_DIR / f"{job_id}.sample"
 
     try:
-        request_file.save(upload_path)
+        request_file.save(tmp_upload_path)
         sample_sha256 = hashlib.sha256()
-        with open(upload_path, "rb") as f:
+        with open(tmp_upload_path, "rb") as f:
             for chunk in iter(lambda: f.read(32 * 4096), b""):
                 sample_sha256.update(chunk)
-        sample_magic = magic.from_file(upload_path)
+        sample_magic = magic.from_file(tmp_upload_path)
 
         file_metadata = FileMetadata(
-            name=filename,
+            name=sample_filename,
             type=sample_magic,
             sha256=sample_sha256.hexdigest(),
         )
@@ -93,18 +93,18 @@ def upload_sample(form: UploadFileForm):
         if is_s3_enabled(config.s3):
             s3_client = get_s3_client(config.s3)
             s3_bucket = config.s3.bucket
-            with upload_path.open("rb") as f:
+            with tmp_upload_path.open("rb") as f:
                 upload_sample_to_s3(job_id, f, s3_client, s3_bucket)
-            upload_path.unlink()
+            tmp_upload_path.unlink()
             sample_path = None
         else:
-            sample_path = upload_path.as_posix()
+            sample_path = tmp_upload_path.as_posix()
 
         analysis_options = AnalysisOptions(
             config=config,
             preset=preset,
-            sample_path=sample_path,
-            target_filename=filename,
+            host_sample_path=pathlib.Path(sample_path) if sample_path else None,
+            guest_filename=sample_filename,
             start_command=start_command,
             plugins=plugins,
             timeout=timeout,
@@ -115,11 +115,12 @@ def upload_sample(form: UploadFileForm):
         if no_screenshots:
             analysis_options.no_screenshotter = True
         if form.file_path:
-            analysis_options.target_filepath = pathlib.PureWindowsPath(form.file_path)
+            analysis_options.guest_target_directory = pathlib.PureWindowsPath(form.file_path)
         if form.extract_archive:
             analysis_options.extract_archive = True
             analysis_options.archive_password = form.archive_password
-            analysis_options.target_filename = form.file_name
+            # For archives, archive_entry_path contains the entry path to execute (e.g., "dir/malware.exe")
+            analysis_options.guest_archive_entry_path = form.archive_entry_path
         enqueue_analysis(
             job_id=job_id,
             file_metadata=file_metadata,
@@ -128,7 +129,7 @@ def upload_sample(form: UploadFileForm):
             result_ttl=config.drakrun.result_ttl,
         )
     except Exception:
-        upload_path.unlink(missing_ok=True)
+        tmp_upload_path.unlink(missing_ok=True)
         raise
 
     truncate_analysis_list(connection=redis, limit=ANALYSES_LIST_MAX_LENGTH)

@@ -50,14 +50,14 @@ from .check_root import check_root
     "target_filename",
     default=None,
     type=str,
-    help="Target file name where sample will be copied on a VM",
+    help="Guest file name where sample will be copied on a VM (filename only, not full path)",
 )
 @click.option(
     "--target-filepath",
     "target_filepath",
     default=None,
     type=str,
-    help="Target file path where sample will be copied on a VM",
+    help="Target directory on VM where sample will be copied (Windows path)",
 )
 @click.option(
     "--start-command",
@@ -159,10 +159,10 @@ def analyze(
     options = AnalysisOptions(
         config=config,
         preset=preset,
-        sample_path=sample,
+        host_sample_path=sample,
         timeout=timeout,
         net_enable=net_enable,
-        target_filename=target_filename,
+        guest_filename=target_filename,
         start_command=start_command,
         plugins=plugins,
         no_vm_restore=no_restore,
@@ -173,7 +173,7 @@ def analyze(
     )
 
     if target_filepath is not None:
-        options.target_filepath = pathlib.PureWindowsPath(target_filepath)
+        options.guest_target_directory = pathlib.PureWindowsPath(target_filepath)
 
     extra_metadata = analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)
     append_metadata_to_analysis(output_dir, extra_metadata)
