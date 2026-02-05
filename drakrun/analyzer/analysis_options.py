@@ -9,8 +9,8 @@ from drakrun.lib.config import DrakrunConfig
 class AnalysisOptions(BaseModel):
     # Host sample path (local filesystem or None when using S3)
     host_sample_path: Optional[pathlib.Path] = None
-    # Guest VM: filename only (e.g., "malware.exe")
-    guest_filename: Optional[str] = None
+    # Filename of the uploaded sample (archive name for archives, executable for normal files)
+    sample_filename: Optional[str] = None
     # Guest VM: entry path inside archive (e.g., "setup/setup.exe")
     guest_archive_entry_path: Optional[str] = None
     # Target directory on guest VM (where files will be placed)

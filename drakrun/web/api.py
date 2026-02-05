@@ -104,7 +104,7 @@ def upload_sample(form: UploadFileForm):
             config=config,
             preset=preset,
             host_sample_path=pathlib.Path(sample_path) if sample_path else None,
-            guest_filename=sample_filename,
+            sample_filename=sample_filename,
             start_command=start_command,
             plugins=plugins,
             timeout=timeout,

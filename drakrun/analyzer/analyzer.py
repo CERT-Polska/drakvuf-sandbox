@@ -25,7 +25,7 @@ from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command, prepare_ps_command
 from .postprocessing import postprocess_analysis_dir
 from .run_tools import run_drakvuf, run_screenshotter, run_tcpdump, run_vm
-from .startup_command import get_startup_argv, get_guest_filename_from_host_path
+from .startup_command import get_startup_argv, get_sample_filename_from_host_path
 
 log = logging.getLogger(__name__)
 
@@ -128,7 +128,7 @@ def extract_archive_on_vm(
     archive_password: Optional[str],
 ) -> pathlib.PureWindowsPath:
     guest_archive_target_path = guest_target_directory / pathlib.PureWindowsPath(
-        get_guest_filename_from_host_path(host_sample_path)
+        get_sample_filename_from_host_path(host_sample_path)
     )
     if guest_archive_target_path.suffix.lower() != ".zip":
         guest_archive_target_path = guest_archive_target_path.with_suffix(".zip")
@@ -220,7 +220,7 @@ def analyze_file(
                 options.guest_target_directory,
                 options.archive_password,
             )
-            # For archives, ALWAYS use guest_archive_entry_path (not guest_filename or existing start_command)
+            # For archives, ALWAYS use guest_archive_entry_path (not sample_filename or existing start_command)
             # This ensures we run the extracted file, not the archive itself
             archive_executable_path = str(target_dir / options.guest_archive_entry_path)
             log.info(f"Archive mode: setting start_command from archive_entry_path: {archive_executable_path}")
@@ -229,25 +229,25 @@ def analyze_file(
             log.info(f"Archive mode: start_command set to {options.start_command}")
 
         elif options.host_sample_path is not None:
-            log.info(f"Normal file mode: host_sample_path={options.host_sample_path}, guest_filename={options.guest_filename}")
-            # For normal files, use guest_filename
-            if options.guest_filename is None:
-                options.guest_filename = get_guest_filename_from_host_path(
+            log.info(f"Normal file mode: host_sample_path={options.host_sample_path}, sample_filename={options.sample_filename}")
+            # For normal files, use sample_filename
+            if options.sample_filename is None:
+                options.sample_filename = get_sample_filename_from_host_path(
                     options.host_sample_path
                 )
             # Determine the full executable path on guest VM
-            lower_target_name = options.guest_filename.lower()
+            lower_target_name = options.sample_filename.lower()
             if not lower_target_name.startswith(
                 "c:"
             ) and not lower_target_name.startswith("%"):
                 # Relative path: append to target directory
                 guest_executable_path = (
-                    options.guest_target_directory / options.guest_filename
+                    options.guest_target_directory / options.sample_filename
                 )
             else:
                 # Absolute path: use as-is
                 guest_executable_path = pathlib.PureWindowsPath(
-                    options.guest_filename
+                    options.sample_filename
                 )
             log.info(
                 f"Copying sample to the VM ({options.host_sample_path.as_posix()} -> {guest_executable_path})..."

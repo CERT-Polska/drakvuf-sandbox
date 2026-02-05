@@ -15,7 +15,7 @@ def random_filename() -> str:
     return "".join(random.choice(chars) for _ in range(10))
 
 
-def get_guest_filename_from_host_path(host_path: pathlib.Path) -> str:
+def get_sample_filename_from_host_path(host_path: pathlib.Path) -> str:
     name, extension = host_path.name, host_path.suffix
     if extension is None:
         raise ValueError(

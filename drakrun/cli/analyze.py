@@ -162,7 +162,7 @@ def analyze(
         host_sample_path=sample,
         timeout=timeout,
         net_enable=net_enable,
-        guest_filename=target_filename,
+        sample_filename=target_filename,
         start_command=start_command,
         plugins=plugins,
         no_vm_restore=no_restore,
