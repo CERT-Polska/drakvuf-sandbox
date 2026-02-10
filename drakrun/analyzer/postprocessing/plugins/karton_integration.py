@@ -19,12 +19,11 @@ from .plugin_base import PostprocessContext
 logger = logging.getLogger(__name__)
 
 
-def _store_upload_token(analysis_id: str, token: str) -> None:
+def _store_upload_token(context: PostprocessContext, analysis_id: str, token: str) -> None:
     """Store upload token in Redis job metadata."""
     from drakrun.analyzer.worker import get_redis_connection
 
-    config = load_config()
-    redis = get_redis_connection(config.redis)
+    redis = get_redis_connection(context.config.redis)
 
     try:
         job = Job.fetch(analysis_id, connection=redis)
@@ -34,7 +33,6 @@ def _store_upload_token(analysis_id: str, token: str) -> None:
 
     job.meta["karton_upload_token"] = {
         "token": token,
-        "status": "pending",
         "created_at": time.time(),
     }
     job.save_meta()
@@ -47,9 +45,7 @@ def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
     Polls for completion using KartonState.
     """
     analysis_dir = context.analysis_dir
-    config = load_config()
-
-    if not config.karton.enabled:
+    if not context.config.karton.enabled:
         logger.warning("Karton is not enabled, skipping analysis upload")
         return
 
@@ -102,9 +98,9 @@ def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
 
     # Generate token for API uploads from Karton reporter
     token = secrets.token_urlsafe(32)
-    _store_upload_token(analysis_dir.name, token)
+    _store_upload_token(context, analysis_dir.name, token)
 
-    karton_config = Config(config.karton.config_path)
+    karton_config = Config(context.config.karton.config_path)
     producer = Producer(karton_config, identity="drakvuf-sandbox")
 
     headers = {"type": "analysis", "kind": "drakrun"}

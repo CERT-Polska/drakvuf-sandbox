@@ -93,6 +93,11 @@ class S3StorageConfigSection(BaseModel):
     remove_local_after_upload: bool = True
 
 
+class KartonConfigSection(BaseModel):
+    enabled: bool = False
+    config_path: Optional[pathlib.Path] = None
+
+
 class DrakrunConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
     redis: RedisConfigSection
@@ -100,6 +105,7 @@ class DrakrunConfig(BaseModel):
     drakrun: DrakrunConfigSection
     capa: CapaConfigSection = CapaConfigSection()
     memdump: MemdumpConfigSection = MemdumpConfigSection()
+    karton: KartonConfigSection = KartonConfigSection()
     s3: Optional[S3StorageConfigSection] = None
     preset: Dict[str, DrakrunDefaultsPresetSection] = Field(default_factory=dict)
 
