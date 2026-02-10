@@ -461,6 +461,121 @@ function SummaryDNSSection() {
     );
 }
 
+
+// Helper to find dump info by filename from memdumps array
+function findDumpInfo(summary, filename) {
+    if (!summary?.memdumps) return null;
+    for (const memdump of summary.memdumps) {
+        for (const dump of memdump.dumps) {
+            if (dump.filename === filename) {
+                return {
+                    processSeqid: memdump.process_seqid,
+                    targetProcess: dump.target_process,
+                };
+            }
+        }
+    }
+    return null;
+}
+
+function DumpSourceBadge({ filename }) {
+    const { summary: analysisSummary } = useContext(AnalysisSummaryContext);
+    const dumpInfo = findDumpInfo(analysisSummary, filename);
+
+    return (
+        <div className="d-inline-block me-2 mb-1">
+            <span className="badge rounded-pill bg-secondary font-monospace me-1">
+                {filename}
+            </span>
+            {dumpInfo?.processSeqid !== undefined && (
+                <SummaryProcessBadge processId={dumpInfo.processSeqid} />
+            )}
+            {dumpInfo?.targetProcess !== undefined && (
+                <>
+                    <span className="text-muted mx-1">&rarr;</span>
+                    <SummaryProcessBadge processId={dumpInfo.targetProcess} />
+                </>
+            )}
+        </div>
+    );
+}
+
+function SummaryYaraSection() {
+    const analysisSummary = useAnalysisSummary();
+    const yaraMatches = analysisSummary["yara_matches"];
+    if (!yaraMatches || Object.keys(yaraMatches).length === 0) return [];
+    const matchCount = Object.values(yaraMatches).reduce(
+        (sum, sources) => sum + sources.length,
+        0,
+    );
+    return (
+        <SummarySection
+            header="YARA matches"
+            badgeType="warning"
+            badgeValue={matchCount}
+        >
+            <ul style={{ overflow: "auto" }}>
+                {Object.entries(yaraMatches).map(([ruleName, sources]) => (
+                    <li key={`yara-${ruleName}`} className="mb-2">
+                        <div>
+                            <span className="badge rounded-pill bg-warning text-dark me-2">
+                                {ruleName}
+                            </span>
+                        </div>
+                        <div className="ms-3">
+                            {sources.map((source, idx) => (
+                                <DumpSourceBadge
+                                    key={`${ruleName}-${idx}`}
+                                    filename={source}
+                                />
+                            ))}
+                        </div>
+                    </li>
+                ))}
+            </ul>
+        </SummarySection>
+    );
+}
+
+function ConfigRow({ config }) {
+    const family = config.family || "unknown";
+    const source = config.source;
+    const cfg = config.config;
+
+    return (
+        <li className="mb-3 p-2 border-bottom">
+            <div className="mb-2">
+                <span className="badge rounded-pill bg-danger me-2">
+                    {family}
+                </span>
+                <DumpSourceBadge filename={source} />
+            </div>
+            <pre className="mb-0 pl-3" style={{ fontSize: "0.85rem" }}>
+                {JSON.stringify(cfg, null, 2)}
+            </pre>
+        </li>
+    );
+}
+
+function SummaryExtractedConfigsSection() {
+    const analysisSummary = useAnalysisSummary();
+    const extractedConfigs = analysisSummary["extracted_configs"];
+    if (!extractedConfigs || extractedConfigs.length === 0) return [];
+    return (
+        <SummarySection
+            header="Extracted configs"
+            badgeType="danger"
+            badgeValue={extractedConfigs.length}
+        >
+            <ul style={{ overflow: "auto" }}>
+                {extractedConfigs.map((cfg, idx) => (
+                    <ConfigRow config={cfg} key={`cfg-${idx}`} />
+                ))}
+            </ul>
+        </SummarySection>
+    );
+}
+
 export function AnalysisSummary({ analysisSummary, setSelectedProcess }) {
     const selectProcess = useCallback(
         (processId) => {
@@ -495,6 +610,8 @@ export function AnalysisSummary({ analysisSummary, setSelectedProcess }) {
             }}
         >
             <SummaryStartupSection />
+            <SummaryExtractedConfigsSection />
+            <SummaryYaraSection />
             <SummaryDNSSection />
             <SummaryHTTPSection />
             <SummaryCrackedURLs />

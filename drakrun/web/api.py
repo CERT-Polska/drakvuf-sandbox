@@ -33,6 +33,9 @@ from drakrun.web.schema import (
     AnalysisRequestPath,
     AnalysisResponse,
     APIErrorResponse,
+    KartonResultsUploadForm,
+    KartonResultsUploadPath,
+    KartonResultsUploadResponse,
     LogsRequestPath,
     ProcessInfoRequestPath,
     ProcessLogsRequestPath,
@@ -133,6 +136,57 @@ def upload_sample(form: UploadFileForm):
 
     truncate_analysis_list(connection=redis, limit=ANALYSES_LIST_MAX_LENGTH)
     return jsonify({"task_uid": job_id})
+
+
+@api.post(
+    "/analysis/<analysis_id>/karton-results",
+    responses={
+        200: KartonResultsUploadResponse,
+        403: APIErrorResponse,
+        404: APIErrorResponse,
+    },
+)
+def karton_results_upload(path: KartonResultsUploadPath, form: KartonResultsUploadForm):
+    """
+    Upload Karton analysis results to the analysis directory.
+    Validates token stored when analysis was sent to Karton.
+    """
+    try:
+        job = Job.fetch(path.analysis_id, connection=redis)
+    except NoSuchJobError:
+        return jsonify({"error": "Analysis not found"}), 404
+
+    # Validate token
+    token_info = job.meta.get("karton_upload_token")
+    if not token_info or token_info.get("token") != form.token:
+        return jsonify({"error": "Invalid token"}), 403
+
+    # Determine the analysis directory
+    from drakrun.lib.paths import ANALYSES_DIR
+
+    analysis_dir = ANALYSES_DIR / path.analysis_id
+
+    if not analysis_dir.exists():
+        return jsonify({"error": "Analysis directory not found"}), 404
+
+    # Determine target filename
+    request_file = form.file
+    target_filename = form.filename if form.filename else request_file.filename
+    if not target_filename:
+        return jsonify({"error": "Filename required"}), 400
+
+    target_filename = pathlib.Path(target_filename).name
+    target_path = analysis_dir / target_filename
+
+    try:
+        request_file.save(target_path)
+        logger.info(
+            f"Karton result uploaded: analysis={path.analysis_id}, file={target_filename}"
+        )
+        return jsonify({"status": "success", "filename": target_filename})
+    except Exception as e:
+        logger.error(f"Failed to save uploaded file: {e}")
+        return jsonify({"error": "Failed to save file"}), 500
 
 
 @api.get("/list", responses={200: AnalysisListResponse})

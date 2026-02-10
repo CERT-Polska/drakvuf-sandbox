@@ -3,13 +3,20 @@ from typing import Any, Dict, List, NamedTuple, Optional, Protocol
 
 from drakrun.lib.config import DrakrunConfig
 
+from ...analysis_options import AnalysisOptions
 from ..process_tree import ProcessTree
 
 
 class PostprocessContext:
-    def __init__(self, analysis_dir: pathlib.Path, config: DrakrunConfig) -> None:
+    def __init__(
+        self,
+        analysis_dir: pathlib.Path,
+        config: DrakrunConfig,
+        options: Optional[AnalysisOptions] = None,
+    ) -> None:
         self.analysis_dir = analysis_dir
         self.config = config
+        self.options = options
         self._process_tree: Optional[ProcessTree] = None
         # Quick metadata fetched along with analysis status
         self.metadata = {}

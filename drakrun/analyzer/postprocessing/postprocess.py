@@ -1,8 +1,9 @@
 import json
 import logging
 import pathlib
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
+from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.lib.config import DrakrunConfig
 
 from .plugins import POSTPROCESS_PLUGINS
@@ -52,10 +53,15 @@ def append_metadata_to_analysis(
     metadata_path.write_text(json.dumps(metadata))
 
 
-def postprocess_analysis_dir(analysis_dir: pathlib.Path, config: DrakrunConfig):
+def postprocess_analysis_dir(
+    analysis_dir: pathlib.Path,
+    config: DrakrunConfig,
+    options: Optional[AnalysisOptions] = None,
+):
     context = PostprocessContext(
         analysis_dir=analysis_dir,
         config=config,
+        options=options,
     )
     run_postprocessing(context)
     return context.metadata
