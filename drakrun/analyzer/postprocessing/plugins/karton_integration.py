@@ -2,7 +2,8 @@ import json
 import logging
 import secrets
 import time
-from typing import Dict
+from pathlib import Path
+from typing import Dict, Optional
 
 from karton.core.config import Config
 from karton.core.inspect import KartonState
@@ -12,14 +13,14 @@ from karton.core.task import Task
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
 
-from drakrun.lib.config import load_config
-
 from .plugin_base import PostprocessContext
 
 logger = logging.getLogger(__name__)
 
 
-def _store_upload_token(context: PostprocessContext, analysis_id: str, token: str) -> None:
+def _try_store_upload_token(
+    context: PostprocessContext, analysis_id: str, token: str
+) -> bool:
     """Store upload token in Redis job metadata."""
     from drakrun.analyzer.worker import get_redis_connection
 
@@ -29,32 +30,17 @@ def _store_upload_token(context: PostprocessContext, analysis_id: str, token: st
         job = Job.fetch(analysis_id, connection=redis)
     except NoSuchJobError:
         logger.warning(f"Job {analysis_id} not found, cannot store upload token")
-        return
+        return False
 
-    job.meta["karton_upload_token"] = {
-        "token": token,
-        "created_at": time.time(),
-    }
+    job.meta["token"] = token
     job.save_meta()
     logger.info(f"Stored Karton upload token for analysis {analysis_id}")
+    return True
 
 
-def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
-    """
-    Send analysis results from analysis_dir to Karton for further processing.
-    Polls for completion using KartonState.
-    """
-    analysis_dir = context.analysis_dir
-    if not context.config.karton.enabled:
-        logger.warning("Karton is not enabled, skipping analysis upload")
-        return
-
-    metadata = context.metadata
-    dumps_metadata = metadata.get("dumps_metadata", {})
-
-    # Create resources from analysis files
+def _collect_analysis_files(analysis_dir: Path) -> Dict[str, Resource]:
+    """Create resources from analysis files"""
     analysis_files: Dict[str, Resource] = {}
-
     dumps_path = analysis_dir / "dumps.zip"
     if dumps_path.exists():
         analysis_files["dumps.zip"] = Resource(
@@ -76,13 +62,10 @@ def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
         analysis_files["tlsmon.log"] = Resource(
             name="tlsmon.log", path=tlsmon_path.as_posix()
         )
+    return analysis_files
 
-    sample_sha256 = metadata.get("sample_sha256")
-    if not sample_sha256:
-        logger.warning("sample_sha256 not found in metadata")
 
-    # Create sample resource from the sample file
-    sample_resource = None
+def _try_get_sample_resource(context: PostprocessContext) -> Optional[Resource]:
     if (
         context.options
         and context.options.sample_path
@@ -93,56 +76,76 @@ def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
             path=context.options.sample_path.as_posix(),
         )
         logger.info(f"Created sample resource from {context.options.sample_path}")
-    else:
-        logger.info("Sample not available")
+        return sample_resource
 
-    # Generate token for API uploads from Karton reporter
-    token = secrets.token_urlsafe(32)
-    _store_upload_token(context, analysis_dir.name, token)
+
+def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
+    """
+    Send analysis results from analysis_dir to Karton for further processing.
+    Polls for completion using KartonState.
+    """
+
+    if not context.config.karton.enabled:
+        logger.info("Karton is not enabled, skipping analysis upload")
+        return
 
     karton_config = Config(context.config.karton.config_path)
     producer = Producer(karton_config, identity="drakvuf-sandbox")
 
-    headers = {"type": "analysis", "kind": "drakrun"}
-    if producer.debug:
-        headers = {"type": "analysis-debug", "kind": "drakrun"}
+    analysis_dir = context.analysis_dir
+    job_id = analysis_dir.name
+    metadata = context.metadata
 
-    payload = {
-        "sample_sha256": sample_sha256,
-        "dumps_metadata": dumps_metadata,
-        **analysis_files,
-    }
-    payload_persistent = {
-        "drakrun_token": token,
-        "drakrun_analysis_id": analysis_dir.name,
-    }
-
-    if sample_resource:
-        payload["sample"] = sample_resource
-
-    task = Task(headers=headers, payload=payload, payload_persistent=payload_persistent)
-    producer.log.info(f"Sending analysis for Karton processing (uid={task.uid})")
-    producer.send_task(task)
-
-    # Poll for completion using KartonState
-    state = KartonState(producer.backend)
-    start_time = time.time()
-    poll_interval = 10.0
-
-    logger.info(
-        f"Waiting for Karton analysis to complete (uid={task.uid}, timeout={timeout}s)"
-    )
-    while time.time() - start_time < timeout:
-        analysis = state.get_analysis(task.uid)
-        if analysis.is_done:
-            logger.info(f"Karton analysis complete (uid={task.uid})")
-            time.sleep(1)
-            _update_report(context)
+    # Generate token for API uploads from Karton reporter
+    token = secrets.token_urlsafe(32)
+    if _try_store_upload_token(context, job_id, token):
+        sample = _try_get_sample_resource(context)
+        if (
+            not sample
+        ):  # sample should always be available unless running drakrun postprocess
+            logger.info("Sample not found, skipping karton postprocessing")
             return
 
-        time.sleep(poll_interval)
+        dumps_metadata = metadata.get("dumps_metadata", {})
+        analysis_files = _collect_analysis_files(analysis_dir)
 
-    logger.error(f"Karton analysis timed out after {timeout}s (uid={task.uid})")
+        headers = {"type": "analysis", "kind": "drakrun"}
+        if producer.debug:
+            headers = {"type": "analysis-debug", "kind": "drakrun"}
+
+        payload = {
+            "sample": sample,
+            "dumps_metadata": dumps_metadata,
+            **analysis_files,
+        }
+        payload_persistent = {
+            "drakrun_token": token,
+            "drakrun_analysis_id": job_id,
+        }
+
+        task = Task(
+            headers=headers, payload=payload, payload_persistent=payload_persistent
+        )
+        producer.log.info(f"Sending analysis for Karton processing (uid={task.uid})")
+        producer.send_task(task)
+
+        # Poll for completion using KartonState
+        state = KartonState(producer.backend)
+        start_time = time.time()
+        poll_interval = 10.0
+
+        logger.info(
+            f"Waiting for Karton analysis to complete (uid={task.uid}, timeout={timeout}s)"
+        )
+        while time.time() - start_time < timeout:
+            time.sleep(poll_interval)
+            analysis = state.get_analysis(task.uid)
+            if analysis.is_done:
+                logger.info(f"Karton analysis complete (uid={task.uid})")
+                _update_report(context)
+                return
+
+        logger.error(f"Karton analysis timed out after {timeout}s (uid={task.uid})")
 
 
 def _update_report(context: PostprocessContext):
@@ -152,11 +155,13 @@ def _update_report(context: PostprocessContext):
         if file.is_file():
             try:
                 if file.name == "yara_matches.json":
+                    logger.info("Adding yara matches to report")
                     with open(file) as f:
                         matches = json.loads(f.read())
                         context.update_report({"yara_matches": matches})
 
                 if file.name.startswith("config"):
+                    logger.info(f"Adding config {file.name} to report")
                     with open(file) as f:
                         config_data = json.loads(f.read())
                         configs.append(config_data)

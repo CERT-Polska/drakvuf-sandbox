@@ -157,8 +157,8 @@ def karton_results_upload(path: KartonResultsUploadPath, form: KartonResultsUplo
         return jsonify({"error": "Analysis not found"}), 404
 
     # Validate token
-    token_info = job.meta.get("karton_upload_token")
-    if not token_info or token_info.get("token") != form.token:
+    token = job.meta.get("token")
+    if not token or token != form.token:
         return jsonify({"error": "Invalid token"}), 403
 
     # Determine the analysis directory
@@ -180,6 +180,7 @@ def karton_results_upload(path: KartonResultsUploadPath, form: KartonResultsUplo
 
     try:
         request_file.save(target_path)
+
         logger.info(
             f"Karton result uploaded: analysis={path.analysis_id}, file={target_filename}"
         )
