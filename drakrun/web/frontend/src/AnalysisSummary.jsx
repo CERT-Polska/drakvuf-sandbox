@@ -461,7 +461,6 @@ function SummaryDNSSection() {
     );
 }
 
-
 // Helper to find dump info by filename from memdumps array
 function findDumpInfo(summary, filename) {
     if (!summary?.memdumps) return null;
