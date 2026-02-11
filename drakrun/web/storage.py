@@ -112,7 +112,7 @@ def get_s3_prefix(analysis_id):
     return "/".join([*analysis_id[0:4], analysis_id])
 
 
-def read_analysis_json(analysis_id: str, path: str, s3_config: S3StorageConfigSection):
+def read_analysis_file(analysis_id: str, path: str, s3_config: S3StorageConfigSection):
     if not is_s3_enabled(s3_config):
         base_path = ANALYSES_DIR / analysis_id
         path_to_file = check_path(base_path / path, base_path)
@@ -131,7 +131,11 @@ def read_analysis_json(analysis_id: str, path: str, s3_config: S3StorageConfigSe
                 raise FileNotFoundError from e
             else:
                 raise
+    return data
 
+
+def read_analysis_json(analysis_id: str, path: str, s3_config: S3StorageConfigSection):
+    data = read_analysis_file(analysis_id, path, s3_config)
     parsed_data = json.loads(data)
     return parsed_data
 

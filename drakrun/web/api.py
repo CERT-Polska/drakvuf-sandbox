@@ -27,6 +27,7 @@ from drakrun.analyzer.worker import (
 from drakrun.lib.config import load_config
 from drakrun.lib.paths import UPLOADS_DIR
 from drakrun.lib.s3_storage import get_s3_client, is_s3_enabled, upload_sample_to_s3
+from drakrun.web.html_report import generate_html_report
 from drakrun.web.schema import (
     AnalysisFileRequestQuery,
     AnalysisListResponse,
@@ -345,4 +346,14 @@ def screenshot(path: ScreenshotRequestPath):
         f"screenshots/screenshot_{which}.png",
         mimetype="image/png",
         s3_config=config.s3,
+    )
+
+
+@api.get("/html/<task_uid>")
+def get_html_report(path: AnalysisRequestPath):
+    task_uid = path.task_uid
+    html_report = generate_html_report(task_uid, s3_config=config.s3)
+    return Response(
+        html_report,
+        mimetype="text/html",
     )

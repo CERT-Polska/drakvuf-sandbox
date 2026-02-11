@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build-embedded": "vite build --config embedded_report.vite.config.js",
+    "build": "vite build && vite build --config embedded_report.vite.config.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
