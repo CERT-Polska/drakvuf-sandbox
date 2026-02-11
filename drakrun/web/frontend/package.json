@@ -28,7 +28,8 @@
     "react-modal": "^3.16.3",
     "react-router-dom": "^6.30.3",
     "react-select": "^5.10.1",
-    "startbootstrap-sb-admin": "^7.0.7"
+    "startbootstrap-sb-admin": "^7.0.7",
+    "vite-plugin-css-injected-by-js": "^3.5.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
