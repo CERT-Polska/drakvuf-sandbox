@@ -28,8 +28,7 @@
     "react-modal": "^3.16.3",
     "react-router-dom": "^6.30.3",
     "react-select": "^5.10.1",
-    "startbootstrap-sb-admin": "^7.0.7",
-    "vite-plugin-css-injected-by-js": "^3.5.2"
+    "startbootstrap-sb-admin": "^7.0.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
@@ -40,8 +39,8 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
-    "rollup-plugin-gzip": "^4.1.1",
     "vite": "^6.4.1",
+    "vite-plugin-css-injected-by-js": "^3.5.2",
     "vite-plugin-singlefile": "^2.3.0"
   },
   "prettier": {
