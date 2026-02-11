@@ -19,6 +19,7 @@ import axios, { CanceledError } from "axios";
 import { AnalysisSummary } from "./AnalysisSummary.jsx";
 import { ProcessBadge } from "./ProcessBadge.jsx";
 import { AnalysisFilesViewer } from "./AnalysisFiles.jsx";
+import { useAnalysisReport } from "./AnalysisReportContext.jsx";
 
 export function AnalysisLogViewerTab({ analysisId }) {
     const logType = useTabContext()?.activeTab;
@@ -279,10 +280,11 @@ function AnalysisReportTabs({
     );
 }
 
-export function AnalysisReport({ analysis }) {
+export function AnalysisReport() {
     const [selectedProcess, setSelectedProcess] = useState();
     const [activeReportTab, setActiveReportTab] = useState();
     const [analysisSummary, setAnalysisSummary] = useState();
+    const { analysisInfo: analysis, getAnalysisSummary } = useAnalysisReport();
     const plugins = analysis.options?.plugins;
     const baseUrl = axios.defaults.baseURL;
     const analysisId = analysis.id;
@@ -298,7 +300,7 @@ export function AnalysisReport({ analysis }) {
                     console.error(error);
                 }
             });
-    }, [analysisId]);
+    }, [analysisId, getAnalysisSummary]);
 
     useEffect(() => {
         fetchSummary();

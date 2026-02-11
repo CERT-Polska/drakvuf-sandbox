@@ -8,6 +8,7 @@ import {
     AnalysisPendingStatusBox,
 } from "./AnalysisPendingView.jsx";
 import { AnalysisReport } from "./AnalysisReport.jsx";
+import { OnlineAnalysisReportProvider } from "./AnalysisReportContext.jsx";
 
 function AnalysisViewComponent({ analysisId }) {
     const checkInterval = useRef(null);
@@ -76,7 +77,11 @@ function AnalysisViewComponent({ analysisId }) {
     if (isStatusPending(analysisInfo?.status)) {
         return <AnalysisPendingView analysis={analysisInfo} />;
     }
-    return <AnalysisReport analysis={analysisInfo} />;
+    return (
+        <OnlineAnalysisReportProvider analysisInfo={analysisInfo}>
+            <AnalysisReport />
+        </OnlineAnalysisReportProvider>
+    );
 }
 
 export default function AnalysisView() {

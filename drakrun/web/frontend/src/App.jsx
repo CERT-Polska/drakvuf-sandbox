@@ -10,7 +10,7 @@ import AnalysisView from "./AnalysisView.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder, faUpload, faGear } from "@fortawesome/free-solid-svg-icons";
 
-function AppHeader() {
+export function AppHeader() {
     return (
         <nav className="sb-topnav navbar navbar-expand navbar-dark bg-dark">
             <Link className="navbar-brand ps-3" to="/">
@@ -65,7 +65,7 @@ function AppSidenav() {
     );
 }
 
-function AppFooter() {
+export function AppFooter() {
     return (
         <footer className="py-4 bg-light mt-auto">
             <div className="container-fluid px-4">
