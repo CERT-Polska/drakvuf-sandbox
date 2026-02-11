@@ -157,13 +157,13 @@ def _update_report(context: PostprocessContext):
                 if file.name == "yara_matches.json":
                     logger.info("Adding yara matches to report")
                     with open(file) as f:
-                        matches = json.loads(f.read())
+                        matches = json.load(f)
                         context.update_report({"yara_matches": matches})
 
                 if file.name.startswith("config"):
                     logger.info(f"Adding config {file.name} to report")
                     with open(file) as f:
-                        config_data = json.loads(f.read())
+                        config_data = json.load(f)
                         configs.append(config_data)
 
             except Exception as e:

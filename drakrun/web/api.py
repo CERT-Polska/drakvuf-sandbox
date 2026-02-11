@@ -142,8 +142,10 @@ def upload_sample(form: UploadFileForm):
     "/analysis/<analysis_id>/karton-results",
     responses={
         200: KartonResultsUploadResponse,
+        400: APIErrorResponse,
         403: APIErrorResponse,
         404: APIErrorResponse,
+        500: APIErrorResponse,
     },
 )
 def karton_results_upload(path: KartonResultsUploadPath, form: KartonResultsUploadForm):
@@ -186,7 +188,7 @@ def karton_results_upload(path: KartonResultsUploadPath, form: KartonResultsUplo
         )
         return jsonify({"status": "success", "filename": target_filename})
     except Exception as e:
-        logger.error(f"Failed to save uploaded file: {e}")
+        logger.exception(f"Failed to save uploaded file: {e}")
         return jsonify({"error": "Failed to save file"}), 500
 
 
