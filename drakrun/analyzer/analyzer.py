@@ -25,7 +25,7 @@ from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command, prepare_ps_command
 from .postprocessing import postprocess_analysis_dir
 from .run_tools import run_drakvuf, run_screenshotter, run_tcpdump, run_vm
-from .startup_command import get_startup_argv, get_sample_filename_from_host_path
+from .startup_command import get_sample_filename_from_host_path, get_startup_argv
 
 log = logging.getLogger(__name__)
 
@@ -135,7 +135,9 @@ def extract_archive_on_vm(
     log.info(
         f"Copying archive to the VM ({host_sample_path.as_posix()} -> {guest_archive_target_path})..."
     )
-    guest_archive_path = drop_sample_to_vm(injector, host_sample_path, str(guest_archive_target_path))
+    guest_archive_path = drop_sample_to_vm(
+        injector, host_sample_path, str(guest_archive_target_path)
+    )
     guest_extraction_dir = pathlib.PureWindowsPath(guest_archive_path).parent
     if config.drakrun.use_7zip:
         log.info(
@@ -183,7 +185,9 @@ def analyze_file(
         substatus_callback(AnalysisSubstatus.starting_vm)
 
     if options.extract_archive:
-        log.info(f"Archive mode: extract_archive=True, guest_archive_entry_path={options.guest_archive_entry_path}, start_command={options.start_command}")
+        log.info(
+            f"Archive mode: extract_archive=True, guest_archive_entry_path={options.guest_archive_entry_path}, start_command={options.start_command}"
+        )
         if not options.guest_archive_entry_path and not options.start_command:
             raise ValueError(
                 "Archive extractor requires guest_archive_entry_path or start_command "
@@ -223,13 +227,19 @@ def analyze_file(
             # For archives, ALWAYS use guest_archive_entry_path (not sample_filename or existing start_command)
             # This ensures we run the extracted file, not the archive itself
             archive_executable_path = str(target_dir / options.guest_archive_entry_path)
-            log.info(f"Archive mode: setting start_command from archive_entry_path: {archive_executable_path}")
-            log.info(f"  target_dir={target_dir}, guest_archive_entry_path={options.guest_archive_entry_path}")
+            log.info(
+                f"Archive mode: setting start_command from archive_entry_path: {archive_executable_path}"
+            )
+            log.info(
+                f"  target_dir={target_dir}, guest_archive_entry_path={options.guest_archive_entry_path}"
+            )
             options.start_command = get_startup_argv(archive_executable_path)
             log.info(f"Archive mode: start_command set to {options.start_command}")
 
         elif options.host_sample_path is not None:
-            log.info(f"Normal file mode: host_sample_path={options.host_sample_path}, sample_filename={options.sample_filename}")
+            log.info(
+                f"Normal file mode: host_sample_path={options.host_sample_path}, sample_filename={options.sample_filename}"
+            )
             # For normal files, use sample_filename
             if options.sample_filename is None:
                 options.sample_filename = get_sample_filename_from_host_path(
@@ -246,9 +256,7 @@ def analyze_file(
                 )
             else:
                 # Absolute path: use as-is
-                guest_executable_path = pathlib.PureWindowsPath(
-                    options.sample_filename
-                )
+                guest_executable_path = pathlib.PureWindowsPath(options.sample_filename)
             log.info(
                 f"Copying sample to the VM ({options.host_sample_path.as_posix()} -> {guest_executable_path})..."
             )
@@ -286,7 +294,9 @@ def analyze_file(
                 exec_cmd = None
 
             # todo tmp
-            log.info(f"Starting analysis with drakvuf args: {drakvuf_args}, exec_cmd: {exec_cmd}")
+            log.info(
+                f"Starting analysis with drakvuf args: {drakvuf_args}, exec_cmd: {exec_cmd}"
+            )
             with run_tcpdump(network_info, tcpdump_file), run_screenshotter(
                 vm_id, install_info, output_dir, enabled=(not options.no_screenshotter)
             ), run_drakvuf(

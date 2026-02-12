@@ -115,14 +115,20 @@ def upload_sample(form: UploadFileForm):
         if no_screenshots:
             analysis_options.no_screenshotter = True
         if form.file_path:
-            analysis_options.guest_target_directory = pathlib.PureWindowsPath(form.file_path)
+            analysis_options.guest_target_directory = pathlib.PureWindowsPath(
+                form.file_path
+            )
         if form.extract_archive:
-            logger.info(f"Archive upload: extract_archive=True, archive_entry_path={form.archive_entry_path}")
+            logger.info(
+                f"Archive upload: extract_archive=True, archive_entry_path={form.archive_entry_path}"
+            )
             analysis_options.extract_archive = True
             analysis_options.archive_password = form.archive_password
             # For archives, archive_entry_path contains the entry path to execute (e.g., "dir/malware.exe")
             analysis_options.guest_archive_entry_path = form.archive_entry_path
-            logger.info(f"Archive upload: set guest_archive_entry_path={analysis_options.guest_archive_entry_path}")
+            logger.info(
+                f"Archive upload: set guest_archive_entry_path={analysis_options.guest_archive_entry_path}"
+            )
         enqueue_analysis(
             job_id=job_id,
             file_metadata=file_metadata,
