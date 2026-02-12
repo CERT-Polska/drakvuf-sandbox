@@ -100,7 +100,11 @@ class S3StorageConfigSection(BaseModel):
 
 class DrakrunConfig(BaseSettings):
     model_config = SettingsConfigDict(
-        extra="allow", toml_file=CONFIG_PATH, env_prefix="drakrun_"
+        extra="allow",
+        toml_file=CONFIG_PATH,
+        env_prefix="drakrun_",
+        nested_model_default_partial_update=True,
+        env_nested_delimiter="_",
     )
     redis: RedisConfigSection
     network: NetworkConfigSection
