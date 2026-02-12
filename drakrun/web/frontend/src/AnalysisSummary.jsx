@@ -501,8 +501,9 @@ function DumpSourceBadge({ filename }) {
 
 function SummaryYaraSection() {
     const analysisSummary = useAnalysisSummary();
-    const yaraMatches = analysisSummary["yara_matches"];
-    if (!yaraMatches || Object.keys(yaraMatches).length === 0) return [];
+    const yaraMatches =
+        analysisSummary["karton-analysis-results"]?.["yara-matches"];
+    if (!yaraMatches || !Object.keys(yaraMatches).length) return [];
     const matchCount = Object.values(yaraMatches).reduce(
         (sum, sources) => sum + sources.length,
         0,
@@ -558,16 +559,23 @@ function ConfigRow({ config }) {
 
 function SummaryExtractedConfigsSection() {
     const analysisSummary = useAnalysisSummary();
-    const extractedConfigs = analysisSummary["extracted_configs"];
-    if (!extractedConfigs || extractedConfigs.length === 0) return [];
+    const kartonResults = analysisSummary["karton-analysis-results"] || {};
+
+    // Get all keys starting with "config" from karton results
+    const kartonConfigs = Object.keys(kartonResults)
+        .filter((key) => key.startsWith("config"))
+        .map((key) => kartonResults[key])
+        .filter(Boolean);
+
+    if (kartonConfigs.length === 0) return [];
     return (
         <SummarySection
             header="Extracted configs"
             badgeType="danger"
-            badgeValue={extractedConfigs.length}
+            badgeValue={kartonConfigs.length}
         >
             <ul style={{ overflow: "auto" }}>
-                {extractedConfigs.map((cfg, idx) => (
+                {kartonConfigs.map((cfg, idx) => (
                     <ConfigRow config={cfg} key={`cfg-${idx}`} />
                 ))}
             </ul>

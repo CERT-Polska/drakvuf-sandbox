@@ -10,32 +10,13 @@ from karton.core.inspect import KartonState
 from karton.core.karton import Producer
 from karton.core.resource import Resource
 from karton.core.task import Task
+from redis import Redis
 from rq.exceptions import NoSuchJobError
 from rq.job import Job
 
 from .plugin_base import PostprocessContext
 
 logger = logging.getLogger(__name__)
-
-
-def _try_store_upload_token(
-    context: PostprocessContext, analysis_id: str, token: str
-) -> bool:
-    """Store upload token in Redis job metadata."""
-    from drakrun.analyzer.worker import get_redis_connection
-
-    redis = get_redis_connection(context.config.redis)
-
-    try:
-        job = Job.fetch(analysis_id, connection=redis)
-    except NoSuchJobError:
-        logger.warning(f"Job {analysis_id} not found, cannot store upload token")
-        return False
-
-    job.meta["token"] = token
-    job.save_meta()
-    logger.info(f"Stored Karton upload token for analysis {analysis_id}")
-    return True
 
 
 def _collect_analysis_files(analysis_dir: Path) -> Dict[str, Resource]:
@@ -96,77 +77,97 @@ def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
     job_id = analysis_dir.name
     metadata = context.metadata
 
+    from drakrun.analyzer.worker import get_redis_connection
+
+    redis = get_redis_connection(context.config.redis)
+    try:
+        job = Job.fetch(job_id, connection=redis)
+    except NoSuchJobError:
+        logger.error(f"Job {job_id} not found")
+        return
+
+    sample = _try_get_sample_resource(context)
+    if (
+        not sample
+    ):  # sample should always be available unless running drakrun postprocess
+        logger.info("Sample not found, skipping karton postprocessing")
+        return
+
     # Generate token for API uploads from Karton reporter
     token = secrets.token_urlsafe(32)
-    if _try_store_upload_token(context, job_id, token):
-        sample = _try_get_sample_resource(context)
-        if (
-            not sample
-        ):  # sample should always be available unless running drakrun postprocess
-            logger.info("Sample not found, skipping karton postprocessing")
+    job.meta["token"] = token
+    job.save_meta()
+    logger.info(f"Stored Karton upload token for analysis {job_id}")
+
+    dumps_metadata = metadata.get("dumps_metadata", {})
+    analysis_files = _collect_analysis_files(analysis_dir)
+
+    headers = {"type": "analysis", "kind": "drakrun"}
+    if producer.debug:
+        headers = {"type": "analysis-debug", "kind": "drakrun"}
+
+    payload = {
+        "sample": sample,
+        "dumps_metadata": dumps_metadata,
+        **analysis_files,
+    }
+    payload_persistent = {
+        "drakrun_token": token,
+        "drakrun_analysis_id": job_id,
+    }
+
+    task = Task(headers=headers, payload=payload, payload_persistent=payload_persistent)
+    producer.log.info(f"Sending analysis for Karton processing (uid={task.uid})")
+    producer.send_task(task)
+
+    # Poll for completion using KartonState
+    state = KartonState(producer.backend)
+    start_time = time.time()
+    poll_interval = context.config.karton.poll_interval
+
+    logger.info(
+        f"Waiting for Karton analysis to complete (uid={task.uid}, timeout={timeout}s)"
+    )
+    while time.time() - start_time < timeout:
+        time.sleep(poll_interval)
+        analysis = state.get_analysis(task.uid)
+        if analysis.is_done:
+            logger.info(f"Karton analysis complete (uid={task.uid})")
+            _move_results_to_report(context, redis, job_id)
             return
 
-        dumps_metadata = metadata.get("dumps_metadata", {})
-        analysis_files = _collect_analysis_files(analysis_dir)
-
-        headers = {"type": "analysis", "kind": "drakrun"}
-        if producer.debug:
-            headers = {"type": "analysis-debug", "kind": "drakrun"}
-
-        payload = {
-            "sample": sample,
-            "dumps_metadata": dumps_metadata,
-            **analysis_files,
-        }
-        payload_persistent = {
-            "drakrun_token": token,
-            "drakrun_analysis_id": job_id,
-        }
-
-        task = Task(
-            headers=headers, payload=payload, payload_persistent=payload_persistent
-        )
-        producer.log.info(f"Sending analysis for Karton processing (uid={task.uid})")
-        producer.send_task(task)
-
-        # Poll for completion using KartonState
-        state = KartonState(producer.backend)
-        start_time = time.time()
-        poll_interval = 10.0
-
-        logger.info(
-            f"Waiting for Karton analysis to complete (uid={task.uid}, timeout={timeout}s)"
-        )
-        while time.time() - start_time < timeout:
-            time.sleep(poll_interval)
-            analysis = state.get_analysis(task.uid)
-            if analysis.is_done:
-                logger.info(f"Karton analysis complete (uid={task.uid})")
-                _update_report(context)
-                return
-
-        logger.error(f"Karton analysis timed out after {timeout}s (uid={task.uid})")
+    logger.error(f"Karton analysis timed out after {timeout}s (uid={task.uid})")
 
 
-def _update_report(context: PostprocessContext):
-    analysis_dir = context.analysis_dir
-    configs = []
-    for file in analysis_dir.iterdir():
-        if file.is_file():
-            try:
-                if file.name == "yara_matches.json":
-                    logger.info("Adding yara matches to report")
-                    with open(file) as f:
-                        matches = json.load(f)
-                        context.update_report({"yara_matches": matches})
+def _move_results_to_report(context: PostprocessContext, redis: Redis, job_id):
+    """
+    Get karton results from redis (uploaded in api/karton_results_upload)
+    and store them in report under karton-analysis-results, then delete from redis
+    """
+    redis_key = f"karton-results:{job_id}"
+    karton_results = redis.hgetall(redis_key)
 
-                if file.name.startswith("config"):
-                    logger.info(f"Adding config {file.name} to report")
-                    with open(file) as f:
-                        config_data = json.load(f)
-                        configs.append(config_data)
+    if not karton_results:
+        logger.warning(f"No karton results found in Redis for key {redis_key}")
+        return
 
-            except Exception as e:
-                logger.warning(f"failed to process {file.name}: {e}")
+    report_data = {}
 
-        context.update_report({"extracted_configs": configs})
+    for key, data in karton_results.items():
+        if isinstance(key, bytes):
+            key = key.decode("utf-8")
+        if isinstance(data, bytes):
+            data = data.decode("utf-8")
+
+        logger.info(f"Adding {key} to report")
+        try:
+            parsed_data = json.loads(data)
+            report_data[key] = parsed_data
+        except json.JSONDecodeError:
+            report_data[key] = data
+        except Exception as e:
+            logger.exception(f"failed to process {key}: {e}")
+
+    context.update_report({"karton-analysis-results": report_data})
+    redis.delete(redis_key)
+    logger.info(f"Deleted karton results from Redis: {redis_key}")

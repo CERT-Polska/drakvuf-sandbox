@@ -150,7 +150,7 @@ def upload_sample(form: UploadFileForm):
 )
 def karton_results_upload(path: KartonResultsUploadPath, form: KartonResultsUploadForm):
     """
-    Upload Karton analysis results to the analysis directory.
+    Upload Karton analysis results to Redis hash.
     Validates token stored when analysis was sent to Karton.
     """
     try:
@@ -158,38 +158,24 @@ def karton_results_upload(path: KartonResultsUploadPath, form: KartonResultsUplo
     except NoSuchJobError:
         return jsonify({"error": "Analysis not found"}), 404
 
-    # Validate token
     token = job.meta.get("token")
     if not token or token != form.token:
         return jsonify({"error": "Invalid token"}), 403
 
-    # Determine the analysis directory
-    from drakrun.lib.paths import ANALYSES_DIR
+    target_key = form.key
+    if not target_key:
+        return jsonify({"error": "Key required"}), 400
 
-    analysis_dir = ANALYSES_DIR / path.analysis_id
+    data_content = form.data.read()
 
-    if not analysis_dir.exists():
-        return jsonify({"error": "Analysis directory not found"}), 404
+    redis_key = f"karton-results:{path.analysis_id}"
+    redis.hset(redis_key, target_key, data_content)
+    redis.expire(redis_key, config.karton.redis_ttl)
 
-    # Determine target filename
-    request_file = form.file
-    target_filename = form.filename if form.filename else request_file.filename
-    if not target_filename:
-        return jsonify({"error": "Filename required"}), 400
-
-    target_filename = pathlib.Path(target_filename).name
-    target_path = analysis_dir / target_filename
-
-    try:
-        request_file.save(target_path)
-
-        logger.info(
-            f"Karton result uploaded: analysis={path.analysis_id}, file={target_filename}"
-        )
-        return jsonify({"status": "success", "filename": target_filename})
-    except Exception as e:
-        logger.exception(f"Failed to save uploaded file: {e}")
-        return jsonify({"error": "Failed to save file"}), 500
+    logger.info(
+        f"Karton result uploaded to Redis: analysis={path.analysis_id}, key={target_key}"
+    )
+    return jsonify({"status": "success", "key": target_key})
 
 
 @api.get("/list", responses={200: AnalysisListResponse})
