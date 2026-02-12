@@ -1,8 +1,13 @@
 import pathlib
 from typing import Any, Dict, List, Optional
 
-import tomli
 from pydantic import BaseModel, ConfigDict, Field
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    TomlConfigSettingsSource,
+)
 
 from drakrun.lib.paths import CONFIG_PATH, PACKAGE_DIR
 
@@ -93,8 +98,10 @@ class S3StorageConfigSection(BaseModel):
     remove_local_after_upload: bool = True
 
 
-class DrakrunConfig(BaseModel):
-    model_config = ConfigDict(extra="allow")
+class DrakrunConfig(BaseSettings):
+    model_config = SettingsConfigDict(
+        extra="allow", toml_file=CONFIG_PATH, env_prefix="drakrun_"
+    )
     redis: RedisConfigSection
     network: NetworkConfigSection
     drakrun: DrakrunConfigSection
@@ -102,12 +109,6 @@ class DrakrunConfig(BaseModel):
     memdump: MemdumpConfigSection = MemdumpConfigSection()
     s3: Optional[S3StorageConfigSection] = None
     preset: Dict[str, DrakrunDefaultsPresetSection] = Field(default_factory=dict)
-
-    @staticmethod
-    def load(filename: str) -> "DrakrunConfig":
-        with open(filename, "rb") as f:
-            config = tomli.load(f)
-        return DrakrunConfig.model_validate(config)
 
     def get_drakrun_defaults(
         self, preset_name: Optional[str] = None
@@ -126,6 +127,20 @@ class DrakrunConfig(BaseModel):
             }
         )
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            env_settings,
+            TomlConfigSettingsSource(settings_cls),
+        )
+
 
 def load_config() -> DrakrunConfig:
-    return DrakrunConfig.load(CONFIG_PATH)
+    return DrakrunConfig()
