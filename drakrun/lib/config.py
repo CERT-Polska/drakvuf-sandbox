@@ -29,15 +29,25 @@ class RedisConfigSection(BaseModel):
 
 
 class NetworkConfigSection(BaseModel):
-    dns_server: str
-    out_interface: str
-    net_enable: bool
+    dns_server: str = DNS_USE_GATEWAY_ADDRESS
+    out_interface: str = OUT_INTERFACE_DEFAULT
+    net_enable: bool = False
 
 
 class DrakrunConfigSection(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    plugins: List[str]
-    default_timeout: int
+    plugins: List[str] = [
+        "apimon",
+        "clipboardmon",
+        "exmon",
+        "filetracer",
+        "memdump",
+        "procmon",
+        "regmon",
+        "socketmon",
+        "tlsmon",
+    ]
+    default_timeout: int = 300
     job_timeout_leeway: int = 600
     net_enable: Optional[bool] = None
     apimon_hooks_path: Optional[pathlib.Path] = None
