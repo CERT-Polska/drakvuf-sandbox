@@ -150,6 +150,24 @@ export default function UploadView() {
                         placeholder="(pick automatically)"
                     />
                 </div>
+                {extractArchive ? (
+                    <div className="mb-3">
+                        <label
+                            htmlFor="archive-entry-path"
+                            className="form-label"
+                        >
+                            Path inside archive to execute
+                        </label>
+                        <input
+                            type="text"
+                            className="form-control"
+                            id="archive-entry-path"
+                            name="archive_entry_path"
+                        />
+                    </div>
+                ) : (
+                    []
+                )}
                 <div className="mb-3">
                     <label
                         htmlFor="custom-start-command"
@@ -214,36 +232,20 @@ export default function UploadView() {
                     </label>
                 </div>
                 {extractArchive ? (
-                    <>
-                        <div className="mb-3">
-                            <label
-                                htmlFor="archive-password"
-                                className="form-label"
-                            >
-                                Archive password (optional)
-                            </label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                id="archive-password"
-                                name="archive_password"
-                            />
-                        </div>
-                        <div className="mb-3">
-                            <label
-                                htmlFor="archive-entry-path"
-                                className="form-label"
-                            >
-                                Path inside archive to execute
-                            </label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                id="archive-entry-path"
-                                name="archive_entry_path"
-                            />
-                        </div>
-                    </>
+                    <div className="mb-3">
+                        <label
+                            htmlFor="archive-password"
+                            className="form-label"
+                        >
+                            Archive password (optional)
+                        </label>
+                        <input
+                            type="text"
+                            className="form-control"
+                            id="archive-password"
+                            name="archive_password"
+                        />
+                    </div>
                 ) : (
                     []
                 )}
