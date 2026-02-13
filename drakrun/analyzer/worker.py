@@ -115,14 +115,14 @@ def worker_analyze(options: AnalysisOptions):
         )
     )
 
-    if options.sample_path is None:
+    if options.host_sample_path is None:
         if s3_client is None:
             raise RuntimeError("Got sample referenced on S3 but S3 is not enabled")
         # Sample is passed via S3
         UPLOADS_DIR.mkdir(exist_ok=True)
         upload_path = UPLOADS_DIR / f"{job.id}.sample"
         download_sample_from_s3(job.id, upload_path, s3_client, s3_bucket)
-        options.sample_path = upload_path
+        options.host_sample_path = upload_path
 
     job_success = True
     try:
@@ -150,7 +150,7 @@ def worker_analyze(options: AnalysisOptions):
                 }
             )
         )
-        options.sample_path.unlink()
+        options.host_sample_path.unlink()
         if s3_client is not None:
             upload_analysis(job.id, output_dir, s3_client, s3_bucket)
             if config.s3.remove_local_after_upload:

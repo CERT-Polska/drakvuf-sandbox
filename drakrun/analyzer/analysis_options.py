@@ -7,12 +7,14 @@ from drakrun.lib.config import DrakrunConfig
 
 
 class AnalysisOptions(BaseModel):
-    # Host sample path
-    sample_path: Optional[pathlib.Path] = None
-    # Target file name on guest VM
-    target_filename: Optional[str] = None
-    # Target filepath on guest VM
-    target_filepath: pathlib.PureWindowsPath = pathlib.PureWindowsPath(
+    # Host sample path (local filesystem or None when using S3)
+    host_sample_path: Optional[pathlib.Path] = None
+    # Filename of the uploaded sample (archive name for archives, executable for normal files)
+    sample_filename: Optional[str] = None
+    # Guest VM: entry path inside archive (e.g., "setup/setup.exe")
+    guest_archive_entry_path: Optional[str] = None
+    # Target directory on guest VM (where files will be placed)
+    guest_target_directory: pathlib.PureWindowsPath = pathlib.PureWindowsPath(
         "%USERPROFILE%\\Desktop\\"
     )
     # Start command to run on the VM

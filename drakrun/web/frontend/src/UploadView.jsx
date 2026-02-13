@@ -24,7 +24,7 @@ export default function UploadView() {
     const validateForm = useCallback(() => {
         const form = new FormData(formRef.current);
         const filename = form.get("file").name;
-        const targetFileName = form.get("file_name");
+        const archiveEntryPath = form.get("archive_entry_path");
         const targetStartCommand = form.get("start_command");
         const extractArchive = form.get("extract_archive");
 
@@ -42,11 +42,11 @@ export default function UploadView() {
                 "Consider providing 'Target file name' for correct execution.";
         }
 
-        if (extractArchive && !targetFileName && !targetStartCommand) {
-            formErrors["target-file-name"] = formErrors[
+        if (extractArchive && !archiveEntryPath && !targetStartCommand) {
+            formErrors["archive-entry-path"] = formErrors[
                 "custom-start-command"
             ] =
-                "Target file name or start command is required when extracting archive";
+                "Path to execute in archive or start command is required when extracting archive";
             isValid = false;
         }
 
@@ -71,6 +71,7 @@ export default function UploadView() {
                     no_screenshots: form.get("no_screenshots"),
                     extract_archive: form.get("extract_archive"),
                     archive_password: form.get("archive_password"),
+                    archive_entry_path: form.get("archive_entry_path"),
                 });
                 const jobId = jobData["task_uid"];
                 navigate(`/analysis/${jobId}`);
@@ -148,6 +149,29 @@ export default function UploadView() {
                         placeholder="(pick automatically)"
                     />
                 </div>
+                {extractArchive ? (
+                    <div className="mb-3">
+                        <label
+                            htmlFor="archive-entry-path"
+                            className="form-label"
+                        >
+                            Path inside archive to execute
+                        </label>
+                        <input
+                            type="text"
+                            className="form-control"
+                            id="archive-entry-path"
+                            name="archive_entry_path"
+                            onChange={validateForm}
+                        />
+                        <FormError
+                            errors={formErrors}
+                            field="archive-entry-path"
+                        />
+                    </div>
+                ) : (
+                    []
+                )}
                 <div className="mb-3">
                     <label
                         htmlFor="custom-start-command"

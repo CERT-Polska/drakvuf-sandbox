@@ -25,7 +25,7 @@ from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command, prepare_ps_command
 from .postprocessing import postprocess_analysis_dir
 from .run_tools import run_drakvuf, run_screenshotter, run_tcpdump, run_vm
-from .startup_command import get_startup_argv, get_target_filename_from_sample_path
+from .startup_command import get_sample_filename_from_host_path, get_startup_argv
 
 log = logging.getLogger(__name__)
 
@@ -123,40 +123,42 @@ def extract_archive_on_vm(
     config: DrakrunConfig,
     drakshell: Drakshell,
     injector: Injector,
-    sample_path: pathlib.Path,
-    target_filepath: pathlib.PureWindowsPath,
+    host_sample_path: pathlib.Path,
+    guest_target_directory: pathlib.PureWindowsPath,
     archive_password: Optional[str],
 ) -> pathlib.PureWindowsPath:
-    target_archive_path = target_filepath / pathlib.PureWindowsPath(
-        get_target_filename_from_sample_path(sample_path)
+    guest_archive_target_path = guest_target_directory / pathlib.PureWindowsPath(
+        get_sample_filename_from_host_path(host_sample_path)
     )
-    if target_archive_path.suffix.lower() != ".zip":
-        target_archive_path = target_archive_path.with_suffix(".zip")
+    if guest_archive_target_path.suffix.lower() != ".zip":
+        guest_archive_target_path = guest_archive_target_path.with_suffix(".zip")
     log.info(
-        f"Copying archive to the VM ({sample_path.as_posix()} -> {target_archive_path})..."
+        f"Copying archive to the VM ({host_sample_path.as_posix()} -> {guest_archive_target_path})..."
     )
-    guest_path = drop_sample_to_vm(injector, sample_path, str(target_archive_path))
-    resolved_target_dir = pathlib.PureWindowsPath(guest_path).parent
+    guest_archive_path = drop_sample_to_vm(
+        injector, host_sample_path, str(guest_archive_target_path)
+    )
+    guest_extraction_dir = pathlib.PureWindowsPath(guest_archive_path).parent
     if config.drakrun.use_7zip:
         log.info(
-            f"Expanding archive using 7-Zip {guest_path} -> {resolved_target_dir}..."
+            f"Expanding archive using 7-Zip {guest_archive_path} -> {guest_extraction_dir}..."
         )
         command = [
             config.drakrun.path_to_7zip,
             "e",
-            str(guest_path),
-            "-o" + str(resolved_target_dir),
+            str(guest_archive_path),
+            "-o" + str(guest_extraction_dir),
             *(["-p" + archive_password] if archive_password else []),
         ]
     else:
         log.info(
-            f"Expanding archive using Expand-Archive {guest_path} -> {resolved_target_dir}..."
+            f"Expanding archive using Expand-Archive {guest_archive_path} -> {guest_extraction_dir}..."
         )
         command = prepare_ps_command(
-            f"Expand-Archive -Force {guest_path} {resolved_target_dir}"
+            f"Expand-Archive -Force {guest_archive_path} {guest_extraction_dir}"
         )
     drakshell.check_call(command)
-    return resolved_target_dir
+    return guest_extraction_dir
 
 
 def analyze_file(
@@ -169,6 +171,7 @@ def analyze_file(
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
     vmi_info = VmiInfo.load(VMI_INFO_PATH)
     kernel_profile_path = VMI_KERNEL_PROFILE_PATH.as_posix()
+    exec_cmd = None
 
     prepare_output_dir(output_dir, options)
 
@@ -182,9 +185,12 @@ def analyze_file(
         substatus_callback(AnalysisSubstatus.starting_vm)
 
     if options.extract_archive:
-        if not options.target_filename and not options.start_command:
+        log.info(
+            f"Archive mode: extract_archive=True, guest_archive_entry_path={options.guest_archive_entry_path}, start_command={options.start_command}"
+        )
+        if not options.guest_archive_entry_path and not options.start_command:
             raise ValueError(
-                "Archive extractor requires target_filename or start_command "
+                "Archive extractor requires guest_archive_entry_path or start_command "
                 "to know what to execute after unpacking archive."
             )
 
@@ -214,40 +220,52 @@ def analyze_file(
                 config,
                 drakshell,
                 injector,
-                options.sample_path,
-                options.target_filepath,
+                options.host_sample_path,
+                options.guest_target_directory,
                 options.archive_password,
             )
-            if options.start_command is None:
-                options.start_command = get_startup_argv(
-                    str(target_dir / options.target_filename)
-                )
+            # For archives, ALWAYS use guest_archive_entry_path (not sample_filename or existing start_command)
+            # This ensures we run the extracted file, not the archive itself
+            archive_executable_path = str(target_dir / options.guest_archive_entry_path)
+            log.info(
+                f"Archive mode: setting start_command from archive_entry_path: {archive_executable_path}"
+            )
+            log.info(
+                f"  target_dir={target_dir}, guest_archive_entry_path={options.guest_archive_entry_path}"
+            )
+            options.start_command = get_startup_argv(archive_executable_path)
+            log.info(f"Archive mode: start_command set to {options.start_command}")
 
-        elif options.sample_path is not None:
-            if options.target_filename is None:
-                options.target_filename = get_target_filename_from_sample_path(
-                    options.sample_path
+        elif options.host_sample_path is not None:
+            log.info(
+                f"Normal file mode: host_sample_path={options.host_sample_path}, sample_filename={options.sample_filename}"
+            )
+            # For normal files, use sample_filename
+            if options.sample_filename is None:
+                options.sample_filename = get_sample_filename_from_host_path(
+                    options.host_sample_path
                 )
-            lower_target_name = options.target_filename.lower()
+            # Determine the full executable path on guest VM
+            lower_target_name = options.sample_filename.lower()
             if not lower_target_name.startswith(
                 "c:"
             ) and not lower_target_name.startswith("%"):
-                options.target_filepath = (
-                    options.target_filepath / options.target_filename
+                # Relative path: append to target directory
+                guest_executable_path = (
+                    options.guest_target_directory / options.sample_filename
                 )
             else:
-                options.target_filepath = pathlib.PureWindowsPath(
-                    options.target_filename
-                )
+                # Absolute path: use as-is
+                guest_executable_path = pathlib.PureWindowsPath(options.sample_filename)
             log.info(
-                f"Copying sample to the VM ({options.sample_path.as_posix()} -> {options.target_filepath})..."
+                f"Copying sample to the VM ({options.host_sample_path.as_posix()} -> {guest_executable_path})..."
             )
-            guest_path = drop_sample_to_vm(
-                injector, options.sample_path, str(options.target_filepath)
+            guest_executable_path = drop_sample_to_vm(
+                injector, options.host_sample_path, str(guest_executable_path)
             )
 
             if options.start_command is None:
-                options.start_command = get_startup_argv(guest_path)
+                options.start_command = get_startup_argv(guest_executable_path)
 
         tcpdump_file = output_dir / "dump.pcap"
         drakmon_file = output_dir / "drakmon.log"
@@ -275,6 +293,9 @@ def analyze_file(
                 drakshell.finish()
                 exec_cmd = None
 
+            log.info(
+                f"Starting analysis with drakvuf args: {drakvuf_args}, exec_cmd: {exec_cmd}"
+            )
             with run_tcpdump(network_info, tcpdump_file), run_screenshotter(
                 vm_id, install_info, output_dir, enabled=(not options.no_screenshotter)
             ), run_drakvuf(
