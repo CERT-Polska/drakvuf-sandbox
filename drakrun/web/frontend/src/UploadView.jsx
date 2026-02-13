@@ -25,7 +25,6 @@ export default function UploadView() {
         const form = new FormData(formRef.current);
         const filename = form.get("file").name;
         const archiveEntryPath = form.get("archive_entry_path");
-        const targetFileName = form.get("file_name");
         const targetStartCommand = form.get("start_command");
         const extractArchive = form.get("extract_archive");
 
@@ -47,7 +46,7 @@ export default function UploadView() {
             formErrors["archive-entry-path"] = formErrors[
                 "custom-start-command"
             ] =
-                "Archive entry path or start command is required when extracting archive";
+                "Path to execute in archive or start command is required when extracting archive";
             isValid = false;
         }
 
@@ -163,6 +162,11 @@ export default function UploadView() {
                             className="form-control"
                             id="archive-entry-path"
                             name="archive_entry_path"
+                            onChange={validateForm}
+                        />
+                        <FormError
+                            errors={formErrors}
+                            field="archive-entry-path"
                         />
                     </div>
                 ) : (
