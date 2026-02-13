@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 from drakrun.lib.config import DrakrunConfig
 
+from ..analysis_metadata import AnalysisMetadata
 from .plugins import POSTPROCESS_PLUGINS
 from .plugins.plugin_base import PostprocessContext, PostprocessPlugin
 
@@ -52,10 +53,13 @@ def append_metadata_to_analysis(
     metadata_path.write_text(json.dumps(metadata))
 
 
-def postprocess_analysis_dir(analysis_dir: pathlib.Path, config: DrakrunConfig):
+def postprocess_analysis_dir(
+    analysis_dir: pathlib.Path, config: DrakrunConfig, metadata: AnalysisMetadata
+):
     context = PostprocessContext(
         analysis_dir=analysis_dir,
         config=config,
+        metadata=metadata,
     )
     run_postprocessing(context)
     return context.metadata

@@ -2,6 +2,7 @@ import pathlib
 from datetime import datetime
 
 import click
+from analyzer.analysis_metadata import AnalysisMetadata
 
 from .check_root import check_root
 
@@ -175,5 +176,7 @@ def analyze(
     if target_filepath is not None:
         options.guest_target_directory = pathlib.PureWindowsPath(target_filepath)
 
-    extra_metadata = analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)
+    # TODO: evaluate metadata
+    metadata = AnalysisMetadata()
+    extra_metadata = analyze_file(vm_id=vm_id, output_dir=output_dir, metadata=metadata)
     append_metadata_to_analysis(output_dir, extra_metadata)

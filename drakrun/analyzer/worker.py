@@ -19,9 +19,9 @@ from ..lib.s3_storage import (
     is_s3_enabled,
     upload_analysis,
 )
+from .analysis_metadata import AnalysisMetadata, FileMetadata
 from .analysis_options import AnalysisOptions
 from .analyzer import AnalysisSubstatus, analyze_file
-from .file_metadata import FileMetadata
 
 ANALYSIS_QUEUE_NAME = "drakrun-analysis"
 _WORKER_VM_ID: Optional[int] = None
@@ -39,26 +39,32 @@ def get_redis_connection(config: RedisConfigSection):
     return redis
 
 
-def analysis_job_to_status_dict(job: Job):
+def analysis_job_to_metadata(job: Job) -> AnalysisMetadata:
     job_status = job.get_status()
     job_meta = job.get_meta()
     time_finished = job.meta["time_finished"] if "time_finished" in job.meta else None
     if time_finished is None:
         time_finished = job.ended_at.isoformat() if job.ended_at is not None else None
-    return {
-        "id": job.id,
-        "status": job_status.value if job_status is not None else "unknown",
-        **job_meta,
-        "time_started": (
-            job.started_at.isoformat() if job.started_at is not None else None
-        ),
-        "time_execution_started": (
-            job.meta["time_execution_started"]
-            if "time_execution_started" in job.meta
-            else None
-        ),
-        "time_finished": time_finished,
-    }
+    return AnalysisMetadata.model_validate(
+        {
+            **job_meta.get("extra_metadata", {}),
+            "id": job.id,
+            "status": job_status.value if job_status is not None else "unknown",
+            "substatus": job_meta.get("substatus"),
+            "options": job_meta["options"],
+            "file": job_meta["file"],
+            "vm_id": job_meta.get("vm_id"),
+            "time_started": (
+                job.started_at.isoformat() if job.started_at is not None else None
+            ),
+            "time_execution_started": (
+                job.meta["time_execution_started"]
+                if "time_execution_started" in job.meta
+                else None
+            ),
+            "time_finished": time_finished,
+        }
+    )
 
 
 def worker_analyze(options: AnalysisOptions):
@@ -83,21 +89,11 @@ def worker_analyze(options: AnalysisOptions):
     job.meta["vm_id"] = _WORKER_VM_ID
     job.save_meta()
 
+    file_metadata = FileMetadata.model_validate(job.meta["file"])
+
     vm_id = _WORKER_VM_ID
     output_dir = ANALYSES_DIR / job.id
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    def substatus_callback(
-        substatus: AnalysisSubstatus, updated_options: Optional[AnalysisOptions] = None
-    ):
-        job.meta["substatus"] = substatus.value
-        if substatus == AnalysisSubstatus.analyzing:
-            job.meta["time_execution_started"] = datetime.datetime.now(
-                datetime.timezone.utc
-            ).isoformat()
-        if updated_options is not None:
-            job.meta["options"] = updated_options.to_dict(exclude_none=True)
-        job.save_meta()
 
     file_handler = logging.FileHandler(output_dir / "drakrun.log")
     formatter = logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
@@ -105,15 +101,28 @@ def worker_analyze(options: AnalysisOptions):
     drakrun_logger = logging.getLogger("drakrun")
     drakrun_logger.addHandler(file_handler)
 
+    metadata = AnalysisMetadata(
+        id=job.id,
+        options=options,
+        time_started=job.started_at.isoformat(),
+        vm_id=vm_id,
+        file=file_metadata,
+    )
     metadata_file = output_dir / "metadata.json"
     metadata_file.write_text(
-        json.dumps(
-            {
-                "time_started": job.started_at.isoformat(),
-                **job.meta,
-            }
-        )
+        json.dumps(metadata.model_dump(mode="json", exclude_none=True))
     )
+
+    def substatus_callback(substatus: AnalysisSubstatus, updated_options: bool = False):
+        job.meta["substatus"] = substatus.value
+        if substatus == AnalysisSubstatus.analyzing:
+            metadata.time_execution_started = datetime.datetime.now(
+                datetime.timezone.utc
+            ).isoformat()
+            job.meta["time_execution_started"] = metadata.time_execution_started
+        if updated_options:
+            job.meta["options"] = options.to_dict(exclude_none=True)
+        job.save_meta()
 
     if options.host_sample_path is None:
         if s3_client is None:
@@ -127,9 +136,9 @@ def worker_analyze(options: AnalysisOptions):
     job_success = True
     try:
         extra_metadata = analyze_file(
-            vm_id, output_dir, options, substatus_callback=substatus_callback
+            vm_id, output_dir, metadata, substatus_callback=substatus_callback
         )
-        job.meta.update(extra_metadata)
+        job.meta.update({"extra_metadata": extra_metadata})
         job.save_meta()
     except BaseException:
         job_success = False
@@ -138,17 +147,16 @@ def worker_analyze(options: AnalysisOptions):
     finally:
         drakrun_logger.removeHandler(file_handler)
         file_handler.close()
-        job.meta["time_finished"] = datetime.datetime.now(
+
+        metadata.status = "finished" if job_success else "failed"
+        metadata.time_finished = datetime.datetime.now(
             datetime.timezone.utc
         ).isoformat()
+        job.meta["time_finished"] = metadata.time_finished
         job.save_meta()
+
         metadata_file.write_text(
-            json.dumps(
-                {
-                    **analysis_job_to_status_dict(job),
-                    "status": "finished" if job_success else "failed",
-                }
-            )
+            json.dumps(metadata.model_dump(mode="json", exclude_none=True))
         )
         options.host_sample_path.unlink()
         if s3_client is not None:

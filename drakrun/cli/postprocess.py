@@ -21,5 +21,8 @@ def postprocess(output_dir):
 
     config = load_config()
     output_dir = pathlib.Path(output_dir)
+
+    # TODO: pass metadata from metadata.json
+
     extra_metadata = postprocess_analysis_dir(output_dir, config)
     append_metadata_to_analysis(output_dir, extra_metadata)

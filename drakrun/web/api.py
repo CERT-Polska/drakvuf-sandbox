@@ -4,13 +4,14 @@ import pathlib
 import uuid
 
 import magic
+from analyzer.analysis_metadata import AnalysisMetadata
 from flask import Response, jsonify, request
 from flask_openapi3 import APIBlueprint
 from rq.exceptions import NoSuchJobError
 from rq.job import Job, JobStatus
 
+from drakrun.analyzer.analysis_metadata import FileMetadata
 from drakrun.analyzer.analysis_options import AnalysisOptions
-from drakrun.analyzer.file_metadata import FileMetadata
 from drakrun.analyzer.postprocessing.indexer import (
     get_log_index_for_process,
     get_plugin_names_for_process,
@@ -18,7 +19,7 @@ from drakrun.analyzer.postprocessing.indexer import (
 )
 from drakrun.analyzer.postprocessing.process_tree import tree_from_dict
 from drakrun.analyzer.worker import (
-    analysis_job_to_status_dict,
+    analysis_job_to_metadata,
     enqueue_analysis,
     get_analyses_list,
     get_redis_connection,
@@ -63,7 +64,7 @@ def upload_sample(form: UploadFileForm):
 
     timeout = form.timeout
     if not timeout:
-        timeout = config.default_timeout
+        timeout = config.drakrun.default_timeout
     sample_filename = form.file_name
     if not sample_filename:
         sample_filename = request_file.filename
@@ -147,7 +148,9 @@ def upload_sample(form: UploadFileForm):
 @api.get("/list", responses={200: AnalysisListResponse})
 def list_analyses():
     analysis_list = get_analyses_list(connection=redis)
-    return jsonify([analysis_job_to_status_dict(job) for job in analysis_list])
+    return jsonify(
+        [analysis_job_to_metadata(job).model_dump(mode="json") for job in analysis_list]
+    )
 
 
 @api.get("/status/<task_uid>", responses={200: AnalysisResponse, 404: APIErrorResponse})
@@ -162,18 +165,17 @@ def status(path: AnalysisRequestPath):
         JobStatus.FINISHED,
         JobStatus.FAILED,
     ]:
-        return jsonify(analysis_job_to_status_dict(job))
+        metadata = analysis_job_to_metadata(job)
+    else:
+        try:
+            metadata_dict = read_analysis_json(task_uid, "metadata.json", config.s3)
+            if "id" not in metadata_dict:
+                metadata_dict = {"id": task_uid, **metadata_dict}
+            metadata = AnalysisMetadata.model_validate(metadata_dict)
+        except FileNotFoundError:
+            return jsonify({"error": "Job not found"}), 404
 
-    try:
-        metadata = read_analysis_json(task_uid, "metadata.json", config.s3)
-        if "id" not in metadata:
-            metadata = {"id": task_uid, **metadata}
-        if "status" not in metadata:
-            metadata = {"status": "unknown", **metadata}
-    except FileNotFoundError:
-        return jsonify({"error": "Job not found"}), 404
-
-    return jsonify(metadata)
+    return jsonify(metadata.model_dump(mode="json"))
 
 
 @api.get("/processed/<task_uid>/process_tree")
