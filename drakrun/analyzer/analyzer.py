@@ -293,7 +293,6 @@ def analyze_file(
                 drakshell.finish()
                 exec_cmd = None
 
-            # todo tmp
             log.info(
                 f"Starting analysis with drakvuf args: {drakvuf_args}, exec_cmd: {exec_cmd}"
             )
