@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import click
 
 from drakrun.analyzer.analysis_metadata import AnalysisMetadata, FileMetadata
+from drakrun.analyzer.analyzer import AnalysisSubstatus
 
 from .check_root import check_root
 
@@ -135,7 +136,6 @@ def analyze(
     """
     from drakrun.analyzer.analysis_options import AnalysisOptions
     from drakrun.analyzer.analyzer import analyze_file
-    from drakrun.analyzer.postprocessing import append_metadata_to_analysis
     from drakrun.lib.config import load_config
 
     started_at = datetime.now(timezone.utc)
@@ -165,7 +165,7 @@ def analyze(
         # Click passes empty list there.
         plugins = None
 
-    options = AnalysisOptions(
+    options = AnalysisOptions.with_config_defaults(
         config=config,
         preset=preset,
         host_sample_path=sample,
@@ -185,7 +185,7 @@ def analyze(
         options.guest_target_directory = pathlib.PureWindowsPath(target_filepath)
 
     metadata = AnalysisMetadata(
-        id="",
+        id=output_dir.name,
         options=options,
         time_started=started_at.isoformat(),
         vm_id=vm_id,
@@ -196,5 +196,21 @@ def analyze(
         json.dumps(metadata.model_dump(mode="json", exclude_none=True))
     )
 
-    extra_metadata = analyze_file(vm_id=vm_id, output_dir=output_dir, metadata=metadata)
-    append_metadata_to_analysis(output_dir, extra_metadata)
+    def substatus_callback(substatus: AnalysisSubstatus, updated_options: bool = False):
+        if substatus == AnalysisSubstatus.analyzing:
+            metadata.time_execution_started = datetime.datetime.now(
+                datetime.timezone.utc
+            ).isoformat()
+
+    extra_metadata = analyze_file(
+        vm_id=vm_id,
+        output_dir=output_dir,
+        metadata=metadata,
+        substatus_callback=substatus_callback,
+    )
+    metadata.time_finished = datetime.now(timezone.utc).isoformat()
+
+    metadata.model_extra.update(extra_metadata)
+    metadata_file.write_text(
+        json.dumps(metadata.model_dump(mode="json", exclude_none=True))
+    )

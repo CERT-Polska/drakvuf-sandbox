@@ -47,7 +47,7 @@ def generate_report(context: PostprocessContext) -> None:
     analysis_dir = context.analysis_dir
     process_tree = context._process_tree
     report = {
-        "info": context.metadata.model_dump(mode="json"),
+        "info": context.metadata.model_dump(mode="json", exclude_none=True),
         "startup": get_inject_info(analysis_dir, process_tree),
         **context.report,
     }

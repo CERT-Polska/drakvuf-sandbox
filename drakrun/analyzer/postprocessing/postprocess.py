@@ -1,7 +1,5 @@
-import json
 import logging
 import pathlib
-from typing import Any, Dict
 
 from drakrun.lib.config import DrakrunConfig
 
@@ -40,17 +38,6 @@ def run_postprocessing(context: PostprocessContext):
             plugin.function(context)
         except Exception:
             logger.exception(f"{plugin_name} failed with uncaught exception")
-
-
-def append_metadata_to_analysis(
-    analysis_dir: pathlib.Path, extra_metadata: Dict[str, Any]
-):
-    metadata_path = analysis_dir / "metadata.json"
-    metadata = {}
-    if metadata_path.exists():
-        metadata = json.loads(metadata_path.read_text())
-    metadata.update(extra_metadata)
-    metadata_path.write_text(json.dumps(metadata))
 
 
 def postprocess_analysis_dir(

@@ -80,7 +80,7 @@ def worker_analyze(options: AnalysisOptions):
         s3_bucket = None
 
     # Reconstruct options object to include worker-side preset defaults
-    options = AnalysisOptions(config, **dict(options))
+    options = AnalysisOptions.with_config_defaults(config, **dict(options))
 
     if not options.plugins:
         raise RuntimeError("Cannot analyze sample without plugins specified")
@@ -139,6 +139,7 @@ def worker_analyze(options: AnalysisOptions):
             vm_id, output_dir, metadata, substatus_callback=substatus_callback
         )
         job.meta.update({"extra_metadata": extra_metadata})
+        metadata.model_extra.update(extra_metadata)
         job.save_meta()
     except BaseException:
         job_success = False

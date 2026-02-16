@@ -16,17 +16,17 @@ def postprocess(output_dir):
     """
     Run postprocessing on analysis output
     """
-    from drakrun.analyzer.postprocessing import (
-        append_metadata_to_analysis,
-        postprocess_analysis_dir,
-    )
+    from drakrun.analyzer.postprocessing import postprocess_analysis_dir
 
     config = load_config()
     output_dir = pathlib.Path(output_dir)
 
-    # TODO: pass metadata from metadata.json
-    metadata_dict = json.loads((output_dir / "metadata.json").read_text())
+    metadata_file = output_dir / "metadata.json"
+    metadata_dict = json.loads(metadata_file.read_text())
     metadata = AnalysisMetadata.model_validate(metadata_dict)
 
     extra_metadata = postprocess_analysis_dir(output_dir, config, metadata)
-    append_metadata_to_analysis(output_dir, extra_metadata)
+    metadata.model_extra.update(extra_metadata)
+    metadata_file.write_text(
+        json.dumps(metadata.model_dump(mode="json", exclude_none=True))
+    )

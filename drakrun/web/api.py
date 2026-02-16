@@ -90,7 +90,7 @@ def upload_sample(form: UploadFileForm):
         else:
             sample_path = tmp_upload_path.as_posix()
 
-        analysis_options = AnalysisOptions(
+        analysis_options = AnalysisOptions.with_config_defaults(
             config=config,
             preset=preset,
             host_sample_path=pathlib.Path(sample_path) if sample_path else None,
