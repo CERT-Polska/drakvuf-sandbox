@@ -108,8 +108,7 @@ def install(
     iso_path = os.path.abspath(iso_path)
     vm0.create(iso_path=iso_path)
 
-    banner(
-        f"""
+    banner(f"""
         Initial VM setup is complete and the vm-0 was launched.
         Please now VNC to the port 5900 on this machine to perform Windows installation.
         After you have installed Windows and booted it to the desktop, please execute:
@@ -118,5 +117,4 @@ def install(
         {vnc_passwd}
         Please note that on some machines, system installer may boot for up to 10 minutes
         and may look unresponsive during the process. Please be patient.
-    """
-    )
+    """)

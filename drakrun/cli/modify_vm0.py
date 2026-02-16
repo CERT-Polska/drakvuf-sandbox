@@ -39,8 +39,7 @@ def begin_modify_vm0(cold_boot):
 
     # Internally, it's expected that VM-0 will be restored from vm-modify snapshot
     vm0.restore(cold_boot=cold_boot)
-    banner(
-        f"""
+    banner(f"""
         Initial VM setup is complete and the vm-0 was launched.
         Please now VNC to the port 5900 on this machine to perform Windows installation.
         After you have installed Windows and booted it to the desktop, please execute:
@@ -48,8 +47,7 @@ def begin_modify_vm0(cold_boot):
         - 'draksetup modify-vm0 rollback' to rollback your changes
         Your configured VNC password is:
         {install_info.vnc_passwd}
-    """
-    )
+    """)
 
 
 @modify_vm0.command(name="commit", help="Commit changes made during vm-0 modification")

@@ -153,8 +153,7 @@ def snapshot_import(input_dir, storage_backend, zfs_tank_name, lvm_volume_group,
     for profile_path in exported_profiles_path.glob("*.json"):
         shutil.copy(profile_path, VMI_PROFILES_DIR / profile_path.name)
 
-    banner(
-        f"""
+    banner(f"""
         Initial VM setup is complete.
         Please test your VM by running the following command:
         # drakrun vm-start
@@ -166,5 +165,4 @@ def snapshot_import(input_dir, storage_backend, zfs_tank_name, lvm_volume_group,
         and then proceed accordingly.
         Your configured VNC password is:
         {install_info.vnc_passwd}
-    """
-    )
+    """)
