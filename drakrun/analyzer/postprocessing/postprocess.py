@@ -49,4 +49,4 @@ def postprocess_analysis_dir(
         metadata=metadata,
     )
     run_postprocessing(context)
-    return context.metadata
+    return context.extra_metadata
