@@ -164,7 +164,7 @@ def status(path: AnalysisRequestPath):
         except FileNotFoundError:
             return jsonify({"error": "Job not found"}), 404
 
-    return jsonify(metadata.model_dump(mode="json"))
+    return jsonify(metadata.model_dump(mode="json", exclude_none=True))
 
 
 @api.get("/processed/<task_uid>/process_tree")

@@ -36,7 +36,7 @@ class AnalysisMetadata(BaseModel):
     model_config = ConfigDict(extra="allow")
     id: str
     options: AnalysisOptions
-    time_started: str
+    time_started: Optional[str] = None
     time_finished: Optional[str] = None
     time_execution_started: Optional[str] = None
     # Status of the job
