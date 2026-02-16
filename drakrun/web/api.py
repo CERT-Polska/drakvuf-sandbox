@@ -1,16 +1,13 @@
-import hashlib
 import logging
 import pathlib
 import uuid
 
-import magic
-from analyzer.analysis_metadata import AnalysisMetadata
 from flask import Response, jsonify, request
 from flask_openapi3 import APIBlueprint
 from rq.exceptions import NoSuchJobError
 from rq.job import Job, JobStatus
 
-from drakrun.analyzer.analysis_metadata import FileMetadata
+from drakrun.analyzer.analysis_metadata import AnalysisMetadata, FileMetadata
 from drakrun.analyzer.analysis_options import AnalysisOptions
 from drakrun.analyzer.postprocessing.indexer import (
     get_log_index_for_process,
@@ -79,16 +76,8 @@ def upload_sample(form: UploadFileForm):
 
     try:
         request_file.save(tmp_upload_path)
-        sample_sha256 = hashlib.sha256()
-        with open(tmp_upload_path, "rb") as f:
-            for chunk in iter(lambda: f.read(32 * 4096), b""):
-                sample_sha256.update(chunk)
-        sample_magic = magic.from_file(tmp_upload_path)
-
-        file_metadata = FileMetadata(
-            name=sample_filename,
-            type=sample_magic,
-            sha256=sample_sha256.hexdigest(),
+        file_metadata = FileMetadata.evaluate(
+            file_path=tmp_upload_path, file_name=sample_filename
         )
 
         if is_s3_enabled(config.s3):
