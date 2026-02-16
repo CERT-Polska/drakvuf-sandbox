@@ -1,6 +1,7 @@
 import hashlib
+import json
 import pathlib
-from typing import Optional
+from typing import Any, Optional
 
 import magic
 from pydantic import BaseModel, ConfigDict
@@ -47,3 +48,21 @@ class AnalysisMetadata(BaseModel):
     vm_id: Optional[int] = None
     # File metadata (None in case of fileless analysis - possible via CLI)
     file: Optional[FileMetadata] = None
+
+    @classmethod
+    def load_from_dict(cls, obj: dict[str, Any]):
+        return cls.model_validate(obj)
+
+    @classmethod
+    def load_from_file(cls, path: pathlib.Path):
+        with path.open("r") as f:
+            json_obj = json.load(f)
+        return cls.load_from_dict(json_obj)
+
+    def store_to_dict(self):
+        return self.model_dump(mode="json", exclude_none=True)
+
+    def store_to_file(self, path: pathlib.Path):
+        json_obj = self.store_to_dict()
+        with path.open("w") as f:
+            json.dump(json_obj, f)

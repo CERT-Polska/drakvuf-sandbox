@@ -1,4 +1,3 @@
-import json
 import pathlib
 from datetime import datetime, timezone
 
@@ -192,9 +191,7 @@ def analyze(
         file=file_metadata,
     )
     metadata_file = output_dir / "metadata.json"
-    metadata_file.write_text(
-        json.dumps(metadata.model_dump(mode="json", exclude_none=True))
-    )
+    metadata.store_to_file(metadata_file)
 
     def substatus_callback(substatus: AnalysisSubstatus, updated_options: bool = False):
         if substatus == AnalysisSubstatus.analyzing:
@@ -211,6 +208,4 @@ def analyze(
     metadata.time_finished = datetime.now(timezone.utc).isoformat()
 
     metadata.model_extra.update(extra_metadata)
-    metadata_file.write_text(
-        json.dumps(metadata.model_dump(mode="json", exclude_none=True))
-    )
+    metadata.store_to_file(metadata_file)

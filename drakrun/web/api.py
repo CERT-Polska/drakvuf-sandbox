@@ -138,7 +138,7 @@ def upload_sample(form: UploadFileForm):
 def list_analyses():
     analysis_list = get_analyses_list(connection=redis)
     return jsonify(
-        [analysis_job_to_metadata(job).model_dump(mode="json") for job in analysis_list]
+        [analysis_job_to_metadata(job).store_to_dict() for job in analysis_list]
     )
 
 
@@ -160,11 +160,11 @@ def status(path: AnalysisRequestPath):
             metadata_dict = read_analysis_json(task_uid, "metadata.json", config.s3)
             if "id" not in metadata_dict:
                 metadata_dict = {"id": task_uid, **metadata_dict}
-            metadata = AnalysisMetadata.model_validate(metadata_dict)
+            metadata = AnalysisMetadata.load_from_dict(metadata_dict)
         except FileNotFoundError:
             return jsonify({"error": "Job not found"}), 404
 
-    return jsonify(metadata.model_dump(mode="json", exclude_none=True))
+    return jsonify(metadata.store_to_dict())
 
 
 @api.get("/processed/<task_uid>/process_tree")

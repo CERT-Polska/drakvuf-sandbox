@@ -1,4 +1,3 @@
-import json
 import pathlib
 
 import click
@@ -22,11 +21,8 @@ def postprocess(output_dir):
     output_dir = pathlib.Path(output_dir)
 
     metadata_file = output_dir / "metadata.json"
-    metadata_dict = json.loads(metadata_file.read_text())
-    metadata = AnalysisMetadata.model_validate(metadata_dict)
+    metadata = AnalysisMetadata.load_from_file(metadata_file)
 
     extra_metadata = postprocess_analysis_dir(output_dir, config, metadata)
     metadata.model_extra.update(extra_metadata)
-    metadata_file.write_text(
-        json.dumps(metadata.model_dump(mode="json", exclude_none=True))
-    )
+    metadata.store_to_file(metadata_file)

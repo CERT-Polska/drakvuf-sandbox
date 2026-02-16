@@ -1,5 +1,4 @@
 import datetime
-import json
 import logging
 import shutil
 import socket
@@ -45,7 +44,7 @@ def analysis_job_to_metadata(job: Job) -> AnalysisMetadata:
     time_finished = job.meta["time_finished"] if "time_finished" in job.meta else None
     if time_finished is None:
         time_finished = job.ended_at.isoformat() if job.ended_at is not None else None
-    return AnalysisMetadata.model_validate(
+    return AnalysisMetadata.load_from_dict(
         {
             **job_meta.get("extra_metadata", {}),
             "id": job.id,
@@ -109,9 +108,7 @@ def worker_analyze(options: AnalysisOptions):
         file=file_metadata,
     )
     metadata_file = output_dir / "metadata.json"
-    metadata_file.write_text(
-        json.dumps(metadata.model_dump(mode="json", exclude_none=True))
-    )
+    metadata.store_to_file(metadata_file)
 
     def substatus_callback(substatus: AnalysisSubstatus, updated_options: bool = False):
         job.meta["substatus"] = substatus.value
@@ -156,9 +153,7 @@ def worker_analyze(options: AnalysisOptions):
         job.meta["time_finished"] = metadata.time_finished
         job.save_meta()
 
-        metadata_file.write_text(
-            json.dumps(metadata.model_dump(mode="json", exclude_none=True))
-        )
+        metadata.store_to_file(metadata_file)
         options.host_sample_path.unlink()
         if s3_client is not None:
             upload_analysis(job.id, output_dir, s3_client, s3_bucket)
