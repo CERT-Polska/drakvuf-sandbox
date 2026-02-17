@@ -195,9 +195,7 @@ def analyze(
 
     def substatus_callback(substatus: AnalysisSubstatus, updated_options: bool = False):
         if substatus == AnalysisSubstatus.analyzing:
-            metadata.time_execution_started = datetime.datetime.now(
-                datetime.timezone.utc
-            ).isoformat()
+            metadata.time_execution_started = datetime.now(timezone.utc).isoformat()
 
     extra_metadata = analyze_file(
         vm_id=vm_id,
