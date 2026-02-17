@@ -224,16 +224,19 @@ def analyze_file(
                 options.guest_target_directory,
                 options.archive_password,
             )
-            # For archives, ALWAYS use guest_archive_entry_path (not sample_filename or existing start_command)
-            # This ensures we run the extracted file, not the archive itself
-            archive_executable_path = str(target_dir / options.guest_archive_entry_path)
-            log.info(
-                f"Archive mode: setting start_command from archive_entry_path: {archive_executable_path}"
-            )
-            log.info(
-                f"  target_dir={target_dir}, guest_archive_entry_path={options.guest_archive_entry_path}"
-            )
-            options.start_command = get_startup_argv(archive_executable_path)
+
+            if options.start_command is None:
+                archive_executable_path = str(
+                    target_dir / options.guest_archive_entry_path
+                )
+                log.info(
+                    f"Archive mode: setting start_command from archive_entry_path: {archive_executable_path}"
+                )
+                log.info(
+                    f"  target_dir={target_dir}, guest_archive_entry_path={options.guest_archive_entry_path}"
+                )
+                options.start_command = get_startup_argv(archive_executable_path)
+
             log.info(f"Archive mode: start_command set to {options.start_command}")
 
         elif options.host_sample_path is not None:
