@@ -21,6 +21,7 @@ from drakrun.lib.paths import (
     VMI_KERNEL_PROFILE_PATH,
 )
 
+from .analysis_metadata import AnalysisMetadata
 from .analysis_options import AnalysisOptions
 from .post_restore import get_post_restore_command, prepare_ps_command
 from .postprocessing import postprocess_analysis_dir
@@ -42,7 +43,7 @@ class AnalysisSubstatusCallback(Protocol):
     def __call__(
         self,
         substatus: AnalysisSubstatus,
-        updated_options: Optional[AnalysisOptions] = None,
+        updated_options: bool = False,
     ) -> None: ...
 
 
@@ -164,13 +165,14 @@ def extract_archive_on_vm(
 def analyze_file(
     vm_id: int,
     output_dir: pathlib.Path,
-    options: AnalysisOptions,
+    metadata: AnalysisMetadata,
     substatus_callback: Optional[AnalysisSubstatusCallback] = None,
 ):
     config = load_config()
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
     vmi_info = VmiInfo.load(VMI_INFO_PATH)
     kernel_profile_path = VMI_KERNEL_PROFILE_PATH.as_posix()
+    options = metadata.options
     exec_cmd = None
 
     prepare_output_dir(output_dir, options)
@@ -288,7 +290,7 @@ def analyze_file(
                 exec_cmd = options.start_command
 
             if substatus_callback is not None:
-                substatus_callback(AnalysisSubstatus.analyzing, updated_options=options)
+                substatus_callback(AnalysisSubstatus.analyzing, updated_options=True)
 
             if options.start_command is None:
                 # If we don't inject the command to run:
@@ -328,7 +330,7 @@ def analyze_file(
     if substatus_callback is not None:
         substatus_callback(AnalysisSubstatus.postprocessing)
 
-    extra_metadata = postprocess_analysis_dir(output_dir, config)
+    extra_metadata = postprocess_analysis_dir(output_dir, config, metadata)
 
     if substatus_callback is not None:
         substatus_callback(AnalysisSubstatus.done)

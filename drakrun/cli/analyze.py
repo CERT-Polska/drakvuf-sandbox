@@ -1,7 +1,10 @@
 import pathlib
-from datetime import datetime
+from datetime import datetime, timezone
 
 import click
+
+from drakrun.analyzer.analysis_metadata import AnalysisMetadata, FileMetadata
+from drakrun.analyzer.analyzer import AnalysisSubstatus
 
 from .check_root import check_root
 
@@ -132,9 +135,9 @@ def analyze(
     """
     from drakrun.analyzer.analysis_options import AnalysisOptions
     from drakrun.analyzer.analyzer import analyze_file
-    from drakrun.analyzer.postprocessing import append_metadata_to_analysis
     from drakrun.lib.config import load_config
 
+    started_at = datetime.now(timezone.utc)
     config = load_config()
     if output_dir is None:
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -149,6 +152,11 @@ def analyze(
 
     if sample is not None:
         sample = pathlib.Path(sample)
+        file_metadata = FileMetadata.evaluate(
+            file_path=sample, file_name=target_filename
+        )
+    else:
+        file_metadata = None
 
     if not plugins:
         # If plugins not provided, pass None to indicate
@@ -156,7 +164,7 @@ def analyze(
         # Click passes empty list there.
         plugins = None
 
-    options = AnalysisOptions(
+    options = AnalysisOptions.with_config_defaults(
         config=config,
         preset=preset,
         host_sample_path=sample,
@@ -175,5 +183,27 @@ def analyze(
     if target_filepath is not None:
         options.guest_target_directory = pathlib.PureWindowsPath(target_filepath)
 
-    extra_metadata = analyze_file(vm_id=vm_id, output_dir=output_dir, options=options)
-    append_metadata_to_analysis(output_dir, extra_metadata)
+    metadata = AnalysisMetadata(
+        id=output_dir.name,
+        options=options,
+        time_started=started_at.isoformat(),
+        vm_id=vm_id,
+        file=file_metadata,
+    )
+    metadata_file = output_dir / "metadata.json"
+    metadata.store_to_file(metadata_file)
+
+    def substatus_callback(substatus: AnalysisSubstatus, updated_options: bool = False):
+        if substatus == AnalysisSubstatus.analyzing:
+            metadata.time_execution_started = datetime.now(timezone.utc).isoformat()
+
+    extra_metadata = analyze_file(
+        vm_id=vm_id,
+        output_dir=output_dir,
+        metadata=metadata,
+        substatus_callback=substatus_callback,
+    )
+    metadata.time_finished = datetime.now(timezone.utc).isoformat()
+
+    metadata.model_extra.update(extra_metadata)
+    metadata.store_to_file(metadata_file)

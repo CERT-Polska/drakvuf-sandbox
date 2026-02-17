@@ -76,9 +76,10 @@ class AnalysisOptions(BaseModel):
             **dict(net_enable=net_enable),
         }
 
-    def __init__(self, config: DrakrunConfig, **kwargs):
-        super().__init__(
-            **self._apply_defaults(config, kwargs),
+    @classmethod
+    def with_config_defaults(cls, config: DrakrunConfig, **kwargs):
+        return cls(
+            **cls._apply_defaults(config, kwargs),
         )
 
     def to_dict(self, exclude_none=True):

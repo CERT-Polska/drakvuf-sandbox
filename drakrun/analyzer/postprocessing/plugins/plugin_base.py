@@ -3,16 +3,24 @@ from typing import Any, Dict, List, NamedTuple, Optional, Protocol
 
 from drakrun.lib.config import DrakrunConfig
 
+from ...analysis_metadata import AnalysisMetadata
 from ..process_tree import ProcessTree
 
 
 class PostprocessContext:
-    def __init__(self, analysis_dir: pathlib.Path, config: DrakrunConfig) -> None:
+    def __init__(
+        self,
+        analysis_dir: pathlib.Path,
+        config: DrakrunConfig,
+        metadata: AnalysisMetadata,
+    ) -> None:
         self.analysis_dir = analysis_dir
         self.config = config
+        self.metadata = metadata
+        self.options = metadata.options
         self._process_tree: Optional[ProcessTree] = None
         # Quick metadata fetched along with analysis status
-        self.metadata = {}
+        self.extra_metadata = {}
         # More verbose data to be placed in report.json
         self.report = {}
 
@@ -27,7 +35,7 @@ class PostprocessContext:
         self._process_tree = value
 
     def update_metadata(self, metadata: Dict[str, Any]) -> None:
-        self.metadata.update(metadata)
+        self.extra_metadata.update(metadata)
 
     def update_report(self, report: Dict[str, Any]) -> None:
         self.report.update(report)
