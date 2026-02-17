@@ -49,20 +49,24 @@ export function OfflineAnalysisReportProvider({ reportData, children }) {
             getProcessInfo: ({ processSeqId }) =>
                 new Promise((resolve) => {
                     // Conversion between schemas if /api/report and /api/process_info
-                    const processInfo =
-                        reportData["report.json"].processes[processSeqId];
+                    const processes = reportData["report.json"].processes;
+                    const processInfo = processes[processSeqId];
                     const ppid =
-                        processInfo["parent_seqid"] ??
-                        processInfo[processInfo["parent_seqid"]].pid;
+                        processInfo["parent_seqid"] !== null
+                            ? processes[processInfo["parent_seqid"]].pid
+                            : null;
                     resolve({
                         logs: {},
                         process: {
                             ...processInfo,
+                            // evtid: We don't have it in report.json and don't need it
+                            // as we don't have offline logs for now. If needed, change
+                            // this code to fetch information from process_tree.json
+                            // instead of report.json (process_tree needs tree traversal)
                             evtid_from: 0,
                             evtid_to: 0,
-                            pid: 5944,
                             ppid: ppid,
-                            name: processInfo["procname"],
+                            procname: processInfo["name"],
                             ts_from: processInfo["started_at"],
                             ts_to: processInfo["exited_at"],
                         },
@@ -73,7 +77,8 @@ export function OfflineAnalysisReportProvider({ reportData, children }) {
                     resolve(reportData["process_tree.json"]);
                 }),
             getScreenshotURL: (analysis_id, screenshot_idx) =>
-                reportData["screenshots"] && reportData["screenshots"][screenshot_idx],
+                reportData["screenshots"] &&
+                reportData["screenshots"][screenshot_idx - 1],
             isOffline: true,
         }),
         [reportData],

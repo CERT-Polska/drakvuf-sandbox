@@ -15,13 +15,15 @@ function EmbeddedReport() {
     return (
         <div className="container-fluid px-4">
             <h1 className="m-4 h4">Analysis report</h1>
-            {
-                window.OFFLINE_FILES ?
-                    <OfflineAnalysisReportProvider reportData={window.OFFLINE_FILES}>
-                        <AnalysisReport />
-                    </OfflineAnalysisReportProvider>
-                    : "There are no analysis data embedded in the file"
-            }
+            {window.OFFLINE_FILES ? (
+                <OfflineAnalysisReportProvider
+                    reportData={window.OFFLINE_FILES}
+                >
+                    <AnalysisReport />
+                </OfflineAnalysisReportProvider>
+            ) : (
+                "There are no analysis data embedded in the file"
+            )}
         </div>
     );
 }
