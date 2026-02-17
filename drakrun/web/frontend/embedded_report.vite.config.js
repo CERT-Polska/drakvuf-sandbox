@@ -18,13 +18,8 @@ function viteGzipBundle() {
                         Buffer.from(originalCode, "utf-8"),
                     );
                     const base64 = gzipped.toString("base64");
-                    const wrapper = `
-(async () => { const stream = new Response(Uint8Array.from(atob("${base64}"), c => c.charCodeAt(0))).body.pipeThrough(new DecompressionStream("gzip"));
-const buffer = await new Response(stream).arrayBuffer();
-const blob = new Blob([buffer], { type: "text/javascript" });
-const url = URL.createObjectURL(blob);
-try { await import(url); } finally { URL.revokeObjectURL(url); }})();`;
-                    chunk.code = wrapper;
+                    const loader = `await import(URL.createObjectURL(new Blob([await fetch('data:;base64,${base64}').then(r=>r.body.pipeThrough(new DecompressionStream('gzip')).text())],{type:'module'})))`;
+                    chunk.code = loader;
                 }
             }
         },
