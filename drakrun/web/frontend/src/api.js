@@ -129,6 +129,7 @@ export async function uploadSample({
     no_screenshots,
     extract_archive,
     archive_password,
+    archive_entry_path,
 }) {
     const formData = new FormData();
     formData.append("file", file);
@@ -141,6 +142,8 @@ export async function uploadSample({
     if (no_screenshots) formData.append("no_screenshots", "1");
     if (extract_archive) formData.append("extract_archive", "1");
     if (archive_password) formData.append("archive_password", archive_password);
+    if (archive_entry_path)
+        formData.append("archive_entry_path", archive_entry_path);
     const request = await axios.post("/upload", formData, {
         headers: {
             "Content-Type": "multipart/form-data",

@@ -28,6 +28,9 @@ class UploadFileForm(BaseModel):
     extract_archive: Optional[bool] = Field(
         default=False, description="Sample is an archive, extract it"
     )
+    archive_entry_path: Optional[str] = Field(
+        default=None, description="Path inside archive to execute (for archive mode)"
+    )
     archive_password: Optional[str] = Field(
         default=None, description="Archive password"
     )
