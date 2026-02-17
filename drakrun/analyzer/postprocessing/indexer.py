@@ -69,7 +69,7 @@ def index_log_file(
                     if key is not None:
                         index_entry["mapping"].append(value_index)
             except Exception:
-                logger.exception("Failed to process entry")
+                logger.exception("Failed to process entry in %s", log_file.name)
     return dict(index)
 
 
@@ -77,7 +77,7 @@ def build_log_index(analysis_dir: pathlib.Path, process_tree: ProcessTree) -> by
     log_index = [dict() for _ in range(len(process_tree.processes))]
     for log_file_path in analysis_dir.glob("*.log"):
         plugin_name = log_file_path.stem
-        if plugin_name in ["drakrun", "drakvuf_stderr"]:
+        if plugin_name in ["drakrun", "drakvuf_stderr", "parse_errors"]:
             continue
         index = index_log_file(
             log_file_path,
