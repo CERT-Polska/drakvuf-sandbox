@@ -18,11 +18,12 @@ def png_bytes_to_data_uri(png_bytes: bytes):
 
 
 def generate_html_report(context: PostprocessContext) -> None:
-    offline_files = {}
-
-    metadata_file = context.analysis_dir / "metadata.json"
-    with metadata_file.open("r") as f:
-        offline_files["metadata.json"] = json.load(f)
+    offline_files = {
+        "metadata.json": {
+            **context.metadata.store_to_dict(),
+            **context.extra_metadata,
+        }
+    }
 
     report_file = context.analysis_dir / "report.json"
     with report_file.open("r") as f:
