@@ -33,9 +33,10 @@ def generate_html_report(context: PostprocessContext):
         with process_tree_file.open("r") as f:
             offline_files["process_tree.json"] = json.load(f)
 
+    offline_files["screenshots"] = []
     screenshots_count = offline_files["metadata.json"].get("screenshots", 0)
     for which in range(screenshots_count):
-        with (context.analysis_dir / f"screenshots/screenshot_{which}.png").open(
+        with (context.analysis_dir / f"screenshots/screenshot_{which+1}.png").open(
             "rb"
         ) as f:
             screenshot_data_uri = png_bytes_to_data_uri(f.read())
