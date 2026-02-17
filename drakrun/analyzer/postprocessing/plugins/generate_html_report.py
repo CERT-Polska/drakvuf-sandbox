@@ -17,7 +17,7 @@ def png_bytes_to_data_uri(png_bytes: bytes):
     return f"data:image/png;base64,{encoded}"
 
 
-def generate_html_report(context: PostprocessContext):
+def generate_html_report(context: PostprocessContext) -> None:
     offline_files = {}
 
     metadata_file = context.analysis_dir / "metadata.json"
@@ -46,4 +46,4 @@ def generate_html_report(context: PostprocessContext):
         OFFLINE_FILES_PLACEHOLDER, f"window.OFFLINE_FILES={json.dumps(offline_files)};"
     )
     (context.analysis_dir / "report.html").write_text(html_report)
-    return {"html_report": True}
+    context.update_metadata({"html_report": True})
