@@ -3,10 +3,10 @@ click==8.1.7
 flare-capa==7.4.0
 orjson==3.9.15
 mslex==1.1.0
-pydantic==2.10.6
+pydantic==2.11.10
+pydantic-settings==2.11.0
 pathvalidate==3.2.0
 drakpdb==0.2.2
-tomli==2.2.1
 # Web analyzer dependencies
 rq==2.3.1
 Flask==3.0.3
@@ -21,4 +21,6 @@ Perception==0.6.8
 opencv-contrib-python-headless==4.11.0.86
 # Also peer vivisect dependency, but we use it directly
 msgpack==1.0.8
-boto3==1.38.15
+boto3==1.35.81
+# Karton integration dependency
+karton-core>=5.9.0,<6.0.0

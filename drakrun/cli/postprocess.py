@@ -2,6 +2,7 @@ import pathlib
 
 import click
 
+from drakrun.analyzer.analysis_metadata import AnalysisMetadata
 from drakrun.lib.config import load_config
 
 
@@ -14,12 +15,14 @@ def postprocess(output_dir):
     """
     Run postprocessing on analysis output
     """
-    from drakrun.analyzer.postprocessing import (
-        append_metadata_to_analysis,
-        postprocess_analysis_dir,
-    )
+    from drakrun.analyzer.postprocessing import postprocess_analysis_dir
 
     config = load_config()
     output_dir = pathlib.Path(output_dir)
-    extra_metadata = postprocess_analysis_dir(output_dir, config)
-    append_metadata_to_analysis(output_dir, extra_metadata)
+
+    metadata_file = output_dir / "metadata.json"
+    metadata = AnalysisMetadata.load_from_file(metadata_file)
+
+    extra_metadata = postprocess_analysis_dir(output_dir, config, metadata)
+    metadata.model_extra.update(extra_metadata)
+    metadata.store_to_file(metadata_file)

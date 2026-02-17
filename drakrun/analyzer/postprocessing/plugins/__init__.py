@@ -11,6 +11,7 @@ from .get_socket_info import get_socket_info
 from .get_ttps_info import get_ttps_info
 from .gzip_syscalls import gzip_syscalls
 from .index_logs import index_logs
+from .karton_integration import analyze_in_karton
 from .plugin_base import PostprocessPlugin
 from .process_dumps import process_dumps
 from .screenshot_metadata import screenshot_metadata
@@ -72,6 +73,11 @@ POSTPROCESS_PLUGINS = [
     PostprocessPlugin(
         function=get_ttps_info,
         requires=["process_tree.json", "ttps.json"],
+        generates=[],
+    ),
+    PostprocessPlugin(
+        function=analyze_in_karton,
+        requires=[],
         generates=[],
     ),
     PostprocessPlugin(

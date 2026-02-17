@@ -1,16 +1,14 @@
-import hashlib
 import logging
 import pathlib
 import uuid
 
-import magic
 from flask import Response, jsonify, request
 from flask_openapi3 import APIBlueprint
 from rq.exceptions import NoSuchJobError
 from rq.job import Job, JobStatus
 
+from drakrun.analyzer.analysis_metadata import AnalysisMetadata, FileMetadata
 from drakrun.analyzer.analysis_options import AnalysisOptions
-from drakrun.analyzer.file_metadata import FileMetadata
 from drakrun.analyzer.postprocessing.indexer import (
     get_log_index_for_process,
     get_plugin_names_for_process,
@@ -18,7 +16,7 @@ from drakrun.analyzer.postprocessing.indexer import (
 )
 from drakrun.analyzer.postprocessing.process_tree import tree_from_dict
 from drakrun.analyzer.worker import (
-    analysis_job_to_status_dict,
+    analysis_job_to_metadata,
     enqueue_analysis,
     get_analyses_list,
     get_redis_connection,
@@ -34,6 +32,9 @@ from drakrun.web.schema import (
     AnalysisRequestPath,
     AnalysisResponse,
     APIErrorResponse,
+    KartonResultsUploadForm,
+    KartonResultsUploadPath,
+    KartonResultsUploadResponse,
     LogsRequestPath,
     ProcessInfoRequestPath,
     ProcessLogsRequestPath,
@@ -64,10 +65,10 @@ def upload_sample(form: UploadFileForm):
 
     timeout = form.timeout
     if not timeout:
-        timeout = config.default_timeout
-    filename = form.file_name
-    if not filename:
-        filename = request_file.filename
+        timeout = config.drakrun.default_timeout
+    sample_filename = form.file_name
+    if not sample_filename:
+        sample_filename = request_file.filename
     start_command = form.start_command
     plugins = form.plugins
     preset = form.preset
@@ -75,37 +76,29 @@ def upload_sample(form: UploadFileForm):
     no_screenshots = form.no_screenshots
 
     UPLOADS_DIR.mkdir(exist_ok=True)
-    upload_path = UPLOADS_DIR / f"{job_id}.sample"
+    tmp_upload_path = UPLOADS_DIR / f"{job_id}.sample"
 
     try:
-        request_file.save(upload_path)
-        sample_sha256 = hashlib.sha256()
-        with open(upload_path, "rb") as f:
-            for chunk in iter(lambda: f.read(32 * 4096), b""):
-                sample_sha256.update(chunk)
-        sample_magic = magic.from_file(upload_path)
-
-        file_metadata = FileMetadata(
-            name=filename,
-            type=sample_magic,
-            sha256=sample_sha256.hexdigest(),
+        request_file.save(tmp_upload_path)
+        file_metadata = FileMetadata.evaluate(
+            file_path=tmp_upload_path, file_name=sample_filename
         )
 
         if is_s3_enabled(config.s3):
             s3_client = get_s3_client(config.s3)
             s3_bucket = config.s3.bucket
-            with upload_path.open("rb") as f:
+            with tmp_upload_path.open("rb") as f:
                 upload_sample_to_s3(job_id, f, s3_client, s3_bucket)
-            upload_path.unlink()
+            tmp_upload_path.unlink()
             sample_path = None
         else:
-            sample_path = upload_path.as_posix()
+            sample_path = tmp_upload_path.as_posix()
 
-        analysis_options = AnalysisOptions(
+        analysis_options = AnalysisOptions.with_config_defaults(
             config=config,
             preset=preset,
-            sample_path=sample_path,
-            target_filename=filename,
+            host_sample_path=pathlib.Path(sample_path) if sample_path else None,
+            sample_filename=sample_filename,
             start_command=start_command,
             plugins=plugins,
             timeout=timeout,
@@ -116,11 +109,20 @@ def upload_sample(form: UploadFileForm):
         if no_screenshots:
             analysis_options.no_screenshotter = True
         if form.file_path:
-            analysis_options.target_filepath = pathlib.PureWindowsPath(form.file_path)
+            analysis_options.guest_target_directory = pathlib.PureWindowsPath(
+                form.file_path
+            )
         if form.extract_archive:
+            logger.info(
+                f"Archive upload: extract_archive=True, archive_entry_path={form.archive_entry_path}"
+            )
             analysis_options.extract_archive = True
             analysis_options.archive_password = form.archive_password
-            analysis_options.target_filename = form.file_name
+            # For archives, archive_entry_path contains the entry path to execute (e.g., "dir/malware.exe")
+            analysis_options.guest_archive_entry_path = form.archive_entry_path
+            logger.info(
+                f"Archive upload: set guest_archive_entry_path={analysis_options.guest_archive_entry_path}"
+            )
         enqueue_analysis(
             job_id=job_id,
             file_metadata=file_metadata,
@@ -129,17 +131,59 @@ def upload_sample(form: UploadFileForm):
             result_ttl=config.drakrun.result_ttl,
         )
     except Exception:
-        upload_path.unlink(missing_ok=True)
+        tmp_upload_path.unlink(missing_ok=True)
         raise
 
     truncate_analysis_list(connection=redis, limit=ANALYSES_LIST_MAX_LENGTH)
     return jsonify({"task_uid": job_id})
 
 
+@api.post(
+    "/analysis/<analysis_id>/karton-results",
+    responses={
+        200: KartonResultsUploadResponse,
+        400: APIErrorResponse,
+        403: APIErrorResponse,
+        404: APIErrorResponse,
+        500: APIErrorResponse,
+    },
+)
+def karton_results_upload(path: KartonResultsUploadPath, form: KartonResultsUploadForm):
+    """
+    Upload Karton analysis results to Redis hash.
+    Validates token stored when analysis was sent to Karton.
+    """
+    try:
+        job = Job.fetch(path.analysis_id, connection=redis)
+    except NoSuchJobError:
+        return jsonify({"error": "Analysis not found"}), 404
+
+    token = job.meta.get("token")
+    if not token or token != form.token:
+        return jsonify({"error": "Invalid token"}), 403
+
+    target_key = form.key
+    if not target_key:
+        return jsonify({"error": "Key required"}), 400
+
+    data_content = form.data.read()
+
+    redis_key = f"karton-results:{path.analysis_id}"
+    redis.hset(redis_key, target_key, data_content)
+    redis.expire(redis_key, config.karton.redis_ttl)
+
+    logger.info(
+        f"Karton result uploaded to Redis: analysis={path.analysis_id}, key={target_key}"
+    )
+    return jsonify({"status": "success", "key": target_key})
+
+
 @api.get("/list", responses={200: AnalysisListResponse})
 def list_analyses():
     analysis_list = get_analyses_list(connection=redis)
-    return jsonify([analysis_job_to_status_dict(job) for job in analysis_list])
+    return jsonify(
+        [analysis_job_to_metadata(job).store_to_dict() for job in analysis_list]
+    )
 
 
 @api.get("/status/<task_uid>", responses={200: AnalysisResponse, 404: APIErrorResponse})
@@ -154,18 +198,17 @@ def status(path: AnalysisRequestPath):
         JobStatus.FINISHED,
         JobStatus.FAILED,
     ]:
-        return jsonify(analysis_job_to_status_dict(job))
+        metadata = analysis_job_to_metadata(job)
+    else:
+        try:
+            metadata_dict = read_analysis_json(task_uid, "metadata.json", config.s3)
+            if "id" not in metadata_dict:
+                metadata_dict = {"id": task_uid, **metadata_dict}
+            metadata = AnalysisMetadata.load_from_dict(metadata_dict)
+        except FileNotFoundError:
+            return jsonify({"error": "Job not found"}), 404
 
-    try:
-        metadata = read_analysis_json(task_uid, "metadata.json", config.s3)
-        if "id" not in metadata:
-            metadata = {"id": task_uid, **metadata}
-        if "status" not in metadata:
-            metadata = {"status": "unknown", **metadata}
-    except FileNotFoundError:
-        return jsonify({"error": "Job not found"}), 404
-
-    return jsonify(metadata)
+    return jsonify(metadata.store_to_dict())
 
 
 @api.get("/processed/<task_uid>/process_tree")
