@@ -31,6 +31,9 @@ from drakrun.web.schema import (
     AnalysisRequestPath,
     AnalysisResponse,
     APIErrorResponse,
+    KartonResultsUploadForm,
+    KartonResultsUploadPath,
+    KartonResultsUploadResponse,
     LogsRequestPath,
     ProcessInfoRequestPath,
     ProcessLogsRequestPath,
@@ -132,6 +135,46 @@ def upload_sample(form: UploadFileForm):
 
     truncate_analysis_list(connection=redis, limit=ANALYSES_LIST_MAX_LENGTH)
     return jsonify({"task_uid": job_id})
+
+
+@api.post(
+    "/analysis/<analysis_id>/karton-results",
+    responses={
+        200: KartonResultsUploadResponse,
+        400: APIErrorResponse,
+        403: APIErrorResponse,
+        404: APIErrorResponse,
+        500: APIErrorResponse,
+    },
+)
+def karton_results_upload(path: KartonResultsUploadPath, form: KartonResultsUploadForm):
+    """
+    Upload Karton analysis results to Redis hash.
+    Validates token stored when analysis was sent to Karton.
+    """
+    try:
+        job = Job.fetch(path.analysis_id, connection=redis)
+    except NoSuchJobError:
+        return jsonify({"error": "Analysis not found"}), 404
+
+    token = job.meta.get("token")
+    if not token or token != form.token:
+        return jsonify({"error": "Invalid token"}), 403
+
+    target_key = form.key
+    if not target_key:
+        return jsonify({"error": "Key required"}), 400
+
+    data_content = form.data.read()
+
+    redis_key = f"karton-results:{path.analysis_id}"
+    redis.hset(redis_key, target_key, data_content)
+    redis.expire(redis_key, config.karton.redis_ttl)
+
+    logger.info(
+        f"Karton result uploaded to Redis: analysis={path.analysis_id}, key={target_key}"
+    )
+    return jsonify({"status": "success", "key": target_key})
 
 
 @api.get("/list", responses={200: AnalysisListResponse})

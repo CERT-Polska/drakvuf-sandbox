@@ -301,18 +301,25 @@ def analyze_file(
             log.info(
                 f"Starting analysis with drakvuf args: {drakvuf_args}, exec_cmd: {exec_cmd}"
             )
-            with run_tcpdump(network_info, tcpdump_file), run_screenshotter(
-                vm_id, install_info, output_dir, enabled=(not options.no_screenshotter)
-            ), run_drakvuf(
-                vm.vm_name,
-                vmi_info,
-                kernel_profile_path,
-                drakmon_file,
-                drakvuf_err_file,
-                drakvuf_args,
-                exec_cmd=exec_cmd,
-                cwd=output_dir,
-            ) as drakvuf:
+            with (
+                run_tcpdump(network_info, tcpdump_file),
+                run_screenshotter(
+                    vm_id,
+                    install_info,
+                    output_dir,
+                    enabled=(not options.no_screenshotter),
+                ),
+                run_drakvuf(
+                    vm.vm_name,
+                    vmi_info,
+                    kernel_profile_path,
+                    drakmon_file,
+                    drakvuf_err_file,
+                    drakvuf_args,
+                    exec_cmd=exec_cmd,
+                    cwd=output_dir,
+                ) as drakvuf,
+            ):
                 log.info("Analysis started...")
                 try:
                     # -t should be respected, but let's give 30 more secs

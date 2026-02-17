@@ -98,6 +98,15 @@ class S3StorageConfigSection(BaseModel):
     remove_local_after_upload: bool = True
 
 
+class KartonConfigSection(BaseModel):
+    enabled: bool = False
+    config_path: Optional[pathlib.Path] = None
+    # redis expire timeout for karton results
+    redis_ttl: int = 3600
+    # How often KartonState is polled to check if analysis is done
+    poll_interval: int = 10
+
+
 class DrakrunConfig(BaseSettings):
     model_config = SettingsConfigDict(
         extra="allow",
@@ -111,6 +120,7 @@ class DrakrunConfig(BaseSettings):
     drakrun: DrakrunConfigSection
     capa: CapaConfigSection = CapaConfigSection()
     memdump: MemdumpConfigSection = MemdumpConfigSection()
+    karton: KartonConfigSection = KartonConfigSection()
     s3: Optional[S3StorageConfigSection] = None
     preset: Dict[str, DrakrunDefaultsPresetSection] = Field(default_factory=dict)
 
