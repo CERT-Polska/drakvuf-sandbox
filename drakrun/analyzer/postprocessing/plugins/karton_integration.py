@@ -140,7 +140,9 @@ def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
     logger.error(f"Karton analysis timed out after {timeout}s (uid={task.uid})")
 
 
-def _move_results_to_report(context: PostprocessContext, redis: Redis, job_id: str) -> None:
+def _move_results_to_report(
+    context: PostprocessContext, redis: Redis, job_id: str
+) -> None:
     """
     Get karton results from redis (uploaded in api/karton_results_upload)
     and store them in report under karton-analysis-results, then delete from redis
