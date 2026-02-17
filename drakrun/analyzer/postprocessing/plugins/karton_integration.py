@@ -49,15 +49,16 @@ def _collect_analysis_files(analysis_dir: Path) -> Dict[str, Resource]:
 def _try_get_sample_resource(context: PostprocessContext) -> Optional[Resource]:
     if (
         context.options
-        and context.options.sample_path
-        and context.options.sample_path.exists()
+        and context.options.host_sample_path
+        and context.options.host_sample_path.exists()
     ):
         sample_resource = Resource(
             name="sample",
-            path=context.options.sample_path.as_posix(),
+            path=context.options.host_sample_path.as_posix(),
         )
-        logger.info(f"Created sample resource from {context.options.sample_path}")
+        logger.info(f"Created sample resource from {context.options.host_sample_path}")
         return sample_resource
+    return None
 
 
 def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
@@ -99,7 +100,7 @@ def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
     job.save_meta()
     logger.info(f"Stored Karton upload token for analysis {job_id}")
 
-    dumps_metadata = metadata.get("dumps_metadata", {})
+    dumps_metadata = metadata.model_extra.get("dumps_metadata", {})
     analysis_files = _collect_analysis_files(analysis_dir)
 
     headers = {"type": "analysis", "kind": "drakrun"}
@@ -139,7 +140,7 @@ def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
     logger.error(f"Karton analysis timed out after {timeout}s (uid={task.uid})")
 
 
-def _move_results_to_report(context: PostprocessContext, redis: Redis, job_id):
+def _move_results_to_report(context: PostprocessContext, redis: Redis, job_id: str) -> None:
     """
     Get karton results from redis (uploaded in api/karton_results_upload)
     and store them in report under karton-analysis-results, then delete from redis

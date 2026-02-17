@@ -102,7 +102,7 @@ class KartonConfigSection(BaseModel):
     enabled: bool = False
     config_path: Optional[pathlib.Path] = None
     # redis expire timeout for karton results
-    redis_ttl: int = 300
+    redis_ttl: int = 3600
     # How often KartonState is polled to check if analysis is done
     poll_interval: int = 10
 
