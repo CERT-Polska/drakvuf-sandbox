@@ -380,6 +380,19 @@ export function AnalysisReport() {
                                 ) : (
                                     []
                                 )}
+                                {analysis["html_report"] ? (
+                                    <a href={`${baseUrl}/html/${analysis.id}`}>
+                                        <button className="btn btn-primary m-1">
+                                            <FontAwesomeIcon
+                                                icon={faDownload}
+                                                className="me-2"
+                                            />
+                                            HTML report
+                                        </button>
+                                    </a>
+                                ) : (
+                                    []
+                                )}
                             </div>
                         </div>
                     ) : (
