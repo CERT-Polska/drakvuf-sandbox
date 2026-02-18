@@ -76,7 +76,6 @@ def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
 
     analysis_dir = context.analysis_dir
     job_id = analysis_dir.name
-    metadata = context.metadata
 
     from drakrun.analyzer.worker import get_redis_connection
 
@@ -100,7 +99,7 @@ def analyze_in_karton(context: PostprocessContext, timeout: int = 3600) -> None:
     job.save_meta()
     logger.info(f"Stored Karton upload token for analysis {job_id}")
 
-    dumps_metadata = metadata.model_extra.get("dumps_metadata", {})
+    dumps_metadata = context.extra_metadata.get("dumps_metadata", {})
     analysis_files = _collect_analysis_files(analysis_dir)
 
     headers = {"type": "analysis", "kind": "drakrun"}
