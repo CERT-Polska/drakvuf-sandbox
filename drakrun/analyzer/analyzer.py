@@ -5,8 +5,6 @@ import pathlib
 import subprocess
 from typing import Any, Dict, List, Optional, Protocol
 
-import mslex
-
 from drakrun.lib.config import DrakrunConfig, NetworkConfigSection, load_config
 from drakrun.lib.drakshell import Drakshell
 from drakrun.lib.injector import Injector
@@ -20,13 +18,18 @@ from drakrun.lib.paths import (
     VMI_INFO_PATH,
     VMI_KERNEL_PROFILE_PATH,
 )
+from drakrun.lib.version_detection import get_drakvuf_version
 
 from .analysis_metadata import AnalysisMetadata
-from .analysis_options import AnalysisOptions
+from .analysis_options import AnalysisOptions, StartMethod
 from .post_restore import get_post_restore_command, prepare_ps_command
 from .postprocessing import postprocess_analysis_dir
 from .run_tools import run_drakvuf, run_screenshotter, run_tcpdump, run_vm
-from .startup_command import get_sample_filename_from_host_path, get_startup_argv
+from .startup_command import (
+    get_sample_filename_from_host_path,
+    get_startup_method_and_argv,
+    make_exec_parameters,
+)
 
 log = logging.getLogger(__name__)
 
@@ -173,7 +176,15 @@ def analyze_file(
     vmi_info = VmiInfo.load(VMI_INFO_PATH)
     kernel_profile_path = VMI_KERNEL_PROFILE_PATH.as_posix()
     options = metadata.options
-    exec_cmd = None
+
+    drakvuf_version_info = get_drakvuf_version()
+    shellexec_supported = drakvuf_version_info.supports_shellexec_verb
+
+    if options.start_method == "runas" and not shellexec_supported:
+        raise RuntimeError(
+            "Installed DRAKVUF version doesn't support custom ShellExecute verbs "
+            "required for executing samples with elevated privileges."
+        )
 
     prepare_output_dir(output_dir, options)
 
@@ -237,7 +248,11 @@ def analyze_file(
                 log.info(
                     f"  target_dir={target_dir}, guest_archive_entry_path={options.guest_archive_entry_path}"
                 )
-                options.start_command = get_startup_argv(archive_executable_path)
+                start_method, options.start_command = get_startup_method_and_argv(
+                    archive_executable_path
+                )
+                if options.start_method is None:
+                    options.start_method = start_method
 
             log.info(f"Archive mode: start_command set to {options.start_command}")
 
@@ -270,7 +285,11 @@ def analyze_file(
             )
 
             if options.start_command is None:
-                options.start_command = get_startup_argv(guest_executable_path)
+                start_method, options.start_command = get_startup_method_and_argv(
+                    guest_executable_path
+                )
+                if options.start_method is None:
+                    options.start_method = start_method
 
         tcpdump_file = output_dir / "dump.pcap"
         drakmon_file = output_dir / "drakmon.log"
@@ -278,28 +297,37 @@ def analyze_file(
         drakvuf_args = prepare_drakvuf_args(output_dir, options)
 
         try:
-            if (
-                options.start_command is not None
-                and type(options.start_command) is list
-            ):
-                exec_cmd: Optional[str] = mslex.join(
-                    options.start_command, for_cmd=False
+            if options.start_command is not None:
+                start_method: StartMethod
+                if options.start_method is None:
+                    start_method = "createproc"
+                else:
+                    start_method = options.start_method
+
+                exec_parameters = make_exec_parameters(
+                    options.start_command,
+                    start_method,
+                    shellexec_supported,
                 )
-                options.start_command = exec_cmd
-            elif type(options.start_command) is str:
-                exec_cmd = options.start_command
+                # At this point options object is used only to visualize
+                # the started command in metadata. Actual execution parameters are
+                # contained in exec_parameters
+                options.start_command = exec_parameters.full_command
+                options.start_method = exec_parameters.start_method
+            else:
+                exec_parameters = None
 
             if substatus_callback is not None:
                 substatus_callback(AnalysisSubstatus.analyzing, updated_options=True)
 
-            if options.start_command is None:
+            if exec_parameters is None:
                 # If we don't inject the command to run:
                 # evacuate the drakshell before running anything
                 drakshell.finish()
-                exec_cmd = None
 
             log.info(
-                f"Starting analysis with drakvuf args: {drakvuf_args}, exec_cmd: {exec_cmd}"
+                f"Starting analysis with drakvuf args: {drakvuf_args}, start command: "
+                f"{options.start_command}, exec method: {options.start_method}"
             )
             with (
                 run_tcpdump(network_info, tcpdump_file),
@@ -316,7 +344,7 @@ def analyze_file(
                     drakmon_file,
                     drakvuf_err_file,
                     drakvuf_args,
-                    exec_cmd=exec_cmd,
+                    exec_parameters=exec_parameters,
                     cwd=output_dir,
                 ) as drakvuf,
             ):

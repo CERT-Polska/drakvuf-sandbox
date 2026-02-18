@@ -8,6 +8,8 @@ def get_base_drakvuf_cmdline(
     kernel_profile_path: str,
     vmi_info: VmiInfo,
     exec_cmd: Optional[str] = None,
+    shellexec_args: Optional[str] = None,
+    start_method: Optional[str] = None,
     extra_args: Optional[List[str]] = None,
 ) -> List[str]:
     args = [
@@ -25,14 +27,25 @@ def get_base_drakvuf_cmdline(
     ]
     args.extend(get_dll_cmdline_args())
     if exec_cmd is not None:
+        if start_method == "createproc":
+            exec_args = ["-m", "createproc", "-e", exec_cmd]
+        elif start_method == "shellexec":
+            exec_args = ["-m", "shellexec", "-e", exec_cmd]
+            if shellexec_args:
+                exec_args.extend(["-f", shellexec_args])
+        elif start_method == "runas":
+            exec_args = ["-m", "shellexec", "-V", "runas", "-e", exec_cmd]
+            if shellexec_args:
+                exec_args.extend(["-f", shellexec_args])
+        else:
+            raise ValueError(f"Unsupported start method: {start_method}")
         args.extend(
             [
                 "-j",
                 "60",
                 "-i",
                 str(vmi_info.inject_pid),
-                "-e",
-                exec_cmd,
+                *exec_args,
                 *(
                     ["-I", str(vmi_info.inject_tid), "--exit-injection-thread"]
                     if vmi_info.inject_tid is not None

@@ -1,9 +1,11 @@
 import pathlib
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel
 
 from drakrun.lib.config import DrakrunConfig
+
+StartMethod = Literal["createproc", "shellexec", "runas"]
 
 
 class AnalysisOptions(BaseModel):
@@ -19,6 +21,8 @@ class AnalysisOptions(BaseModel):
     )
     # Start command to run on the VM
     start_command: Optional[Union[List[str], str]] = None
+    # Start method to run start command
+    start_method: Optional[StartMethod] = None
     # Preset of defaults to be used for analysis
     preset: Optional[str] = None
     # Plugins to enable

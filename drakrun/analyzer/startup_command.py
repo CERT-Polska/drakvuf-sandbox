@@ -3,9 +3,12 @@ import pathlib
 import random
 import string
 import unicodedata
-from typing import List
+from typing import NamedTuple, Optional
 
+import mslex
 from pathvalidate import Platform, is_valid_filename
+
+from .analysis_options import StartMethod
 
 log = logging.getLogger(__name__)
 
@@ -34,51 +37,72 @@ def get_sample_filename_from_host_path(host_path: pathlib.Path) -> str:
         return random_filename() + f".{extension}"
 
 
-def get_startup_argv(
+def get_startup_method_and_argv(
     target_path: str,
-) -> List[str]:
+) -> tuple[StartMethod, list[str]]:
     extension = target_path.rsplit(".", 1)[-1].lower()
     if extension == "dll":
-        return ["rundll32", target_path]
+        return "createproc", ["rundll32", target_path]
     elif extension in ["exe", "bat"]:
-        return [target_path]
+        return "createproc", [target_path]
     elif extension == "ps1":
-        return ["powershell.exe", "-executionpolicy", "bypass", "-File", target_path]
-    elif is_office_file(extension):
-        argv = []
-        if is_office_word_file(extension):
-            argv.append("winword.exe")
-        elif is_office_excel_file(extension):
-            argv.append("excel.exe")
-        elif is_office_powerpoint_file(extension):
-            argv.append("powerpnt.exe")
-        else:
-            raise RuntimeError(f"Unknown office file extension {extension}.")
-        argv.extend(["/t", target_path])
-        return ["cmd.exe", "/C", "start", *argv]
+        return "createproc", [
+            "powershell.exe",
+            "-executionpolicy",
+            "bypass",
+            "-File",
+            target_path,
+        ]
     elif extension in ["js", "jse", "vbs", "vbe"]:
-        return ["wscript.exe", target_path]
+        return "createproc", ["wscript.exe", target_path]
     elif extension in ["hta", "html", "htm"]:
-        return ["mshta.exe", target_path]
+        return "createproc", ["mshta.exe", target_path]
     else:
-        return ["cmd.exe", "/C", "start", target_path]
+        return "shellexec", ["cmd.exe", "/C", "start", target_path]
 
 
-def is_office_word_file(extension: str) -> bool:
-    return extension in ["doc", "docm", "docx", "dotm", "rtf"]
+class ExecParameters(NamedTuple):
+    start_method: StartMethod
+    command: str
+    shellexec_args: Optional[str]
+    full_command: str
 
 
-def is_office_excel_file(extension: str) -> bool:
-    return extension in ["xls", "xlsx", "xlsm", "xltx", "xltm"]
+def make_exec_parameters(
+    start_command: list[str] | str,
+    start_method: StartMethod,
+    shellexec_supported: bool,
+) -> ExecParameters:
+    shellexec_args = None
+    if start_method in ["shellexec", "runas"]:
+        # If start_command is not None: it's str or list[str]
+        if type(start_command) is str:
+            splitted_cmd = mslex.split(start_command, like_cmd=False)
+        else:
+            splitted_cmd = start_command
 
+        if shellexec_supported:
+            exec_cmd = splitted_cmd[0]
+            shellexec_args = mslex.join(splitted_cmd[1:], for_cmd=False)
+            full_command = mslex.join(splitted_cmd, for_cmd=False)
+        else:
+            # If shellexec is not supported, we fallback to
+            # cmd.exe /C start "" <cmd>
+            start_method: StartMethod = "createproc"
+            exec_cmd = 'cmd.exe /C start "" ' + mslex.join(splitted_cmd, for_cmd=False)
+            full_command = exec_cmd
 
-def is_office_powerpoint_file(extension: str) -> bool:
-    return extension in ["ppt", "pptx"]
+    elif start_method == "createproc":
+        if type(start_command) is str:
+            full_command = exec_cmd = start_command
+        else:
+            full_command = exec_cmd = mslex.join(start_command, for_cmd=False)
+    else:
+        raise ValueError(f"Unsupported start_method: {start_method}")
 
-
-def is_office_file(extension: str) -> bool:
-    return (
-        is_office_word_file(extension)
-        or is_office_excel_file(extension)
-        or is_office_powerpoint_file(extension)
+    return ExecParameters(
+        start_method=start_method,
+        command=exec_cmd,
+        shellexec_args=shellexec_args,
+        full_command=full_command,
     )
