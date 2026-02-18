@@ -3,6 +3,7 @@ from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP, IPT_DIR, IPT_ZIP
 from .build_process_tree import build_process_tree
 from .capa_plugin.capa_processor import capa_analysis
 from .compress_ipt import compress_ipt
+from .generate_html_report import generate_html_report
 from .generate_report import generate_report
 from .generate_wireshark_key_file import generate_wireshark_key_file
 from .get_http_info import get_http_info
@@ -84,6 +85,11 @@ POSTPROCESS_PLUGINS = [
         function=generate_report,
         requires=[],
         generates=[],
+    ),
+    PostprocessPlugin(
+        function=generate_html_report,
+        requires=["report.json"],
+        generates=["report.html"],
     ),
     PostprocessPlugin(
         function=index_logs, requires=["process_tree.json"], generates=["log_index"]

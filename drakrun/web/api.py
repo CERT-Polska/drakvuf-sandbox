@@ -389,3 +389,15 @@ def screenshot(path: ScreenshotRequestPath):
         mimetype="image/png",
         s3_config=config.s3,
     )
+
+
+@api.get("/html/<task_uid>")
+def get_html_report(path: AnalysisRequestPath):
+    task_uid = path.task_uid
+    return send_analysis_file(
+        task_uid,
+        "report.html",
+        mimetype="text/html",
+        s3_config=config.s3,
+        download_name=f"report-{task_uid}.html",
+    )

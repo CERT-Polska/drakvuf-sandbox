@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getAnalysisProcessTree } from "./api.js";
 import { ProcessTree } from "./ProcessTree.jsx";
+import { useAnalysisReport } from "./AnalysisReportContext.jsx";
 
 function isProcessInteresting(process) {
     return process.procname.endsWith("explorer.exe");
@@ -51,6 +51,7 @@ export function ProcessTreeView({
     const [uncollapsed, setUncollapsed] = useState(new Set());
     const [processTree, setProcessTree] = useState();
     const [error, setError] = useState();
+    const { getAnalysisProcessTree } = useAnalysisReport();
 
     useEffect(() => {
         getAnalysisProcessTree({ analysisId })

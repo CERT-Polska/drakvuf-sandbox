@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-    getAnalysisSummary,
-    getLog,
-    getLogList,
-    getProcessInfo,
-    getProcessLog,
-} from "./api.js";
+import { getLog, getLogList, getProcessLog } from "./api.js";
 import { TabSwitcher, Tab, useTabContext } from "./TabSwitcher.jsx";
 import { getLogLoader, LogViewer } from "./LogViewer.jsx";
 import { AnalysisMetadataTable } from "./AnalysisMetadataTable.jsx";
@@ -19,6 +13,7 @@ import axios, { CanceledError } from "axios";
 import { AnalysisSummary } from "./AnalysisSummary.jsx";
 import { ProcessBadge } from "./ProcessBadge.jsx";
 import { AnalysisFilesViewer } from "./AnalysisFiles.jsx";
+import { useAnalysisReport } from "./AnalysisReportContext.jsx";
 
 export function AnalysisLogViewerTab({ analysisId }) {
     const logType = useTabContext()?.activeTab;
@@ -136,6 +131,7 @@ function ProcessLogViewer({ analysisId, selectedProcess }) {
     const [activeTab, setActiveTab] = useState();
     const [processInfo, setProcessInfo] = useState();
     const [error, setError] = useState();
+    const { getProcessInfo, isOffline } = useAnalysisReport();
     const loadProcessInfo = useCallback(
         async (processSeqId) => {
             try {
@@ -194,11 +190,15 @@ function ProcessLogViewer({ analysisId, selectedProcess }) {
                         selectedProcess={selectedProcess}
                         processInfo={processInfo}
                     />
-                    <ProcessLogViewerTab
-                        analysisId={analysisId}
-                        selectedProcess={selectedProcess}
-                        processInfo={processInfo}
-                    />
+                    {!isOffline ? (
+                        <ProcessLogViewerTab
+                            analysisId={analysisId}
+                            selectedProcess={selectedProcess}
+                            processInfo={processInfo}
+                        />
+                    ) : (
+                        []
+                    )}
                 </TabSwitcher>
             </div>
         </div>
@@ -220,6 +220,7 @@ function AnalysisReportTabs({
     setSelectedProcess,
     activeReportTab,
     setActiveReportTab,
+    isOffline,
 }) {
     const getHeader = useCallback(
         (tab) => {
@@ -256,9 +257,13 @@ function AnalysisReportTabs({
                             setSelectedProcess={setSelectedProcess}
                         />
                     </PaddedTab>
-                    <PaddedTab tab="General logs">
-                        <AnalysisLogViewer analysisId={analysis.id} />
-                    </PaddedTab>
+                    {!isOffline ? (
+                        <PaddedTab tab="General logs">
+                            <AnalysisLogViewer analysisId={analysis.id} />
+                        </PaddedTab>
+                    ) : (
+                        []
+                    )}
                     <PaddedTab tab="Process info">
                         <ProcessLogViewer
                             analysisId={analysis.id}
@@ -270,19 +275,28 @@ function AnalysisReportTabs({
                             <AnalysisScreenshotViewer analysis={analysis} />
                         </PaddedTab>
                     ) : null}
-                    <PaddedTab tab="Analysis files">
-                        <AnalysisFilesViewer analysisId={analysis.id} />
-                    </PaddedTab>
+                    {!isOffline ? (
+                        <PaddedTab tab="Analysis files">
+                            <AnalysisFilesViewer analysisId={analysis.id} />
+                        </PaddedTab>
+                    ) : (
+                        []
+                    )}
                 </TabSwitcher>
             </div>
         </div>
     );
 }
 
-export function AnalysisReport({ analysis }) {
+export function AnalysisReport() {
     const [selectedProcess, setSelectedProcess] = useState();
     const [activeReportTab, setActiveReportTab] = useState();
     const [analysisSummary, setAnalysisSummary] = useState();
+    const {
+        analysisInfo: analysis,
+        getAnalysisSummary,
+        isOffline,
+    } = useAnalysisReport();
     const plugins = analysis.options?.plugins;
     const baseUrl = axios.defaults.baseURL;
     const analysisId = analysis.id;
@@ -298,7 +312,7 @@ export function AnalysisReport({ analysis }) {
                     console.error(error);
                 }
             });
-    }, [analysisId]);
+    }, [analysisId, getAnalysisSummary]);
 
     useEffect(() => {
         fetchSummary();
@@ -324,47 +338,66 @@ export function AnalysisReport({ analysis }) {
                 </div>
                 <div className="col-6">
                     <AnalysisMetadataTable analysis={analysis} />
-                    <div className="card">
-                        <div className="card-body">
-                            <a href={`${baseUrl}/pcap_file/${analysis.id}`}>
-                                <button className="btn btn-primary m-1">
-                                    <FontAwesomeIcon
-                                        icon={faDownload}
-                                        className="me-2"
-                                    />
-                                    Download PCAP
-                                </button>
-                            </a>
-                            {Array.isArray(plugins) &&
-                            plugins.includes("tlsmon") ? (
-                                <a href={`${baseUrl}/pcap_keys/${analysis.id}`}>
+                    {!isOffline ? (
+                        <div className="card">
+                            <div className="card-body">
+                                <a href={`${baseUrl}/pcap_file/${analysis.id}`}>
                                     <button className="btn btn-primary m-1">
                                         <FontAwesomeIcon
                                             icon={faDownload}
                                             className="me-2"
                                         />
-                                        TLS keys
+                                        Download PCAP
                                     </button>
                                 </a>
-                            ) : (
-                                []
-                            )}
-                            {Array.isArray(plugins) &&
-                            plugins.includes("memdump") ? (
-                                <a href={`${baseUrl}/dumps/${analysis.id}`}>
-                                    <button className="btn btn-primary m-1">
-                                        <FontAwesomeIcon
-                                            icon={faDownload}
-                                            className="me-2"
-                                        />
-                                        Memory dumps
-                                    </button>
-                                </a>
-                            ) : (
-                                []
-                            )}
+                                {Array.isArray(plugins) &&
+                                plugins.includes("tlsmon") ? (
+                                    <a
+                                        href={`${baseUrl}/pcap_keys/${analysis.id}`}
+                                    >
+                                        <button className="btn btn-primary m-1">
+                                            <FontAwesomeIcon
+                                                icon={faDownload}
+                                                className="me-2"
+                                            />
+                                            TLS keys
+                                        </button>
+                                    </a>
+                                ) : (
+                                    []
+                                )}
+                                {Array.isArray(plugins) &&
+                                plugins.includes("memdump") ? (
+                                    <a href={`${baseUrl}/dumps/${analysis.id}`}>
+                                        <button className="btn btn-primary m-1">
+                                            <FontAwesomeIcon
+                                                icon={faDownload}
+                                                className="me-2"
+                                            />
+                                            Memory dumps
+                                        </button>
+                                    </a>
+                                ) : (
+                                    []
+                                )}
+                                {analysis["html_report"] ? (
+                                    <a href={`${baseUrl}/html/${analysis.id}`}>
+                                        <button className="btn btn-primary m-1">
+                                            <FontAwesomeIcon
+                                                icon={faDownload}
+                                                className="me-2"
+                                            />
+                                            HTML report
+                                        </button>
+                                    </a>
+                                ) : (
+                                    []
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        []
+                    )}
                 </div>
             </div>
             <div className="row py-4">
@@ -376,6 +409,7 @@ export function AnalysisReport({ analysis }) {
                         setSelectedProcess={onSelectProcess}
                         activeReportTab={activeReportTab}
                         setActiveReportTab={setActiveReportTab}
+                        isOffline={isOffline}
                     />
                 </div>
             </div>

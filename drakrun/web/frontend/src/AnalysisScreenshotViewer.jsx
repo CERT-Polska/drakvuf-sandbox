@@ -1,14 +1,9 @@
 import Zoom from "react-medium-image-zoom";
 import "react-medium-image-zoom/dist/styles.css";
-
-let BASE_URL = "";
-if (import.meta.env.VITE_API_SERVER) {
-    BASE_URL = import.meta.env.VITE_API_SERVER;
-} else {
-    BASE_URL = "/api";
-}
+import { useAnalysisReport } from "./AnalysisReportContext.jsx";
 
 export function AnalysisScreenshotViewer({ analysis }) {
+    const { getScreenshotURL } = useAnalysisReport();
     return (
         <div className="container-fluid">
             <div className="row">
@@ -18,7 +13,7 @@ export function AnalysisScreenshotViewer({ analysis }) {
                             <Zoom>
                                 <img
                                     alt={`screenshot-${idx + 1}`}
-                                    src={`${BASE_URL}/screenshot/${analysis.id}/${idx + 1}`}
+                                    src={getScreenshotURL(analysis.id, idx + 1)}
                                     className="img-thumbnail"
                                     style={{ cursor: "pointer" }}
                                 />
