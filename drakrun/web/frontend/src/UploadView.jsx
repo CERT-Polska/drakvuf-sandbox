@@ -202,7 +202,9 @@ export default function UploadView() {
                         id="start-method"
                         name="start_method"
                     >
-                        <option selected>default</option>
+                        <option value="" selected>
+                            default
+                        </option>
                         <option value="createproc">CreateProcess</option>
                         <option value="shellexec">ShellExecute</option>
                         <option value="runas">
