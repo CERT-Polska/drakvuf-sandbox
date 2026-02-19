@@ -58,7 +58,7 @@ def get_startup_method_and_argv(
     elif extension in ["hta", "html", "htm"]:
         return "createproc", ["mshta.exe", target_path]
     else:
-        return "shellexec", ["cmd.exe", "/C", "start", target_path]
+        return "shellexec", [target_path]
 
 
 class ExecParameters(NamedTuple):
