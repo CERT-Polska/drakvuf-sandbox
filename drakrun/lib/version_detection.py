@@ -31,7 +31,7 @@ def get_drakvuf_version() -> DrakvufVersionInfo:
 
     help_string = output.stderr
     version_string = help_string.splitlines()[0]
-    match = re.search(r"v(\d+)\.(\d+)-(.+?)(?:\s|$)", version_string)
+    match = re.search(r"v(\d+)\.(\d+)-(.+?)\s", version_string)
     if match:
         major = int(match.group(1))
         minor = int(match.group(2))
