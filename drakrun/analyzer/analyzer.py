@@ -179,6 +179,12 @@ def analyze_file(
 
     drakvuf_version_info = get_drakvuf_version()
     shellexec_supported = drakvuf_version_info.supports_shellexec_verb
+    # ShellExecute is able to auto-elevate binary in case of ERROR_ELEVATION_REQUIRED
+    # so if Drakvuf implements the improved shellexec injection: it should be
+    # our first choice
+    preferred_start_method: StartMethod = (
+        "shellexec" if shellexec_supported else "createproc"
+    )
 
     if options.start_method == "runas" and not shellexec_supported:
         raise RuntimeError(
@@ -249,8 +255,9 @@ def analyze_file(
                     f"  target_dir={target_dir}, guest_archive_entry_path={options.guest_archive_entry_path}"
                 )
                 start_method, options.start_command = get_startup_method_and_argv(
-                    archive_executable_path
+                    archive_executable_path, preferred_start_method
                 )
+                # If user provides its own method, we will stick to that one
                 if options.start_method is None:
                     options.start_method = start_method
 
@@ -286,8 +293,9 @@ def analyze_file(
 
             if options.start_command is None:
                 start_method, options.start_command = get_startup_method_and_argv(
-                    guest_executable_path
+                    guest_executable_path, preferred_start_method
                 )
+                # If user provides its own method, we will stick to that one
                 if options.start_method is None:
                     options.start_method = start_method
 
@@ -299,11 +307,19 @@ def analyze_file(
         try:
             if options.start_command is not None:
                 start_method: StartMethod
+                # If user provided the start command but not the start method
+                # fallback to the preferred_start_method
                 if options.start_method is None:
-                    start_method = "createproc"
+                    start_method = preferred_start_method
                 else:
                     start_method = options.start_method
 
+                # At this point:
+                # - createproc always use CreateProcess method
+                # - shellexec uses CreateProcess combined with "cmd /c start"
+                #   in case of old Drakvuf version or ShellExecuteEx
+                # - runas requires Drakvuf version that implements ShellExecuteEx
+                #   and verbs
                 exec_parameters = make_exec_parameters(
                     options.start_command,
                     start_method,

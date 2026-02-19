@@ -38,15 +38,15 @@ def get_sample_filename_from_host_path(host_path: pathlib.Path) -> str:
 
 
 def get_startup_method_and_argv(
-    target_path: str,
+    target_path: str, preferred_method: StartMethod
 ) -> tuple[StartMethod, list[str]]:
     extension = target_path.rsplit(".", 1)[-1].lower()
     if extension == "dll":
-        return "createproc", ["rundll32", target_path]
+        return preferred_method, ["rundll32", target_path]
     elif extension in ["exe", "bat"]:
-        return "createproc", [target_path]
+        return preferred_method, [target_path]
     elif extension == "ps1":
-        return "createproc", [
+        return preferred_method, [
             "powershell.exe",
             "-executionpolicy",
             "bypass",
@@ -54,9 +54,9 @@ def get_startup_method_and_argv(
             target_path,
         ]
     elif extension in ["js", "jse", "vbs", "vbe"]:
-        return "createproc", ["wscript.exe", target_path]
+        return preferred_method, ["wscript.exe", target_path]
     elif extension in ["hta", "html", "htm"]:
-        return "createproc", ["mshta.exe", target_path]
+        return preferred_method, ["mshta.exe", target_path]
     else:
         return "shellexec", [target_path]
 
