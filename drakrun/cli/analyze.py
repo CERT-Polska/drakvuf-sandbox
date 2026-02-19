@@ -70,6 +70,13 @@ from .check_root import check_root
     help="Start command to use for sample execution",
 )
 @click.option(
+    "--start-method",
+    "start_method",
+    default=None,
+    type=click.Choice(["createproc", "shellexec", "runas"]),
+    help="Start method to use (chosen automatically by default)",
+)
+@click.option(
     "--plugin",
     "plugins",
     default=None,
@@ -122,6 +129,7 @@ def analyze(
     target_filename,
     target_filepath,
     start_command,
+    start_method,
     plugins,
     net_enable,
     no_restore,
@@ -172,6 +180,7 @@ def analyze(
         net_enable=net_enable,
         sample_filename=target_filename,
         start_command=start_command,
+        start_method=start_method,
         plugins=plugins,
         no_vm_restore=no_restore,
         no_post_restore=no_post_restore,
