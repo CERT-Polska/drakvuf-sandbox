@@ -67,6 +67,7 @@ export default function UploadView() {
                     file_name: form.get("file_name"),
                     file_path: form.get("file_path"),
                     start_command: form.get("start_command"),
+                    start_method: form.get("start_method"),
                     no_internet: form.get("no_internet"),
                     no_screenshots: form.get("no_screenshots"),
                     extract_archive: form.get("extract_archive"),
@@ -191,6 +192,23 @@ export default function UploadView() {
                         errors={formErrors}
                         field="custom-start-command"
                     />
+                </div>
+                <div className="mb-3">
+                    <label htmlFor="start-method" className="form-label">
+                        Start method
+                    </label>
+                    <select
+                        className="form-select"
+                        id="start-method"
+                        name="start_method"
+                    >
+                        <option selected>default</option>
+                        <option value="createproc">CreateProcess</option>
+                        <option value="shellexec">ShellExecute</option>
+                        <option value="runas">
+                            ShellExecute with runas verb (force elevate)
+                        </option>
+                    </select>
                 </div>
                 <div className="mb-3 form-check">
                     <input

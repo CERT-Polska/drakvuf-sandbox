@@ -69,6 +69,7 @@ def upload_sample(form: UploadFileForm):
     if not sample_filename:
         sample_filename = request_file.filename
     start_command = form.start_command
+    start_method = form.start_method
     plugins = form.plugins
     preset = form.preset
     no_internet = form.no_internet
@@ -99,6 +100,7 @@ def upload_sample(form: UploadFileForm):
             host_sample_path=pathlib.Path(sample_path) if sample_path else None,
             sample_filename=sample_filename,
             start_command=start_command,
+            start_method=start_method,
             plugins=plugins,
             timeout=timeout,
             job_timeout_leeway=config.drakrun.job_timeout_leeway,
