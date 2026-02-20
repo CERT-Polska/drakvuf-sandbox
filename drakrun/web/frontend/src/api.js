@@ -140,6 +140,8 @@ export async function uploadSample({
     if (file_path) formData.append("file_path", file_path);
     if (start_command) formData.append("start_command", start_command);
     if (start_method) formData.append("start_method", start_method);
+    if (start_working_dir)
+        formData.append("start_working_dir", start_working_dir);
     if (no_internet) formData.append("no_internet", "1");
     if (no_screenshots) formData.append("no_screenshots", "1");
     if (extract_archive) formData.append("extract_archive", "1");

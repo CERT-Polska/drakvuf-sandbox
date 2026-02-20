@@ -113,6 +113,10 @@ def upload_sample(form: UploadFileForm):
             analysis_options.guest_target_directory = pathlib.PureWindowsPath(
                 form.file_path
             )
+        if form.start_working_dir:
+            analysis_options.guest_working_directory = pathlib.PureWindowsPath(
+                form.start_working_dir
+            )
         if form.extract_archive:
             logger.info(
                 f"Archive upload: extract_archive=True, archive_entry_path={form.archive_entry_path}"
