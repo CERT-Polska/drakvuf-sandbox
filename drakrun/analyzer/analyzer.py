@@ -128,38 +128,39 @@ def extract_archive_on_vm(
     drakshell: Drakshell,
     injector: Injector,
     host_sample_path: pathlib.Path,
+    guest_archive_name: str,
     guest_target_directory: pathlib.PureWindowsPath,
     archive_password: Optional[str],
 ) -> pathlib.PureWindowsPath:
     guest_archive_target_path = guest_target_directory / pathlib.PureWindowsPath(
-        get_sample_filename_from_host_path(host_sample_path)
+        guest_archive_name
     )
     if guest_archive_target_path.suffix.lower() != ".zip":
         guest_archive_target_path = guest_archive_target_path.with_suffix(".zip")
     log.info(
         f"Copying archive to the VM ({host_sample_path.as_posix()} -> {guest_archive_target_path})..."
     )
-    guest_archive_path = drop_sample_to_vm(
+    guest_archive_resolved_path = drop_sample_to_vm(
         injector, host_sample_path, str(guest_archive_target_path)
     )
-    guest_extraction_dir = pathlib.PureWindowsPath(guest_archive_path).parent
+    guest_extraction_dir = pathlib.PureWindowsPath(guest_archive_resolved_path).parent
     if config.drakrun.use_7zip:
         log.info(
-            f"Expanding archive using 7-Zip {guest_archive_path} -> {guest_extraction_dir}..."
+            f"Expanding archive using 7-Zip {guest_archive_resolved_path} -> {guest_extraction_dir}..."
         )
         command = [
             config.drakrun.path_to_7zip,
             "e",
-            str(guest_archive_path),
+            str(guest_archive_resolved_path),
             "-o" + str(guest_extraction_dir),
             *(["-p" + archive_password] if archive_password else []),
         ]
     else:
         log.info(
-            f"Expanding archive using Expand-Archive {guest_archive_path} -> {guest_extraction_dir}..."
+            f"Expanding archive using Expand-Archive {guest_archive_resolved_path} -> {guest_extraction_dir}..."
         )
         command = prepare_ps_command(
-            f"Expand-Archive -Force {guest_archive_path} {guest_extraction_dir}"
+            f"Expand-Archive -Force {guest_archive_resolved_path} {guest_extraction_dir}"
         )
     drakshell.check_call(command)
     return guest_extraction_dir
@@ -235,13 +236,20 @@ def analyze_file(
 
         if options.extract_archive:
             log.info("Running archive extraction...")
+            # If sample_filename is not explicitly defined, get
+            # target archive file name from host_sample_path
+            if options.sample_filename is None:
+                options.sample_filename = get_sample_filename_from_host_path(
+                    options.host_sample_path
+                )
             target_dir = extract_archive_on_vm(
                 config,
                 drakshell,
                 injector,
-                options.host_sample_path,
-                options.guest_target_directory,
-                options.archive_password,
+                host_sample_path=options.host_sample_path,
+                guest_archive_name=options.sample_filename,
+                guest_target_directory=options.guest_target_directory,
+                archive_password=options.archive_password,
             )
 
             if options.start_command is None:
@@ -267,7 +275,8 @@ def analyze_file(
             log.info(
                 f"Normal file mode: host_sample_path={options.host_sample_path}, sample_filename={options.sample_filename}"
             )
-            # For normal files, use sample_filename
+            # If sample_filename is not explicitly defined, get
+            # target file name from host_sample_path
             if options.sample_filename is None:
                 options.sample_filename = get_sample_filename_from_host_path(
                     options.host_sample_path
