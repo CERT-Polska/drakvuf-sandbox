@@ -7,6 +7,7 @@ import time
 from typing import List, Optional
 
 from drakrun.analyzer.screenshotter import Screenshotter
+from drakrun.analyzer.startup_command import ExecParameters
 from drakrun.lib.config import NetworkConfigSection
 from drakrun.lib.drakvuf_cmdline import get_base_drakvuf_cmdline
 from drakrun.lib.install_info import InstallInfo
@@ -75,15 +76,23 @@ def run_drakvuf(
     output_file: pathlib.Path,
     output_err_file: pathlib.Path,
     drakvuf_args: List[str],
-    exec_cmd: Optional[str] = None,
+    exec_parameters: Optional[ExecParameters] = None,
     cwd: Optional[pathlib.Path] = None,
 ):
     drakvuf_cmdline = get_base_drakvuf_cmdline(
         vm_name,
         kernel_profile_path,
         vmi_info,
-        exec_cmd=exec_cmd,
         extra_args=drakvuf_args,
+        **(
+            dict(
+                exec_cmd=exec_parameters.command,
+                shellexec_args=exec_parameters.shellexec_args,
+                start_method=exec_parameters.start_method,
+            )
+            if exec_parameters
+            else {}
+        ),
     )
 
     stop_watchdog = threading.Event()

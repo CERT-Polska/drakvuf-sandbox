@@ -4,6 +4,8 @@ from typing import Annotated, List, Optional
 from flask_openapi3 import FileStorage
 from pydantic import AfterValidator, BaseModel, Field, RootModel
 
+from drakrun.analyzer.analysis_options import StartMethod
+
 
 class APIErrorResponse(BaseModel):
     error: str = Field(description="Error message")
@@ -15,6 +17,9 @@ class UploadFileForm(BaseModel):
     file_name: Optional[str] = Field(default=None, description="Target file name")
     file_path: Optional[str] = Field(default=None, description="Target file path")
     start_command: Optional[str] = Field(default=None, description="Start command")
+    start_method: Optional[StartMethod] = Field(
+        default=None, description="Start method"
+    )
     plugins: Optional[List[str]] = Field(
         default=None, description="Plugins to use (in JSON array string)"
     )
