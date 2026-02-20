@@ -33,7 +33,10 @@ log = logging.getLogger(__name__)
     default="createproc",
     help="Execution method for injection (createproc, shellexec, runas)",
 )
-def drakvuf_cmdline(vm_id, cmd, method):
+@click.option(
+    "--working-dir", default=None, help="Working directory for executed sample"
+)
+def drakvuf_cmdline(vm_id, cmd, method, working_dir):
     from drakrun.analyzer.startup_command import make_exec_parameters
 
     config = load_config()
@@ -44,7 +47,9 @@ def drakvuf_cmdline(vm_id, cmd, method):
     if cmd is not None:
         drakvuf_version = get_drakvuf_version()
         supports_shellexec = drakvuf_version.supports_shellexec_verb
-        exec_parameters = make_exec_parameters(cmd, method, supports_shellexec)
+        exec_parameters = make_exec_parameters(
+            cmd, method, working_dir, supports_shellexec
+        )
     else:
         exec_parameters = None
     print(
@@ -58,6 +63,7 @@ def drakvuf_cmdline(vm_id, cmd, method):
                         exec_cmd=exec_parameters.command,
                         shellexec_args=exec_parameters.shellexec_args,
                         start_method=exec_parameters.start_method,
+                        working_dir=exec_parameters.working_dir,
                     )
                     if exec_parameters
                     else {}

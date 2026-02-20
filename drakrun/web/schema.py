@@ -20,6 +20,9 @@ class UploadFileForm(BaseModel):
     start_method: Optional[StartMethod] = Field(
         default=None, description="Start method"
     )
+    start_working_dir: Optional[str] = Field(
+        default=None, description="Start working directory"
+    )
     plugins: Optional[List[str]] = Field(
         default=None, description="Plugins to use (in JSON array string)"
     )

@@ -66,11 +66,13 @@ class ExecParameters(NamedTuple):
     command: str
     shellexec_args: Optional[str]
     full_command: str
+    working_dir: Optional[str]
 
 
 def make_exec_parameters(
     start_command: list[str] | str,
     start_method: StartMethod,
+    working_dir: Optional[str],
     shellexec_supported: bool,
 ) -> ExecParameters:
     shellexec_args = None
@@ -105,4 +107,5 @@ def make_exec_parameters(
         command=exec_cmd,
         shellexec_args=shellexec_args,
         full_command=full_command,
+        working_dir=working_dir,
     )

@@ -10,6 +10,7 @@ def get_base_drakvuf_cmdline(
     exec_cmd: Optional[str] = None,
     shellexec_args: Optional[str] = None,
     start_method: Optional[str] = None,
+    working_dir: Optional[str] = None,
     extra_args: Optional[List[str]] = None,
 ) -> List[str]:
     args = [
@@ -39,6 +40,8 @@ def get_base_drakvuf_cmdline(
                 exec_args.extend(["-f", shellexec_args])
         else:
             raise ValueError(f"Unsupported start method: {start_method}")
+        if working_dir is not None:
+            exec_args.extend(["-c", working_dir])
         args.extend(
             [
                 "-j",
