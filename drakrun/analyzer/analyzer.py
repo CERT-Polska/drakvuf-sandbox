@@ -243,6 +243,8 @@ def analyze_file(
                 options.guest_target_directory,
                 options.archive_password,
             )
+            if options.guest_working_directory is None:
+                options.guest_working_directory = target_dir
 
             if options.start_command is None:
                 archive_executable_path = str(
@@ -291,6 +293,13 @@ def analyze_file(
                 injector, options.host_sample_path, str(guest_executable_path)
             )
 
+            resolved_guest_executable_dir = pathlib.PureWindowsPath(
+                guest_executable_path
+            ).parent
+
+            if options.guest_working_directory is None:
+                options.guest_working_directory = resolved_guest_executable_dir
+
             if options.start_command is None:
                 start_method, options.start_command = get_startup_method_and_argv(
                     guest_executable_path, preferred_start_method
@@ -323,6 +332,7 @@ def analyze_file(
                 exec_parameters = make_exec_parameters(
                     options.start_command,
                     start_method,
+                    str(options.guest_working_directory),
                     shellexec_supported,
                 )
                 # At this point options object is used only to visualize
@@ -361,7 +371,7 @@ def analyze_file(
                     drakvuf_err_file,
                     drakvuf_args,
                     exec_parameters=exec_parameters,
-                    cwd=output_dir,
+                    drakvuf_cwd=output_dir,
                 ) as drakvuf,
             ):
                 log.info("Analysis started...")

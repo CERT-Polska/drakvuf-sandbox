@@ -19,6 +19,9 @@ class AnalysisOptions(BaseModel):
     guest_target_directory: pathlib.PureWindowsPath = pathlib.PureWindowsPath(
         "%USERPROFILE%\\Desktop\\"
     )
+    # Working directory set for the sample during execution
+    # Default is resolved guest_target_directory
+    guest_working_directory: Optional[pathlib.PureWindowsPath] = None
     # Start command to run on the VM
     start_command: Optional[Union[List[str], str]] = None
     # Start method to run start command
