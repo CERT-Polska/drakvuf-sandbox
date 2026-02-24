@@ -68,6 +68,7 @@ export default function UploadView() {
                     file_path: form.get("file_path"),
                     start_command: form.get("start_command"),
                     start_method: form.get("start_method"),
+                    start_working_dir: form.get("start_working_dir"),
                     no_internet: form.get("no_internet"),
                     no_screenshots: form.get("no_screenshots"),
                     extract_archive: form.get("extract_archive"),
@@ -211,6 +212,23 @@ export default function UploadView() {
                             ShellExecute with runas verb (force elevate)
                         </option>
                     </select>
+                </div>
+                <div className="mb-3">
+                    <label htmlFor="start-method" className="form-label">
+                        Start working directory
+                    </label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        id="custom-start-working-dir"
+                        name="start_working_dir"
+                        onChange={validateForm}
+                        placeholder="(pick automatically)"
+                    />
+                    <FormError
+                        errors={formErrors}
+                        field="custom-start-working-dir"
+                    />
                 </div>
                 <div className="mb-3 form-check">
                     <input

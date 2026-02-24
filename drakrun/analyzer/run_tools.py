@@ -77,7 +77,7 @@ def run_drakvuf(
     output_err_file: pathlib.Path,
     drakvuf_args: List[str],
     exec_parameters: Optional[ExecParameters] = None,
-    cwd: Optional[pathlib.Path] = None,
+    drakvuf_cwd: Optional[pathlib.Path] = None,
 ):
     drakvuf_cmdline = get_base_drakvuf_cmdline(
         vm_name,
@@ -89,6 +89,7 @@ def run_drakvuf(
                 exec_cmd=exec_parameters.command,
                 shellexec_args=exec_parameters.shellexec_args,
                 start_method=exec_parameters.start_method,
+                guest_working_dir=exec_parameters.working_dir,
             )
             if exec_parameters
             else {}
@@ -107,7 +108,7 @@ def run_drakvuf(
     try:
         with output_file.open("wb") as output, output_err_file.open("wb") as output_err:
             drakvuf = subprocess.Popen(
-                drakvuf_cmdline, stdout=output, stderr=output_err, cwd=cwd
+                drakvuf_cmdline, stdout=output, stderr=output_err, cwd=drakvuf_cwd
             )
             with process_graceful_exit(drakvuf):
                 yield drakvuf

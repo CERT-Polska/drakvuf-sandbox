@@ -63,6 +63,20 @@ from .check_root import check_root
     help="Target directory on VM where sample will be copied (Windows path)",
 )
 @click.option(
+    "--guest-archive-entry-path",
+    "guest_archive_entry_path",
+    default=None,
+    type=str,
+    help="File to execute after archive extraction",
+)
+@click.option(
+    "--guest-working-directory",
+    "guest_working_directory",
+    default=None,
+    type=str,
+    help="Alternative working directory to set while executing a file",
+)
+@click.option(
     "--start-command",
     "start_command",
     default=None,
@@ -128,6 +142,8 @@ def analyze(
     preset,
     target_filename,
     target_filepath,
+    guest_archive_entry_path,
+    guest_working_directory,
     start_command,
     start_method,
     plugins,
@@ -179,6 +195,7 @@ def analyze(
         timeout=timeout,
         net_enable=net_enable,
         sample_filename=target_filename,
+        guest_archive_entry_path=guest_archive_entry_path,
         start_command=start_command,
         start_method=start_method,
         plugins=plugins,
@@ -191,6 +208,11 @@ def analyze(
 
     if target_filepath is not None:
         options.guest_target_directory = pathlib.PureWindowsPath(target_filepath)
+
+    if guest_working_directory is not None:
+        options.guest_working_directory = pathlib.PureWindowsPath(
+            guest_working_directory
+        )
 
     metadata = AnalysisMetadata(
         id=output_dir.name,
