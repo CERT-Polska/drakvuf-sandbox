@@ -11,7 +11,61 @@ function FormError({ errors, field }) {
     return [];
 }
 
-export default function UploadView() {
+function Collapse({ header, children, collapsed, onToggle }) {
+    return (
+        <div className="mb-3">
+            <div className="d-flex align-items-center mb-2">
+                <hr className="flex-grow-1" />
+
+                <button
+                    type="button"
+                    className="btn btn-sm btn-link text-decoration-none px-2 d-flex align-items-center"
+                    onClick={onToggle}
+                >
+                    <span className="me-1">{header}</span>
+                    <span className="chevron">{collapsed ? "▼" : "▲"}</span>
+                </button>
+                <hr className="flex-grow-1" />
+            </div>
+            <div
+                className={
+                    "card card-body border-0 bg-light" +
+                    (collapsed ? " d-none" : "")
+                }
+            >
+                {children}
+            </div>
+        </div>
+    );
+}
+
+function InfoPopover({ children }) {
+    const [show, setShow] = useState(false);
+    return (
+        <span className="position-relative">
+            <span
+                className="ms-2 text-muted"
+                style={{ cursor: "pointer" }}
+                onMouseEnter={() => setShow(true)}
+                onMouseLeave={() => setShow(false)}
+                // Support non-mouse devices (e.g. mobile)
+                onClick={() => setShow((state) => !state)}
+            >
+                ⓘ
+            </span>
+            {show && (
+                <div
+                    className="position-absolute bg-white border rounded p-2 shadow"
+                    style={{ top: "100%", left: 0, zIndex: 10, width: "400px" }}
+                >
+                    {children}
+                </div>
+            )}
+        </span>
+    );
+}
+
+function UploadForm() {
     const [valid, setValid] = useState(true);
     const [submitted, setSubmitted] = useState(false);
     const formRef = useRef(undefined);
@@ -19,6 +73,7 @@ export default function UploadView() {
     const [error, setError] = useState();
     const [analysisTime, setAnalysisTime] = useState(10);
     const [extractArchive, setExtractArchive] = useState(false);
+    const [extraOptionsCollapsed, setExtraOptionsCollapsed] = useState(true);
     const navigate = useNavigate();
 
     const validateForm = useCallback(() => {
@@ -86,48 +141,105 @@ export default function UploadView() {
         [navigate],
     );
     return (
-        <div className="container-fluid px-4">
-            <h1 className="m-4 h4">Upload sample</h1>
-            {error ? <div className="text-danger">Error: {error}</div> : []}
-            <form onSubmit={submitForm} ref={formRef}>
+        <form onSubmit={submitForm} ref={formRef}>
+            <div className="mb-3">
+                <input
+                    className="form-control"
+                    type="file"
+                    id="form-file"
+                    name="file"
+                    onChange={validateForm}
+                    required
+                />
+                <FormError errors={formErrors} field="form-file" />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="form-timeout" className="form-label">
+                    Analysis time: {analysisTime} minute
+                    {analysisTime > 1 ? "s" : ""}
+                </label>
+                <input
+                    type="range"
+                    className="form-range"
+                    min="1"
+                    max="15"
+                    value={analysisTime}
+                    onChange={(ev) => setAnalysisTime(+ev.target.value)}
+                    id="form-timeout"
+                    name="timeout"
+                />
+            </div>
+            <div className="mb-3 form-check">
+                <input
+                    className="form-check-input"
+                    id="extract-archive"
+                    type="checkbox"
+                    name="extract_archive"
+                    onChange={(ev) => {
+                        setExtractArchive(ev.target.checked);
+                        validateForm();
+                    }}
+                />
+                <label className="form-check-label" htmlFor="extract-archive">
+                    Extract archive on the VM
+                </label>
+            </div>
+            {extractArchive ? (
                 <div className="mb-3">
-                    <label htmlFor="form-file" className="form-label">
-                        Sample file
+                    <label htmlFor="archive-entry-path" className="form-label">
+                        Path inside archive to execute
+                        <InfoPopover>
+                            Relative path of the file to execute after
+                            extracting the archive
+                        </InfoPopover>
                     </label>
                     <input
+                        type="text"
                         className="form-control"
-                        type="file"
-                        id="form-file"
-                        name="file"
+                        id="archive-entry-path"
+                        name="archive_entry_path"
                         onChange={validateForm}
-                        required
                     />
-                    <FormError errors={formErrors} field="form-file" />
+                    <FormError errors={formErrors} field="archive-entry-path" />
                 </div>
+            ) : (
+                []
+            )}
+            {extractArchive ? (
                 <div className="mb-3">
-                    <label htmlFor="form-timeout" className="form-label">
-                        Analysis time: {analysisTime} minute
-                        {analysisTime > 1 ? "s" : ""}
+                    <label htmlFor="archive-password" className="form-label">
+                        Archive password (optional)
                     </label>
                     <input
-                        type="range"
-                        className="form-range"
-                        min="1"
-                        max="15"
-                        value={analysisTime}
-                        onChange={(ev) => setAnalysisTime(+ev.target.value)}
-                        id="form-timeout"
-                        name="timeout"
+                        type="text"
+                        className="form-control"
+                        id="archive-password"
+                        name="archive_password"
                     />
                 </div>
+            ) : (
+                []
+            )}
+            <Collapse
+                header="Extra options"
+                collapsed={extraOptionsCollapsed}
+                onToggle={() => setExtraOptionsCollapsed((state) => !state)}
+            >
                 <div className="mb-3">
-                    <label className="form-label">Plugins</label>
+                    <label className="form-label">Plugins:</label>
                     <PluginPicker name="plugins" onChange={validateForm} />
                     <FormError errors={formErrors} field="plugins" />
                 </div>
                 <div className="mb-3">
                     <label htmlFor="target-file-name" className="form-label">
                         Target file name
+                        <InfoPopover>
+                            Specify the name to assign to the file when it is
+                            uploaded to the VM. By default, the file keeps the
+                            same name as the one you uploaded. Use this if the
+                            malware requires a specific name or if the uploaded
+                            file doesn’t have the correct extension.
+                        </InfoPopover>
                     </label>
                     <input
                         type="text"
@@ -142,6 +254,12 @@ export default function UploadView() {
                 <div className="mb-3">
                     <label htmlFor="target-file-path" className="form-label">
                         Target file path
+                        <InfoPopover>
+                            Choose the location on the VM where the file will be
+                            uploaded. By default, files go to the Desktop. You
+                            can use environment variables here (e.g.,
+                            %USERPROFILE%).
+                        </InfoPopover>
                     </label>
                     <input
                         type="text"
@@ -151,35 +269,19 @@ export default function UploadView() {
                         placeholder="(pick automatically)"
                     />
                 </div>
-                {extractArchive ? (
-                    <div className="mb-3">
-                        <label
-                            htmlFor="archive-entry-path"
-                            className="form-label"
-                        >
-                            Path inside archive to execute
-                        </label>
-                        <input
-                            type="text"
-                            className="form-control"
-                            id="archive-entry-path"
-                            name="archive_entry_path"
-                            onChange={validateForm}
-                        />
-                        <FormError
-                            errors={formErrors}
-                            field="archive-entry-path"
-                        />
-                    </div>
-                ) : (
-                    []
-                )}
                 <div className="mb-3">
                     <label
                         htmlFor="custom-start-command"
                         className="form-label"
                     >
                         Start command
+                        <InfoPopover>
+                            Enter a custom command line to execute the sample on
+                            the VM. This is passed directly to
+                            CreateProcess/ShellExecute, so include the correct
+                            file name. Note that environment variables are not
+                            expanded in this field.
+                        </InfoPopover>
                     </label>
                     <input
                         type="text"
@@ -197,6 +299,13 @@ export default function UploadView() {
                 <div className="mb-3">
                     <label htmlFor="start-method" className="form-label">
                         Start method
+                        <InfoPopover>
+                            Select the method used to launch the sample on the
+                            VM. CreateProcess requires a Windows executable (not
+                            a script). "ShellExecute with runas verb" can be
+                            used to force elevation if the sample needs higher
+                            privileges and does not self-elevate.
+                        </InfoPopover>
                     </label>
                     <select
                         className="form-select"
@@ -216,6 +325,11 @@ export default function UploadView() {
                 <div className="mb-3">
                     <label htmlFor="start-method" className="form-label">
                         Start working directory
+                        <InfoPopover>
+                            Define the working directory for the sample during
+                            execution. By default, it is set to the "Target file
+                            path". Environment variables are not expanded here.
+                        </InfoPopover>
                     </label>
                     <input
                         type="text"
@@ -230,77 +344,76 @@ export default function UploadView() {
                         field="custom-start-working-dir"
                     />
                 </div>
-                <div className="mb-3 form-check">
-                    <input
-                        className="form-check-input"
-                        id="no-internet"
-                        type="checkbox"
-                        name="no_internet"
-                    />
-                    <label className="form-check-label" htmlFor="no-internet">
-                        Disable Internet access
-                    </label>
-                </div>
-                <div className="mb-3 form-check">
-                    <input
-                        className="form-check-input"
-                        id="no-screenshots"
-                        type="checkbox"
-                        name="no_screenshots"
-                    />
-                    <label
-                        className="form-check-label"
-                        htmlFor="no-screenshots"
-                    >
-                        Disable screenshots
-                    </label>
-                </div>
-                <div className="mb-3 form-check">
-                    <input
-                        className="form-check-input"
-                        id="extract-archive"
-                        type="checkbox"
-                        name="extract_archive"
-                        onChange={(ev) => {
-                            setExtractArchive(ev.target.checked);
-                            validateForm();
-                        }}
-                    />
-                    <label
-                        className="form-check-label"
-                        htmlFor="extract-archive"
-                    >
-                        Extract archive
-                    </label>
-                </div>
-                {extractArchive ? (
-                    <div className="mb-3">
-                        <label
-                            htmlFor="archive-password"
-                            className="form-label"
-                        >
-                            Archive password (optional)
-                        </label>
-                        <input
-                            type="text"
-                            className="form-control"
-                            id="archive-password"
-                            name="archive_password"
-                        />
+                <div className="row mb-3">
+                    <div className="col-md-6">
+                        <div className="form-check">
+                            <input
+                                className="form-check-input"
+                                id="no-internet"
+                                type="checkbox"
+                                name="no_internet"
+                            />
+                            <label
+                                className="form-check-label"
+                                htmlFor="no-internet"
+                            >
+                                Disable Internet access
+                            </label>
+                        </div>
                     </div>
+                    <div className="col-md-6">
+                        <div className="form-check">
+                            <input
+                                className="form-check-input"
+                                id="no-screenshots"
+                                type="checkbox"
+                                name="no_screenshots"
+                            />
+                            <label
+                                className="form-check-label"
+                                htmlFor="no-screenshots"
+                            >
+                                Disable screenshots
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </Collapse>
+
+            <div className="d-flex align-items-center">
+                <button
+                    className="btn btn-primary"
+                    disabled={submitted || !valid}
+                    type="submit"
+                >
+                    Analyze
+                </button>
+                {error ? (
+                    <div className="text-danger ms-3">Error: {error}</div>
                 ) : (
                     []
                 )}
-                <div className="mb-3">
-                    <button
-                        className="btn btn-primary"
-                        disabled={submitted || !valid}
-                        type="submit"
-                    >
-                        Submit
-                    </button>
+            </div>
+        </form>
+    );
+}
+
+export default function UploadView() {
+    return (
+        <div className="container py-5" style={{ maxWidth: "800px" }}>
+            <div className="card">
+                <div className="card-body">
+                    <div className="d-flex align-items-center mb-3">
+                        <div>
+                            <h4 className="mb-0">Submit file for analysis</h4>
+                            <small className="text-muted">
+                                Detonate file inside malware sandbox
+                            </small>
+                        </div>
+                    </div>
+                    <UploadForm />
                 </div>
-            </form>
+            </div>
         </div>
     );
 }
