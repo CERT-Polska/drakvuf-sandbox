@@ -126,6 +126,7 @@ export async function uploadSample({
     plugins,
     start_command,
     start_method,
+    start_working_dir,
     no_internet,
     no_screenshots,
     extract_archive,
