@@ -89,7 +89,7 @@ def run_drakvuf(
                 exec_cmd=exec_parameters.command,
                 shellexec_args=exec_parameters.shellexec_args,
                 start_method=exec_parameters.start_method,
-                guest_working_dir=exec_parameters.working_dir,
+                working_dir=exec_parameters.working_dir,
             )
             if exec_parameters
             else {}
