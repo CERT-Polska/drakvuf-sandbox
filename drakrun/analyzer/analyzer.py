@@ -182,9 +182,11 @@ def analyze_file(
     shellexec_supported = drakvuf_version_info.supports_shellexec_verb
     # ShellExecute is able to auto-elevate binary in case of ERROR_ELEVATION_REQUIRED
     # so if Drakvuf implements the improved shellexec injection: it should be
-    # our first choice
+    # our first choice for binaries
     preferred_start_method: StartMethod = (
-        "shellexec" if shellexec_supported else "createproc"
+        "shellexec"
+        if shellexec_supported and not config.drakrun.no_shellexec
+        else "createproc"
     )
 
     if options.start_method == "runas" and not shellexec_supported:

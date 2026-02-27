@@ -42,11 +42,11 @@ def get_startup_method_and_argv(
 ) -> tuple[StartMethod, list[str]]:
     extension = target_path.rsplit(".", 1)[-1].lower()
     if extension == "dll":
-        return preferred_method, ["rundll32", target_path]
+        return "createproc", ["rundll32", target_path]
     elif extension in ["exe", "bat"]:
         return preferred_method, [target_path]
     elif extension == "ps1":
-        return preferred_method, [
+        return "createproc", [
             "powershell.exe",
             "-executionpolicy",
             "bypass",
@@ -54,11 +54,13 @@ def get_startup_method_and_argv(
             target_path,
         ]
     elif extension in ["js", "jse", "vbs", "vbe"]:
-        return preferred_method, ["wscript.exe", target_path]
+        return "createproc", ["wscript.exe", target_path]
     elif extension in ["hta", "html", "htm"]:
-        return preferred_method, ["mshta.exe", target_path]
+        return "createproc", ["mshta.exe", target_path]
     else:
-        return "shellexec", [target_path]
+        # shellexec may wait for documents to fully open
+        # which may cause injector timeout
+        return "createproc", ["cmd.exe", "/C", "start", "", target_path]
 
 
 class ExecParameters(NamedTuple):
