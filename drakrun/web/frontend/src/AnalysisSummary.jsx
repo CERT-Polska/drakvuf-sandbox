@@ -159,6 +159,17 @@ function SummaryStartupSection() {
                 </table>
             </SummarySection>
         );
+    } else if (!startupStatus) {
+        return (
+            <SummarySection
+                header="Process creation"
+                badgeValue="Unknown"
+                badgeType="danger"
+            >
+                No information about startup status. Check drakrun.log or
+                inject.log for more information.
+            </SummarySection>
+        );
     } else {
         return (
             <SummarySection
