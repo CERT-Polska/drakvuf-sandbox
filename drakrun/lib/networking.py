@@ -367,8 +367,8 @@ def stop_vm_network(vm_id: int):
         del_iptable_rule(f"DRAKRUN_FWD -i {bridge_name} -o {out_interface} -j ACCEPT")
         del_iptable_rule(f"DRAKRUN_FWD -i {out_interface} -o {bridge_name} -j ACCEPT")
 
-    network_info_path.unlink()
     run_network_setup_script("vmnet-post-down.sh", network_info)
+    network_info_path.unlink()
 
 
 def list_vm_bridges() -> List[str]:
