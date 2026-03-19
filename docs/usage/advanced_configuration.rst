@@ -278,10 +278,12 @@ Customizing network configuration
 Every time the VM is started, DRAKVUF Sandbox creates ``drakN`` bridge, starts ``dnsmasq`` and applies iptables rules to setup the network.
 In non-trivial configurations you may want to run your own commands.
 
-You can provide your own scripts that are executed each time the network is created:
+You can provide your own scripts that are executed each time the network is created/removed:
 
 - ``/etc/drakrun/vmnet-pre.sh`` executed before the network is created
 - ``/etc/drakrun/vmnet-post.sh`` executed after the network is created
+- ``/etc/drakrun/vmnet-pre-down.sh`` executed before the network is removed
+- ``/etc/drakrun/vmnet-post-down.sh`` executed after the network is removed
 
 e.g. the following ``vmnet-post.sh`` script can be used for setting up an alternative routing table to route VM traffic
 through different interface than the default one (in our case it was "enp2s0")
