@@ -1,4 +1,4 @@
-import { formatDate, fromTimestamp } from "./formatUtils.js"
+import { formatDate, fromTimestamp } from "./formatUtils.js";
 
 export function ProcessInfoTable({ processInfo }) {
     return (

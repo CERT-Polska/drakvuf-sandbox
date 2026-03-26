@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { ProcessBadge } from "./ProcessBadge.jsx";
-import { formatDate, fromTimestamp } from "./formatUtils.js"
+import { formatDate, fromTimestamp } from "./formatUtils.js";
 
 const COMMON_PORTS = {
     21: "FTP",
@@ -129,7 +129,9 @@ function SummaryStartupSection() {
                             <th>Exited at:</th>
                             <td>
                                 {processInfo.exited_at ? (
-                                    formatDate(fromTimestamp(processInfo.exited_at))
+                                    formatDate(
+                                        fromTimestamp(processInfo.exited_at),
+                                    )
                                 ) : (
                                     <i>(never)</i>
                                 )}

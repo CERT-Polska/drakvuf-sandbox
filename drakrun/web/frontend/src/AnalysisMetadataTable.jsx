@@ -1,5 +1,5 @@
 import { PluginList } from "./PluginPicker.jsx";
-import { formatDate } from "./formatUtils.js"
+import { formatDate } from "./formatUtils.js";
 
 export function AnalysisMetadataTable({ analysis }) {
     const startCommand = analysis.options["start_command"] || "-";
