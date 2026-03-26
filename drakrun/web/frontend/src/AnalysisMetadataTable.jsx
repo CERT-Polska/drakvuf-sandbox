@@ -1,4 +1,5 @@
 import { PluginList } from "./PluginPicker.jsx";
+import { formatDate } from "./formatUtils.js"
 
 export function AnalysisMetadataTable({ analysis }) {
     const startCommand = analysis.options["start_command"] || "-";
@@ -31,15 +32,15 @@ export function AnalysisMetadataTable({ analysis }) {
                 </tr>
                 <tr>
                     <th>Job started at</th>
-                    <td>{analysis["time_started"] || "-"}</td>
+                    <td>{formatDate(analysis["time_started"])}</td>
                 </tr>
                 <tr>
                     <th>Execution started at</th>
-                    <td>{analysis["time_execution_started"] || "-"}</td>
+                    <td>{formatDate(analysis["time_execution_started"])}</td>
                 </tr>
                 <tr>
                     <th>Job finished at</th>
-                    <td>{analysis["time_finished"] || "-"}</td>
+                    <td>{formatDate(analysis["time_finished"])}</td>
                 </tr>
                 <tr>
                     <th>Plugins</th>
