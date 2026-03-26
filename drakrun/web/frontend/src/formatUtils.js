@@ -13,7 +13,6 @@ export function formatDate(date) {
     }
     // Slightly hacky - sv-SE uses the time format we want (yyyy-mm-dd), but - unlike
     // toISOString() - it uses local time.
-    //
     return date.toLocaleString("sv-SE");
 }
 
