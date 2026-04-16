@@ -150,7 +150,7 @@ def extract_archive_on_vm(
         )
         command = [
             config.drakrun.path_to_7zip,
-            "e",
+            "x",
             str(guest_archive_resolved_path),
             "-o" + str(guest_extraction_dir),
             *(["-p" + archive_password] if archive_password else []),
