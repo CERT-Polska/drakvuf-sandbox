@@ -1,23 +1,34 @@
 /**
- * Format a javascript Date object into human-readable format.
+ * Format a Date object into human-readable format.
  *
  * The date format is "2026-03-26 12:23:43".
  * For null, this function returns "-"
  *
- * @param {?Date} date Javascript Date object. Can be null.
- * @returns {String} Pretty printed date object
+ * @param {Date|String|null} date Date object or ISO formatted string. Can be null or an empty string.
+ * @returns {String} Pretty-printed date object
  */
 export function formatDate(date) {
-    if (date === null) {
+    if (!date) {
         return "-";
     }
-    // Slightly hacky - sv-SE uses the time format we want (yyyy-mm-dd), but - unlike
-    // toISOString() - it uses local time.
-    return date.toLocaleString("sv-SE");
+    if (typeof date === "string") {
+        date = new Date(date);
+    }
+    const pad = (n) => String(n).padStart(2, "0");
+
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1); // Months are 0-based
+    const day = pad(date.getDate());
+
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 /**
- * Create a javascript Date object from Unix timestamp
+ * Create a Date object from Unix timestamp
  *
  * @param {number} timestamp Unix timestmap
  * @returns {Date}

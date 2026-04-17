@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getAnalysisList } from "./api";
 import { CanceledError } from "axios";
 import { AnalysisStatusBadge } from "./AnalysisStatusBadge.jsx";
+import { formatDate } from "./formatUtils.js";
 
 function AnalysisListRow({ analysis }) {
     return (
@@ -25,8 +26,8 @@ function AnalysisListRow({ analysis }) {
                     <div>{analysis.file.type}</div>
                 </div>
             </td>
-            <td>{analysis.time_started || "-"}</td>
-            <td>{analysis.time_finished || "-"}</td>
+            <td>{formatDate(analysis.time_started)}</td>
+            <td>{formatDate(analysis.time_finished)}</td>
         </tr>
     );
 }
