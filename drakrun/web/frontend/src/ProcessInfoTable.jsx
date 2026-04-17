@@ -1,6 +1,4 @@
-function epochToTimestamp(timestamp) {
-    return new Date(timestamp * 1000).toISOString();
-}
+import { formatDate, fromTimestamp } from "./formatUtils.js";
 
 export function ProcessInfoTable({ processInfo }) {
     return (
@@ -30,7 +28,7 @@ export function ProcessInfoTable({ processInfo }) {
                     <th>Started at</th>
                     <td>
                         {processInfo.ts_from ? (
-                            epochToTimestamp(processInfo.ts_from)
+                            formatDate(fromTimestamp(processInfo.ts_from))
                         ) : (
                             <i>(running from the beginning of analysis)</i>
                         )}
@@ -40,7 +38,7 @@ export function ProcessInfoTable({ processInfo }) {
                     <th>Finished at</th>
                     <td>
                         {processInfo.ts_to ? (
-                            epochToTimestamp(processInfo.ts_to)
+                            formatDate(fromTimestamp(processInfo.ts_to))
                         ) : (
                             <i>(never)</i>
                         )}
