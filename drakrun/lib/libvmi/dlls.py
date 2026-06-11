@@ -36,6 +36,11 @@ optional_dll_file_list = [
         "--json-clr",
     ),
     DLL(
+        "Windows/Microsoft.NET/Framework64/v4.0.30319/clr.dll",
+        "native_clr_profile_64",
+        "--json-clr-64",
+    ),
+    DLL(
         "Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll",
         "native_mscorwks_profile",
         "--json-mscorwks",
