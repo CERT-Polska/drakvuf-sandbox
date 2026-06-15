@@ -13,6 +13,8 @@ class DrakvufVersionInfo:
 
     # https://github.com/tklengyel/drakvuf/commit/51aef99281e5abc43a7d24b7e548b68b1bdcaf32
     supports_shellexec_verb: bool
+    # https://github.com/tklengyel/drakvuf/commit/8107f115d35311d483e314f48c3b172e094ec6e9
+    supports_clr64: bool
     debug_build: bool
 
 
@@ -43,12 +45,14 @@ def get_drakvuf_version() -> DrakvufVersionInfo:
         )
 
     supports_shellexec_verb = "-V <shellexec verb>" in help_string
+    supports_clr64 = "--json-clr-64 <path to json>" in help_string
     debug_build = "-v, --verbose" in help_string
     return DrakvufVersionInfo(
         major=major,
         minor=minor,
         build=build,
         supports_shellexec_verb=supports_shellexec_verb,
+        supports_clr64=supports_clr64,
         debug_build=debug_build,
     )
 

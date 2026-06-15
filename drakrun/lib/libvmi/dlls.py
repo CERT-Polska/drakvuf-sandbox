@@ -1,6 +1,7 @@
 from typing import NamedTuple, Optional
 
 from ..paths import VMI_PROFILES_DIR
+from ..version_detection import DrakvufVersionInfo
 
 DLL = NamedTuple("DLL", [("path", str), ("dest", str), ("arg", Optional[str])])
 
@@ -36,6 +37,11 @@ optional_dll_file_list = [
         "--json-clr",
     ),
     DLL(
+        "Windows/Microsoft.NET/Framework64/v4.0.30319/clr.dll",
+        "native_clr_profile_64",
+        "--json-clr-64",
+    ),
+    DLL(
         "Windows/Microsoft.NET/Framework/v2.0.50727/mscorwks.dll",
         "native_mscorwks_profile",
         "--json-mscorwks",
@@ -45,10 +51,14 @@ optional_dll_file_list = [
 dll_file_list = required_dll_file_list + optional_dll_file_list
 
 
-def get_dll_cmdline_args():
+def get_dll_cmdline_args(drakvuf_version_info: DrakvufVersionInfo | None = None):
     args = []
     for dll in dll_file_list:
         dll_profile_path = VMI_PROFILES_DIR / f"{dll.dest}.json"
         if dll_profile_path.exists():
+            if dll.arg == "--json-clr-64" and (
+                not drakvuf_version_info or not drakvuf_version_info.supports_clr64
+            ):
+                continue
             args.extend([dll.arg, dll_profile_path.as_posix()])
     return args

@@ -26,6 +26,7 @@ def version():
     log.info(
         " - ShellExecute verb support: %s", drakvuf_version.supports_shellexec_verb
     )
+    log.info(" - 64-bit clr.dll profile support: %s", drakvuf_version.supports_clr64)
 
     if not is_drakvuf_supported(drakvuf_version):
         log.warning(
