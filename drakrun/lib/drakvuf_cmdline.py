@@ -1,12 +1,14 @@
 from typing import List, Optional
 
 from .libvmi import VmiInfo, get_dll_cmdline_args
+from .version_detection import DrakvufVersionInfo
 
 
 def get_base_drakvuf_cmdline(
     vm_name: str,
     kernel_profile_path: str,
     vmi_info: VmiInfo,
+    drakvuf_version_info: DrakvufVersionInfo,
     exec_cmd: Optional[str] = None,
     shellexec_args: Optional[str] = None,
     start_method: Optional[str] = None,
@@ -26,7 +28,7 @@ def get_base_drakvuf_cmdline(
         "-d",
         vm_name,
     ]
-    args.extend(get_dll_cmdline_args())
+    args.extend(get_dll_cmdline_args(drakvuf_version_info))
     if exec_cmd is not None:
         if start_method == "createproc":
             exec_args = ["-m", "createproc", "-e", exec_cmd]

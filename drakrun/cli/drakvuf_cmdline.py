@@ -44,9 +44,9 @@ def drakvuf_cmdline(vm_id, cmd, method, working_dir):
 
     vm = VirtualMachine(vm_id, install_info, config.network)
     vmi_info = VmiInfo.load(VMI_INFO_PATH)
+    drakvuf_version_info = get_drakvuf_version()
     if cmd is not None:
-        drakvuf_version = get_drakvuf_version()
-        supports_shellexec = drakvuf_version.supports_shellexec_verb
+        supports_shellexec = drakvuf_version_info.supports_shellexec_verb
         exec_parameters = make_exec_parameters(
             cmd, method, working_dir, supports_shellexec
         )
@@ -58,6 +58,7 @@ def drakvuf_cmdline(vm_id, cmd, method, working_dir):
                 vm.vm_name,
                 VMI_KERNEL_PROFILE_PATH.as_posix(),
                 vmi_info=vmi_info,
+                drakvuf_version_info=drakvuf_version_info,
                 **(
                     dict(
                         exec_cmd=exec_parameters.command,

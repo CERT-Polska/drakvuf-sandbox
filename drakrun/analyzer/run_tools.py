@@ -14,6 +14,7 @@ from drakrun.lib.install_info import InstallInfo
 from drakrun.lib.libvmi import VmiInfo
 from drakrun.lib.network_info import NetworkInfo
 from drakrun.lib.networking import start_tcpdump_collector
+from drakrun.lib.version_detection import DrakvufVersionInfo
 from drakrun.lib.vm import VirtualMachine
 
 logger = logging.getLogger(__name__)
@@ -76,13 +77,15 @@ def run_drakvuf(
     output_file: pathlib.Path,
     output_err_file: pathlib.Path,
     drakvuf_args: List[str],
+    drakvuf_version_info: DrakvufVersionInfo,
     exec_parameters: Optional[ExecParameters] = None,
     drakvuf_cwd: Optional[pathlib.Path] = None,
 ):
     drakvuf_cmdline = get_base_drakvuf_cmdline(
         vm_name,
         kernel_profile_path,
-        vmi_info,
+        vmi_info=vmi_info,
+        drakvuf_version_info=drakvuf_version_info,
         extra_args=drakvuf_args,
         **(
             dict(
