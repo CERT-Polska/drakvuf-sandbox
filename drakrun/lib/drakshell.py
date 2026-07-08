@@ -194,16 +194,20 @@ class DrakshellInteractiveProcess:
                             if self._stdout is not None:
                                 if hasattr(self._stdout, "send"):
                                     self._stdout.send(data)
-                                else:
+                                elif hasattr(self._stdout, "buffer"):
                                     self._stdout.buffer.write(data)
                                     self._stdout.flush()
+                                else:
+                                    self._stdout.write(data)
                         elif status == RespCode.RESP_STDERR_DATA:
                             if self._stderr is not None:
                                 if hasattr(self._stderr, "send"):
                                     self._stderr.send(data)
-                                else:
+                                elif hasattr(self._stderr, "buffer"):
                                     self._stderr.buffer.write(data)
                                     self._stderr.flush()
+                                else:
+                                    self._stderr.write(data)
                         elif status == RespCode.RESP_PROCESS_EXIT:
                             self.terminated = True
                             raise InteractiveProcessExit(data)
@@ -338,6 +342,15 @@ class Drakshell:
         exit_code = process.join()
         if exit_code != 0:
             raise RuntimeError(f"Process exited with exit code {exit_code}")
+
+    def run_and_capture(self, args, encoding="utf-8"):
+        import io
+
+        stdout_capture = io.BytesIO()
+        process = self.run_interactive(args, stdout=stdout_capture)
+        exit_code = process.join()
+        stdout = stdout_capture.getvalue().decode(encoding)
+        return exit_code, stdout
 
 
 def get_drakshell(vm, injector):
