@@ -193,7 +193,7 @@ Check if ``drakvuf`` and ``injector`` commands load correctly:
 .. code-block:: console
 
     $ apt update
-    $ apt install iptables tcpdump dnsmasq qemu-utils bridge-utils libmagic1 python3-venv redis-server
+    $ apt install iptables tcpdump dnsmasq qemu-utils bridge-utils libmagic1 python3-venv redis-server conntrack
 
 2. Prepare virtualenv
 
