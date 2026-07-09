@@ -337,7 +337,7 @@ def drop_outgoing_conntrack(vm_ip: str):
     # get traffic from the previous VM instance
     try:
         subprocess.run(
-            f"conntrack -D -s {vm_ip}",
+            ["conntrack", "-D", "-s", vm_ip],
             shell=True,
             check=True,
         )
