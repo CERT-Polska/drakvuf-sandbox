@@ -133,6 +133,8 @@ def setup_iptables_chains() -> None:
         "-A FORWARD -j DRAKRUN_FWD",
         "-N DRAKRUN_PRT -t nat",
         "-A POSTROUTING -j DRAKRUN_PRT -t nat",
+        # Don't forward traffic between VM bridges (isolate)
+        "-A DRAKRUN_FWD -i drak+ -o drak+ -j DROP",
     ]
     exists = [
         iptable_rule_exists("INPUT -j DRAKRUN_INP"),
@@ -330,6 +332,25 @@ def delete_vm_bridge(bridge_name: str):
         log.info(f"Deleted {bridge_name} bridge")
 
 
+def drop_outgoing_conntrack(vm_ip: str):
+    # NAT state needs to be flushed, so we don't
+    # get traffic from the previous VM instance
+    try:
+        subprocess.run(
+            f"conntrack -D -s {vm_ip}",
+            shell=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        log.warning(
+            f"Failed to flush conntrack for {vm_ip}. "
+            f"Ensure that 'conntrack' is installed on the host "
+            f"and works correctly."
+        )
+    else:
+        log.info(f"Flushed conntrack for {vm_ip}")
+
+
 def vm_network_exists(vm_id: int):
     network_info_path = get_network_info_path(vm_id)
     return network_info_path.exists()
@@ -367,6 +388,7 @@ def stop_vm_network(vm_id: int):
         del_iptable_rule(f"DRAKRUN_FWD -i {bridge_name} -o {out_interface} -j ACCEPT")
         del_iptable_rule(f"DRAKRUN_FWD -i {out_interface} -o {bridge_name} -j ACCEPT")
 
+    drop_outgoing_conntrack(network_info.vm_address)
     run_network_setup_script("vmnet-post-down.sh", network_info)
     network_info_path.unlink()
 
