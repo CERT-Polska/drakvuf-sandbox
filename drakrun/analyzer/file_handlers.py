@@ -18,6 +18,20 @@ log = logging.getLogger(__name__)
 
 DISK_IMAGE_EXTENSIONS: Set[str] = {".vhd", ".vhdx", ".iso", ".img"}
 
+# Executable extensions in priority order
+# Used for auto-selecting executables from archives and disk images
+EXECUTABLE_EXTENSIONS: List[str] = [
+    ".exe",
+    ".lnk",
+    ".msi",
+    ".bat",
+    ".cmd",
+    ".ps1",
+    ".js",
+    ".vbs",
+    ".vbe",
+]
+
 
 @dataclass
 class PreparedSampleInfo:
@@ -36,7 +50,7 @@ class FileHandler(ABC):
     """
 
     @abstractmethod
-    def can_handle(self, sample_path: pathlib.Path, options: AnalysisOptions) -> bool:
+    def can_handle(self, options: AnalysisOptions) -> bool:
         """Return True if this handler can process the given file."""
         pass
 
@@ -46,7 +60,6 @@ class FileHandler(ABC):
         config: DrakrunConfig,
         drakshell: Drakshell,
         injector: Injector,
-        sample_path: pathlib.Path,
         options: AnalysisOptions,
     ) -> PreparedSampleInfo:
         """Prepare the file for analysis and return information about it."""
@@ -67,29 +80,101 @@ def drop_sample_to_vm(
         raise e
 
 
+def _select_executable(drakshell: Drakshell, search_path: str) -> str:
+    """
+    Select the highest priority executable from a directory on the guest.
+    """
+    log.info(f"Searching for executables in {search_path}...")
+
+    escaped_path: str = search_path.replace("'", "''")
+
+    ext_patterns = ",".join(f"*{ext}" for ext in EXECUTABLE_EXTENSIONS)
+
+    script = (
+        f"$ProgressPreference='SilentlyContinue';"
+        f"[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;"
+        f"Get-ChildItem '{escaped_path}' -Recurse -Include {ext_patterns} | "
+        f"Where {{ !$_.PSIsHidden -and !$_.PSIsContainer }} | "
+        f"Select-Object -ExpandProperty FullName | ConvertTo-Json -C"
+    )
+
+    search_command = prepare_ps_command(script)
+    exit_code, output = drakshell.run_and_capture(search_command, capture_stderr=True)
+
+    output = output.strip()
+
+    if not output:
+        test_script = f"Test-Path '{escaped_path}'"
+        test_cmd = prepare_ps_command(test_script)
+        test_exit, test_output = drakshell.run_and_capture(
+            test_cmd, capture_stderr=False
+        )
+
+        list_script = f"Get-ChildItem '{escaped_path}' -Force -File | Select-Object Name,Attributes,Length"
+        list_cmd = prepare_ps_command(list_script)
+        list_exit, list_output = drakshell.run_and_capture(
+            list_cmd, capture_stderr=True
+        )
+
+        raise RuntimeError(
+            f"No executables found in {search_path}. "
+            f"Path exists: {test_output.strip()}. "
+            f"Files: {list_output.strip() if list_output.strip() else 'none'}"
+        )
+
+    try:
+        files = json.loads(output)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(
+            f"Failed to parse PowerShell JSON output: {e}. Raw output: {output}"
+        )
+
+    if isinstance(files, str):
+        files = [files]
+    log.info(f"Files: {files}")
+
+    ext_priority = {ext.lower(): i for i, ext in enumerate(EXECUTABLE_EXTENSIONS)}
+
+    valid_files = [
+        (filepath, pathlib.Path(filepath).suffix.lower())
+        for filepath in files
+        if pathlib.Path(filepath).suffix.lower() in ext_priority
+    ]
+
+    if not valid_files:
+        raise RuntimeError(f"No executable found in {search_path}")
+
+    valid_files.sort(key=lambda x: ext_priority[x[1]])
+    selected = valid_files[0][0]
+    log.info(f"Selected {valid_files[0][1]} file: {selected}")
+    return selected
+
+
 class ArchiveHandler(FileHandler):
     """
     Handler for extractable archives.
     Supports both 7-Zip and PowerShell Expand-Archive extraction methods.
     """
 
-    def can_handle(self, sample_path: pathlib.Path, options: AnalysisOptions) -> bool:
+    def can_handle(self, options: AnalysisOptions) -> bool:
         """Check if extract_archive is enabled"""
         if options.extract_archive:
             return True
+        return False
 
     def prepare(
         self,
         config: DrakrunConfig,
         drakshell: Drakshell,
         injector: Injector,
-        sample_path: pathlib.Path,
         options: AnalysisOptions,
     ) -> PreparedSampleInfo:
         """Extract archive on the VM."""
         # If sample_filename is not explicitly defined, get target archive file name
         if options.sample_filename is None:
-            options.sample_filename = get_sample_filename_from_host_path(sample_path)
+            options.sample_filename = get_sample_filename_from_host_path(
+                options.host_sample_path
+            )
 
         guest_archive_name = options.sample_filename
         guest_target_directory = options.guest_target_directory
@@ -100,15 +185,19 @@ class ArchiveHandler(FileHandler):
         )
 
         log.info(
-            f"Copying archive to the VM ({sample_path.as_posix()} -> {guest_archive_target_path})..."
+            f"Copying archive to the VM ({options.host_sample_path.as_posix()} -> {guest_archive_target_path})..."
         )
         guest_archive_resolved_path = drop_sample_to_vm(
-            injector, sample_path, str(guest_archive_target_path)
+            injector, options.host_sample_path, str(guest_archive_target_path)
         )
 
-        guest_extraction_dir = pathlib.PureWindowsPath(
-            guest_archive_resolved_path
-        ).parent
+        # Extract to a directory based on archive name
+        archive_stem = pathlib.PureWindowsPath(guest_archive_name).stem
+        if guest_archive_name == archive_stem:
+            archive_stem += "~"  # behave like 7z when archive has no extension
+        guest_extraction_dir = (
+            pathlib.PureWindowsPath(guest_archive_resolved_path).parent / archive_stem
+        )
 
         if config.drakrun.use_7zip:
             log.info(
@@ -126,7 +215,7 @@ class ArchiveHandler(FileHandler):
                 f"Expanding archive using Expand-Archive {guest_archive_resolved_path} -> {guest_extraction_dir}..."
             )
             command = prepare_ps_command(
-                f"Expand-Archive -Force {guest_archive_resolved_path} {guest_extraction_dir}"
+                f"Expand-Archive -Force -DestinationPath '{guest_extraction_dir}' '{guest_archive_resolved_path}'"
             )
 
         drakshell.check_call(command)
@@ -134,13 +223,14 @@ class ArchiveHandler(FileHandler):
         # Determine executable path and working directory
         archive_executable_path = ""
         if options.start_command is None:
-            if not options.guest_archive_entry_path:
-                raise ValueError(
-                    "Archive handler requires guest_archive_entry_path when start_command is not provided"
+            if options.guest_archive_entry_path:
+                archive_executable_path = str(
+                    guest_extraction_dir / options.guest_archive_entry_path
                 )
-            archive_executable_path = str(
-                guest_extraction_dir / options.guest_archive_entry_path
-            )
+            else:
+                archive_executable_path = _select_executable(
+                    drakshell, str(guest_extraction_dir)
+                )
 
             # Set working directory to the archive entry's parent directory
             if options.guest_working_directory is None:
@@ -168,12 +258,14 @@ class DiskImageHandler(FileHandler):
     an executable to run based on heuristics.
     """
 
-    EXECUTABLE_EXTENSIONS = [".exe", ".lnk", ".msi", ".bat", ".cmd", ".ps1", ".js"]
-
-    def can_handle(self, sample_path: pathlib.Path, options: AnalysisOptions) -> bool:
+    def can_handle(self, options: AnalysisOptions) -> bool:
         """Check if this is a disk image."""
         # Check target filename extension if set, otherwise check host path
-        check_ext = (options.sample_filename or sample_path.name).split(".")[-1].lower()
+        check_ext = (
+            (options.sample_filename or options.host_sample_path.name)
+            .split(".")[-1]
+            .lower()
+        )
         return f".{check_ext}" in DISK_IMAGE_EXTENSIONS
 
     def prepare(
@@ -181,21 +273,22 @@ class DiskImageHandler(FileHandler):
         config: DrakrunConfig,
         drakshell: Drakshell,
         injector: Injector,
-        sample_path: pathlib.Path,
         options: AnalysisOptions,
     ) -> PreparedSampleInfo:
         """Mount disk image on the VM and select executable to run."""
         # If sample_filename is not explicitly defined, get target file name
         if options.sample_filename is None:
-            options.sample_filename = get_sample_filename_from_host_path(sample_path)
+            options.sample_filename = get_sample_filename_from_host_path(
+                options.host_sample_path
+            )
 
         guest_disk_path = options.guest_target_directory / options.sample_filename
 
         log.info(
-            f"Copying disk image to the VM ({sample_path.as_posix()} -> {guest_disk_path})..."
+            f"Copying disk image to the VM ({options.host_sample_path.as_posix()} -> {guest_disk_path})..."
         )
         guest_disk_resolved_path = drop_sample_to_vm(
-            injector, sample_path, str(guest_disk_path)
+            injector, options.host_sample_path, str(guest_disk_path)
         )
 
         log.info("Getting existing drives...")
@@ -231,7 +324,9 @@ class DiskImageHandler(FileHandler):
         drives_after = set(stdout_after.strip().split())
         new_drives = drives_after - drives_before
         if not new_drives:
-            raise RuntimeError(f"No new drive found after mounting disk image. Drives: {drives_after}")
+            raise RuntimeError(
+                f"No new drive found after mounting disk image. Drives: {drives_after}"
+            )
 
         drive_letter = list(new_drives)[0]
         log.info(f"Mounted as drive: {drive_letter}:\\")
@@ -243,7 +338,7 @@ class DiskImageHandler(FileHandler):
                 pathlib.PureWindowsPath(mount_point) / options.guest_archive_entry_path
             )
         else:
-            executable_path = self._select_executable(drakshell, mount_point)
+            executable_path = _select_executable(drakshell, mount_point)
 
         log.info(f"Selected executable for analysis: {executable_path}")
 
@@ -259,55 +354,26 @@ class DiskImageHandler(FileHandler):
             guest_target_directory=str(options.guest_target_directory),
         )
 
-    def _select_executable(self, drakshell: Drakshell, mount_point: str) -> str:
-        log.info(f"Searching for executables in {mount_point}...")
 
-        ext_patterns = ",".join(f"*{ext}" for ext in self.EXECUTABLE_EXTENSIONS)
-        search_command = prepare_ps_command(
-            f"Get-ChildItem -Path '{mount_point}' -Recurse -Include {ext_patterns} "
-            f"-ErrorAction SilentlyContinue | "
-            f"Where-Object {{ !$_.PSIsHidden -and !$_.PSIsContainer }} | "
-            f"Select-Object -ExpandProperty FullName"
-        )
-
-        exit_code, output = drakshell.run_and_capture(search_command)
-        if exit_code != 0:
-            raise RuntimeError(f"Failed to list files, exit code: {exit_code}")
-
-        # Parse output and filter by extension priority
-        files = [line.strip() for line in output.strip().splitlines() if line.strip()]
-
-        ext_priority = {
-            ext.lower(): i for i, ext in enumerate(self.EXECUTABLE_EXTENSIONS)
-        }
-
-        for filepath in files:
-            ext = pathlib.Path(filepath).suffix.lower()
-            if ext in ext_priority:
-                log.info(f"Found {ext} file: {filepath}")
-                return filepath
-
-        raise RuntimeError("No executable found in disk image")
-
-
-class NormalFileHandler(FileHandler):
+class RegularFileHandler(FileHandler):
     """Handler for normal files (executables, scripts, etc.)."""
 
-    def can_handle(self, sample_path: pathlib.Path, options: AnalysisOptions) -> bool:
-        return not options.extract_archive
+    def can_handle(self, options: AnalysisOptions) -> bool:
+        return options.host_sample_path and not options.extract_archive
 
     def prepare(
         self,
         config: DrakrunConfig,
         drakshell: Drakshell,
         injector: Injector,
-        sample_path: pathlib.Path,
         options: AnalysisOptions,
     ) -> PreparedSampleInfo:
         """Copy file to the VM."""
         # If sample_filename is not explicitly defined, get target file name
         if options.sample_filename is None:
-            options.sample_filename = get_sample_filename_from_host_path(sample_path)
+            options.sample_filename = get_sample_filename_from_host_path(
+                options.host_sample_path
+            )
 
         # Determine the full executable path on guest VM
         lower_target_name = options.sample_filename.lower()
@@ -323,10 +389,10 @@ class NormalFileHandler(FileHandler):
             guest_executable_path = pathlib.PureWindowsPath(options.sample_filename)
 
         log.info(
-            f"Copying sample to the VM ({sample_path.as_posix()} -> {guest_executable_path})..."
+            f"Copying sample to the VM ({options.host_sample_path.as_posix()} -> {guest_executable_path})..."
         )
         guest_executable_path = drop_sample_to_vm(
-            injector, sample_path, str(guest_executable_path)
+            injector, options.host_sample_path, str(guest_executable_path)
         )
 
         resolved_guest_executable_dir = pathlib.PureWindowsPath(
@@ -349,14 +415,12 @@ class NormalFileHandler(FileHandler):
 FILE_HANDLERS: List[FileHandler] = [  # ordered from most specific
     DiskImageHandler(),
     ArchiveHandler(),
-    NormalFileHandler(),
+    RegularFileHandler(),
 ]
 
 
-def get_handler_for_file(
-    sample_path: pathlib.Path, options: AnalysisOptions
-) -> Optional[FileHandler]:
+def get_handler_for_file(options: AnalysisOptions) -> Optional[FileHandler]:
     for handler in FILE_HANDLERS:
-        if handler.can_handle(sample_path, options):
+        if handler.can_handle(options):
             return handler
     return None

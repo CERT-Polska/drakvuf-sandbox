@@ -67,19 +67,6 @@ def prepare_output_dir(output_dir: pathlib.Path, options: AnalysisOptions) -> No
             subdir.mkdir()
 
 
-def expand_command_variables(
-    command: str | list[str], variables: Dict[str, str]
-) -> str | list[str]:
-    if isinstance(command, str):
-        expanded = command
-        for var_name, var_value in variables.items():
-            expanded = expanded.replace(f"%{var_name}%", var_value)
-        return expanded
-    elif isinstance(command, list):
-        return [expand_command_variables(arg, variables) for arg in command]
-    return command
-
-
 def args_dict_to_list(args: Dict[str, Any]) -> List[str]:
     args_list = []
     for argname, argvalue in args.items():
@@ -170,11 +157,6 @@ def analyze_file(
             f"Archive mode: extract_archive=True, guest_archive_entry_path={options.guest_archive_entry_path}, "
             f"start_command={options.start_command}"
         )
-        if not options.guest_archive_entry_path and not options.start_command:
-            raise ValueError(
-                "Archive extractor requires guest_archive_entry_path or start_command "
-                "to know what to execute after unpacking archive."
-            )
 
     tcpdump_file = output_dir / "dump.pcap"
     drakmon_file = output_dir / "drakmon.log"
@@ -202,19 +184,19 @@ def analyze_file(
             post_restore_cmd = get_post_restore_command(network_conf.net_enable)
             drakshell.check_call(post_restore_cmd)
 
-        # Prepare sample using file handlers
+        # Prepare sample using file handlers.
+        # This can involve transfering to vm, mounting disk image/unpacking archive
+        # and automatically selecting file to execute if not specified
         sample_info: Optional[PreparedSampleInfo] = None
         if options.host_sample_path is not None:
-            handler = get_handler_for_file(options.host_sample_path, options)
+            handler = get_handler_for_file(options)
             if handler is None:
                 raise ValueError(
                     f"No handler found for file: {options.host_sample_path}"
                 )
 
             log.info(f"Using handler: {handler.__class__.__name__}")
-            sample_info = handler.prepare(
-                config, drakshell, injector, options.host_sample_path, options
-            )
+            sample_info = handler.prepare(config, drakshell, injector, options)
 
             # Determine start command if not provided
             if options.start_command is None and sample_info.guest_executable_path:
@@ -224,34 +206,34 @@ def analyze_file(
                 start_method, options.start_command = get_startup_method_and_argv(
                     sample_info.guest_executable_path, preferred_start_method
                 )
+                # If user provides their own method, we will stick to that one
                 if options.start_method is None:
                     options.start_method = start_method
 
         try:
             if options.start_command is not None:
-                variables = {
-                    "SAMPLE_PATH": sample_info.guest_executable_path
-                    if sample_info
-                    else "",
-                    "WORKING_DIR": sample_info.guest_working_directory
-                    if sample_info
-                    else "",
-                    "TARGET_DIR": sample_info.guest_target_directory
-                    if sample_info
-                    else "",
-                }
-
-                options.start_command = expand_command_variables(
-                    options.start_command, variables
-                )
-
+                # If user provided the start command but not the start method
+                # fallback to the preferred_start_method
                 start_method = options.start_method or preferred_start_method
+                # At this point:
+                # - createproc always use CreateProcess method
+                # - shellexec uses CreateProcess combined with "cmd /c start"
+                #   in case of old Drakvuf version or ShellExecuteEx
+                # - runas requires Drakvuf version that implements ShellExecuteEx
+                #   and verbs
                 exec_parameters = make_exec_parameters(
                     options.start_command,
                     start_method,
-                    str(options.guest_working_directory),
+                    str(
+                        sample_info.guest_working_directory
+                        if sample_info
+                        else options.guest_working_directory
+                    ),
                     shellexec_supported,
                 )
+                # At this point options object is used only to visualize
+                # the started command in metadata. Actual execution parameters are
+                # contained in exec_parameters
                 options.start_command = exec_parameters.full_command
                 options.start_method = exec_parameters.start_method
             else:
@@ -261,6 +243,8 @@ def analyze_file(
                 substatus_callback(AnalysisSubstatus.analyzing, updated_options=True)
 
             if exec_parameters is None:
+                # If we don't inject the command to run:
+                # evacuate the drakshell before running anything
                 drakshell.finish()
 
             log.info(

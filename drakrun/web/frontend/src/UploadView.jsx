@@ -97,14 +97,6 @@ function UploadForm() {
                 "Consider providing 'Target file name' for correct execution.";
         }
 
-        if (extractArchive && !archiveEntryPath && !targetStartCommand) {
-            formErrors["archive-entry-path"] = formErrors[
-                "custom-start-command"
-            ] =
-                "Path to execute in archive or start command is required when extracting archive";
-            isValid = false;
-        }
-
         setValid(isValid);
         setFormErrors(formErrors);
     }, []);
@@ -187,10 +179,12 @@ function UploadForm() {
             {extractArchive ? (
                 <div className="mb-3">
                     <label htmlFor="archive-entry-path" className="form-label">
-                        Path inside archive to execute
+                        Path inside archive/disk image to execute (optional)
                         <InfoPopover>
-                            Relative path of the file to execute after
-                            extracting the archive
+                            If not provided, the system will automatically search for
+                            and select an executable (.exe, .bat, etc.) based on priority.
+                            For archives: path relative to archive root.
+                            For disk images: path relative to mounted drive.
                         </InfoPopover>
                     </label>
                     <input
@@ -199,6 +193,7 @@ function UploadForm() {
                         id="archive-entry-path"
                         name="archive_entry_path"
                         onChange={validateForm}
+                        placeholder="(auto-detect)"
                     />
                     <FormError errors={formErrors} field="archive-entry-path" />
                 </div>
