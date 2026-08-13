@@ -336,11 +336,7 @@ def drop_outgoing_conntrack(vm_ip: str):
     # NAT state needs to be flushed, so we don't
     # get traffic from the previous VM instance
     try:
-        subprocess.run(
-            ["conntrack", "-D", "-s", vm_ip],
-            shell=True,
-            check=True,
-        )
+        subprocess.run(["conntrack", "-D", "-s", vm_ip], check=True)
     except subprocess.CalledProcessError:
         log.warning(
             f"Failed to flush conntrack for {vm_ip}. "
