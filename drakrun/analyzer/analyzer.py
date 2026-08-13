@@ -22,17 +22,11 @@ from drakrun.lib.version_detection import get_drakvuf_version
 
 from .analysis_metadata import AnalysisMetadata
 from .analysis_options import AnalysisOptions, StartMethod
-from .file_handlers import (
-    PreparedSampleInfo,
-    get_handler_for_file,
-)
+from .file_handlers import PreparedSampleInfo, get_handler_for_file
 from .post_restore import get_post_restore_command
 from .postprocessing import postprocess_analysis_dir
 from .run_tools import run_drakvuf, run_screenshotter, run_tcpdump, run_vm
-from .startup_command import (
-    get_startup_method_and_argv,
-    make_exec_parameters,
-)
+from .startup_command import get_startup_method_and_argv, make_exec_parameters
 
 log = logging.getLogger(__name__)
 

@@ -181,10 +181,11 @@ function UploadForm() {
                     <label htmlFor="archive-entry-path" className="form-label">
                         Path inside archive/disk image to execute (optional)
                         <InfoPopover>
-                            If not provided, the system will automatically search for
-                            and select an executable (.exe, .bat, etc.) based on priority.
-                            For archives: path relative to archive root.
-                            For disk images: path relative to mounted drive.
+                            If not provided, the system will automatically
+                            search for and select an executable (.exe, .bat,
+                            etc.) based on priority. For archives: path relative
+                            to archive root. For disk images: path relative to
+                            mounted drive.
                         </InfoPopover>
                     </label>
                     <input
