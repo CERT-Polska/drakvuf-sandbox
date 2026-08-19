@@ -2,6 +2,26 @@
 What's changed, how to upgrade?
 ===============================
 
+v0.21.0
+-------
+
+This release comes with multiple bugfixes and additional web application features.
+
+Most important changes:
+
+- Web: All analysis files can be downloaded as .zip archive
+- Added offline HTML analysis reports that can be downloaded and shared with someone without direct access to Drakvuf Sandbox
+- Support for "shellexec" injection method and runas elevation
+- Improved iptables rules, added conntrack drop after analysis
+
+Known issues:
+
+- Analysis may hang on Windows 7 with pre-installed Powershell 2.0. It's recommended to upgrade Powershell to at least 5.1. See also `the issue #1199 on Github <https://github.com/CERT-Polska/drakvuf-sandbox/issues/1199>`.
+
+It's recommended to upgrade the Drakvuf engine to the latest version. This version was tested using `DRAKVUF v1.1-8107f115 <https://github.com/tklengyel/drakvuf/commit/8107f115d35311d483e314f48c3b172e094ec6e9>` and may not work correctly with older versions.
+
+Complete changelog can be found here: `v0.20.0 changelog <https://github.com/CERT-Polska/drakvuf-sandbox/releases/tag/v0.21.0>`_.
+
 v0.20.0
 -------
 
