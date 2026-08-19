@@ -16,11 +16,21 @@ Most important changes:
 
 Known issues:
 
-- Analysis may hang on Windows 7 with pre-installed Powershell 2.0. It's recommended to upgrade Powershell to at least 5.1. See also `the issue #1199 on Github <https://github.com/CERT-Polska/drakvuf-sandbox/issues/1199>`.
+- Analysis may hang on Windows 7 with pre-installed Powershell 2.0. It's recommended to upgrade Powershell to at least 5.1. See also `the issue #1199 on Github <https://github.com/CERT-Polska/drakvuf-sandbox/issues/1199>`_.
 
-It's recommended to upgrade the Drakvuf engine to the latest version. This version was tested using `DRAKVUF v1.1-8107f115 <https://github.com/tklengyel/drakvuf/commit/8107f115d35311d483e314f48c3b172e094ec6e9>` and may not work correctly with older versions.
+This version was tested using `DRAKVUF v1.1-8107f115 <https://github.com/tklengyel/drakvuf/commit/8107f115d35311d483e314f48c3b172e094ec6e9>`_ and may not work correctly with older versions.
+It's recommended to upgrade DRAKVUF to this version or newer before running analyses.
 
-Complete changelog can be found here: `v0.20.0 changelog <https://github.com/CERT-Polska/drakvuf-sandbox/releases/tag/v0.21.0>`_.
+After upgrading Drakvuf engine, it's also recommended to regenerate VMI profiles to include the 64-bit .NET ``clr.dll`` profile. This can be
+done by doing the following operations:
+
+- shut down all of the workers and ensure that all of the guest VMs are stopped
+- run ``drakrun modify-vm0 begin`` to start VM-0
+- after ensuring that VM started correctly, run ``drakrun modify-vm0 commit`` to create a new snapshot and refresh the VMI profiles.
+
+It's recommended to read the :ref:`Managing snapshots` documentation section before running these operations.
+
+Complete changelog can be found here: `v0.21.0 changelog <https://github.com/CERT-Polska/drakvuf-sandbox/releases/tag/v0.21.0>`_.
 
 v0.20.0
 -------

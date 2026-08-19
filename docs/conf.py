@@ -41,6 +41,7 @@ def setup(app):
 # ones.
 extensions = [
     "sphinx_rtd_theme",
+    "sphinx.ext.autosectionlabel",
     "sphinx.ext.graphviz",
 ]
 
