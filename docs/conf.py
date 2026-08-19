@@ -27,7 +27,7 @@ copyright = '2025, CERT Polska'
 author = 'CERT Polska'
 
 # The full version, including alpha/beta/rc tags
-release = 'v0.20.0'
+release = 'v0.21.0'
 
 latex_engine = 'xelatex'
 
@@ -41,6 +41,7 @@ def setup(app):
 # ones.
 extensions = [
     "sphinx_rtd_theme",
+    "sphinx.ext.autosectionlabel",
     "sphinx.ext.graphviz",
 ]
 

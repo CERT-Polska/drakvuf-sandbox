@@ -1,0 +1,13 @@
+[files]
+"drakrun/web/frontend/package.json" = [
+    "\"version\": \"$VERSION\"",
+]
+"drakrun/web/frontend/package-lock.json" = [
+    "\"name\": \"@drakvuf-sandbox/web\",\\s+\"version\": \"$VERSION\"",
+]
+"drakrun/version.py" = [
+    "__version__ = \"$VERSION\"",
+]
+"docs/conf.py" = [
+    "release = 'v$VERSION'",
+]
