@@ -19,10 +19,14 @@ from ..lib.s3_storage import (
     upload_analysis,
 )
 from .analysis_metadata import AnalysisMetadata, FileMetadata
-from .analysis_options import AnalysisOptions
+from .analysis_options import AnalysisOptions, JobPriority
 from .analyzer import AnalysisSubstatus, analyze_file
 
-ANALYSIS_QUEUE_NAME = "drakrun-analysis"
+ANALYSIS_QUEUE_NAMES = {
+    "high": "drakrun-analysis-high",
+    "normal": "drakrun-analysis-normal",
+    "low": "drakrun-analysis-low",
+}
 _WORKER_VM_ID: Optional[int] = None
 
 logger = logging.getLogger(__name__)
@@ -53,6 +57,7 @@ def analysis_job_to_metadata(job: Job) -> AnalysisMetadata:
             "options": job_meta["options"],
             "file": job_meta["file"],
             "vm_id": job_meta.get("vm_id"),
+            "priority": job_meta.get("priority", "normal"),
             "time_started": (
                 job.started_at.isoformat() if job.started_at is not None else None
             ),
@@ -168,7 +173,7 @@ def worker_main(vm_id: int):
     hostname = config.drakrun.worker_hostname or socket.gethostname()
 
     worker = Worker(
-        queues=[ANALYSIS_QUEUE_NAME],
+        queues=list(ANALYSIS_QUEUE_NAMES.values()),
         name=f"drakrun-worker@{hostname}:vm-{vm_id}",
         connection=get_redis_connection(config.redis),
     )
@@ -181,8 +186,10 @@ def enqueue_analysis(
     options: AnalysisOptions,
     connection: Redis,
     result_ttl: int,
+    priority: JobPriority = "normal",
 ) -> Job:
-    queue = Queue(name=ANALYSIS_QUEUE_NAME, connection=connection)
+    queue_name = ANALYSIS_QUEUE_NAMES[priority]
+    queue = Queue(name=queue_name, connection=connection)
     if options.timeout is None:
         raise RuntimeError("Timeout is required when spawning analysis to worker")
     return queue.enqueue(
@@ -192,6 +199,7 @@ def enqueue_analysis(
         meta={
             "options": options.to_dict(exclude_none=True),
             "file": file_metadata.to_dict(),
+            "priority": priority,
         },
         job_timeout=options.timeout + options.job_timeout_leeway,
         result_ttl=result_ttl,
@@ -199,21 +207,23 @@ def enqueue_analysis(
 
 
 def get_analyses_list(connection: Redis) -> List[Job]:
-    queue = Queue(name=ANALYSIS_QUEUE_NAME, connection=connection)
-    jobs = list(queue.get_jobs())
-    for job_registry in [
-        queue.started_job_registry,
-        queue.finished_job_registry,
-        queue.failed_job_registry,
-    ]:
-        job_ids = job_registry.get_job_ids()
-        jobs.extend(
-            [
-                job
-                for job in Job.fetch_many(job_ids, connection=connection)
-                if job is not None
-            ]
-        )
+    jobs = []
+    for queue_name in ANALYSIS_QUEUE_NAMES.values():
+        queue = Queue(name=queue_name, connection=connection)
+        jobs.extend(queue.get_jobs())
+        for job_registry in [
+            queue.started_job_registry,
+            queue.finished_job_registry,
+            queue.failed_job_registry,
+        ]:
+            job_ids = job_registry.get_job_ids()
+            jobs.extend(
+                [
+                    job
+                    for job in Job.fetch_many(job_ids, connection=connection)
+                    if job is not None
+                ]
+            )
     return sorted(jobs, key=lambda job: job.enqueued_at, reverse=True)
 
 

@@ -117,6 +117,7 @@ export async function getAnalysisFileList({
 export async function uploadSample({
     file,
     timeout,
+    priority,
     file_name,
     file_path,
     plugins,
@@ -132,6 +133,7 @@ export async function uploadSample({
     const formData = new FormData();
     formData.append("file", file);
     formData.append("timeout", timeout);
+    if (priority) formData.append("priority", priority);
     formData.append("plugins", JSON.stringify(plugins));
     if (file_name) formData.append("file_name", file_name);
     if (file_path) formData.append("file_path", file_path);

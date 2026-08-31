@@ -72,6 +72,7 @@ def upload_sample(form: UploadFileForm):
     start_method = form.start_method
     plugins = form.plugins
     preset = form.preset
+    priority = form.priority or "normal"
     no_internet = form.no_internet
     no_screenshots = form.no_screenshots
 
@@ -134,6 +135,7 @@ def upload_sample(form: UploadFileForm):
             options=analysis_options,
             connection=redis,
             result_ttl=config.drakrun.result_ttl,
+            priority=priority,
         )
     except Exception:
         tmp_upload_path.unlink(missing_ok=True)

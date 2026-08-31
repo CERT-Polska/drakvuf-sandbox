@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from drakrun.lib.config import DrakrunConfig
 
 StartMethod = Literal["createproc", "shellexec", "runas"]
+JobPriority = Literal["low", "normal", "high"]
 
 
 class AnalysisOptions(BaseModel):
