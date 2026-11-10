@@ -167,13 +167,10 @@ def send_analysis_file(
         if request.range:
             if len(request.range.ranges) > 1:
                 return dict(error="Multiple ranges unsupported"), 400
-            range_start, range_stop = request.range.ranges[0]
-            if range_stop is None:
-                range_stop = ""
             response = s3_client.get_object(
                 Bucket=s3_config.bucket,
                 Key=object_key,
-                Range=f"bytes={range_start}-{range_stop}",
+                Range=request.range.to_header(),
             )
             body = response["Body"]
             return Response(
