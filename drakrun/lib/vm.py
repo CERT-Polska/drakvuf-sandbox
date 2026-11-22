@@ -17,6 +17,7 @@ from .xen import (
     xen_restore_vm,
     xen_save_vm,
 )
+from .xl_cfg_check import warn_about_xl_cfg_template
 
 log = logging.getLogger(__name__)
 
@@ -96,7 +97,11 @@ class VirtualMachine:
         self._network_info = start_vm_network(self.vm_id, self.network_conf)
 
         vm_conf_path = self._generate_vm_conf(disks)
-        xen_create_vm(self.vm_name, vm_conf_path.as_posix())
+        try:
+            xen_create_vm(self.vm_name, vm_conf_path.as_posix())
+        except RuntimeError:
+            warn_about_xl_cfg_template(self.install_info.xl_cfg_template)
+            raise
 
     def restore(self, snapshot_path: Optional[str] = None, cold_boot=False) -> None:
         if not cold_boot and snapshot_path is None:
@@ -118,10 +123,14 @@ class VirtualMachine:
 
         vm_conf_path = self._generate_vm_conf(disks)
         log.info(f"Restoring VM {self.vm_name}")
-        if not cold_boot:
-            xen_restore_vm(self.vm_name, vm_conf_path.as_posix(), snapshot_path)
-        else:
-            xen_create_vm(self.vm_name, vm_conf_path.as_posix())
+        try:
+            if not cold_boot:
+                xen_restore_vm(self.vm_name, vm_conf_path.as_posix(), snapshot_path)
+            else:
+                xen_create_vm(self.vm_name, vm_conf_path.as_posix())
+        except RuntimeError:
+            warn_about_xl_cfg_template(self.install_info.xl_cfg_template)
+            raise
 
     def save(self, snapshot_path: Optional[str] = None) -> None:
         if snapshot_path is None:

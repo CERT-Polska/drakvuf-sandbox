@@ -137,8 +137,9 @@ Once you are booted into Xen, verify that everything works as such:
 
        device_model_args_hvm = [ "-audiodev", "none,id=snd0", "-global", "hda-duplex.audiodev=snd0" ]
 
-    Then rebuild LibVMI and DRAKVUF against the new Xen libraries. An existing VM snapshot made on Xen 4.19
-    can be restored on Xen 4.22.
+    ``drakrun version``, the worker and a failed VM start/restore log a warning when this line is missing
+    on Xen 4.20 or newer. Then rebuild LibVMI and DRAKVUF against the new Xen libraries. An existing VM
+    snapshot made on Xen 4.19 can be restored on Xen 4.22.
 
 .. note::
     
