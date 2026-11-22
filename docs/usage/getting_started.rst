@@ -11,7 +11,7 @@ In order to run DRAKVUF Sandbox, your setup must fulfill all of the listed requi
 * Host system: Debian 12 Bookworm/Ubuntu 22.04 (Jammy Jellyfish) with at least 2 core CPU and 8 GB RAM, running GRUB as bootloader.
 * Host linux kernel version: 5.11+ recommended
 * Guest system: Windows 10 (x64, 22H2 recommended), Windows 7 (x64)
-* Hypervisor: Xen (at least 4.17, 4.19 recommended)
+* Hypervisor: Xen (at least 4.17, 4.22 recommended)
 
 Nested virtualization:
 
@@ -36,7 +36,7 @@ The easiest way is to use prebuilt .deb Xen and Drakvuf packages from `https://g
 
 It's recommended to build components from sources to include latest patches that may be crucial for the stability of the system.
 
-* Xen 4.19.2 sources: `https://downloads.xenproject.org/release/xen/4.19.2/ <https://downloads.xenproject.org/release/xen/4.19.2/>`_
+* Xen 4.22.0 sources: `https://downloads.xenproject.org/release/xen/4.22.0/ <https://downloads.xenproject.org/release/xen/4.22.0/>`_
 * Drakvuf sources: `https://github.com/tklengyel/drakvuf <https://github.com/tklengyel/drakvuf>`_
 
 Perform the Xen and DRAKVUF installation without installing Windows domain and creating JSON profiles. DRAKVUF Sandbox toolkit will assist you in creating
@@ -50,7 +50,7 @@ the snapshot and its VMI profile. DRAKVUF Sandbox requires the following LibVMI/
 
 It's required to perform all installation activities using ``root`` user. Below you can find the installation instruction that we've followed and it's working on fresh Debian 12 installation:
 
-First, install build dependencies and unpack Xen 4.19.2 sources
+First, install build dependencies and unpack Xen 4.22.0 sources
 
 .. code-block:: console
 
@@ -58,13 +58,13 @@ First, install build dependencies and unpack Xen 4.19.2 sources
     $ apt-get install wget git bcc bin86 gawk bridge-utils iproute2 libcurl4-openssl-dev bzip2 libpci-dev build-essential make gcc clang libc6-dev linux-libc-dev zlib1g-dev libncurses5-dev patch libvncserver-dev libssl-dev libsdl1.2-dev iasl libbz2-dev e2fslibs-dev git-core uuid-dev ocaml libx11-dev bison flex ocaml-findlib xz-utils gettext libyajl-dev libpixman-1-dev libaio-dev libfdt-dev cabextract libglib2.0-dev autoconf automake libtool libjson-c-dev libfuse-dev liblzma-dev autoconf-archive kpartx python3-dev python3-pip golang libsystemd-dev nasm ninja-build llvm lld meson
 
     $ cd /opt
-    $ wget https://downloads.xenproject.org/release/xen/4.19.2/xen-4.19.2.tar.gz
-    $ tar -xvzf xen-4.19.2.tar.gz
-    $ cd xen-4.19.2
+    $ wget https://downloads.xenproject.org/release/xen/4.22.0/xen-4.22.0.tar.gz
+    $ tar -xvzf xen-4.22.0.tar.gz
+    $ cd xen-4.22.0
 
 .. note::
     
-    **Bug noted on 2025-04-24**: Xen refers to old Tianocore OVMF version that refers to `broken subhook submodule URL <https://github.com/tianocore/edk2/commit/4dfdca63a93497203f197ec98ba20e2327e4afe4>`_.
+    **Bug noted on 2025-04-24, still present in Xen 4.22.0**: Xen refers to old Tianocore OVMF version that refers to `broken subhook submodule URL <https://github.com/tianocore/edk2/commit/4dfdca63a93497203f197ec98ba20e2327e4afe4>`_.
     If you're affected by this bug, you'll be asked for Git credentials while running ``make -j4 dist-tools`` and build process will be interrupted.
 
     To overcome this issue, we changed the OVMF version to edk2-stable202408.01 by applying this patch to ``Config.mk``:
@@ -76,6 +76,9 @@ First, install build dependencies and unpack Xen 4.19.2 sources
        + OVMF_UPSTREAM_URL ?= https://github.com/tianocore/edk2.git
        + OVMF_UPSTREAM_REVISION ?= 4dfdca63a93497203f197ec98ba20e2327e4afe4
 
+    OVMF (UEFI firmware) is not needed for the DRAKVUF Sandbox guests, which use the default SeaBIOS.
+    Alternatively, you can drop ``--enable-ovmf`` from the ``./configure`` command below.
+
 Then build and install Xen:
 
 .. code-block:: console
@@ -85,7 +88,7 @@ Then build and install Xen:
     $ make -j4 dist-xen
     $ make -j4 dist-tools
     $ make -j4 debball
-    $ apt install ./dist/xen-upstream-4.19.2.deb
+    $ apt install ./dist/xen-upstream-4.22.0.deb
 
 Then set default Xen cmdline to run Xen with Dom0 getting 4GB RAM assigned and two dedicated CPU cores (tune it as preferred):
 
@@ -116,12 +119,26 @@ Once you are booted into Xen, verify that everything works as such:
 
     $ xen-detect
 
-    Running in PV context on Xen V4.19.
+    Running in PV context on Xen V4.22.
 
     $ xl list
 
     Name                                        ID   Mem VCPUs	State	Time(s)
     Domain-0                                     0  4096     2     r-----       6.9
+
+.. note::
+
+    **Upgrading from Xen 4.19**: Xen 4.22 ships QEMU 9.1, which does not start the HDA audio device
+    without an explicit audio backend. The default ``cfg.template`` contains the required
+    ``device_model_args_hvm`` line, but an existing installation keeps its own copy in
+    ``/etc/drakrun/cfg.template``. Add this line there (it also works with Xen 4.19):
+
+    .. code-block:: text
+
+       device_model_args_hvm = [ "-audiodev", "none,id=snd0", "-global", "hda-duplex.audiodev=snd0" ]
+
+    Then rebuild LibVMI and DRAKVUF against the new Xen libraries. An existing VM snapshot made on Xen 4.19
+    can be restored on Xen 4.22.
 
 .. note::
     

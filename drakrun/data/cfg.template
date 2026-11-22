@@ -25,6 +25,9 @@ altp2m = 2
 shadow_memory = 32
 audio = 1
 soundhw='hda'
+# Explicit audio backend for the HDA codec: QEMU 9.1 shipped with Xen 4.22 has no implicit
+# default backend and refuses to start hda-duplex without it. Also works with QEMU 8.0 (Xen 4.19).
+device_model_args_hvm = [ "-audiodev", "none,id=snd0", "-global", "hda-duplex.audiodev=snd0" ]
 cpuid="host,htt=0"
 vga="stdvga"
 vif = [ 'type=ioemu,model=e1000,bridge={{ BRIDGE_NAME }}' ]
