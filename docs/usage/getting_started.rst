@@ -533,19 +533,37 @@ Building from sources
 
     $ apt install tcpdump genisoimage qemu-utils bridge-utils dnsmasq libmagic1
 
-4. Install additional Web build dependencies
+4. Install Node.js and npm (needed to build the web frontend)
 
-  The web frontend is built with Node.js and npm. Node.js 26 (current LTS) is recommended,
-  the minimum supported version is 22.12 (required by Vite and ESLint).
+  Node.js 26 (current LTS) is recommended, the minimum supported version is 22.12 (required by
+  Vite and ESLint). The ``nodejs`` packages shipped by Debian 12 and Ubuntu 22.04 are too old, so
+  install Node.js from the `NodeSource <https://github.com/nodesource/distributions>`_ APT
+  repository. Its ``nodejs`` package already includes ``npm``.
 
   .. code-block:: console
 
-    $ apt install nodejs npm
+    $ apt install ca-certificates curl gnupg
+    $ curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /usr/share/keyrings/nodesource.gpg
+    $ cat > /etc/apt/sources.list.d/nodesource.sources <<EOF
+    Types: deb
+    URIs: https://deb.nodesource.com/node_26.x
+    Suites: nodistro
+    Components: main
+    Signed-By: /usr/share/keyrings/nodesource.gpg
+    EOF
+    $ cat > /etc/apt/preferences.d/nodejs <<EOF
+    Package: nodejs
+    Pin: origin deb.nodesource.com
+    Pin-Priority: 600
+    EOF
+    $ apt update
+    $ apt install nodejs
     $ node --version
 
-  If your distribution ships an older Node.js (e.g. Debian 12 and Ubuntu 24.04 provide 18.x, which is
-  end-of-life), install a current release from `NodeSource <https://github.com/nodesource/distributions>`_
-  or the `official binaries <https://nodejs.org/en/download>`_ instead.
+  The APT pin makes the NodeSource ``nodejs`` package take precedence over the one from your
+  distribution. If ``nodejs`` or ``npm`` from the distribution are already installed, remove them
+  first with ``apt remove nodejs npm``. To use a different Node.js major version, change
+  ``node_26.x`` in the repository URL.
 
 5. Make and install DRAKVUF Sandbox Python wheel. It's highly recommended to use `virtualenv <https://docs.python.org/3/library/venv.html>`_.
 
