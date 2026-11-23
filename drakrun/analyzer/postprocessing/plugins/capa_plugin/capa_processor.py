@@ -26,7 +26,7 @@ from capa.main import (
 from capa.render.result_document import MatchResults as ResultDocumentMatchResults
 from capa.rules import Rule, RuleSet, get_rules, get_rules_and_dependencies
 
-from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP
+from drakrun.lib.paths import DUMPS_DIR, DUMPS_ZIP, TMP_DIR
 
 from ..plugin_base import PostprocessContext
 
@@ -228,7 +228,9 @@ def static_memory_dumps_capa_analysis(
         )
     )
 
-    with TemporaryDirectory() as dump_extraction_directory:
+    with TemporaryDirectory(
+        prefix="capa-dumps-", dir=TMP_DIR
+    ) as dump_extraction_directory:
         # extract all memory dumps temporarily into a dumps/ folder
         with zipfile.ZipFile(analysis_dir / DUMPS_ZIP, "r") as zip_ref:
             # extract the memory dumps into the temporary directory

@@ -13,6 +13,7 @@ VMI_PROFILES_DIR = LIB_DIR / "profiles"
 PDB_CACHE_DIR = LIB_DIR / "pdb_cache"
 ANALYSES_DIR = LIB_DIR / "analyses"
 UPLOADS_DIR = LIB_DIR / "uploads"
+TMP_DIR = LIB_DIR / "tmp"
 
 VMI_INFO_PATH = VMI_PROFILES_DIR / "runtime.json"
 VMI_KERNEL_PROFILE_PATH = VMI_PROFILES_DIR / "kernel.json"
@@ -29,6 +30,10 @@ IPT_DIR = "ipt"
 IPT_ZIP = "ipt.zip"
 
 
+def make_tmp_dir():
+    TMP_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+
 def make_dirs():
     pathlib.Path(ETC_DIR).mkdir(exist_ok=True)
     pathlib.Path(LIB_DIR).mkdir(exist_ok=True)
@@ -37,6 +42,7 @@ def make_dirs():
     ANALYSES_DIR.mkdir(exist_ok=True)
     VMI_PROFILES_DIR.mkdir(exist_ok=True)
     PDB_CACHE_DIR.mkdir(exist_ok=True)
+    make_tmp_dir()
 
 
 def initialize_config_files():

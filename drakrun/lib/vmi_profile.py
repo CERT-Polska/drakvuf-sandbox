@@ -1,7 +1,6 @@
 import json
 import logging
 import pathlib
-import tempfile
 import time
 
 from drakpdb import make_pdb_profile, pe_codeview_data
@@ -11,7 +10,12 @@ from drakrun.lib.fetch_pdb import vmi_fetch_pdb
 from drakrun.lib.injector import Injector
 from drakrun.lib.libvmi.dlls import DLL, optional_dll_file_list, required_dll_file_list
 from drakrun.lib.libvmi.vmi_info import VmiInfo
-from drakrun.lib.paths import VMI_INFO_PATH, VMI_KERNEL_PROFILE_PATH, VMI_PROFILES_DIR
+from drakrun.lib.paths import (
+    TMP_DIR,
+    VMI_INFO_PATH,
+    VMI_KERNEL_PROFILE_PATH,
+    VMI_PROFILES_DIR,
+)
 from drakrun.lib.vm import VirtualMachine
 
 from .libvmi import extract_explorer_pid, extract_vmi_offsets, get_vmi_kernel_guid
@@ -20,8 +24,7 @@ log = logging.getLogger(__name__)
 
 
 def extract_dll_profile(injector: Injector, dll: DLL):
-    tempdir = pathlib.Path(tempfile.gettempdir())
-    local_dll_path = (tempdir / dll.dest).as_posix()
+    local_dll_path = (TMP_DIR / dll.dest).as_posix()
     guest_dll_path = str(pathlib.PureWindowsPath("C:/", dll.path))
 
     log.info("Generating VMI profile for %s", local_dll_path)
