@@ -536,7 +536,7 @@ Building from sources
 4. Install additional Web build dependencies
 
   The web frontend is built with Node.js and npm. Node.js 26 (current LTS) is recommended,
-  the minimum supported version is 20.19 or 22.12 (required by Vite and ESLint).
+  the minimum supported version is 22.12 (required by Vite and ESLint).
 
   .. code-block:: console
 

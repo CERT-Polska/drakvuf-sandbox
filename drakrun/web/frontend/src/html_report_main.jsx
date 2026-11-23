@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import "bootstrap";
 import "bootstrap/dist/css/bootstrap.css";
 import "./App.css";
-import "startbootstrap-sb-admin/dist/css/styles.css";
+import "./layout.css";
 
 import { HashRouter } from "react-router-dom";
 import { AppHeader, AppFooter } from "./App";

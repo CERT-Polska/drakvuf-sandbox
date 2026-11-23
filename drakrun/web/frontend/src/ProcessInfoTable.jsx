@@ -2,7 +2,7 @@ import { formatDate, fromTimestamp } from "./formatUtils.js";
 
 export function ProcessInfoTable({ processInfo }) {
     return (
-        <table className="datatable-table">
+        <table className="table table-bordered table-hover datatable-table">
             <tbody>
                 <tr>
                     <th>Process name</th>

@@ -69,7 +69,7 @@ function AnalysisListTable() {
 
     return (
         <div className="datatable-container">
-            <table className="datatable-table">
+            <table className="table table-bordered table-hover datatable-table">
                 <thead>
                     <tr>
                         <th>Analysis ID</th>

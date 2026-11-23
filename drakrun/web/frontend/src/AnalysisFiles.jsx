@@ -5,7 +5,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faFile } from "@fortawesome/free-solid-svg-icons";
 import Modal from "react-modal";
 import JSZip from "jszip";
-import JSZipUtils from "jszip-utils";
 
 let BASE_URL = "";
 if (import.meta.env.VITE_API_SERVER) {
@@ -16,16 +15,14 @@ if (import.meta.env.VITE_API_SERVER) {
 
 Modal.setAppElement("#root");
 
-function urlToPromise(url) {
-    return new Promise(function (resolve, reject) {
-        JSZipUtils.getBinaryContent(url, function (err, data) {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(data);
-            }
-        });
-    });
+async function urlToPromise(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(
+            `Failed to download ${url}: ${response.status} ${response.statusText}`,
+        );
+    }
+    return response.arrayBuffer();
 }
 
 function FileTree({ fileList, analysisId }) {
