@@ -57,7 +57,7 @@ jobs:
             drakrun/tools/drakshell/drakshell
   build_drakrun_web:
     runs-on: ubuntu-latest
-    container: "node:18"
+    container: "node:26"
     steps:
       - uses: actions/checkout@v4
       - name: Install web dependencies

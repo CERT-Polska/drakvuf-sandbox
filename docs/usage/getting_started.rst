@@ -535,9 +535,17 @@ Building from sources
 
 4. Install additional Web build dependencies
 
+  The web frontend is built with Node.js and npm. Node.js 26 (current LTS) is recommended,
+  the minimum supported version is 20.19 or 22.12 (required by Vite and ESLint).
+
   .. code-block:: console
 
     $ apt install nodejs npm
+    $ node --version
+
+  If your distribution ships an older Node.js (e.g. Debian 12 and Ubuntu 24.04 provide 18.x, which is
+  end-of-life), install a current release from `NodeSource <https://github.com/nodesource/distributions>`_
+  or the `official binaries <https://nodejs.org/en/download>`_ instead.
 
 5. Make and install DRAKVUF Sandbox Python wheel. It's highly recommended to use `virtualenv <https://docs.python.org/3/library/venv.html>`_.
 
