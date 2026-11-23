@@ -9,6 +9,7 @@ import {
 } from "./AnalysisPendingView.jsx";
 import { AnalysisReport } from "./AnalysisReport.jsx";
 import { OnlineAnalysisReportProvider } from "./AnalysisReportContext.jsx";
+import { formatApiError } from "./errors.js";
 
 function AnalysisViewComponent({ analysisId }) {
     const checkInterval = useRef(null);
@@ -60,7 +61,7 @@ function AnalysisViewComponent({ analysisId }) {
     }, [analysisId, checkStatus]);
 
     if (typeof error !== "undefined") {
-        return <div>Error: {error.toString()}</div>;
+        return <div>Error: {formatApiError(error)}</div>;
     }
 
     if (typeof analysisInfo === "undefined") {

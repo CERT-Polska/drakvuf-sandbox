@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDownload, faFile } from "@fortawesome/free-solid-svg-icons";
 import Modal from "react-modal";
 import JSZip from "jszip";
+import { formatApiError } from "./errors.js";
 
 let BASE_URL = "";
 if (import.meta.env.VITE_API_SERVER) {
@@ -93,7 +94,7 @@ export function AnalysisZipDownload({ files, analysisId }) {
                 setDownloadFinished(true);
             },
             (err) => {
-                setModalMessage(err);
+                setModalMessage(formatApiError(err));
                 setDownloadFinished(true);
             },
         );
@@ -193,7 +194,9 @@ export function AnalysisFilesViewer({ analysisId }) {
     }, [analysisId]);
 
     if (typeof error !== "undefined") {
-        return <div className="text-danger">Error: {error.toString()}</div>;
+        return (
+            <div className="text-danger">Error: {formatApiError(error)}</div>
+        );
     }
 
     if (typeof files === "undefined") {

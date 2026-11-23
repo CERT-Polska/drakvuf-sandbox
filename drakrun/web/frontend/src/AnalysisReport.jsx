@@ -14,6 +14,7 @@ import { AnalysisSummary } from "./AnalysisSummary.jsx";
 import { ProcessBadge } from "./ProcessBadge.jsx";
 import { AnalysisFilesViewer } from "./AnalysisFiles.jsx";
 import { useAnalysisReport } from "./AnalysisReportContext.jsx";
+import { formatApiError } from "./errors.js";
 
 export function AnalysisLogViewerTab({ analysisId }) {
     const logType = useTabContext()?.activeTab;
@@ -55,7 +56,9 @@ function AnalysisLogViewer({ analysisId }) {
 
     if (typeof error !== "undefined") {
         return (
-            <div className="text-danger py-2">Error: {error.toString()}</div>
+            <div className="text-danger py-2">
+                Error: {formatApiError(error)}
+            </div>
         );
     }
 
@@ -170,7 +173,9 @@ function ProcessLogViewer({ analysisId, selectedProcess }) {
 
     if (typeof error !== "undefined") {
         return (
-            <div className="text-danger py-2">Error: {error.toString()}</div>
+            <div className="text-danger py-2">
+                Error: {formatApiError(error)}
+            </div>
         );
     }
 
