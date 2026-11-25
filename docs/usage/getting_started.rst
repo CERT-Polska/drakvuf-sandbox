@@ -11,7 +11,7 @@ In order to run DRAKVUF Sandbox, your setup must fulfill all of the listed requi
 * Host system: Debian 12 Bookworm/Ubuntu 22.04 (Jammy Jellyfish) with at least 2 core CPU and 8 GB RAM, running GRUB as bootloader.
 * Host linux kernel version: 5.11+ recommended
 * Guest system: Windows 10 (x64, 22H2 recommended), Windows 7 (x64)
-* Hypervisor: Xen (at least 4.17, 4.22 recommended)
+* Hypervisor: Xen (at least 4.17, 4.22.0-drakvuf1 recommended, see :ref:`the note below <patched_xen>`)
 
 Nested virtualization:
 
@@ -26,17 +26,42 @@ Nested virtualization:
 First steps: Basic installation
 ===============================
 
+.. _patched_xen:
+
+.. important::
+
+    **Temporarily, the recommended Xen and QEMU are not the stock releases.** Stock Xen 4.22.0 and its
+    qemu-xen (QEMU 9.1) have two bugs that make DRAKVUF analyses hang at random
+    (`tklengyel/drakvuf#1858 <https://github.com/tklengyel/drakvuf/issues/1858>`_). Until the fixes are
+    released upstream, DRAKVUF builds Xen from the fork
+    `tklengyel/xen <https://github.com/tklengyel/xen/tree/RELEASE-4.22.0-drakvuf1>`_, branch
+    ``RELEASE-4.22.0-drakvuf1``, which is Xen 4.22.0 plus:
+
+    * a Xen fix that stops requesting a QEMU mapcache invalidation when altp2m views are torn down
+      (``x86/p2m: don't request mapcache invalidation for altp2m removals``),
+    * qemu-xen 4.22.0 with the backported upstream QEMU fix for a deadlock between IDE TRIM and block
+      drain (``ide: Minimal fix for deadlock between TRIM and drain`` and its prerequisites).
+      The fork's ``Config.mk`` fetches this QEMU automatically.
+
+    Both the prebuilt packages and the build from sources below use this fork. **Expect the Xen version
+    to be reported as** ``4.22.0-drakvuf1``: the ``-drakvuf1`` suffix marks a build that includes the
+    required patches. A plain ``4.22.0`` is a stock build without them.
+
 **Step 1. Installation of Xen Hypervisor and DRAKVUF engine**
 
 First you need to perform Xen installation and install DRAKVUF engine itself. Official DRAKVUF installation instruction can be found on https://drakvuf.com/
 
 The easiest way is to use prebuilt .deb Xen and Drakvuf packages from `https://github.com/tklengyel/drakvuf-builds/releases <https://github.com/tklengyel/drakvuf-builds/releases>`_
 
+The ``xen-hypervisor-4.22.0-*.deb`` packages from DRAKVUF builds made since
+`3ce877d <https://github.com/tklengyel/drakvuf/commit/3ce877d80173801629c52fbb8b3f565b3b6a5418>`_ are built from the
+patched Xen fork. The package version is ``4.22.0``, but the installed hypervisor reports ``4.22.0-drakvuf1``.
+
 **Step 1. alternative: Installation of Xen Hypervisor and DRAKVUF engine from sources**
 
 It's recommended to build components from sources to include latest patches that may be crucial for the stability of the system.
 
-* Xen 4.22.0 sources: `https://downloads.xenproject.org/release/xen/4.22.0/ <https://downloads.xenproject.org/release/xen/4.22.0/>`_
+* Xen 4.22.0-drakvuf1 sources (Xen 4.22.0 with the patches described :ref:`above <patched_xen>`): `https://github.com/tklengyel/xen/tree/RELEASE-4.22.0-drakvuf1 <https://github.com/tklengyel/xen/tree/RELEASE-4.22.0-drakvuf1>`_
 * Drakvuf sources: `https://github.com/tklengyel/drakvuf <https://github.com/tklengyel/drakvuf>`_
 
 Perform the Xen and DRAKVUF installation without installing Windows domain and creating JSON profiles. DRAKVUF Sandbox toolkit will assist you in creating
@@ -50,7 +75,7 @@ the snapshot and its VMI profile. DRAKVUF Sandbox requires the following LibVMI/
 
 It's required to perform all installation activities using ``root`` user. Below you can find the installation instruction that we've followed and it's working on fresh Debian 12 installation:
 
-First, install build dependencies and unpack Xen 4.22.0 sources
+First, install build dependencies and clone the Xen 4.22.0-drakvuf1 sources
 
 .. code-block:: console
 
@@ -58,9 +83,8 @@ First, install build dependencies and unpack Xen 4.22.0 sources
     $ apt-get install wget git bcc bin86 gawk bridge-utils iproute2 libcurl4-openssl-dev bzip2 libpci-dev build-essential make gcc clang libc6-dev linux-libc-dev zlib1g-dev libncurses5-dev patch libvncserver-dev libssl-dev libsdl1.2-dev iasl libbz2-dev e2fslibs-dev git-core uuid-dev ocaml libx11-dev bison flex ocaml-findlib xz-utils gettext libyajl-dev libpixman-1-dev libaio-dev libfdt-dev cabextract libglib2.0-dev autoconf automake libtool libjson-c-dev libfuse-dev liblzma-dev autoconf-archive kpartx python3-dev python3-pip golang libsystemd-dev nasm ninja-build llvm lld meson
 
     $ cd /opt
-    $ wget https://downloads.xenproject.org/release/xen/4.22.0/xen-4.22.0.tar.gz
-    $ tar -xvzf xen-4.22.0.tar.gz
-    $ cd xen-4.22.0
+    $ git clone -b RELEASE-4.22.0-drakvuf1 https://github.com/tklengyel/xen.git xen-4.22.0-drakvuf1
+    $ cd xen-4.22.0-drakvuf1
 
 .. note::
     
@@ -83,12 +107,11 @@ Then build and install Xen:
 
 .. code-block:: console
 
-    $ chmod +x ./configure
     $ ./configure --enable-githttp --enable-systemd --enable-ovmf --disable-pvshim
     $ make -j4 dist-xen
     $ make -j4 dist-tools
     $ make -j4 debball
-    $ apt install ./dist/xen-upstream-4.22.0.deb
+    $ apt install ./dist/xen-upstream-4.22.0-drakvuf1.deb
 
 Then set default Xen cmdline to run Xen with Dom0 getting 4GB RAM assigned and two dedicated CPU cores (tune it as preferred):
 
@@ -120,6 +143,10 @@ Once you are booted into Xen, verify that everything works as such:
     $ xen-detect
 
     Running in PV context on Xen V4.22.
+
+    $ xl info | grep xen_version
+
+    xen_version            : 4.22.0-drakvuf1
 
     $ xl list
 
