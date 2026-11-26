@@ -1,3 +1,5 @@
+import contextlib
+import fcntl
 import ipaddress
 import logging
 import os
@@ -6,13 +8,31 @@ import re
 import signal
 import subprocess
 import time
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
 from .config import DNS_USE_GATEWAY_ADDRESS, OUT_INTERFACE_DEFAULT, NetworkConfigSection
 from .network_info import NetworkInfo
 from .paths import ETC_DIR, RUN_DIR
 
 log = logging.getLogger(__name__)
+
+IPTABLES_CHAINS_LOCK_PATH = RUN_DIR / "iptables-chains.lock"
+
+
+@contextlib.contextmanager
+def iptables_chains_lock() -> Iterator[None]:
+    """
+    Serializes setup and removal of the shared DRAKRUN_* iptables chains
+    between drakrun processes (e.g. several workers starting their first
+    analysis at the same time after a host reboot).
+    """
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    with IPTABLES_CHAINS_LOCK_PATH.open("w") as lock_file:
+        fcntl.flock(lock_file, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
 
 
 def find_default_interface() -> Optional[str]:
@@ -126,6 +146,11 @@ def list_iptables_rules(table=None) -> List[str]:
 
 
 def setup_iptables_chains() -> None:
+    with iptables_chains_lock():
+        _setup_iptables_chains()
+
+
+def _setup_iptables_chains() -> None:
     rules = [
         "-N DRAKRUN_INP",
         "-A INPUT -j DRAKRUN_INP",
@@ -151,9 +176,10 @@ def setup_iptables_chains() -> None:
     try:
         for rule in rules:
             subprocess.run(f"iptables {rule}", shell=True, check=True)
-    except subprocess.CalledProcessError:
-        log.debug("Failed to setup one of chains, rolling back")
+    except subprocess.CalledProcessError as e:
+        log.error("Failed to setup one of iptables chains, rolling back")
         delete_iptables_chains()
+        raise RuntimeError("Failed to setup drakrun iptables chains") from e
 
 
 def flush_iptables_chains() -> None:
@@ -253,10 +279,29 @@ def start_vm_network(vm_id: int, network_conf: NetworkConfigSection) -> NetworkI
         stop_vm_network(vm_id)
 
     network_info = make_network_info_for_vm(vm_id, network_conf)
+    # Save network info before creating anything, so stop_vm_network() can
+    # clean up after a failed or interrupted setup. Otherwise a leftover
+    # bridge makes every next start of this VM fail.
+    network_info.save(network_info_path)
+    try:
+        _setup_vm_network(network_info)
+    except Exception:
+        log.exception(f"Failed to start network for vm-{vm_id}, cleaning up")
+        try:
+            stop_vm_network(vm_id)
+        except Exception:
+            log.exception(f"Failed to clean up network for vm-{vm_id}")
+        raise
+    return network_info
 
+
+def _setup_vm_network(network_info: NetworkInfo) -> None:
     run_network_setup_script("vmnet-pre.sh", network_info)
 
     bridge_name = network_info.bridge_name
+    if interface_exists(bridge_name):
+        log.warning(f"Bridge {bridge_name} already exists, deleting it first")
+        delete_vm_bridge(bridge_name)
     try:
         subprocess.run(
             f"brctl addbr {bridge_name}", shell=True, capture_output=True, check=True
@@ -307,10 +352,7 @@ def start_vm_network(vm_id: int, network_conf: NetworkConfigSection) -> NetworkI
         network_info.dnsmasq_pidfile,
     )
 
-    network_info.save(network_info_path)
-
     run_network_setup_script("vmnet-post.sh", network_info)
-    return network_info
 
 
 def delete_vm_bridge(bridge_name: str):
@@ -409,8 +451,9 @@ def stop_all_vm_networks() -> None:
     """
     for dnsmasq_pidfile in RUN_DIR.glob("dnsmasq-vm*.pid"):
         stop_dnsmasq(dnsmasq_pidfile.as_posix())
-    flush_iptables_chains()
-    delete_iptables_chains()
+    with iptables_chains_lock():
+        flush_iptables_chains()
+        delete_iptables_chains()
     for bridge_name in list_vm_bridges():
         delete_vm_bridge(bridge_name)
     for network_info_path in RUN_DIR.glob("vmnet-*.json"):
