@@ -11,6 +11,7 @@ from rq.job import Job, JobStatus
 
 from drakrun.lib.config import RedisConfigSection, load_config
 from drakrun.lib.paths import ANALYSES_DIR, UPLOADS_DIR
+from drakrun.lib.xl_cfg_check import warn_about_xl_cfg_template
 
 from ..lib.s3_storage import (
     download_sample_from_s3,
@@ -165,6 +166,7 @@ def worker_main(vm_id: int):
     global _WORKER_VM_ID
     _WORKER_VM_ID = vm_id
     config = load_config()
+    warn_about_xl_cfg_template()
     hostname = config.drakrun.worker_hostname or socket.gethostname()
 
     worker = Worker(

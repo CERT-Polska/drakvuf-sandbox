@@ -7,6 +7,7 @@ from drakrun.lib.version_detection import (
     get_drakvuf_version,
     is_drakvuf_supported,
 )
+from drakrun.lib.xl_cfg_check import get_xen_version, warn_about_xl_cfg_template
 from drakrun.version import __version__
 
 log = logging.getLogger(__name__)
@@ -27,6 +28,13 @@ def version():
         " - ShellExecute verb support: %s", drakvuf_version.supports_shellexec_verb
     )
     log.info(" - 64-bit clr.dll profile support: %s", drakvuf_version.supports_clr64)
+
+    xen_version = get_xen_version()
+    log.info(
+        "Xen version: %s",
+        "%d.%d" % xen_version if xen_version else "unknown (xl info failed)",
+    )
+    warn_about_xl_cfg_template()
 
     if not is_drakvuf_supported(drakvuf_version):
         log.warning(
