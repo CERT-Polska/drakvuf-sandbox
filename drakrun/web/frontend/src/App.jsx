@@ -2,7 +2,7 @@ import React from "react";
 import { Routes, Route, Link } from "react-router-dom";
 
 import "./App.css";
-import "startbootstrap-sb-admin/dist/css/styles.css";
+import "./layout.css";
 import logo from "./assets/logo.png";
 import AnalysisList from "./AnalysisList.jsx";
 import UploadView from "./UploadView.jsx";

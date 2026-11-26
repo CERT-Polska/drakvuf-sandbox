@@ -4,7 +4,7 @@ import { formatDate } from "./formatUtils.js";
 export function AnalysisMetadataTable({ analysis }) {
     const startCommand = analysis.options["start_command"] || "-";
     return (
-        <table className="datatable-table">
+        <table className="table table-bordered table-hover datatable-table">
             <tbody>
                 <tr>
                     <th>File name</th>
