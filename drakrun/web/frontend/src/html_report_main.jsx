@@ -10,6 +10,8 @@ import { HashRouter } from "react-router-dom";
 import { AppHeader, AppFooter } from "./App";
 import { OfflineAnalysisReportProvider } from "./AnalysisReportContext.jsx";
 import { AnalysisReport } from "./AnalysisReport.jsx";
+import { ErrorBoundary } from "./ErrorBoundary.jsx";
+import { NotificationsProvider } from "./NotificationsProvider.jsx";
 
 async function loadOfflineFiles() {
     const encoded = window.OFFLINE_FILES_GZIP_BASE64;
@@ -56,10 +58,12 @@ function EmbeddedReportApp({ reportData, loadError }) {
             <div id="layoutSidenav">
                 <div id="layoutSidenav_content">
                     <main>
-                        <EmbeddedReport
-                            reportData={reportData}
-                            loadError={loadError}
-                        />
+                        <ErrorBoundary>
+                            <EmbeddedReport
+                                reportData={reportData}
+                                loadError={loadError}
+                            />
+                        </ErrorBoundary>
                     </main>
                     <AppFooter />
                 </div>
@@ -72,10 +76,12 @@ function render({ reportData = null, loadError = null }) {
     createRoot(document.getElementById("root")).render(
         <StrictMode>
             <HashRouter>
-                <EmbeddedReportApp
-                    reportData={reportData}
-                    loadError={loadError}
-                />
+                <NotificationsProvider>
+                    <EmbeddedReportApp
+                        reportData={reportData}
+                        loadError={loadError}
+                    />
+                </NotificationsProvider>
             </HashRouter>
         </StrictMode>,
     );

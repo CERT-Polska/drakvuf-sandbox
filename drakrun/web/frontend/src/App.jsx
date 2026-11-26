@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link, useLocation } from "react-router-dom";
 
 import "./App.css";
 import "./layout.css";
@@ -9,6 +9,7 @@ import UploadView from "./UploadView.jsx";
 import AnalysisView from "./AnalysisView.jsx";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFolder, faUpload, faGear } from "@fortawesome/free-solid-svg-icons";
+import { ErrorBoundary } from "./ErrorBoundary.jsx";
 
 export function AppHeader() {
     return (
@@ -95,6 +96,7 @@ export function AppFooter() {
 }
 
 export default function App() {
+    const location = useLocation();
     return (
         <>
             <AppHeader />
@@ -102,14 +104,19 @@ export default function App() {
                 <AppSidenav />
                 <div id="layoutSidenav_content">
                     <main>
-                        <Routes>
-                            <Route path="/" element={<AnalysisList />} />
-                            <Route path="/upload" element={<UploadView />} />
-                            <Route
-                                path="/analysis/:jobid"
-                                element={<AnalysisView />}
-                            />
-                        </Routes>
+                        <ErrorBoundary key={location.pathname}>
+                            <Routes>
+                                <Route path="/" element={<AnalysisList />} />
+                                <Route
+                                    path="/upload"
+                                    element={<UploadView />}
+                                />
+                                <Route
+                                    path="/analysis/:jobid"
+                                    element={<AnalysisView />}
+                                />
+                            </Routes>
+                        </ErrorBoundary>
                     </main>
                     <AppFooter />
                 </div>

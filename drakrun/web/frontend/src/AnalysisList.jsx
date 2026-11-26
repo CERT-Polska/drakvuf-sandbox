@@ -4,6 +4,7 @@ import { getAnalysisList } from "./api";
 import { CanceledError } from "axios";
 import { AnalysisStatusBadge } from "./AnalysisStatusBadge.jsx";
 import { formatDate } from "./formatUtils.js";
+import { formatApiError } from "./errors.js";
 
 function AnalysisListRow({ analysis }) {
     return (
@@ -54,7 +55,7 @@ function AnalysisListTable() {
     }, []);
 
     if (typeof error !== "undefined") {
-        return <div>Error: {error.toString()}</div>;
+        return <div>Error: {formatApiError(error)}</div>;
     }
 
     if (typeof analysisList === "undefined") {

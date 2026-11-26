@@ -2,6 +2,7 @@ import { PluginPicker } from "./PluginPicker.jsx";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useRef, useState } from "react";
 import { uploadSample } from "./api.js";
+import { formatApiError } from "./errors.js";
 
 function FormError({ errors, field }) {
     const error = errors[field];
@@ -389,7 +390,9 @@ function UploadForm() {
                     Analyze
                 </button>
                 {error ? (
-                    <div className="text-danger ms-3">Error: {error}</div>
+                    <div className="text-danger ms-3">
+                        Error: {formatApiError(error)}
+                    </div>
                 ) : (
                     []
                 )}
