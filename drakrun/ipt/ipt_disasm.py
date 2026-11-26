@@ -6,7 +6,7 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 
-from drakrun.lib.paths import IPT_DIR
+from drakrun.lib.paths import IPT_DIR, TMP_DIR, make_tmp_dir
 
 from .ipt_utils import (
     get_fault_pa,
@@ -143,6 +143,7 @@ def get_ptxed_cmdline(analysis_dir, cr3_value, vcpu, use_blocks=False):
 
 
 def cmdline_main():
+    make_tmp_dir()
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dry-run",
@@ -181,7 +182,7 @@ def cmdline_main():
         print(subprocess.list2cmdline(ptxed_cmdline + ["--pt", "FILTERED_PT_FILE"]))
         sys.exit(0)
 
-    with tempfile.NamedTemporaryFile() as f:
+    with tempfile.NamedTemporaryFile(prefix="ipt-filtered-", dir=TMP_DIR) as f:
         filter_cmdline = [
             f"drak-ipt-filter {analysis_dir}/ipt/ipt_stream_vcpu{args.vcpu} {args.cr3}"
         ]

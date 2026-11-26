@@ -1,16 +1,28 @@
 import os
+from tempfile import SpooledTemporaryFile
 
 import rq_dashboard
-from flask import jsonify, send_file
+from flask import Request, jsonify, send_file
 from flask_openapi3 import Info, OpenAPI
 
 from drakrun.lib.config import load_config
+from drakrun.lib.paths import TMP_DIR, make_tmp_dir
 from drakrun.version import __version__
 
 from .api import api
 
+
+class DrakrunRequest(Request):
+    def _get_file_stream(
+        self, total_content_length, content_type, filename=None, content_length=None
+    ):
+        return SpooledTemporaryFile(max_size=500 * 1024, mode="rb+", dir=TMP_DIR)
+
+
 info = Info(title="Drakvuf Sandbox", version=__version__)
 app = OpenAPI(__name__, info=info, static_folder="frontend/dist/assets")
+app.request_class = DrakrunRequest
+make_tmp_dir()
 config = load_config()
 app.config.update(
     {

@@ -1,6 +1,9 @@
 import logging
+import os
 
 import click
+
+from drakrun.lib.paths import make_tmp_dir
 
 from .analyze import analyze
 from .drakshell import drakshell
@@ -28,6 +31,8 @@ def main():
         handlers=[logging.StreamHandler()],
     )
     logging.getLogger("drakrun").setLevel(logging.DEBUG)
+    if os.geteuid() == 0:
+        make_tmp_dir()
 
 
 main.add_command(analyze)

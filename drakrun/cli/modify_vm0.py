@@ -1,7 +1,5 @@
 import logging
 import pathlib
-import shutil
-import tempfile
 
 import click
 
@@ -58,9 +56,8 @@ def commit_modify_vm0():
     install_info = InstallInfo.load(INSTALL_INFO_PATH)
 
     vm0 = VirtualMachine(0, install_info, config.network)
-    tmp_path = pathlib.Path(tempfile.gettempdir())
-    temporary_snapshot_path = tmp_path / "snapshot.sav"
     target_snapshot_path = pathlib.Path(install_info.snapshot_dir) / "snapshot.sav"
+    temporary_snapshot_path = target_snapshot_path.with_name("snapshot.sav.tmp")
     try:
         vmi_info = create_vmi_info(vm0)
         vm0.save(temporary_snapshot_path.as_posix())
@@ -69,7 +66,7 @@ def commit_modify_vm0():
         # Memory state is frozen, we can't do any writes to persistent storage
         log.info("Committing persistent memory...")
         vm0.storage.commit_vm0_modify_storage()
-        shutil.move(temporary_snapshot_path, target_snapshot_path)
+        temporary_snapshot_path.replace(target_snapshot_path)
     finally:
         temporary_snapshot_path.unlink(missing_ok=True)
 
