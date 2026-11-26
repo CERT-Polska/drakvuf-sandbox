@@ -194,16 +194,20 @@ class DrakshellInteractiveProcess:
                             if self._stdout is not None:
                                 if hasattr(self._stdout, "send"):
                                     self._stdout.send(data)
-                                else:
+                                elif hasattr(self._stdout, "buffer"):
                                     self._stdout.buffer.write(data)
                                     self._stdout.flush()
+                                else:
+                                    self._stdout.write(data)
                         elif status == RespCode.RESP_STDERR_DATA:
                             if self._stderr is not None:
                                 if hasattr(self._stderr, "send"):
                                     self._stderr.send(data)
-                                else:
+                                elif hasattr(self._stderr, "buffer"):
                                     self._stderr.buffer.write(data)
                                     self._stderr.flush()
+                                else:
+                                    self._stderr.write(data)
                         elif status == RespCode.RESP_PROCESS_EXIT:
                             self.terminated = True
                             raise InteractiveProcessExit(data)
@@ -338,6 +342,30 @@ class Drakshell:
         exit_code = process.join()
         if exit_code != 0:
             raise RuntimeError(f"Process exited with exit code {exit_code}")
+
+    def run_and_capture(self, args, encoding="utf-8", capture_stderr=False):
+        import io
+
+        stdout_capture = io.BytesIO()
+        stderr_capture = io.BytesIO() if capture_stderr else None
+        process = self.run_interactive(
+            args, stdout=stdout_capture, stderr=stderr_capture
+        )
+        exit_code = process.join()
+        raw_stdout = stdout_capture.getvalue()
+        raw_stderr = stderr_capture.getvalue() if stderr_capture else b""
+
+        try:
+            stdout = raw_stdout.decode(encoding)
+        except UnicodeDecodeError:
+            stdout = raw_stdout.decode(encoding, errors="replace")
+
+        stderr = raw_stderr.decode("utf-8", errors="replace") if raw_stderr else ""
+
+        if stderr:
+            log.warning(f"stderr captured: {stderr}")
+
+        return exit_code, stdout
 
 
 def get_drakshell(vm, injector):
