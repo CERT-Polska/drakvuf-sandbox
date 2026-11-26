@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useCallback, useRef, useState } from "react";
 import { uploadSample } from "./api.js";
 
+const PRIORITY_LEVELS = ["low", "normal", "high"];
+
 function FormError({ errors, field }) {
     const error = errors[field];
     if (error) {
@@ -72,6 +74,7 @@ function UploadForm() {
     const [formErrors, setFormErrors] = useState({});
     const [error, setError] = useState();
     const [analysisTime, setAnalysisTime] = useState(10);
+    const [priority, setPriority] = useState("normal");
     const [extractArchive, setExtractArchive] = useState(false);
     const [extraOptionsCollapsed, setExtraOptionsCollapsed] = useState(true);
     const navigate = useNavigate();
@@ -118,6 +121,7 @@ function UploadForm() {
                 const jobData = await uploadSample({
                     file: form.get("file"),
                     timeout: form.get("timeout") * 60,
+                    priority: form.get("priority"),
                     plugins: form.getAll("plugins"),
                     file_name: form.get("file_name"),
                     file_path: form.get("file_path"),
@@ -168,6 +172,24 @@ function UploadForm() {
                     id="form-timeout"
                     name="timeout"
                 />
+            </div>
+            <div className="mb-3">
+                <label htmlFor="form-priority" className="form-label">
+                    Priority: {priority}
+                </label>
+                <input
+                    type="range"
+                    className="form-range"
+                    min="0"
+                    max="2"
+                    step="1"
+                    value={PRIORITY_LEVELS.indexOf(priority)}
+                    onChange={(ev) =>
+                        setPriority(PRIORITY_LEVELS[+ev.target.value])
+                    }
+                    id="form-priority"
+                />
+                <input type="hidden" name="priority" value={priority} />
             </div>
             <div className="mb-3 form-check">
                 <input

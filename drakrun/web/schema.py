@@ -4,7 +4,7 @@ from typing import Annotated, List, Optional
 from flask_openapi3 import FileStorage
 from pydantic import AfterValidator, BaseModel, Field, RootModel
 
-from drakrun.analyzer.analysis_options import StartMethod
+from drakrun.analyzer.analysis_options import JobPriority, StartMethod
 
 
 class APIErrorResponse(BaseModel):
@@ -27,6 +27,9 @@ class UploadFileForm(BaseModel):
         default=None, description="Plugins to use (in JSON array string)"
     )
     preset: Optional[str] = Field(default=None, description="Analysis settings preset")
+    priority: Optional[JobPriority] = Field(
+        default="normal", description="Job priority"
+    )
     no_internet: Optional[bool] = Field(
         default=False, description="Disable Internet connection"
     )

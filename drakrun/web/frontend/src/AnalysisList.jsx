@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getAnalysisList } from "./api";
 import { CanceledError } from "axios";
 import { AnalysisStatusBadge } from "./AnalysisStatusBadge.jsx";
+import { AnalysisPriorityBadge } from "./AnalysisPriorityBadge.jsx";
 import { formatDate } from "./formatUtils.js";
 
 function AnalysisListRow({ analysis }) {
@@ -10,6 +11,7 @@ function AnalysisListRow({ analysis }) {
         <tr>
             <td>
                 <AnalysisStatusBadge status={analysis.status} />
+                <AnalysisPriorityBadge priority={analysis.priority} />
                 <Link to={`/analysis/${analysis.id}`}>{analysis.id}</Link>
             </td>
             <td>
